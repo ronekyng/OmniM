@@ -121,8 +121,11 @@ Built-in catalog seed data + `instantiate_from_series()` in `crates/model/`; han
 - **SeriesStore Manager** at `/series-manager`: decision-tree editor, built-in seed viewer, external `.omnimseries` load/save, drag-to-map ComponentDefs, parameter constraint editor.
 - **UI architecture**: Zustand store, React Query data layer, PanelRegistry panel slots, resizable AppLayout, CSS Modules, `ThreeViewerContext`.
 
-### Known gap 🔀
-Interactive 3D creation supports 1–2 point picking for `PICKING_TYPES` only. N-point polygon/polyline picking (needed for slab/roof/floor boundaries, featureLine, contourLine) is **not implemented** — see [CODE_DEVIATIONS.md](CODE_DEVIATIONS.md) §3/§5.
+### Known gap → RESOLVED (2026-10-27)
+
+~~Interactive 3D creation supports 1–2 point picking for `PICKING_TYPES` only.~~ Superseded: the N-point picking pipeline is implemented end-to-end — polyline picking for wall center-lines (`path[]` → `build_layered_path`), closed-polygon footprints for slab/roof/floor (`boundary[]` → `build_layered_slab_path`, close by returning to the first point or double-click/Enter), and N-point alignment for featureLine/contourLine (`line` genrule). Verified in `web/src/app/components/ThreeViewer.tsx`, `Picking.ts`, `Markers.ts`, `crates/server/src/lib.rs` (`GenRuleRequest::Layered/Line`).
+
+**Residue** (fixed same day, 2026-10-27): picked-point z elevation is now preserved (`base_z`), roof extrusion mode generates a genuine profile, road consumes picked `alignment`, and segment bends are mitered. Remaining: bridge/tunnel still use start/end only (road-family `alignment` lands later or via Phase 8 corridor work).
 
 (Earlier versions listed "command preview before application" here; the AI command preview/accept workflow was **not** delivered and remains a Phase-9 item that itself only partially exists today.)
 

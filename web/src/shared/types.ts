@@ -136,6 +136,8 @@ export type GenRuleRoadRequest = {
   length: number;
   width: number;
   thickness: number;
+  /** Picked polyline path (start/end or full N-point alignment). */
+  alignment?: [number, number, number][];
   parent_id?: string;
   series_id?: string;
 };

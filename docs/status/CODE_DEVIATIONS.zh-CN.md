@@ -36,16 +36,16 @@
 
 ## 3. 创建工作流 — 完整偏差矩阵
 
-### 3.1 SURFACE TYPES（面构件）
+### 3.1 SURFACE TYPES（面构件）—— 主管道已解决 2026-10-27；内核残留另行跟踪
 
-| 类型 | 正确工作流（来自研究） | 代码行为 | 偏差 |
-|------|-------------------------------|--------------|-----------|
-| **Wall** | 折线路径（平面内 2+ 点）+ 高度 + WallType 层 | `neededClicksForType` 返回 2，点已收集，但 `MainToolbar.tsx` 在 `else` 分支仅使用第 1 点（`px, py, pz`）（第 196 行） | ❌ 折线路径未实现；第 2 次点击被浪费 |
-| **Slab** | 闭合边界（平面内 N 点多边形）+ FloorType 层 | 同墙——2 次点击，仅用第 1 点 | ❌ 需要 N 点闭合多边形 + 类型化的 floor 定义 |
-| **Roof** | 拉伸轮廓 + 范围（2 点）或 足迹草图（N 点） | 同墙——2 次点击，仅用第 1 点 | ❌ 需要轮廓/范围模式或足迹多边形 |
-| **Floor** | 闭合边界（平面内 N 点多边形）+ FloorType 层 | 同墙——2 次点击，仅用第 1 点 | ❌ 需要 N 点闭合多边形 + 类型化的 floor 定义 |
+| 类型 | 正确工作流（来自研究） | 代码行为（当前） | 偏差 |
+|------|-------------------------------|------------------------|-----------|
+| **Wall** | 折线路径（平面内 2+ 点）+ 高度 + WallType 层 | 分层路径：最少 2 点（N 可继续），点 → `boundary_points`；MainToolbar 以 `path[]` 提交 `layered` genrule → 服务端 `build_layered_path`（含 `base_z` 标高与转角 miter） | ⚠️ 管道已通；残留：不规则坡向 z 取首点 |
+| **Slab** | 闭合边界（平面内 N 点多边形）+ FloorType 层 | polygon 模式（最少 3 点），回首点或双击/回车闭合 → `boundary[]` → `build_layered_slab_path`（`base_z` 应用 + 有效性校验） | ✅ 一致 |
+| **Roof** | 拉伸轮廓 + 范围（2 点）或 足迹草图（N 点） | 足迹模式与 slab 一样 ✅；挤出模式（2 点）→ `build_layered_roof_profile`（真实剖面、宽度生效、`base_z` 应用） | ✅ 一致 |
+| **Floor** | 闭合边界（平面内 N 点多边形）+ FloorType 层 | 同 slab（polygon → `boundary[]`） | ✅ 一致 |
 
-**根本原因**：`neededClicksForType`（`web/src/shared/types/creation.ts:168`）把所有 SURFACE_TYPES 归为一类（返回 2）。`applyPointsToForm`（第 115 行）填充 `startX/Y/Z` / `endX/Y/Z`，但 `MainToolbar.tsx` 对非 LINEAR 类型忽略这些（第 196 行只用单一位置）。拾取提示（`Picking.ts:10`）只显示“点击点 1 / 2”——不支持 N 点多边形创建。
+**历史根因（已修）**：`neededClicksForType` 曾把所有 SURFACE_TYPES 归为一类（返回 2），`MainToolbar.tsx` 忽略第二点后的所有点。由拾取模式状态机（`defaultPickModeForType` 按类型、`CreationForm.boundary_points`/`is_closed`、`closeToPoint` 闭合判定）修复，genrule 现消费 `path[]`/`boundary[]`。
 
 ### 3.2 LINEAR TYPES（线构件）
 
@@ -55,9 +55,9 @@
 | **Column** | Revit 中为 1 点（定位）；Tekla 中为 2 点（底/顶） | 2 次点击，按线构件处理 | ⚠️ 轻微——两种皆有效；Revit 风格的单点模式会更直观 |
 | **Pipe** | 2 点（连接点对连接点） | 2 次点击 ✅ | ✅ 一致 |
 | **Duct** | 2 点（连接点对连接点） | 2 次点击 ✅ | ✅ 一致 |
-| **Road** | 路线 + 纵断面 + 装配（多步 corridor 工作流） | 2 次点击，简化路径 | ⚠️ 预期——完整 corridor 工作流尚未实现（见 ROADMAP.md） |
-| **Bridge** | 多步 subassembly corridor / 装配 | 2 次点击，简化路径 | ⚠️ 同 road |
-| **Tunnel** | 多步 corridor 装配 | 2 次点击，简化路径 | ⚠️ 同 road |
+| **Road** | 路线 + 纵断面 + 装配（多步 corridor 工作流） | 折线点经 `Road.alignment` 消费：沿折线逐段铺装滚放（`build_road_alignment`） | ✅ 管道一致；完整 corridor 工作流仍属 Phase 8 |
+| **Bridge** | 多步 subassembly corridor / 装配 | 仍只用首末点 | ⚠️ 待 Phase 8 corridor |
+| **Tunnel** | 多步 corridor 装配 | 仍只用首末点 | ⚠️ 待 Phase 8 corridor |
 
 ### 3.3 POINT TYPES（点构件）
 
@@ -65,8 +65,8 @@
 |------|-------------------------------|--------------|-----------|
 | **PointCloud** | 1 次点击（放置） | 1 次点击 ✅ | ✅ 一致 |
 | **TerrainModel** | 1 次点击（放置） | 1 次点击 ✅ | ✅ 一致 |
-| **FeatureLine** | N 点折线绘制 | 1 次点击 | ❌ 需要 N 点折线拾取模式 |
-| **ContourLine** | N 点折线绘制 | 1 次点击 | ❌ 同 featureLine |
+| **FeatureLine** | N 点折线绘制 | polyline 模式（最少 2 点，N 可继续）→ `line` genrule `alignment[]` → 沿折线的细导管 | ✅ 一致 |
+| **ContourLine** | N 点折线绘制 | 同 featureLine | ✅ 一致 |
 
 ### 3.4 BODY TYPES（体构件）
 
@@ -93,22 +93,31 @@ Rust 后端未发现偏差。
 
 ---
 
-## 5. 拾取基础设施缺口
+## 5. 拾取基础设施缺口 — **大部分已解决** (2026-10-27)
+
+**状态**：端到端 N 点拾取管道已实现并验证；上文 §3.1/§3.3 中"只用第 1 点/未实现"的行已在原文位置更正。仍然属实的内容：
 
 ### `web/src/app/components/viewer/three/Picking.ts`
-- `pickingHint` 仅支持 `needed === 2` 或 `needed === 1`——无 N 点多边形提示
-- `pickGroundPoint` 拾取单个地面平面点——无多点多边形模式
+- ~~`pickingHint` 仅支持 2 点/1 点两态~~ **已解决**：`pickingHint` 处理 polyline/polygon 完成态（带回点中文提示、按模式与点数四态）
+- ~~单点地面拾取、无多点多边形模式~~ **已解决**：`PickMode`（polyline/polygon/segment/place）状态机驱动多点收集；每次拾取应用 `snapPoint` 吸附
 
 ### `web/src/shared/types/creation.ts`
-- `neededClicksForType` 对所有 SURFACE_TYPES 返回 2——应区分 wall（2+ 路径）与 slab/roof/floor（N 点闭合多边形）
-- `applyPointsToForm` 仅处理 1 或 2 个点——无 N 点多边形序列化
-- `CreationForm` 缺少用于闭合多边形存储的 `boundary_points` 字段
+- ~~对所有 SURFACE_TYPES 返回 2~~ **已解决**：`defaultPickModeForType` 按 wall→polyline(≥2)、slab/floor/roof→polygon(≥3)、beam/pipe/duct→segment、其余→place 区分
+- ~~仅处理 1/2 点~~ **已解决**：N 点序列化进 `CreationForm.boundary_points` + `is_closed`
+- ~~缺少 `boundary_points` 字段~~ **已解决**
 
 ### `web/src/app/components/ThreeViewer.tsx`
-- 预览线（第 834-860 行）对 1 点→光标仅绘制虚线——N 点拾取无多边形预览
-- `addPreviewLine` 绘制顺序线段——对 N 点正确，但无“闭合多边形”视觉反馈
+- ~~仅 1 点→光标虚线预览；点击时把整条折线在同一 marker 组反复重画（生命周期混乱）~~ **已解决 (2026-10-27 预览重构)**：拆分为"已确认视觉"（点标记 + 链线/填充，由 effect 依 `creationPoints` 同步）与"逐帧 hover 组"（虚线、整条多段墙 ghost、多边形环+填充），每次指针移动重建；hover 终点与点击走同一 `snapPoint` 吸附管线
+
+### `web/src/app/components/viewer/three/Markers.ts`
+- ~~预览只画最后一段的灰色厚板；层厚换算大 20 倍（`unit=0.02`）；`MeshBasicMaterial` 无光照；转角无 miter~~ **已解决 (2026-10-27 预览重构)**：`addLayeredWallPreview` 以服务端同款 mm→m 换算（`0.001`）构建整条逐段 ghost，转角 miter 与内核一致（`e=(t/2)·tan(φ/2)`，封顶），带光照半透明材质（`opacity 0.55`、关深度写入）；无效多边形底面红色预览（`polygonPreviewError`，镜像服务端 `validate_boundary`）
 
 ### `web/src/app/components/MainToolbar.tsx`
-- `SURFACE_TYPES` 对象落入 `else` 分支（第 196 行）使用单一位置——完全忽略第 2 点
-- 未为 slab/roof/floor 写入 `boundary_points` 属性
-- 层属性（`height`、`core_thickness`、`finish_thickness`）仅为 wall/slab 硬编码（第 237 行）——缺失 roof 和 floor
+- ~~SURFACE_TYPES 落入 else 分支只用单点~~ **已解决**：LAYERED_TYPES 以 `path[]`（墙折线）/`boundary[]`（slab/roof/floor 底面）提交 `layered` genrule；LINE_GENRULE_TYPES 以 N 点 `alignment[]` 提交 `line`
+- ~~未写 `boundary_points`~~ **已解决**（表单携带 boundary_points，genruleCreate 消费之）
+- 残留内核缺口（已跟踪至内核工作）：`to_p2` 丢弃 z（已改为 base_z 保留首点标高）；roof 挤出模式（已改为真实剖面）；road 对齐（已消费 `alignment`）；转角 miter（已实现，限 90°/45° 精确）
+
+### 测试
+- `stateMachine.test.ts` 覆盖 idle/picking/configuring 全流程含多点累积；polygon 闭合与 span 过滤用例已随残留项补上（multi-point picking describe 块，6 用例）。
+
+---

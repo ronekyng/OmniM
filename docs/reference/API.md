@@ -485,7 +485,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   |---|---|
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
-  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?` |
+  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`; optional `alignment` (N-point picked polyline `[x,y,z]` in metres, default empty). With `alignment` ≥ 2 points the road is generated per segment along the polyline (each segment `build_road`-meshed, rotated by its segment angle and translated to the segment start, using the same `width`/`thickness`); with < 2 points the single straight road of `length` is generated. For roads the picked polyline goes in `alignment` — `path` is reserved for the wall semantics of `layered`. |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` (parented to the wall; boolean-subtracted opening from the wall bbox) |
   | `assembly` | `name`, `components[]` of `{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`, `parent_id?` |
@@ -494,8 +494,14 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
 
   Units are metres. `series_id` forwards the request to the catalog/series path instead of raw mesh generation.
 
+  Layered picked elevation (`path`/`boundary` carry `[x, y, z]`): the picked z is no longer dropped.
+  - Wall `path`: the z values are preserved; when all picked z are equal the geometry is placed at that elevation (bbox min-z = picked z). If z values differ (sloped path), the simplified plan keeps the **first point's z** as the base elevation and ignores the differences (planar extrusion only, no per-point grading).
+  - `boundary` (slab/roof/floor footprint): base elevation = the first boundary point's z (bottom of the lowest layer).
+  - `roof` profile mode: `mode = "roof"` with a 2-point `path` (distinct start/end, no `boundary`) generates a 2-point profile roof: the span runs start→end, extruded across `width` (≤ 0 falls back to 1.0), each layer stacked along the layer normal starting at `path[0].z`; segment orientation comes from the call-site rotation by the segment angle.
+  - `road` with ≥ 2 `alignment` points lays segments along the polyline honoring `width`/`thickness`.
+
 - Response: the created `OmniObject` (with generated `geometry`).
-- Errors: `404` unknown `wall_id` (door/window), `400` (empty layers, < 2 alignment points, unsolvable series), plus propagates GenRule engine errors.
+- Errors: `404` unknown `wall_id` (door/window), `400` (empty layers, < 2 alignment points, unsolvable series, **invalid `boundary`** — `validate_boundary` rejects < 3 points, collinear points, zero-length edges, degenerate area, and self-intersecting (bowtie) closed boundaries, with the reason in the message; wall `path` requires ≥ 2 distinct points), plus propagates GenRule engine errors.
 
 ```bash
 curl -sS -X POST "$BASE/api/genrule" -H 'Content-Type: application/json' \

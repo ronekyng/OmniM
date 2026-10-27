@@ -485,7 +485,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   |---|---|
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
-  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?` |
+  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的 N 点折线 `[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
@@ -494,8 +494,14 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
 
   单位为米。`series_id` 非空时改走目录/系列实例化路径，而非直接生成网格。
 
+  分层构件的拾取高程（`path`/`boundary` 携带 `[x, y, z]`）：拾取的 z 不再被丢弃。
+  - 墙体 `path`：z 值被保留；所有拾取 z 相等时，几何体落在该高程（bbox 最小 z = 拾取 z）。若 z 各不相同（斜坡路径），简化方案以**首点 z** 为基准高程并忽略其余差异（当前为纯平面拉伸，不支持逐点放坡）。
+  - `boundary`（slab/roof/floor 轮廓）：基准高程取第一个轮廓点的 z（最底层底面）。
+  - `roof` profile 模式：`mode = "roof"` 且 `path` 恰为 2 个互异点（无 `boundary`）时生成两点轮廓屋面：跨度沿 start→end，垂直跨度延伸 `width`（≤ 0 时取 1.0），各层沿层法向自 `path[0].z` 向上堆叠；坡度/朝向由调用点按段角度的旋转负责。
+  - `road` 的 `alignment` ≥ 2 点时沿折线逐段铺设，统一使用 `width`/`thickness`。
+
 - 响应：创建的 `OmniObject`（带生成的 `geometry`）。
-- 错误：`404` `wall_id` 不存在（door/window），`400`（层数为空、对齐点不足 2、系列不可解等），并透传 GenRule 引擎错误。
+- 错误：`404` `wall_id` 不存在（door/window），`400`（层数为空、对齐点不足 2、系列不可解、**轮廓无效** —— `validate_boundary` 拒绝少于 3 点、共线点、零长度边、退化面积或自相交（蝴蝶结）闭合轮廓，消息中给出具体原因；墙体 `path` 需 ≥ 2 个互异点），并透传 GenRule 引擎错误。
 
 ```bash
 curl -sS -X POST "$BASE/api/genrule" -H 'Content-Type: application/json' \

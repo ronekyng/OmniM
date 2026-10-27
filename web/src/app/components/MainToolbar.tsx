@@ -8,7 +8,7 @@ import { useAppStore } from '../store/appStore';
 import { CreatePanel } from './create/CreatePanel';
 import { AssemblyPanel } from './create/AssemblyPanel';
 import type { ObjectType, GeometryType, CreationForm } from '../../shared/types/creation';
-import { createInitialForm, validateForm, type ValidationResult } from '../../shared/types/creation';
+import { createInitialForm, validateForm, totalPolylineLength, type ValidationResult } from '../../shared/types/creation';
 import { CATALOG_TYPES, GENRULE_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, LINEAR_TYPES, SURFACE_TYPES, PICKING_TYPES, DOMAIN_GROUPS, defaultParamsForDef, ensureCatalogLoaded, getCatalogSnapshot, resolveDef } from '../../shared/catalog';
 
 export type TransformMode = 'translate' | 'rotate' | 'scale' | null;
@@ -138,6 +138,21 @@ export function MainToolbar({
         ...(objectType === 'wall' && useBoundary
           ? { path: boundaryPoints }
           : (objectType !== 'wall' && useBoundary ? { boundary: boundaryPoints } : {})),
+      });
+    } else if (objectType === 'road' && boundaryPoints.length >= 2) {
+      // Road with picked alignment: server GenRuleRequest::Road accepts an
+      // N-point path. With >= 2 picks we always send alignment (kernel bridge
+      // task provides server support); straight 2-point paths degrade naturally.
+      const alignmentLength = totalPolylineLength(form.boundary_points);
+      obj = await api.genruleCreate({
+        genrule: 'road',
+        name,
+        alignment: boundaryPoints,
+        length: alignmentLength || length,
+        width: parseFloat(form.width) || 7,
+        thickness: parseFloat(form.thickness) || 0.3,
+        parent_id: parentId,
+        series_id: seriesId,
       });
     } else if (LINE_GENRULE_TYPES.has(objectType)) {
       obj = await api.genruleCreate({

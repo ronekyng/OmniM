@@ -756,6 +756,39 @@ pub fn build_guide_line(alignment: &[Point3D], diameter: f64, segments: usize) -
     generate(&input)
 }
 
+/// B3 沿拾取折线生成道路：alignment 中每相邻两点生成一段道路网格，
+/// 按段方向绕 Z 旋转并平移到段起点（z 平移取段起点 z），随后合并。
+///
+/// - alignment: 拾取的 N 点折线（3D，米）；少于 2 点返回空网格
+/// - width: 路面宽度
+/// - thickness: 路面总厚（内部还是按 70% 路基 + 30% 面层拆分）
+/// - segments: 每段的采样分段数
+pub fn build_road_alignment(alignment: &[[f64; 3]], width: f64, thickness: f64, segments: usize) -> MeshGeometry {
+    let meshes: Vec<MeshGeometry> = alignment.windows(2).map(|w| {
+        let (a, b) = (w[0], w[1]);
+        let dx = b[0] - a[0];
+        let dy = b[1] - a[1];
+        let len = (dx * dx + dy * dy).sqrt();
+        if len < 1e-9 {
+            return crate::geometry::merge_meshes(&[]);
+        }
+        let seg = build_road(len, width, thickness * 0.7, thickness * 0.3, segments);
+        // 段方向角绕 Z 旋转（不取半角：build_road 的网格从原点沿 +X 延伸 0..len），
+        // 再平移到段起点，z 取段起点拾取高程
+        let angle = dy.atan2(dx);
+        let half = angle / 2.0;
+        let (sin_h, cos_h) = half.sin_cos();
+        let t = c::Transform {
+            translation: Some(Point3D { x: a[0], y: a[1], z: a[2] }),
+            rotation: Some(c::Rotation { x: 0.0, y: 0.0, z: sin_h, w: cos_h }),
+            scale: None,
+            matrix: Vec::new(),
+        };
+        crate::geometry::transform_mesh(&seg, &t)
+    }).collect();
+    crate::geometry::merge_meshes(&meshes)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -953,5 +986,51 @@ mod tests {
         let has_near = |x: f64, y: f64| mesh.vertices.iter().any(|v| (v.x - x).abs() < 0.3 && (v.y - y).abs() < 0.3);
         assert!(has_near(5.0, 0.0), "corner point (5,0) area should have vertices");
         assert!(has_near(10.0, 5.0), "end point (10,5) area should have vertices");
+    }
+
+    #[test]
+    fn test_road_alignment_3_segments() {
+        // B3：3 段折线道路：(0,0)→(3,0)→(3,4)→(8,4)，总段长 3+4+5 = 12
+        let alignment: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [3.0, 4.0, 0.0], [8.0, 4.0, 0.0]];
+        let width = 1.0;
+        let mesh = build_road_alignment(&alignment, width, 0.3, 6);
+        assert!(!mesh.vertices.is_empty());
+
+        // bbox 覆盖所有拾取点的 xy（含宽度方向的半宽补偿）
+        let min_x = mesh.vertices.iter().map(|v| v.x).fold(f64::INFINITY, f64::min);
+        let max_x = mesh.vertices.iter().map(|v| v.x).fold(f64::NEG_INFINITY, f64::max);
+        let min_y = mesh.vertices.iter().map(|v| v.y).fold(f64::INFINITY, f64::min);
+        let max_y = mesh.vertices.iter().map(|v| v.y).fold(f64::NEG_INFINITY, f64::max);
+        assert!(min_x <= 0.0 + 1e-6 && max_x >= 8.0 - 1e-6, "bbox x [{}, {}] should span 0..8", min_x, max_x);
+        assert!(min_y <= 0.0 - width / 2.0 + 1e-6, "bbox y min should reach -width/2, got {}", min_y);
+        assert!(max_y >= 4.0 + width / 2.0 - 1e-6, "bbox y max should reach 4 + width/2, got {}", max_y);
+
+        // 折点 (3,0) 与 (3,4) 附近应有顶点（逐段生成，而非单一跨距长条）
+        let has_near = |x: f64, y: f64| mesh.vertices.iter().any(|v| (v.x - x).abs() < 0.55 && (v.y - y).abs() < 0.55);
+        assert!(has_near(3.0, 0.0), "corner (3,0) should be covered by per-segment meshes");
+        assert!(has_near(3.0, 4.0), "corner (3,4) should be covered by per-segment meshes");
+
+        // 每段按段角旋转：第二段沿 +Y 方向，其延长后的顶点分布应体现旋转
+        // （若恒等旋转，第二段会沿 +X 而非 +Y）
+        let verts_y_gap = mesh.vertices.iter().any(|v| v.y > 3.0 && v.y < 4.0 && (v.x - 3.0).abs() < 0.6);
+        assert!(verts_y_gap, "second segment should extend along +Y (rotated), not +X");
+
+        // 顶点数应等于逐直线段 hex 数之和（3 段均非退化 → 3 × build_road）
+        let single = build_road(3.0, width, 0.3 * 0.7, 0.3 * 0.3, 6);
+        assert!(mesh.vertices.len() >= 3 * single.vertices.len() - 8,
+            "alignment mesh should contain all per-segment rings: {} vs 3×{}",
+            mesh.vertices.len(), single.vertices.len());
+    }
+
+    #[test]
+    fn test_road_alignment_elevation_follows_picked_z() {
+        // 拾取点带高程：各段顶点 z 应位于对应段起点高程附近
+        let alignment: Vec<[f64; 3]> = vec![[0.0, 0.0, 5.0], [4.0, 0.0, 5.0], [4.0, 3.0, 7.0]];
+        let mesh = build_road_alignment(&alignment, 1.0, 0.3, 4);
+        let zs: Vec<f64> = mesh.vertices.iter().map(|v| v.z).collect();
+        let min_z = zs.iter().cloned().fold(f64::INFINITY, f64::min);
+        let max_z = zs.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        assert!(min_z > 4.0 - 0.3, "min z should reflect segment start elevations, got {}", min_z);
+        assert!(max_z < 7.0 + 0.3, "max z should reflect last segment start elevation, got {}", max_z);
     }
 }

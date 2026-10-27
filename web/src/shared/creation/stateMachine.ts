@@ -26,6 +26,7 @@ export type CreationAction =
   | { type: 'finishCreation' }
   | { type: 'failCreation'; error: string }
   | { type: 'cancelCreation' }
+  | { type: 'removeLastPoint' }
   | { type: 'resetToPicking' };
 
 function assertTransition(from: CreationPhase, action: string): void {
@@ -33,6 +34,7 @@ function assertTransition(from: CreationPhase, action: string): void {
     startPicking: ['idle'],
     collectPoint: ['picking'],
     completePicking: ['idle', 'picking'],
+    removeLastPoint: ['picking'],
     updateForm: ['picking', 'configuring'],
     submitCreation: ['picking', 'configuring'],
     finishCreation: ['creating'],
@@ -70,6 +72,13 @@ export function creationReducer(state: CreationState, action: CreationAction): C
     case 'completePicking': {
       assertTransition(state.phase, 'completePicking');
       return { ...state, phase: 'configuring', form: action.form, error: null };
+    }
+    case 'removeLastPoint': {
+      assertTransition(state.phase, 'removeLastPoint');
+      if (state.points.length === 0) return state;
+      const points = state.points.slice(0, -1);
+      const form = state.form ? applyPointsToForm(state.form, points) : null;
+      return { ...state, points, form };
     }
     case 'updateForm': {
       assertTransition(state.phase, 'updateForm');

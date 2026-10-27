@@ -121,8 +121,11 @@
 - **SeriesStore Manager**（`/series-manager`）：决策树编辑器、内置种子查看器、外部 `.omnimseries` 加载/保存、拖拽映射 ComponentDef、参数约束编辑器。
 - **UI 架构**：Zustand、React Query 数据层、PanelRegistry 可插拔面板、可调整布局、CSS Modules、`ThreeViewerContext`。
 
-### 已知缺口 🔀
-交互式 3D 创建仅对 `PICKING_TYPES` 支持 1–2 点点选。N 点多边形/折线点选（slab/roof/floor 边界、featureLine、contourLine 需要）**未实现**——见 [CODE_DEVIATIONS.md](CODE_DEVIATIONS.md) §3/§5。
+### 已知缺口 → 已解决 (2026-10-27)
+
+~~交互式 3D 创建仅对 `PICKING_TYPES` 支持 1–2 点点选。~~ 已被取代：N 点拾取链路已端到端实现——墙中心线的折线拾取（`path[]` → `build_layered_path`）、slab/roof/floor 的闭合多边形底面（`boundary[]` → `build_layered_slab_path`，回到首点或双击/回车闭合）、featureLine/contourLine 的 N 点对齐线（`line` genrule）。佐证：`web/src/app/components/ThreeViewer.tsx`、`Picking.ts`、`Markers.ts`、`crates/server/src/lib.rs`（`GenRuleRequest::Layered/Line`）。
+
+**残留项**（同日已修复，2026-10-27）：拾取点 z 标高现已保留（`base_z`）、roof 挤出模式生成真实剖面、道路消费拾取 `alignment`、段转角已 miter。剩余：bridge/tunnel 仍只用首末点（road 家族 `alignment` 后续接入或随 Phase 8 corridor 工作）。
 
 （早期版本在此列出“应用前命令预览”；该 AI 命令预览/接受工作流**未交付**，仍属 Phase 9 事项，且今天也只是部分存在。）
 

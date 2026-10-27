@@ -11,7 +11,8 @@ import { useAppStore } from '../store/appStore';
 import type { ObjectType, Point3D, CreationForm } from '../../shared/types/creation';
 import { createInitialForm, applyPointsToForm, pickModeForForm, defaultPickModeForType } from '../../shared/types/creation';
 import { LAYERED_TYPES } from '../../shared/catalog';
-import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayerPreview, addPolygonFill, addPlaceCursor } from './viewer/three/Markers';
+import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayeredWallPreview, addPolygonFill, addPlaceCursor } from './viewer/three/Markers';
+import { polygonPreviewError } from '../../shared/creation/polyline';
 import { pickGroundPoint, pickingHint, requiredClicks } from './viewer/three/Picking';
 import { SnapIndicator } from './viewer/three/SnapIndicator';
 import { snapPoint, snapToGrid, type SnapSettings } from './viewer/three/Snapping';
@@ -109,6 +110,9 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   const measurePointsRef = useRef<THREE.Vector3[]>([]);
   const measureModeRef = useRef<MeasureMode>('none');
   const pickingMarkerGroupRef = useRef<THREE.Group>(new THREE.Group());
+  // Per-frame hover preview (dashed cursor line, whole-path layered preview,
+  // polygon loop + fill incl. cursor). Cleared/rebuilt on every pointer move.
+  const hoverGroupRef = useRef<THREE.Group | null>(null);
   const previewLineRef = useRef<THREE.Line | null>(null);
   const layerPreviewRef = useRef<THREE.Group | null>(null);
   const creationPhaseRef = useRef<string>('idle');
@@ -150,14 +154,36 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       clearMarkerGroup(pickingMarkerGroupRef.current);
       removePreviewLine(previewLineRef, pickingMarkerGroupRef);
       layerPreviewRef.current = null;
+      if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
     }
     if (creationPhase === 'idle') {
       clearMarkerGroup(pickingMarkerGroupRef.current);
       removePreviewLine(previewLineRef, pickingMarkerGroupRef);
       layerPreviewRef.current = null;
+      if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
     }
     prevCreationPhaseRef.current = creationPhase;
   }, [creationPhase]);
+
+  // Confirmed picking visuals in pickingMarkerGroup: point markers always;
+  // once the phase leaves 'picking' (configuring/error), also the whole
+  // confirmed polyline/polygon (chain + polygon fill + closing segment) so the
+  // shape stays visible while the user configures parameters.
+  useEffect(() => {
+    const g = pickingMarkerGroupRef.current;
+    clearMarkerGroup(g);
+    previewLineRef.current = null;
+    layerPreviewRef.current = null;
+    for (const p of creationPoints) addPointMarker(g, p);
+    if (creationPhase !== 'picking' && creationPoints.length > 1) {
+      addPreviewLine(g, creationPoints);
+      const mode = creationForm ? pickModeForForm(creationForm) : null;
+      if (mode?.mode === 'polygon' && creationPoints.length >= 3) {
+        addPreviewLine(g, [creationPoints[creationPoints.length - 1], creationPoints[0]], 0xffd34d);
+        addPolygonFill(g, creationPoints);
+      }
+    }
+  }, [creationPoints, creationPhase, creationForm]);
 
   // When enough points are collected during picking, the preview markers
   // are drawn by the click handler. The user stays in 'picking' until they
@@ -244,6 +270,9 @@ focusObject: (id) => {
     },
     clearPickingMarkers: () => {
       clearMarkerGroup(pickingMarkerGroupRef.current);
+      if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
+      previewLineRef.current = null;
+      layerPreviewRef.current = null;
     },
     finishMeasurement: () => {
       const s = stateRef.current;
@@ -469,6 +498,13 @@ focusObject: (id) => {
     const pickingMarkerGroup = new THREE.Group();
     scene.add(pickingMarkerGroup);
     pickingMarkerGroupRef.current = pickingMarkerGroup;
+    // Already-confirmed picking visuals live here (point markers; confirmed
+    // path/fill once the phase leaves 'picking'). The per-frame hover preview
+    // (dashed cursor line, whole-path layered preview, polygon loop + fill)
+    // lives in hoverGroupRef and is rebuilt on every pointer move.
+    const hoverGroup = new THREE.Group();
+    scene.add(hoverGroup);
+    hoverGroupRef.current = hoverGroup;
     const snapIndicator = new SnapIndicator(scene);
     const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator };
     stateRef.current = viewer;
@@ -634,12 +670,10 @@ focusObject: (id) => {
       // ── Interactive 3D point-picking mode (with snap) ──
       if (creationPhaseRef.current === 'picking') {
         event.stopPropagation();
+        // Drop the stale hover preview; the next pointer-move rebuilds it.
         removePreviewLine(previewLineRef, pickingMarkerGroupRef);
-        if (layerPreviewRef.current) {
-          clearMarkerGroup(layerPreviewRef.current);
-          pickingMarkerGroupRef.current.remove(layerPreviewRef.current);
-          layerPreviewRef.current = null;
-        }
+        if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
+        layerPreviewRef.current = null;
         const pt = pickGroundPoint(
           { camera: viewer.camera, renderer: viewer.renderer },
           event.clientX, event.clientY
@@ -663,34 +697,8 @@ focusObject: (id) => {
         }
         const updated = [...current, resolved];
         creationDispatchRef.current({ type: 'collectPoint', point: resolved });
-
-        // Visual marker + mode-aware preview
-        addPointMarker(pickingMarkerGroupRef.current, resolved);
-        if (updated.length > 1) {
-          if (mode.mode === 'polygon') {
-            addPreviewLine(pickingMarkerGroupRef.current, [...updated, updated[0]]);
-            if (updated.length >= 3) addPolygonFill(pickingMarkerGroupRef.current, updated);
-          } else if (mode.mode === 'place') {
-            addPlaceCursor(pickingMarkerGroupRef.current, resolved);
-          } else {
-            addPreviewLine(pickingMarkerGroupRef.current, updated);
-          }
-          if (LAYERED_TYPES.has(form.objectType) && mode.mode !== 'polygon') {
-            const layers = form.layers;
-            if (layers && layers.length > 0) {
-              const group = addLayerPreview(
-                pickingMarkerGroupRef.current,
-                updated[updated.length - 2],
-                resolved,
-                layers,
-                parseFloat(form.height || '3') || 3,
-              );
-              layerPreviewRef.current = group;
-            }
-          }
-        } else if (mode.mode === 'place') {
-          addPlaceCursor(pickingMarkerGroupRef.current, resolved);
-        }
+        // Visuals are owned by the pickedGroup sync effect and the per-frame
+        // hover preview — no drawing here (single source of truth = creationPoints).
 
         // Auto-completion for segment / place / closed polygon (§1.3).
         if (
@@ -888,46 +896,52 @@ focusObject: (id) => {
         viewer.snapIndicator.hide();
       }
 
-      // ── Live dashed preview line while picking (from last point to cursor) ──
+      // ── Live hover preview while picking (rebuilt every move) ──
       if (creationPhaseRef.current === 'picking') {
         const currentPoints = creationPointsRef.current;
-        removePreviewLine(previewLineRef, pickingMarkerGroupRef);
-        // Clear previous layer-stack preview.
-        if (layerPreviewRef.current) {
-          clearMarkerGroup(layerPreviewRef.current);
-          pickingMarkerGroupRef.current.remove(layerPreviewRef.current);
-          layerPreviewRef.current = null;
-        }
+        // The hover preview is drawn into its own group and fully rebuilt on
+        // each move; the confirmed markers/chain live in pickingMarkerGroup.
+        const hoverGroup = hoverGroupRef.current;
+        if (hoverGroup) clearMarkerGroup(hoverGroup);
         const form = creationFormRef.current;
         const mode = form ? pickModeForForm(form) : defaultPickModeForType(creationObjectTypeRef.current ?? 'wall');
-        if (mode.mode !== 'place' || currentPoints.length === 0) {
+        if (hoverGroup && (mode.mode !== 'place' || currentPoints.length === 0)) {
           const pickPt = pickGroundPoint(
             { camera: viewer.camera, renderer: viewer.renderer },
             event.clientX, event.clientY
           );
           if (pickPt) {
-            // For layered surface types, preview the full layer stack as colored boxes.
+            // Resolve the hover endpoint exactly like a click would (snap to
+            // grid/geometry), so the preview segment always matches the
+            // segment that will be committed on click.
+            const vecPt = new THREE.Vector3(pickPt.x, pickPt.y, pickPt.z);
+            const snapResult = snapPoint(vecPt, viewer.meshes, snapSettingsRef.current);
+            const endPt = snapResult.snapped
+              ? { x: snapResult.point.x, y: snapResult.point.y, z: snapResult.point.z }
+              : { x: vecPt.x, y: vecPt.y, z: vecPt.z };
+
             const objType = creationObjectTypeRef.current;
+            const previewPts = [...currentPoints, endPt];
+            // Polygon preview turns red when the footprint is invalid
+            // (self-intersecting / degenerate) — the same rules the server
+            // enforces with a 400 on submit.
+            const polygonIssue = mode.mode === 'polygon' && previewPts.length >= 3
+              ? polygonPreviewError(previewPts)
+              : null;
+            const previewColor = polygonIssue ? 0xff4040 : undefined;
             if (mode.mode !== 'polygon' && objType && LAYERED_TYPES.has(objType) && currentPoints.length >= 1
-              && form?.layers && form.layers.length > 0) {
-              const last = currentPoints[currentPoints.length - 1];
-              const group = addLayerPreview(
-                pickingMarkerGroupRef.current,
-                last,
-                pickPt,
-                form.layers,
-                parseFloat(form.height || '3') || 3,
-              );
-              layerPreviewRef.current = group;
+              && form?.layers && form.layers.length > 0 && previewPts.length <= 33) {
+              // Whole-path layered ghost (per-segment boxes + mitered bends,
+              // same mm→m scale as the server) — replaces "last segment only".
+              addLayeredWallPreview(hoverGroup, previewPts, form.layers, parseFloat(form.height || '3') || 3);
             } else if (mode.mode === 'polygon' && currentPoints.length >= 1) {
-              const closed = [...currentPoints, pickPt];
-              addPreviewLine(pickingMarkerGroupRef.current, closed);
-              if (closed.length >= 3) addPolygonFill(pickingMarkerGroupRef.current, closed);
+              addPreviewLine(hoverGroup, previewPts, previewColor);
+              if (previewPts.length >= 3) addPolygonFill(hoverGroup, previewPts, previewColor);
             } else if (mode.mode === 'place' && currentPoints.length === 0) {
-              addPlaceCursor(pickingMarkerGroupRef.current, pickPt);
+              addPlaceCursor(hoverGroup, endPt);
             } else if (currentPoints.length >= 1) {
-              const dashed = createDashedPreviewLine(currentPoints[currentPoints.length - 1], pickPt);
-              pickingMarkerGroupRef.current.add(dashed);
+              const dashed = createDashedPreviewLine(currentPoints[currentPoints.length - 1], endPt);
+              hoverGroup.add(dashed);
               previewLineRef.current = dashed;
             }
           }

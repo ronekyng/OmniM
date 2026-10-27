@@ -37,7 +37,7 @@ export function addPreviewLine(group: THREE.Group, points: Point3D[], color = 0x
 
 /** Add a translucent filled polygon (ground-plane fan) preview for slab/floor/
  *  roof footprint picking. Fan tessellation matches a single-origin polygon. */
-export function addPolygonFill(group: THREE.Group, points: Point3D[], color = 0x44ff88): void {
+export function addPolygonFill(group: THREE.Group, points: Point3D[], color: number | undefined = 0x44ff88): void {
   if (points.length < 3) return;
   const pts = points.map((p) => new THREE.Vector3(p.x, p.y, p.z));
   const positions: number[] = [];
@@ -103,46 +103,119 @@ export function createDashedPreviewLine(
   return line;
 }
 
-/** Build a per-layer extruded box preview between two picked ground points.
- *  Each layer is a distinct colored box offset along the wall normal so the
- *  section structure is visible before creation (dev plan §2.3). */
+const PREVIEW_THICKNESS_SCALE = 0.001; // mm → metres (matches server Layered genrule)
+
+/** Per-vertex bend extension (miter allowance) for a polyline preview.
+ *  Returns, for each interior vertex i, the amount each adjacent segment end
+ *  should be extended along its own direction so layer planes meet plane-to
+ *  -plane at the bend (server kernel uses e = (t/2)·tan(φ/2) per layer).
+ *  `thickness` is in world units (metres). Interior vertices only; endpoints
+ *  get 0. Sharp bends are capped to keep extents from exploding (matches the
+ *  kernel cap: min(0.45·shorter adjacent edge, 2·t)). */
+export function bendExtensions(points: { x: number; y: number }[], thickness: number): number[] {
+  const n = points.length;
+  const ext = new Array(n).fill(0);
+  for (let i = 1; i + 1 < n; i++) {
+    const a = Math.atan2(points[i].y - points[i - 1].y, points[i].x - points[i - 1].x);
+    const b = Math.atan2(points[i + 1].y - points[i].y, points[i + 1].x - points[i].x);
+    let turn = Math.abs(b - a) % Math.PI;
+    if (turn > Math.PI / 2) turn = Math.PI - turn;
+    const e = (thickness / 2) * Math.tan(turn / 2);
+    const lenPrev = Math.hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y);
+    const lenNext = Math.hypot(points[i + 1].x - points[i].x, points[i + 1].y - points[i].y);
+    ext[i] = Math.min(e, 0.45 * Math.min(lenPrev, lenNext), 2 * thickness);
+  }
+  return ext;
+}
+
+function layerPreviewMaterial(color: THREE.Color): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({
+    color,
+    transparent: true,
+    opacity: 0.55,
+    depthWrite: false,
+    emissive: color,
+    emissiveIntensity: 0.25,
+  });
+}
+
+/** Build a single layer box segment along `from → to`, extended at its ends by
+ *  `extStart`/`extEnd` (bend miter allowance along the segment direction). */
+function addLayerSegment(
+  group: THREE.Group,
+  from: Point3D,
+  to: Point3D,
+  thicknessWorld: number,
+  offsetCenter: number,
+  height: number,
+  extStart: number,
+  extEnd: number,
+  color: THREE.Color,
+): void {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  if (length < 1e-4) return;
+  const angle = Math.atan2(dy, dx);
+  const run = length + extStart + extEnd;
+  const geo = new THREE.BoxGeometry(run, thicknessWorld, height);
+  const mat = layerPreviewMaterial(color);
+  const mesh = new THREE.Mesh(geo, mat);
+  // Slide the centroid along the run by (extEnd - extStart) / 2 and offset by
+  // `offsetCenter` along the outward normal (nx, ny) = (-sin, cos).
+  const nx = -Math.sin(angle);
+  const ny = Math.cos(angle);
+  const slide = (extEnd - extStart) / 2;
+  const cx = (from.x + to.x) / 2 + nx * offsetCenter + Math.cos(angle) * slide;
+  const cy = (from.y + to.y) / 2 + ny * offsetCenter + Math.sin(angle) * slide;
+  mesh.position.set(cx, cy, height / 2);
+  mesh.rotation.z = angle;
+  group.add(mesh);
+}
+
+/** Build a per-layer extruded preview for a whole polyline path (multi-point
+ *  wall like the server's `build_layered_path`, incl. bend miter). Points are
+ *  ground-plane positions in metres; layer thickness in `layers` is mm and is
+ *  scaled by 0.001 — the SAME conversion the server applies, so the preview
+ *  matches the created geometry. Renders with a soft standard material
+ *  (lit, translucent, no depth-write) for a clean "ghost" look. */
+export function addLayeredWallPreview(
+  group: THREE.Group,
+  points: Point3D[],
+  layers: LayerDefInput[],
+  height = 3,
+): THREE.Group | null {
+  if (points.length < 2) return null;
+  const g = new THREE.Group();
+  const layerThk = layers.map((l) => Math.max((l.thickness || 0) * PREVIEW_THICKNESS_SCALE, 0));
+  const total = layerThk.reduce((a, b) => a + b, 0);
+  if (total <= 0) return null;
+  const ext = bendExtensions(points, total);
+  let offset = -total / 2;
+  for (let li = 0; li < layerThk.length; li++) {
+    const t = layerThk[li];
+    const color = layers[li].color ? new THREE.Color(layers[li].color as string) : new THREE.Color(0x999999);
+    for (let i = 0; i + 1 < points.length; i++) {
+      // Extension of this layer at each bend uses the per-layer thickness:
+      // e = (t/2)·tan(φ/2), scaled from the total-thickness vertex allowance.
+      const startExt = i === 0 ? 0 : ext[i] * (t / total);
+      const endExt = i + 2 === points.length ? 0 : ext[i + 1] * (t / total);
+      addLayerSegment(g, points[i], points[i + 1], t, offset + t / 2, height, startExt, endExt, color);
+    }
+    offset += t;
+  }
+  group.add(g);
+  return g;
+}
+
+/** Backward-compatible single-segment preview built on the shared layered
+ *  builder (correct mm→m scale, lit material, optional end extension). */
 export function addLayerPreview(
   group: THREE.Group,
   from: Point3D,
   to: Point3D,
   layers: LayerDefInput[],
   height = 3,
-): THREE.Group {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const length = Math.max(Math.sqrt(dx * dx + dy * dy), 0.1);
-  const angle = Math.atan2(dy, dx);
-  const cos = Math.cos(angle);
-  const sin = Math.sin(angle);
-  const cx = (from.x + to.x) / 2;
-  const cy = (from.y + to.y) / 2;
-
-  const total = layers.reduce((s, l) => s + (l.thickness || 0), 0) || 1;
-  const unit = 0.02; // scale factor mm → world units for preview (20mm per unit)
-  const half = (total * unit) / 2;
-  let offset = -half;
-
-  const merged = new THREE.Group();
-  for (const layer of layers) {
-    const t = (layer.thickness || 0) * unit;
-    const geo = new THREE.BoxGeometry(length, t, height);
-    const color = layer.color ? new THREE.Color(layer.color) : new THREE.Color(0x999999);
-    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, side: THREE.DoubleSide });
-    const mesh = new THREE.Mesh(geo, mat);
-    const localY = offset + t / 2;
-    // Rotate so the layer stack is perpendicular to the wall run.
-    const worldX = cx + localY * sin;
-    const worldY = cy - localY * cos;
-    mesh.position.set(worldX, worldY, height / 2);
-    mesh.rotation.z = -angle;
-    merged.add(mesh);
-    offset += t;
-  }
-  group.add(merged);
-  return merged;
+): THREE.Group | null {
+  return addLayeredWallPreview(group, [from, to], layers, height);
 }

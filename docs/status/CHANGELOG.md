@@ -24,6 +24,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - New guides: Getting Started, Building, Architecture Map, Testing.
 - RFC-0001: Omcom Text DSL (Draft) — captures the former "text DSL" vision, now correctly framed as unimplemented.
 - End-to-end CHANGELOG (this file).
+- N-point picking geometry: preserved picked elevation in layered wall/slab generation (`base_z`), roof extrusion-profile builder, road polyline alignment (`Road.alignment`), bend-corner mitering, boundary validation (area/self-intersection/collinearity) with 400 errors, collinear-point merging; +9 kernel tests.
+- Web interaction polish: Backspace removes the last picked point during picking, count-aware four-mode picking hints, polygon loop-close highlight segment; road creation submits picked alignment; +6 state-machine tests.
+- Picking preview overhaul: whole-path layered wall ghost preview (per-segment boxes + bend miter matching the server kernel, correct mm→m scale — fixes a 20× thickness error), hover endpoint resolved through the same snap pipeline as clicks, lit translucent materials with no depth-write, invalid polygon footprints (self-intersecting/degenerate) preview in red; preview lifecycle split into confirmed markers/chain vs per-frame hover groups; +10 preview-geometry tests.
 
 ### Changed
 - `PLATFORM_ARCH.md` rewritten from a cloud-first aspirational vision to an honest description of the current implementation (REST + JSON-file persistence, no WebSocket/DB/WASM/mobile).

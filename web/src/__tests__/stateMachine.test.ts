@@ -367,4 +367,85 @@ describe('creationReducer', () => {
       expect(state.phase).toBe('idle');
     });
   });
+
+  describe('multi-point picking', () => {
+    it('polyline: preserves point order and fills startX/endX through completePicking', () => {
+      let state = creationReducer(initialCreationState, { type: 'startPicking', objectType: 'wall' });
+      const pts: Point3D[] = [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 0 },
+        { x: 4, y: 3, z: 0 },
+        { x: 8, y: 3, z: 0 },
+      ];
+      for (const p of pts) state = creationReducer(state, { type: 'collectPoint', point: p });
+      expect(state.points).toEqual(pts);
+      expect(state.form?.boundary_points).toEqual(pts);
+      expect(state.form?.startX).toBe('0.000');
+      expect(state.form?.endX).toBe('8.000');
+      // length = 4 + 3 + 4 = 11
+      expect(state.form?.length).toBe('11.000');
+
+      const completeForm = state.form;
+      state = creationReducer(state, { type: 'completePicking', form: completeForm! });
+      expect(state.phase).toBe('configuring');
+      // completePicking passes the caller's form, so boundary order is preserved.
+      expect(state.form?.boundary_points).toEqual(pts);
+    });
+
+    it('polygon: 3 collected points mark is_closed (close detection lives in ThreeViewer, reducer gets the final shape)', () => {
+      let state = creationReducer(initialCreationState, { type: 'startPicking', objectType: 'slab' });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 0, y: 0, z: 0 } });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 5, y: 0, z: 0 } });
+      expect(state.form?.is_closed).toBe(false);
+      // Third pick: ThreeViewer's closeToPoint snaps the click back onto the
+      // first point, so the reducer receives a final point equal to the first.
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 0, y: 0, z: 0 } });
+      expect(state.form?.is_closed).toBe(true);
+      expect(state.form?.boundary_points.length).toBe(3);
+    });
+
+    it('segment: middle points reduce to the first/last span', () => {
+      let state = creationReducer(initialCreationState, { type: 'startPicking', objectType: 'beam' });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 1, y: 1, z: 0 } });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 3, y: 9, z: 0 } });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 6, y: 1, z: 0 } });
+      expect(state.points.length).toBe(3);
+      // applyPointsToForm keeps the full boundary but forms are span-based.
+      expect(state.form?.boundary_points.length).toBe(3);
+      expect(state.form?.startX).toBe('1.000');
+      expect(state.form?.endX).toBe('6.000');
+      // Length is the straight span distance, not the wriggle.
+      expect(state.form?.length).toBe('5.000');
+    });
+
+    it('backspace: removeLastPoint drops the last point and re-updates the form', () => {
+      let state = creationReducer(initialCreationState, { type: 'startPicking', objectType: 'wall' });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 0, y: 0, z: 0 } });
+      state = creationReducer(state, { type: 'collectPoint', point: { x: 5, y: 0, z: 0 } });
+      expect(state.points.length).toBe(2);
+      expect(state.form?.boundary_points.length).toBe(2);
+
+      state = creationReducer(state, { type: 'removeLastPoint' });
+      expect(state.phase).toBe('picking');
+      expect(state.points).toEqual([{ x: 0, y: 0, z: 0 }]);
+      expect(state.form?.boundary_points).toEqual([{ x: 0, y: 0, z: 0 }]);
+      // With a single point left, polyline start/end no longer describe a span.
+      expect(state.form?.posX).toBe('0.000');
+    });
+
+    it('backspace: removeLastPoint on empty picking state is a no-op', () => {
+      let state = creationReducer(initialCreationState, { type: 'startPicking', objectType: 'wall' });
+      const next = creationReducer(state, { type: 'removeLastPoint' });
+      expect(next).toBe(state);
+      expect(next.points).toEqual([]);
+    });
+
+    it('backspace: removeLastPoint is illegal outside picking', () => {
+      expectIllegal(initialCreationState, { type: 'removeLastPoint' });
+      expectIllegal(
+        creationReducer(initialCreationState, { type: 'completePicking', form: mockForm }),
+        { type: 'removeLastPoint' },
+      );
+    });
+  });
 });

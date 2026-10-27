@@ -63,7 +63,8 @@ Vite 开发服务器监听 **http://localhost:5173**，并把 `/api/*` 代理到
     -d '{"command": "UNDO"}'
   ```
 
-- **试用 AI 聊天（免密钥 mock 供应商）。** AMIR 是 AI 指令层（`crates/amir`）。不做任何配置时，它会运行在**mock 供应商**上，无需 API key——打开 AI 聊天面板（`web/src/app/components/AiChat.tsx`），输入类似 *"create a wall named W1"* 的内容。真实使用 OpenAI / Anthropic 需要环境变量密钥——见 [BUILDING.md](BUILDING.md)。
+- **试用 AI 聊天（免密钥 mock 供应商）。** AMIR 是 AI 指令层（`crates/amir`）。不做任何配置时，它会运行在**mock 供应商**上，无需 API key——打开 AI 聊天面板（`web/src/app/components/AiChat.tsx`），输入类似 *"create a wall named W1"* 的内容。真实使用 OpenAI / Anthropic 需要环境变量密钥——见 [BUILDING.md](BUILDING.zh-CN.md)。
+- **试用多点拾取（N 点创建）。** 选中工具后：画一段 **L 形墙**——点 3 个转角，回车 → 带转角 miter 的分层路径；画一块 **楼板**——点 3 个以上多边形角点，回到首点（或双击）闭合 → 分层底面；画一条 **特征线**——点 N 个点 → 沿折线的细导管。Backspace 撤销上一点，Escape 取消。视口上方的提示会跟着显示你的模式与已选点数。
 - **导入 IFC 文件。** `fixtures/ifc/` 目录下有几个 `.ifc` 测试文件：`simple.ifc`、`part.ifc`、`part40.ifc`、`test.ifc`、`test_building.ifc`。用 UI 的导入功能，或者：
 
   ```bash

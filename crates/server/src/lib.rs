@@ -987,7 +987,11 @@ enum GenRuleRequest {
     #[serde(rename = "slab")]
     Slab { name: String, length: f64, width: f64, structural_thickness: f64, finish_thickness: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
     #[serde(rename = "road")]
-    Road { name: String, length: f64, width: f64, thickness: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
+    /// Road (Road): when only `length` is given a straight road is generated;
+    /// when the picked `alignment` ([x,y,z] N-point broken polyline, serde default empty,
+    /// swept one by one per segment with length ≥ 2) is present, a segmented road mesh is generated along the broken
+    /// polyline. The frontend convention: `path` is only used by the wall category (layered wall), the road uses `alignment`.
+    Road { name: String, length: f64, width: f64, thickness: f64, #[serde(default)] alignment: Vec<[f64; 3]>, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
     #[serde(rename = "pipe")]
     Pipe { name: String, length: f64, radius: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
     #[serde(rename = "door")]
@@ -1165,10 +1169,18 @@ async fn genrule_create(
             if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
             obj.clone()
         }
-        GenRuleRequest::Road { name, length, width, thickness, .. } => {
-            let mesh = omnim_model::gen_rule::linear_component::build_road(
-                *length, *width, *thickness * 0.7, *thickness * 0.3, 30,
-            );
+        GenRuleRequest::Road { name, length, width, thickness, alignment, .. } => {
+            // B3：拾取折线（alignment ≥ 2 点）→ 逐段道路网格（绕段角旋转、平移到段起点）；
+            // 否则退化为旧的单段直路
+            let mesh = if alignment.len() >= 2 {
+                omnim_model::gen_rule::linear_component::build_road_alignment(
+                    alignment, *width, *thickness, 30,
+                )
+            } else {
+                omnim_model::gen_rule::linear_component::build_road(
+                    *length, *width, *thickness * 0.7, *thickness * 0.3, 30,
+                )
+            };
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             let id = p.create_object(omnim_core::ObjectType::Road, name).id.clone();
             let obj = p.objects.get_mut(&id).expect("genrule object was just created");
@@ -1237,7 +1249,7 @@ async fn genrule_create(
         }
         GenRuleRequest::Layered { name, mode, length, width, height, layers, path, boundary, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
             use omnim_core::Point2D;
-            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_path, build_layered_slab_path, LayerDef as MLayerDef};
+            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_path_elevated, build_layered_slab_path_elevated, build_layered_roof_profile, merge_collinear, validate_boundary, LayerDef as MLayerDef};
             if layers.is_empty() {
                 return Err((StatusCode::BAD_REQUEST, "layered genrule requires at least one layer".into()));
             }
@@ -1249,19 +1261,51 @@ async fn genrule_create(
                 _ => omnim_core::ObjectType::Wall,
             };
             let to_p2 = |p: &[f64; 3]| Point2D { x: p[0], y: p[1] };
+            let mut skip_end_transform = false;
             let mut mesh = if mode.as_str() == "wall" {
                 if path.len() >= 2 {
-                    build_layered_path(&path.iter().map(to_p2).collect::<Vec<_>>(), false, *height, &layer_defs)
+                    // C2：墙体路径按 ≥ 2 个互异点校验（C3 先合并共线/重复点）
+                    let merged = merge_collinear(&path.iter().map(to_p2).collect::<Vec<_>>());
+                    if merged.len() < 2 {
+                        return Err((StatusCode::BAD_REQUEST, "wall path requires at least 2 distinct points".into()));
+                    }
+                    // B1：不再丢弃拾取点的 z。约定（见 docs/reference/API.md GenRule）：
+                    // - 所有拾取点 z 相等 → 该公共 z 作为基准高程，几何体落于拾取高程；
+                    // - z 各不相同（斜坡路径）→ 简化方案：取首点 z 为基准高程，其余点的
+                    //   高程差异被忽略（当前生成器为纯平面拉伸，不支持逐点放坡）。
+                    // 拾取点坐标是绝对坐标（含 z），因此构建后跳过 start/end 长条
+                    // 变换，避免对整段路径再做空移/回折。
+                    let base_z = path[0][2];
+                    let _ = path.iter().all(|p| (p[2] - base_z).abs() < 1e-6); // 斜坡差异被忽略，仅取首点
+                    skip_end_transform = true;
+                    build_layered_path_elevated(&merged, false, *height, base_z, &layer_defs)
                 } else {
                     build_layered_wall(*length, *height, &layer_defs)
                 }
             } else if boundary.len() >= 3 {
                 // Closed footprint: lift each layer along +Z over the boundary.
-                build_layered_slab_path(&boundary.iter().map(to_p2).collect::<Vec<_>>(), &layer_defs)
+                // C2：先校验轮廓（无效 → 400），再 C3 合并共线点
+                let merged = merge_collinear(&boundary.iter().map(to_p2).collect::<Vec<_>>());
+                validate_boundary(&merged)
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                // B1：slab/roof/floor footprint 以第一个轮廓点的高程为基准 z
+                let base_z = boundary[0][2];
+                skip_end_transform = true;
+                build_layered_slab_path_elevated(&merged, &layer_defs, base_z)
+            } else if mode.as_str() == "roof" && path.len() == 2 && (path[0][0] != path[1][0] || path[0][1] != path[1][1]) {
+                // B2：两点轮廓屋面（profile roof）——start→end 为跨度方向，
+                // width 为垂直跨度延伸宽度（width ≤ 0 时回落 1.0）。
+                // 高程处理与 B1 相同：取首点 z 为基准高程；几何体构建于
+                // 拾取坐标（含旋转/平移），因此跳过 start/end 长条变换。
+                let w = if *width <= 0.0 { 1.0 } else { *width };
+                skip_end_transform = true;
+                build_layered_roof_profile(
+                    [path[0][0], path[0][1]], [path[1][0], path[1][1]], w, &layer_defs, path[0][2],
+                )
             } else {
                 build_layered_slab(*length, *width, &layer_defs)
             };
-            if *end_x != *start_x || *end_y != *start_y || *end_z != *start_z {
+            if !skip_end_transform && (*end_x != *start_x || *end_y != *start_y || *end_z != *start_z) {
                 let dx = *end_x - *start_x;
                 let dy = *end_y - *start_y;
                 let angle = dy.atan2(dx);

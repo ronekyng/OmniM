@@ -85,6 +85,12 @@ export function App() {
           break;
         case 'delete':
         case 'backspace':
+          // While picking, backspace is an undo of the last picked point,
+          // not a delete of scene objects.
+          if (event.key.toLowerCase() === 'backspace' && creationPhase === 'picking') {
+            creationDispatch({ type: 'removeLastPoint' });
+            break;
+          }
           void deleteSelected().catch((err) => toast.error(err instanceof Error ? err.message : String(err)));
           break;
         case 'escape':
@@ -107,7 +113,7 @@ export function App() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedIds, transformSpace, creationPhase]);
+  }, [selectedIds, transformSpace, creationPhase, creationPoints, creationForm]);
 
   const transformRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

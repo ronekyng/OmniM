@@ -64,6 +64,7 @@ Once the app loads, try these in any order:
   ```
 
 - **Try the AI chat (keyless mock provider).** AMIR is the AI-instruction layer (`crates/amir`). Without any configuration, it runs with a **mock provider** that needs no API key — open the AI chat panel (`web/src/app/components/AiChat.tsx`) and type something like *"create a wall named W1"*. Real LLM usage (OpenAI / Anthropic) requires env keys — see [BUILDING.md](BUILDING.md).
+- **Try multi-point picking (N-point creation).** Pick a tool, then: an **L-shaped wall** — click 3 corners, Enter → layered path with mitered corners; a **slab** — click 3+ polygon corners and return to the first point (or double-click) to close → layered footprint; a **feature line** — click N points → polyline guide tube. Backspace removes the last picked point, Escape cancels. The echo hint above the viewport tracks your mode and point count.
 - **Import an IFC file.** A few `.ifc` fixtures live under `fixtures/ifc/`: `simple.ifc`, `part.ifc`, `part40.ifc`, `test.ifc`, `test_building.ifc`. Use the UI's import action, or:
 
   ```bash
