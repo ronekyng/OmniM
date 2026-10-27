@@ -1,0 +1,585 @@
+syntax = "proto3";
+
+package omnim;
+
+// === Common Types ===
+
+message Timestamp {
+  int64 seconds = 1;
+  int32 nanos = 2;
+}
+
+// === Common Geometry Types ===
+
+message Point2D {
+  double x = 1;
+  double y = 2;
+}
+
+message Point3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Vector3D {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message Rotation {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  double w = 4;
+}
+
+message Transform {
+  repeated double matrix = 1;
+  Point3D translation = 2;
+  Rotation rotation = 3;
+  Vector3D scale = 4;
+}
+
+message BoundingBox {
+  Point3D min = 1;
+  Point3D max = 2;
+}
+
+message Color {
+  float r = 1;
+  float g = 2;
+  float b = 3;
+  float a = 4;
+}
+
+// === Object Types ===
+
+enum ObjectType {
+  OBJECT_TYPE_UNSPECIFIED = 0;
+  OBJECT_TYPE_SITE = 1;
+  OBJECT_TYPE_BUILDING = 2;
+  OBJECT_TYPE_BUILDING_STOREY = 3;
+  OBJECT_TYPE_SPACE = 4;
+  OBJECT_TYPE_WALL = 100;
+  OBJECT_TYPE_BEAM = 101;
+  OBJECT_TYPE_COLUMN = 102;
+  OBJECT_TYPE_SLAB = 103;
+  OBJECT_TYPE_DOOR = 104;
+  OBJECT_TYPE_WINDOW = 105;
+  OBJECT_TYPE_STAIR = 106;
+  OBJECT_TYPE_ROOF = 107;
+  OBJECT_TYPE_FLOOR = 108;
+  OBJECT_TYPE_DUCT = 109;
+  OBJECT_TYPE_CABLE_TRAY = 110;
+  OBJECT_TYPE_AIR_TERMINAL = 111;
+  OBJECT_TYPE_AHU = 112;
+  OBJECT_TYPE_CHILLER = 113;
+  OBJECT_TYPE_TRANSFORMER = 114;
+  OBJECT_TYPE_LUMINAIRE = 115;
+  OBJECT_TYPE_ROAD = 200;
+  OBJECT_TYPE_BRIDGE = 201;
+  OBJECT_TYPE_TUNNEL = 202;
+  OBJECT_TYPE_DAM = 203;
+  OBJECT_TYPE_CULVERT = 204;
+  OBJECT_TYPE_RETAINING_WALL = 205;
+  OBJECT_TYPE_PIPE_CIVIL = 206;
+  OBJECT_TYPE_PIER = 207;
+  OBJECT_TYPE_MANHOLE = 208;
+  OBJECT_TYPE_ABUTMENT = 209;
+  OBJECT_TYPE_TANK = 300;
+  OBJECT_TYPE_PUMP = 301;
+  OBJECT_TYPE_VALVE = 302;
+  OBJECT_TYPE_HEAT_EXCHANGER = 303;
+  OBJECT_TYPE_REACTOR = 304;
+  OBJECT_TYPE_PIPE_PLANT = 305;
+  OBJECT_TYPE_STRUCTURAL_STEEL = 306;
+  OBJECT_TYPE_FITTING = 307;
+  OBJECT_TYPE_COMPRESSOR = 308;
+  OBJECT_TYPE_INSTRUMENT = 309;
+  OBJECT_TYPE_PART = 400;
+  OBJECT_TYPE_ASSEMBLY = 401;
+  OBJECT_TYPE_FASTENER = 402;
+  OBJECT_TYPE_GEAR = 403;
+  OBJECT_TYPE_SHAFT = 404;
+  OBJECT_TYPE_BEARING = 405;
+  OBJECT_TYPE_MOTOR = 406;
+  OBJECT_TYPE_SPRING = 407;
+  OBJECT_TYPE_SEAL = 408;
+  OBJECT_TYPE_GENERIC = 999;
+  OBJECT_TYPE_COMPONENT = 500;
+  OBJECT_TYPE_FEATURE_LINE = 501;
+  OBJECT_TYPE_CONTOUR_LINE = 502;
+}
+
+enum ObjectStatus {
+  OBJECT_STATUS_UNSPECIFIED = 0;
+  OBJECT_STATUS_DRAFT = 1;
+  OBJECT_STATUS_PROPOSED = 2;
+  OBJECT_STATUS_APPROVED = 3;
+  OBJECT_STATUS_CONSTRUCTION = 4;
+  OBJECT_STATUS_AS_BUILT = 5;
+  OBJECT_STATUS_OPERATIONAL = 6;
+  OBJECT_STATUS_DECOMMISSIONED = 7;
+}
+
+// === Property System ===
+
+message Property {
+  string name = 1;
+  PropertyValue value = 2;
+  string unit = 3;
+  string description = 4;
+}
+
+message PropertyValue {
+  oneof value_type {
+    string string_value = 1;
+    int64 int_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+    Point3D point_value = 5;
+    Vector3D vector_value = 6;
+    bytes binary_value = 7;
+    Timestamp timestamp_value = 8;
+  }
+}
+
+message PropertySet {
+  string name = 1;
+  string description = 2;
+  repeated Property properties = 3;
+}
+
+// === Geometry ===
+
+enum GeometryType {
+  GEOMETRY_TYPE_UNSPECIFIED = 0;
+  GEOMETRY_TYPE_PARAMETRIC = 1;
+  GEOMETRY_TYPE_BREP = 2;
+  GEOMETRY_TYPE_MESH = 3;
+  GEOMETRY_TYPE_POINT_CLOUD = 4;
+  GEOMETRY_TYPE_CURVE = 5;
+  GEOMETRY_TYPE_EXTERNAL = 6;
+}
+
+message Geometry {
+  string id = 1;
+  GeometryType type = 2;
+  oneof representation {
+    ParametricGeometry parametric = 3;
+    MeshGeometry mesh = 5;
+    ExternalGeometryReference external = 8;
+  }
+  BoundingBox bbox = 9;
+  uint32 level_of_detail = 10;
+}
+
+message ParametricGeometry {
+  repeated ParametricOperation operations = 1;
+}
+
+message ParametricOperation {
+  oneof operation {
+    Box box = 1;
+    Cylinder cylinder = 2;
+    Sphere sphere = 3;
+    Cone cone = 4;
+    Extrusion extrusion = 5;
+    Revolve revolve = 6;
+    Sweep sweep = 7;
+    Loft loft = 8;
+    Torus torus = 9;
+    Dish dish = 10;
+  }
+}
+
+message Box {
+  double length = 1;
+  double width = 2;
+  double height = 3;
+}
+
+message Cylinder {
+  double radius = 1;
+  double height = 2;
+  int32 segments = 3;
+}
+
+message Sphere {
+  double radius = 1;
+  int32 segments = 2;
+}
+
+message Cone {
+  double radius_bottom = 1;
+  double radius_top = 2;
+  double height = 3;
+  int32 segments = 4;
+}
+
+message Extrusion {
+  repeated Point2D profile = 1;
+  double depth = 2;
+  Vector3D direction = 3;
+}
+
+message Revolve {
+  repeated Point2D profile = 1;
+  double angle = 2;
+  Point3D axis_origin = 3;
+  Vector3D axis_direction = 4;
+}
+
+message Sweep {
+  repeated Point2D profile = 1;
+  repeated Point3D path = 2;
+  int32 segments = 3;
+}
+
+message Loft {
+  repeated Point2D profile0 = 1;
+  repeated Point2D profile1 = 2;
+  int32 segments = 3;
+}
+
+message Torus {
+  double major_radius = 1;
+  double minor_radius = 2;
+  int32 segments = 3;
+  int32 rings = 4;
+}
+
+message Dish {
+  double crown_radius = 1;
+  double knuckle_radius = 2;
+  double diameter = 3;
+  int32 segments = 4;
+}
+
+message MeshGeometry {
+  repeated Point3D vertices = 1;
+  repeated Vector3D normals = 2;
+  repeated Point2D uvs = 3;
+  repeated FaceIndices faces = 4;
+}
+
+message FaceIndices {
+  repeated int32 vertex_indices = 1;
+}
+
+message ExternalGeometryReference {
+  string file_path = 1;
+  string format = 2;
+  string external_id = 3;
+}
+
+// === Material ===
+
+enum MaterialCategory {
+  MATERIAL_CATEGORY_UNSPECIFIED = 0;
+  MATERIAL_CATEGORY_METAL = 1;
+  MATERIAL_CATEGORY_CONCRETE = 2;
+  MATERIAL_CATEGORY_WOOD = 3;
+  MATERIAL_CATEGORY_MASONRY = 4;
+  MATERIAL_CATEGORY_PLASTIC = 5;
+  MATERIAL_CATEGORY_COMPOSITE = 6;
+  MATERIAL_CATEGORY_GLASS = 7;
+  MATERIAL_CATEGORY_INSULATION = 8;
+  MATERIAL_CATEGORY_SOIL = 9;
+  MATERIAL_CATEGORY_WATER = 10;
+  MATERIAL_CATEGORY_OTHER = 99;
+}
+
+message Material {
+  string id = 1;
+  string name = 2;
+  MaterialCategory category = 3;
+  double density = 4;
+  double youngs_modulus = 5;
+  double poissons_ratio = 6;
+  double yield_strength = 7;
+  double ultimate_strength = 8;
+  double thermal_conductivity = 9;
+  double specific_heat = 10;
+  Color color = 11;
+  double roughness = 12;
+  double metallic = 13;
+  double transparency = 14;
+  string ifc_material = 15;
+  repeated string standards = 16;
+}
+
+// === Lifecycle ===
+
+enum LifecyclePhase {
+  LIFECYCLE_PHASE_UNSPECIFIED = 0;
+  LIFECYCLE_PHASE_PLANNING = 1;
+  LIFECYCLE_PHASE_DESIGN = 2;
+  LIFECYCLE_PHASE_PROCUREMENT = 3;
+  LIFECYCLE_PHASE_CONSTRUCTION = 4;
+  LIFECYCLE_PHASE_COMMISSIONING_ACCEPTANCE = 5;
+  LIFECYCLE_PHASE_ASSET = 6;
+  LIFECYCLE_PHASE_OPERATION_MAINTENANCE = 7;
+  LIFECYCLE_PHASE_PRODUCTION = 8;
+  LIFECYCLE_PHASE_DECOMMISSIONING = 9;
+}
+
+enum RecordStatus {
+  RECORD_STATUS_UNSPECIFIED = 0;
+  RECORD_STATUS_DRAFT = 1;
+  RECORD_STATUS_OPEN = 2;
+  RECORD_STATUS_IN_PROGRESS = 3;
+  RECORD_STATUS_BLOCKED = 4;
+  RECORD_STATUS_COMPLETED = 5;
+  RECORD_STATUS_APPROVED = 6;
+  RECORD_STATUS_REJECTED = 7;
+  RECORD_STATUS_CLOSED = 8;
+}
+
+message ProjectLifecycleRecord {
+  string id = 1;
+  LifecyclePhase phase = 2;
+  string record_type = 3;
+  string name = 4;
+  string description = 5;
+  repeated string related_object_ids = 6;
+  repeated string related_document_ids = 7;
+  repeated Property properties = 8;
+  RecordStatus status = 9;
+  Timestamp planned_start = 10;
+  Timestamp planned_finish = 11;
+  Timestamp actual_start = 12;
+  Timestamp actual_finish = 13;
+  double planned_cost = 14;
+  double actual_cost = 15;
+  string responsible_party = 16;
+  string version_id = 17;
+}
+
+// === Relationships ===
+
+enum ContainmentType {
+  CONTAINMENT_TYPE_UNSPECIFIED = 0;
+  CONTAINMENT_TYPE_SPATIAL = 1;
+  CONTAINMENT_TYPE_PHYSICAL = 2;
+  CONTAINMENT_TYPE_SYSTEM = 3;
+  CONTAINMENT_TYPE_GROUP = 4;
+}
+
+enum ConnectionType {
+  CONNECTION_TYPE_UNSPECIFIED = 0;
+  CONNECTION_TYPE_STRUCTURAL = 1;
+  CONNECTION_TYPE_MECHANICAL = 2;
+  CONNECTION_TYPE_ELECTRICAL = 3;
+  CONNECTION_TYPE_HYDRAULIC = 4;
+  CONNECTION_TYPE_SPATIAL_ADJACENT = 5;
+}
+
+message Containment {
+  string parent_id = 1;
+  string child_id = 2;
+  ContainmentType type = 3;
+}
+
+message Connection {
+  string from_object_id = 1;
+  string to_object_id = 2;
+  ConnectionType type = 3;
+  Point3D from_point = 4;
+  Point3D to_point = 5;
+  string connection_detail = 6;
+}
+
+// === Administrative Division ===
+
+enum AdministrativeLevel {
+  ADMINISTRATIVE_LEVEL_UNSPECIFIED = 0;
+  ADMINISTRATIVE_LEVEL_WORLD = 1;
+  ADMINISTRATIVE_LEVEL_COUNTRY = 2;
+  ADMINISTRATIVE_LEVEL_PROVINCE = 3;
+  ADMINISTRATIVE_LEVEL_PREFECTURE = 4;
+  ADMINISTRATIVE_LEVEL_COUNTY = 5;
+  ADMINISTRATIVE_LEVEL_TOWNSHIP = 6;
+  ADMINISTRATIVE_LEVEL_COMMUNITY = 7;
+  ADMINISTRATIVE_LEVEL_BLOCK = 8;
+  ADMINISTRATIVE_LEVEL_PARCEL = 9;
+}
+
+message GeoBoundary {
+  string boundary_type = 1;
+  repeated Point3D coordinates = 2;
+  string crs = 3;
+}
+
+message AdministrativeDivision {
+  string id = 1;
+  AdministrativeLevel level = 2;
+  string name = 3;
+  string native_name = 4;
+  string code = 5;
+  string parent_id = 6;
+  GeoBoundary boundary = 7;
+  repeated Property properties = 8;
+}
+
+// === Project Breakdown Structure ===
+
+enum BreakdownConvention {
+  BREAKDOWN_CONVENTION_UNSPECIFIED = 0;
+  BREAKDOWN_CONVENTION_BUILDING = 1;
+  BREAKDOWN_CONVENTION_PLANT = 2;
+  BREAKDOWN_CONVENTION_CIVIL = 3;
+  BREAKDOWN_CONVENTION_MECHANICAL = 4;
+}
+
+enum BreakdownLevel {
+  BREAKDOWN_LEVEL_UNSPECIFIED = 0;
+  BREAKDOWN_LEVEL_PROGRAM = 1;
+  BREAKDOWN_LEVEL_PROJECT = 2;
+  BREAKDOWN_LEVEL_SUB_PROJECT = 3;
+  BREAKDOWN_LEVEL_UNIT = 4;
+  BREAKDOWN_LEVEL_BUILDING = 5;
+  BREAKDOWN_LEVEL_STOREY = 6;
+  BREAKDOWN_LEVEL_ZONE = 7;
+  BREAKDOWN_LEVEL_SYSTEM = 8;
+  BREAKDOWN_LEVEL_ELEMENT = 9;
+  BREAKDOWN_LEVEL_PART = 10;
+}
+
+message BreakdownNode {
+  string id = 1;
+  BreakdownLevel level = 2;
+  string name = 3;
+  string code = 4;
+  string parent_id = 5;
+  BreakdownConvention convention = 6;
+  repeated string related_object_ids = 7;
+  repeated string administrative_division_ids = 8;
+  repeated Property properties = 9;
+}
+
+// === Component Catalog (PARAGON) ===
+
+message ComponentDef {
+  string id = 1;
+  string name = 2;
+  string category = 3;
+  string description = 4;
+  repeated ParamDef params = 10;
+  string feature_tree_id = 11;
+  repeated ConnectorDef connectors = 12;
+  repeated string allowed_materials = 13;
+  string default_material = 14;
+  string ifc_class = 20;
+  string standard_reference = 21;
+  repeated string tags = 22;
+  string domain = 23;
+  map<string, string> properties = 24;
+  bool published = 25;
+}
+
+message ParamDef {
+  string name = 1;
+  ParamType type = 2;
+  double default_value = 3;
+  double min_value = 4;
+  double max_value = 5;
+  double step = 6;
+  string unit = 7;
+  string formula = 8;
+  repeated string choices = 9;
+  string description = 10;
+}
+
+enum ParamType {
+  PARAM_TYPE_UNSPECIFIED = 0;
+  PARAM_TYPE_LENGTH = 1;
+  PARAM_TYPE_ANGLE = 2;
+  PARAM_TYPE_INTEGER = 3;
+  PARAM_TYPE_CHOICE = 4;
+  PARAM_TYPE_BOOLEAN = 5;
+  PARAM_TYPE_RATIO = 6;
+}
+
+message ConnectorDef {
+  string id = 1;
+  string name = 2;
+  string position_x_expr = 10;
+  string position_y_expr = 11;
+  string position_z_expr = 12;
+  string direction_x_expr = 13;
+  string direction_y_expr = 14;
+  string direction_z_expr = 15;
+  string bore_expr = 16;
+  string connection_type_code = 17;
+  ConnectorRole role = 18;
+}
+
+enum ConnectorRole {
+  CONNECTOR_ROLE_UNSPECIFIED = 0;
+  CONNECTOR_ROLE_INLET = 1;
+  CONNECTOR_ROLE_OUTLET = 2;
+  CONNECTOR_ROLE_BIDIRECTIONAL = 3;
+  CONNECTOR_ROLE_MOUNT = 4;
+  CONNECTOR_ROLE_BRANCH = 5;
+}
+
+// === Series Library (SPECON) ===
+
+message Series {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  string domain = 4;
+  string standard_reference = 5;
+  Selector root_selector = 10;
+  repeated string applicable_phases = 11;
+  map<string, string> metadata = 12;
+}
+
+message Selector {
+  string id = 1;
+  string question = 2;
+  repeated Answer answers = 3;
+}
+
+message Answer {
+  string id = 1;
+  string value = 2;
+  bool is_numeric_range = 3;
+  double range_min = 4;
+  double range_max = 5;
+  oneof outcome {
+    Selector next_selector = 10;
+    SpecComponent component = 11;
+  }
+}
+
+message SpecComponent {
+  string id = 1;
+  string component_def_id = 2;
+  repeated ParamConstraint param_constraints = 10;
+  string material = 11;
+  string connection_type_code = 12;
+  map<string, string> design_params = 13;
+}
+
+message ParamConstraint {
+  string param_name = 1;
+  double default_value = 2;
+  double min_value = 3;
+  double max_value = 4;
+  double step = 5;
+  string fixed_value = 6;
+}
+
+// === Catalog Reference on Objects ===
+
+message CatalogRef {
+  string component_def_id = 1;
+  string series_id = 2;
+  string selector_path = 3;
+  map<string, double> param_values = 4;
+}

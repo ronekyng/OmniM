@@ -1,0 +1,683 @@
+syntax = "proto3";
+
+package omnim;
+
+import "omnim.proto";
+
+// === Omcom Top-Level ===
+
+message OmniCommand {
+  string version = 1;
+  string id = 2;
+  Action action = 3;
+  Actor actor = 4;
+  Target target = 5;
+  repeated Operation operations = 6;
+  ValidationResult validation = 7;
+  Timestamp timestamp = 8;
+  map<string, string> metadata = 9;
+}
+
+message Actor {
+  string id = 1;
+  ActorType type = 2;
+}
+
+enum ActorType {
+  ACTOR_TYPE_UNSPECIFIED = 0;
+  USER = 1;
+  AI_AGENT = 2;
+  SYSTEM = 3;
+  IMPORT = 4;
+}
+
+message Target {
+  oneof target_type {
+    ObjectTarget object = 1;
+    GeometryTarget geometry = 2;
+    SelectionTarget selection = 3;
+    SceneTarget scene = 4;
+    LifecycleTarget lifecycle = 5;
+  }
+}
+
+message ObjectTarget {
+  string object_id = 1;
+}
+
+message GeometryTarget {
+  string geometry_id = 1;
+}
+
+message SelectionTarget {
+  repeated string object_ids = 1;
+}
+
+message SceneTarget {
+  string scene_id = 1;
+}
+
+message LifecycleTarget {
+  string record_id = 1;
+}
+
+enum Action {
+  ACTION_UNSPECIFIED = 0;
+
+  // Object operations
+  CREATE_OBJECT = 1;
+  MODIFY_OBJECT = 2;
+  DELETE_OBJECT = 3;
+  COPY_OBJECT = 4;
+  MOVE_OBJECT = 5;
+
+  // Geometry operations
+  CREATE_GEOMETRY = 10;
+  MODIFY_GEOMETRY = 11;
+  DELETE_GEOMETRY = 12;
+  TRANSFORM_GEOMETRY = 13;
+  BOOLEAN_OPERATION = 14;
+
+  // Property operations
+  SET_PROPERTY = 20;
+  DELETE_PROPERTY = 21;
+  ADD_PROPERTY_SET = 22;
+  REMOVE_PROPERTY_SET = 23;
+
+  // Relation operations
+  ADD_CONTAINMENT = 30;
+  REMOVE_CONTAINMENT = 31;
+  ADD_CONNECTION = 32;
+  REMOVE_CONNECTION = 33;
+
+  // Batch operations
+  ARRAY = 40;
+  BATCH_DELETE = 41;
+  BATCH_TRANSFORM = 42;
+
+  // Material operations
+  SET_MATERIAL = 50;
+
+  // Lifecycle operations
+  CREATE_LIFECYCLE_RECORD = 70;
+  MODIFY_LIFECYCLE_RECORD = 71;
+  DELETE_LIFECYCLE_RECORD = 72;
+  LINK_RECORD_TO_OBJECT = 73;
+  UPDATE_SCHEDULE = 75;
+  UPDATE_COST = 76;
+  UPDATE_PROGRESS = 77;
+  CREATE_WORK_ORDER = 80;  // Unimplemented: declared but no Executor handler yet (see RFC)
+  UPDATE_WORK_ORDER = 81;  // Unimplemented: declared but no Executor handler yet (see RFC)
+  INGEST_SENSOR_DATA = 82; // Unimplemented: declared but no Executor handler yet (Digital Twin scope, see RFC)
+
+  // Import/Export
+  IMPORT_FILE = 60;
+  EXPORT_FILE = 61;
+  PARSE_TO_OMCOM = 62; // Unimplemented: declared but no Executor handler yet (text-DSL scope, RFC-0001)
+
+  // Sketch operations
+  CREATE_SKETCH = 100;
+  ADD_SKETCH_ENTITY = 101;
+  ADD_SKETCH_CONSTRAINT = 102;
+  SOLVE_SKETCH = 103;
+  DELETE_SKETCH_ENTITY = 104;
+  REMOVE_SKETCH_CONSTRAINT = 105;
+  DELETE_SKETCH = 106;
+
+  // Feature operations (sketch → 3D body)
+  EXTRUDE_SKETCH = 107;      // direct sketch extrusion (also available via ADD_FEATURE)
+  REVOLVE_SKETCH = 108;      // direct sketch revolution (also available via ADD_FEATURE)
+
+  // Component operations
+  CREATE_COMPONENT = 110;
+  ADD_FEATURE = 111;
+  REMOVE_FEATURE = 112;
+  REBUILD_FEATURES = 113;
+
+  // Validation
+  VALIDATE = 90;
+
+  // Catalog operations
+  DEFINE_COMPONENT = 200;
+  ADD_COMPONENT_PARAM = 201;
+  ADD_CONNECTOR = 202;
+  ADD_COMPONENT_FEATURE = 203;
+  PUBLISH_COMPONENT = 204;
+  LIST_CATALOG = 205;
+  DELETE_COMPONENT_DEF = 206;
+
+  // Series operations
+  CREATE_SERIES = 210;
+  ADD_SELECTOR = 211;
+  ADD_ANSWER = 212;
+  ADD_SPEC_COMPONENT = 213;
+  ADD_PARAM_CONSTRAINT = 214;
+  LIST_SERIES = 215;
+  DELETE_SERIES = 216;
+  LOAD_SERIES = 217;
+}
+
+// === Operations ===
+
+message Operation {
+  oneof op {
+    ParametricOperation create_geometry = 1;
+    CreateObjectOperation create_object = 2;
+    ModifyObjectOperation modify_object = 3;
+    Property set_property = 4;
+    PropertySet add_property_set = 5;
+    Containment add_containment = 6;
+    Connection add_connection = 7;
+    SetMaterialOperation set_material = 8;
+    CreateLifecycleRecordOperation create_lifecycle_record = 9;
+    ModifyLifecycleRecordOperation modify_lifecycle_record = 10;
+    DeletePropertyOperation delete_property = 11;
+    RemovePropertySetOperation remove_property_set = 12;
+    RemoveContainmentOperation remove_containment = 13;
+    RemoveConnectionOperation remove_connection = 14;
+    CopyObjectOperation copy_object = 15;
+    MoveObjectOperation move_object = 16;
+    ArrayOperation array = 17;
+    BooleanOperation boolean = 18;
+    TransformGeometryOperation transform_geometry = 19;
+    DeleteLifecycleRecordOperation delete_lifecycle_record = 20;
+    LinkRecordToObjectOperation link_record_to_object = 21;
+    UpdateScheduleOperation update_schedule = 22;
+    UpdateCostOperation update_cost = 23;
+    UpdateProgressOperation update_progress = 24;
+    CreateWorkOrderOperation create_work_order = 25;
+    UpdateWorkOrderOperation update_work_order = 26;
+    CreateSketchOperation create_sketch = 27;
+    AddSketchEntityOperation add_sketch_entity = 28;
+    AddSketchConstraintOperation add_sketch_constraint = 29;
+    SolveSketchOperation solve_sketch = 30;
+    DeleteSketchEntityOperation delete_sketch_entity = 31;
+    RemoveSketchConstraintOperation remove_sketch_constraint = 32;
+    DeleteSketchOperation delete_sketch = 33;
+    ExtrudeSketchOperation extrude_sketch = 34;
+    RevolveSketchOperation revolve_sketch = 35;
+    CreateComponentOperation create_component = 36;
+    AddFeatureOperation add_feature = 37;
+    RemoveFeatureOperation remove_feature = 38;
+    RebuildFeaturesOperation rebuild_features = 39;
+    DefineComponentOperation define_component = 40;
+    AddComponentParamOperation add_component_param = 41;
+    AddConnectorOperation add_connector = 42;
+    PublishComponentOperation publish_component = 43;
+    DeleteComponentDefOperation delete_component_def = 44;
+    CreateSeriesOperation create_series = 45;
+    AddSelectorOperation add_selector = 46;
+    AddAnswerOperation add_answer = 47;
+    AddSpecComponentOperation add_spec_component = 48;
+    AddParamConstraintOperation add_param_constraint = 49;
+    DeleteSeriesOperation delete_series = 50;
+    LoadSeriesOperation load_series = 51;
+  }
+}
+
+message CreateObjectOperation {
+  ObjectType type = 1;
+  string name = 2;
+  string description = 3;
+  ParametricGeometry geometry = 4;
+  repeated Property properties = 5;
+  string parent_id = 6;
+}
+
+message ModifyObjectOperation {
+  string object_id = 1;
+  optional string new_name = 2;
+  optional string new_description = 3;
+  optional ParametricGeometry new_geometry = 4;
+}
+
+message SetMaterialOperation {
+  string object_id = 1;
+  string material_id = 2;
+}
+
+message CreateLifecycleRecordOperation {
+  LifecyclePhase phase = 1;
+  string name = 2;
+  string description = 3;
+  string record_type = 4;
+  repeated string related_object_ids = 5;
+  repeated Property properties = 6;
+}
+
+message ModifyLifecycleRecordOperation {
+  string record_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional RecordStatus status = 4;
+  repeated Property properties = 5;
+}
+
+// === Property Operations ===
+
+message DeletePropertyOperation {
+  string name = 1;
+}
+
+message RemovePropertySetOperation {
+  string name = 1;
+}
+
+// === Relation Operations ===
+
+message RemoveContainmentOperation {
+  string parent_id = 1;
+  string child_id = 2;
+}
+
+message RemoveConnectionOperation {
+  string from_object_id = 1;
+  string to_object_id = 2;
+}
+
+// === Object Copy/Move ===
+
+message CopyObjectOperation {
+  string source_object_id = 1;
+  string new_name = 2;
+  string parent_id = 3;
+}
+
+message MoveObjectOperation {
+  string object_id = 1;
+  string new_parent_id = 2;
+}
+
+// === Batch Operations ===
+
+message ArrayOperation {
+  string source_object_id = 1;
+  string pattern = 2;        // "linear", "rectangular", "circular"
+  int32 count_x = 3;
+  int32 count_y = 4;
+  int32 count_z = 5;
+  double spacing_x = 6;
+  double spacing_y = 7;
+  double spacing_z = 8;
+}
+
+message BooleanOperation {
+  string type = 1;            // "union", "subtract", "intersect"
+  string target_object_id = 2;
+  repeated string operand_object_ids = 3;
+}
+
+message TransformGeometryOperation {
+  string object_id = 1;
+  optional Point3D translation = 2;
+  optional Rotation rotation = 3;
+  optional Vector3D scale = 4;
+}
+
+// === Lifecycle Operations ===
+
+message DeleteLifecycleRecordOperation {
+  string record_id = 1;
+}
+
+message LinkRecordToObjectOperation {
+  string record_id = 1;
+  string object_id = 2;
+  string link_role = 3;
+}
+
+message UpdateScheduleOperation {
+  string record_id = 1;
+  optional Timestamp planned_start = 2;
+  optional Timestamp planned_finish = 3;
+  optional Timestamp actual_start = 4;
+  optional Timestamp actual_finish = 5;
+}
+
+message UpdateCostOperation {
+  string record_id = 1;
+  double planned_cost = 2;
+  double actual_cost = 3;
+  string currency = 4;
+}
+
+message UpdateProgressOperation {
+  string record_id = 1;
+  double percent_complete = 2;
+  string note = 3;
+}
+
+message CreateWorkOrderOperation {
+  string asset_object_id = 1;
+  string title = 2;
+  string description = 3;
+}
+
+message UpdateWorkOrderOperation {
+  string work_order_id = 1;
+  string status = 2;
+  string description = 3;
+}
+
+// Reserved for future implementation (action values live in the Action enum; the Executor
+// currently only echoes their names). Do NOT reuse these ids for other messages:
+//   action=11  ModifyGeometryOperation
+//   action=12  DeleteGeometryOperation
+//   action=41  BatchDeleteOperation
+//   action=42  BatchTransformOperation
+//   action=203 AddComponentFeatureOperation
+
+// === Sketch Operations ===
+
+message SketchPointRef {
+  int32 entity_index = 1;   // 1-based index of entity in the sketch
+  int32 point_index = 2;    // 0 for free point, 1 for start, 2 for end (for line/arc)
+}
+
+message SketchData {
+  string id = 1;
+  string name = 2;
+  Point3D origin = 3;        // workplane origin
+  Vector3D normal = 4;       // workplane normal (0,0,0 = free 3D)
+  repeated SketchEntityData entities = 5;
+  repeated SketchConstraintData constraints = 6;
+  bool solved = 7;           // whether the sketch is currently solved
+  string component_id = 8;   // parent component (optional)
+}
+
+message SketchEntityData {
+  string id = 1;
+  SketchEntityType entity_type = 2;
+  repeated Point3D points = 3;    // control points (line=2, circle=1+center, arc=3)
+  double radius = 4;              // for circle/arc
+  int32 sides = 5;                // for polygon
+}
+
+enum SketchEntityType {
+  SKETCH_ENTITY_UNSPECIFIED = 0;
+  SKETCH_POINT = 1;
+  SKETCH_LINE = 2;
+  SKETCH_CIRCLE = 3;
+  SKETCH_ARC = 4;
+  SKETCH_WORKPLANE = 5;
+  SKETCH_RECTANGLE = 6;
+  SKETCH_POLYGON = 7;
+  SKETCH_ELLIPSE = 8;
+  SKETCH_SPLINE = 9;
+  SKETCH_POLYLINE = 10;
+}
+
+message SketchConstraintData {
+  string id = 1;
+  SketchConstraintType constraint_type = 2;
+  repeated SketchPointRef entity_refs = 3;  // entity references (1-based indices)
+  double value = 4;                         // for distance/length/angle constraints
+}
+
+enum SketchConstraintType {
+  SKETCH_CONSTRAINT_UNSPECIFIED = 0;
+  SKETCH_HORIZONTAL = 1;
+  SKETCH_VERTICAL = 2;
+  SKETCH_COINCIDENT = 3;
+  SKETCH_PARALLEL = 4;
+  SKETCH_PERPENDICULAR = 5;
+  SKETCH_LENGTH = 6;
+  SKETCH_DISTANCE = 7;
+  SKETCH_ANGLE = 8;
+  SKETCH_RADIUS = 9;
+  SKETCH_DIAMETER = 10;
+  SKETCH_TANGENT = 11;
+  SKETCH_SYMMETRIC = 12;
+  SKETCH_FIXED = 13;
+  SKETCH_AT_MIDPOINT = 14;
+  SKETCH_EQUAL_LENGTH = 15;
+  SKETCH_EQUAL_RADIUS = 16;
+  SKETCH_PT_ON_LINE = 17;
+  SKETCH_PT_ON_CIRCLE = 18;
+  SKETCH_SAME_ORIENTATION = 19;
+}
+
+message CreateSketchOperation {
+  string name = 1;
+  Point3D origin = 2;
+  Vector3D normal = 3;
+}
+
+message AddSketchEntityOperation {
+  string sketch_id = 1;
+  SketchEntityData entity = 2;
+}
+
+message AddSketchConstraintOperation {
+  string sketch_id = 1;
+  SketchConstraintData constraint = 2;
+}
+
+message SolveSketchOperation {
+  string sketch_id = 1;
+}
+
+message DeleteSketchEntityOperation {
+  string sketch_id = 1;
+  int32 entity_index = 2;    // 1-based index
+}
+
+message RemoveSketchConstraintOperation {
+  string sketch_id = 1;
+  int32 constraint_index = 2; // 1-based index
+}
+
+message DeleteSketchOperation {
+  string sketch_id = 1;
+}
+
+message ExtrudeSketchOperation {
+  string sketch_id = 1;
+  double depth = 2;
+  Vector3D direction = 3;
+}
+
+message RevolveSketchOperation {
+  string sketch_id = 1;
+  double angle = 2;                  // radians, 0 = full 360°
+  Point3D axis_origin = 3;
+  Vector3D axis_direction = 4;
+}
+
+// === Component Operations ===
+
+enum FeatureType {
+  FEATURE_TYPE_UNSPECIFIED = 0;
+  FEATURE_EXTRUDE = 1;
+  FEATURE_REVOLVE = 2;
+  FEATURE_SWEEP = 3;
+  FEATURE_LOFT = 4;
+  FEATURE_BOOLEAN = 5;
+  FEATURE_CHAMFER = 6;
+  FEATURE_FILLET = 7;
+  FEATURE_PATTERN = 8;
+  FEATURE_SHELL = 9;
+  FEATURE_FUSION = 10;
+  FEATURE_LOFTED_FUSION = 11;
+}
+
+message FeatureData {
+  string id = 1;
+  string name = 2;
+  FeatureType feature_type = 3;
+  string sketch_id = 4;              // primary source sketch (profile)
+  repeated string dependency_ids = 5; // parent features
+  double depth = 6;                  // extrude depth
+  Vector3D direction = 7;            // extrude direction
+  double angle = 8;                  // revolve angle
+  Point3D axis_origin = 9;           // revolve axis origin
+  Vector3D axis_direction = 10;      // revolve axis direction
+  bool is_cut = 11;                  // when true, subtracts from parent geometry
+  int32 order = 12;                  // position in component feature list
+  // New fields for Feature as first-class entity
+  repeated string input_sketch_ids = 13;  // additional sketches (Sweep path, Loft sections)
+  omnim.MeshGeometry cached_geometry = 14; // cached 3D geometry result
+  bool dirty = 15;                        // needs rebuild when inputs change
+  string axis_sketch_id = 16;             // for revolve (replaces axis_origin/axis_direction)
+}
+
+message ComponentData {
+  string id = 1;
+  string name = 2;
+  repeated string feature_ids = 3;   // ordered feature list
+  repeated string sketch_ids = 4;    // sketches owned by this component
+  string parent_id = 5;              // tree parent
+  Transform transform = 6;           // local placement
+  omnim.MeshGeometry merged_geometry = 7; // result of merging all Feature geometries
+}
+
+message CreateComponentOperation {
+  string name = 1;
+  string parent_id = 2;
+}
+
+message AddFeatureOperation {
+  string component_id = 1;
+  FeatureType feature_type = 2;
+  string sketch_id = 3;
+  double depth = 4;                  // for extrude
+  Vector3D direction = 5;            // for extrude
+  double angle = 6;                  // for revolve (radians)
+  Point3D axis_origin = 7;           // for revolve
+  Vector3D axis_direction = 8;       // for revolve
+  bool is_cut = 9;                   // when true, subtracts from parent geometry
+  // New fields
+  repeated string input_sketch_ids = 10;  // Sweep path_sketch_id, Loft section sketch_ids
+  string axis_sketch_id = 11;             // for revolve (replaces axis_origin/axis_direction)
+}
+
+message RemoveFeatureOperation {
+  string component_id = 1;
+  string feature_id = 2;             // feature to remove
+}
+
+message RebuildFeaturesOperation {
+  string component_id = 1;
+  optional string feature_id = 2;    // if set, rebuild from this feature onward; else rebuild all
+}
+
+// === Catalog Operations ===
+
+message DefineComponentOperation {
+  string name = 1;
+  string category = 2;
+  string description = 3;
+  string ifc_class = 4;
+  string standard_reference = 5;
+  repeated string tags = 6;
+  string domain = 7;
+}
+
+message AddComponentParamOperation {
+  string component_id = 1;
+  string param_name = 2;
+  ParamType param_type = 3;
+  double default_value = 4;
+  double min_value = 5;
+  double max_value = 6;
+  double step = 7;
+  string unit = 8;
+  string formula = 9;
+  repeated string choices = 10;
+  string description = 11;
+}
+
+message AddConnectorOperation {
+  string component_id = 1;
+  string connector_id = 2;
+  string connector_name = 3;
+  string position_x_expr = 4;
+  string position_y_expr = 5;
+  string position_z_expr = 6;
+  string direction_x_expr = 7;
+  string direction_y_expr = 8;
+  string direction_z_expr = 9;
+  string bore_expr = 10;
+  string connection_type_code = 11;
+  ConnectorRole role = 12;
+}
+
+message PublishComponentOperation {
+  string component_id = 1;
+}
+
+message DeleteComponentDefOperation {
+  string component_id = 1;
+}
+
+message CreateSeriesOperation {
+  string name = 1;
+  string description = 2;
+  string domain = 3;
+  string standard_reference = 4;
+}
+
+message AddSelectorOperation {
+  string series_id = 1;
+  string selector_id = 2;
+  string question = 3;
+}
+
+message AddAnswerOperation {
+  string series_id = 1;
+  string selector_id = 2;
+  string answer_id = 3;
+  string answer_value = 4;
+  bool is_numeric_range = 5;
+  double range_min = 6;
+  double range_max = 7;
+}
+
+message AddSpecComponentOperation {
+  string series_id = 1;
+  string selector_id = 2;
+  string answer_id = 3;
+  string component_def_id = 4;
+  string material = 5;
+  string connection_type_code = 6;
+}
+
+message AddParamConstraintOperation {
+  string series_id = 1;
+  string component_def_id = 2;
+  string param_name = 3;
+  double default_value = 4;
+  double min_value = 5;
+  double max_value = 6;
+  double step = 7;
+  string fixed_value = 8;
+}
+
+message DeleteSeriesOperation {
+  string series_id = 1;
+}
+
+message LoadSeriesOperation {
+  string path = 1;
+  string source = 2;  // "standalone" | "library"
+}
+
+// === Validation ===
+
+message ValidationResult {
+  bool valid = 1;
+  repeated ValidationError errors = 2;
+  repeated ValidationWarning warnings = 3;
+}
+
+message ValidationError {
+  string code = 1;
+  string message = 2;
+  string field = 3;
+}
+
+message ValidationWarning {
+  string code = 1;
+  string message = 2;
+  string field = 3;
+}

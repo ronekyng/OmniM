@@ -1,0 +1,16 @@
+ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Test IFC File'),'2;1');
+FILE_NAME('test.ifc','2024-01-01T00:00:00',('Test'),('Test'),'OmniM','OmniM','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCSITE('123',$,$,'Test Site',$,$,$,$,.ELEMENT.,$,$,$,$,$);
+#2=IFCBUILDING('456',$,$,'Test Building',$,$,$,$,.ELEMENT.,$,$,$);
+#3=IFCBUILDINGSTOREY('789',$,$,'Ground Floor',$,$,$,$,$,$);
+#4=IFCWALL('101',$,$,'Wall 1',$,$,$,$);
+#5=IFCWALL('102',$,$,'Wall 2',$,$,$,$);
+#6=IFCBEAM('201',$,$,'Beam A',$,$,$,$);
+#7=IFCCOLUMN('301',$,$,'Column 1',$,$,$,$);
+ENDSEC;
+END-ISO-10303-21;

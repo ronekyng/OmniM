@@ -1,0 +1,12 @@
+[package]
+name = "omnim-sketch"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+omnim-core = { path = "../core" }
+slvs.workspace = true
+uuid.workspace = true
+thiserror.workspace = true
+serde.workspace = true

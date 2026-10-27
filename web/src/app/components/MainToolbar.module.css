@@ -1,0 +1,7 @@
+.mainToolbar { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4); background: var(--bg-secondary); border-bottom: 1px solid var(--border); height: 36px; flex-shrink: 0; overflow-x: auto; }
+.mainToolbar::-webkit-scrollbar { height: 2px; }
+.mainToolbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.mainToolbar button { display: inline-flex; align-items: center; gap: var(--sp-1); padding: var(--sp-1) var(--sp-3); border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--text-secondary); font-size: var(--fs-sm); cursor: pointer; white-space: nowrap; transition: all 0.12s; }
+.mainToolbar button:hover { background: var(--bg-tertiary); border-color: var(--border-light); color: var(--text-primary); }
+.mainToolbar .separator { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
+.btnLabel { font-size: var(--fs-xs); color: var(--text-muted); }

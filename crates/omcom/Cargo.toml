@@ -1,0 +1,13 @@
+[package]
+name = "omnim-omcom"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+omnim-core = { path = "../core" }
+omnim-model = { path = "../model" }
+omnim-sketch = { path = "../sketch" }
+uuid.workspace = true
+thiserror.workspace = true
+serde.workspace = true

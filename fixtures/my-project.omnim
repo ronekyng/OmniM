@@ -1,0 +1,211 @@
+{
+  "name": "OmniM Project",
+  "objects": {
+    "objects": {
+      "3146718a-d9bc-41a3-93f3-f0b2f2991d2b": {
+        "id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "name": "Building-A",
+        "description": "",
+        "object_type": 2,
+        "status": 1,
+        "properties": [],
+        "property_sets": [],
+        "geometry": null,
+        "material_id": null,
+        "parent_id": "37866a8b-c498-42ac-92ed-eb601532f650",
+        "tags": [],
+        "ifc_class": ""
+      },
+      "b71eac93-f6e6-4df1-9362-a42632fcc701": {
+        "id": "b71eac93-f6e6-4df1-9362-a42632fcc701",
+        "name": "Col-1",
+        "description": "",
+        "object_type": 102,
+        "status": 1,
+        "properties": [],
+        "property_sets": [],
+        "geometry": {
+          "id": "",
+          "type": 1,
+          "bbox": {
+            "min": {
+              "x": -0.5,
+              "y": -0.5,
+              "z": -2.0
+            },
+            "max": {
+              "x": 0.5,
+              "y": 0.5,
+              "z": 2.0
+            }
+          },
+          "level_of_detail": 0,
+          "representation": {
+            "Parametric": {
+              "operations": [
+                {
+                  "operation": {
+                    "Cylinder": {
+                      "radius": 0.5,
+                      "height": 4.0,
+                      "segments": 16
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "material_id": null,
+        "parent_id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "tags": [],
+        "ifc_class": ""
+      },
+      "595cfe90-a63e-49dc-8d6a-f3268c104613": {
+        "id": "595cfe90-a63e-49dc-8d6a-f3268c104613",
+        "name": "Wall-1",
+        "description": "",
+        "object_type": 100,
+        "status": 1,
+        "properties": [],
+        "property_sets": [],
+        "geometry": {
+          "id": "",
+          "type": 1,
+          "bbox": {
+            "min": {
+              "x": -2.5,
+              "y": -0.15,
+              "z": -1.5
+            },
+            "max": {
+              "x": 2.5,
+              "y": 0.15,
+              "z": 1.5
+            }
+          },
+          "level_of_detail": 0,
+          "representation": {
+            "Parametric": {
+              "operations": [
+                {
+                  "operation": {
+                    "Box": {
+                      "length": 5.0,
+                      "width": 0.3,
+                      "height": 3.0
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "material_id": null,
+        "parent_id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "tags": [],
+        "ifc_class": ""
+      },
+      "37866a8b-c498-42ac-92ed-eb601532f650": {
+        "id": "37866a8b-c498-42ac-92ed-eb601532f650",
+        "name": "Site-A",
+        "description": "",
+        "object_type": 1,
+        "status": 1,
+        "properties": [],
+        "property_sets": [],
+        "geometry": null,
+        "material_id": null,
+        "parent_id": null,
+        "tags": [],
+        "ifc_class": ""
+      }
+    }
+  },
+  "materials": {
+    "materials": {
+      "mat-c30": {
+        "id": "mat-c30",
+        "name": "C30-Concrete",
+        "category": 2,
+        "density": 2400.0,
+        "youngs_modulus": 0.0,
+        "poissons_ratio": 0.0,
+        "yield_strength": 0.0,
+        "ultimate_strength": 0.0,
+        "thermal_conductivity": 0.0,
+        "specific_heat": 0.0,
+        "color": null,
+        "roughness": 0.0,
+        "metallic": 0.0,
+        "transparency": 0.0,
+        "ifc_material": "",
+        "standards": []
+      }
+    }
+  },
+  "lifecycle": {
+    "records": {
+      "lr-1": {
+        "id": "lr-1",
+        "phase": 2,
+        "record_type": "spec",
+        "name": "StructuralSpec",
+        "description": "",
+        "related_object_ids": [],
+        "related_document_ids": [],
+        "properties": [],
+        "status": 1,
+        "planned_start": null,
+        "planned_finish": null,
+        "actual_start": null,
+        "actual_finish": null,
+        "planned_cost": 0.0,
+        "actual_cost": 0.0,
+        "responsible_party": "",
+        "version_id": ""
+      }
+    },
+    "by_phase": {
+      "2": [
+        "lr-1"
+      ]
+    },
+    "by_object": {}
+  },
+  "relations": {
+    "connections": [],
+    "containments": [
+      {
+        "parent_id": "37866a8b-c498-42ac-92ed-eb601532f650",
+        "child_id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "type": 1
+      },
+      {
+        "parent_id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "child_id": "595cfe90-a63e-49dc-8d6a-f3268c104613",
+        "type": 1
+      },
+      {
+        "parent_id": "3146718a-d9bc-41a3-93f3-f0b2f2991d2b",
+        "child_id": "b71eac93-f6e6-4df1-9362-a42632fcc701",
+        "type": 1
+      }
+    ],
+    "conn_by_object": {},
+    "cont_by_parent": {
+      "3146718a-d9bc-41a3-93f3-f0b2f2991d2b": [
+        1,
+        2
+      ],
+      "37866a8b-c498-42ac-92ed-eb601532f650": [
+        0
+      ]
+    },
+    "cont_by_child": {
+      "595cfe90-a63e-49dc-8d6a-f3268c104613": 1,
+      "3146718a-d9bc-41a3-93f3-f0b2f2991d2b": 0,
+      "b71eac93-f6e6-4df1-9362-a42632fcc701": 2
+    }
+  }
+}

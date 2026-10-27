@@ -1,0 +1,1562 @@
+    6.1.3.41 IfcWall - IFC4.3.2.0 Documentation  
+
+IFC 4.3.2.0 (IFC4X3\_ADD2) official
+
+-   [Help improve the next version](https://technical.buildingsmart.org/standards/ifc/ifc-schema-specifications/)
+-   [Get user or developer support](https://forums.buildingsmart.org/)
+
+[Cover](../../index.html) [Contents](../toc.html) [Foreword](../content/foreword.htm) [Introduction](../content/introduction.htm)
+
+[1 Scope](../content/scope.htm) [2 Normative references](../content/normative_references.htm) [3 Terms, definitions, and abbreviated terms](../content/terms_and_definitions.htm) [4 Fundamental concepts and assumptions](../concepts/content.html) [5 Core data schemas](../chapter-5/index.html) [6 Shared element data schemas](../chapter-6/index.html) [6.1 IfcSharedBldgElements](../ifcsharedbldgelements/content.html) [6.2 IfcSharedBldgServiceElements](../ifcsharedbldgserviceelements/content.html) [6.3 IfcSharedComponentElements](../ifcsharedcomponentelements/content.html) [6.4 IfcSharedFacilitiesElements](../ifcsharedfacilitieselements/content.html) [6.5 IfcSharedMgmtElements](../ifcsharedmgmtelements/content.html) [6.6 IfcSharedInfrastructureElements](../ifcsharedinfrastructureelements/content.html) [7 Domain specific data schemas](../chapter-7/index.html) [8 Resource definition data schemas](../chapter-8/index.html)
+
+[A Computer interpretable listings](../annex-a.html) [B Alphabetical listings](../annex-b.html) [C Inheritance listings](../annex-c.html) [D Diagrams](../annex-d.html) [E Examples](../annex-e.html) [F Change logs](../annex-f.html)
+
+[Bibliography](../content/bibliography.htm) [Index](../index.htm)
+
+# 6.1.3.41 IfcWall
+
+NOTE This entity is a subtype of [IfcProduct](IfcProduct.htm) or [IfcTypeProduct](IfcTypeProduct.htm) and hence part of every standardized schema subset and implementation level.
+
+## 6.1.3.41.1 Semantic definition[](IfcWall.htm#6.1.3.41.1-Semantic-definition)
+
+The wall represents a vertical construction that may bound or subdivide spaces. Wall are usually vertical, or nearly vertical, planar elements, often designed to bear structural loads. A wall is however not required to be load bearing.
+
+A wall may have openings, such as wall openings, openings used for windows or doors, or niches and recesses. They are defined by an *[IfcOpeningElement](IfcOpeningElement.htm)* attached to the wall using the inverse relationship *HasOpenings* pointing to *[IfcRelVoidsElement](IfcRelVoidsElement.htm)*. Walls with openings that have already been modeled within the enclosing geometry may use the relationship *[IfcRelConnectsElements](IfcRelConnectsElements.htm)* to associate the wall with embedded elements such as doors and windows.
+
+There are two main representations for all occurrences:
+
+-   *[IfcWall](IfcWall.htm)* with *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is used for all occurrences of walls, that have a non-changing thickness along the wall path and where the thickness parameter can be fully described by a material layer set. These walls are always represented geometrically by an 'Axis' and a 'SweptSolid' shape representation (or by a 'Clipping' geometry based on 'SweptSolid'), if a 3D geometric representation is assigned.
+    
+-   *[IfcWall](IfcWall.htm)* without *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is used for all other occurrences of wall, particularly for walls with changing thickness along the wall path (e.g. polygonal walls), or walls with a non-rectangular cross sections (e.g. L-shaped retaining walls), and walls having an extrusion axis that is unequal to the global Z axis of the project (i.e. non-vertical walls), or walls having only 'Brep', or 'SurfaceModel' geometry, or if a more parametric representation is not intended.
+    
+
+REFERENCE Definition according to ISO 6707-1: vertical construction usually in masonry or in concrete which bounds or subdivides a construction works and fulfils a load bearing or retaining function.
+
+NOTE An arbitrary planar element to which this semantic information is not applicable (is not predominantly vertical), shall be modeled as *[IfcPlate](IfcPlate.htm)*.
+
+NOTE The entity *[IfcWallStandardCase](IfcWallStandardCase.htm)* has been deprecated, *[IfcWall](IfcWall.htm)* with *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is used instead. The entity *IfcWallElementedCase* has been deleted, *[IfcWall](IfcWall.htm)* with *[IfcRelAggregates](IfcRelAggregates.htm)* is used to describe occurrences of wall which are aggregated from subordinate elements, such as wall panels.
+
+NOTE There is a representation of walls for structural analysis provided by a proper subtype of *[IfcStructuralMember](IfcStructuralMember.htm)* being part of the *[IfcStructuralAnalysisModel](IfcStructuralAnalysisModel.htm)*.
+
+HISTORY New entity in IFC1.0
+
+## 6.1.3.41.2 Entity inheritance[](IfcWall.htm#6.1.3.41.2-Entity-inheritance)
+
+1.  -   [IfcRoot](IfcRoot.htm)
+2.  -   [IfcObjectDefinition](IfcObjectDefinition.htm)
+    -   [IfcPropertyDefinition](IfcPropertyDefinition.htm)
+    -   [IfcRelationship](IfcRelationship.htm)
+3.  -   [IfcObject](IfcObject.htm)
+    -   [IfcContext](IfcContext.htm)
+    -   [IfcTypeObject](IfcTypeObject.htm)
+4.  -   [IfcProduct](IfcProduct.htm)
+    -   [IfcActor](IfcActor.htm)
+    -   [IfcControl](IfcControl.htm)
+    -   [IfcGroup](IfcGroup.htm)
+    -   [IfcProcess](IfcProcess.htm)
+    -   [IfcResource](IfcResource.htm)
+5.  -   [IfcElement](IfcElement.htm)
+    -   [IfcAnnotation](IfcAnnotation.htm)
+    -   [IfcLinearElement](IfcLinearElement.htm)
+    -   [IfcPort](IfcPort.htm)
+    -   [IfcPositioningElement](IfcPositioningElement.htm)
+    -   [IfcSpatialElement](IfcSpatialElement.htm)
+    -   [IfcStructuralActivity](IfcStructuralActivity.htm)
+    -   [IfcStructuralItem](IfcStructuralItem.htm)
+6.  -   [IfcBuiltElement](IfcBuiltElement.htm)
+    -   [IfcCivilElement](IfcCivilElement.htm)
+    -   [IfcDistributionElement](IfcDistributionElement.htm)
+    -   [IfcElementAssembly](IfcElementAssembly.htm)
+    -   [IfcElementComponent](IfcElementComponent.htm)
+    -   [IfcFeatureElement](IfcFeatureElement.htm)
+    -   [IfcFurnishingElement](IfcFurnishingElement.htm)
+    -   [IfcGeographicElement](IfcGeographicElement.htm)
+    -   [IfcGeotechnicalElement](IfcGeotechnicalElement.htm)
+    -   [IfcTransportationDevice](IfcTransportationDevice.htm)
+    -   [IfcVirtualElement](IfcVirtualElement.htm)
+7.  -   [IfcWall](IfcWall.htm)
+    -   [IfcBeam](IfcBeam.htm)
+    -   [IfcBearing](IfcBearing.htm)
+    -   [IfcBuildingElementProxy](IfcBuildingElementProxy.htm)
+    -   [IfcChimney](IfcChimney.htm)
+    -   [IfcColumn](IfcColumn.htm)
+    -   [IfcCourse](IfcCourse.htm)
+    -   [IfcCovering](IfcCovering.htm)
+    -   [IfcCurtainWall](IfcCurtainWall.htm)
+    -   [IfcDeepFoundation](IfcDeepFoundation.htm)
+    -   [IfcDoor](IfcDoor.htm)
+    -   [IfcEarthworksElement](IfcEarthworksElement.htm)
+    -   [IfcFooting](IfcFooting.htm)
+    -   [IfcKerb](IfcKerb.htm)
+    -   [IfcMember](IfcMember.htm)
+    -   [IfcMooringDevice](IfcMooringDevice.htm)
+    -   [IfcNavigationElement](IfcNavigationElement.htm)
+    -   [IfcPavement](IfcPavement.htm)
+    -   [IfcPlate](IfcPlate.htm)
+    -   [IfcRail](IfcRail.htm)
+    -   [IfcRailing](IfcRailing.htm)
+    -   [IfcRamp](IfcRamp.htm)
+    -   [IfcRampFlight](IfcRampFlight.htm)
+    -   [IfcRoof](IfcRoof.htm)
+    -   [IfcShadingDevice](IfcShadingDevice.htm)
+    -   [IfcSlab](IfcSlab.htm)
+    -   [IfcStair](IfcStair.htm)
+    -   [IfcStairFlight](IfcStairFlight.htm)
+    -   [IfcTrackElement](IfcTrackElement.htm)
+    -   [IfcWindow](IfcWindow.htm)
+8.  -   [IfcWallStandardCase](IfcWallStandardCase.htm)
+
+## 6.1.3.41.3 Attributes[](IfcWall.htm#6.1.3.41.3-Attributes)
+
+   
+
+#
+
+Attribute
+
+Type
+
+Description
+
+[IfcRoot](IfcRoot.htm) (4)
+
+1
+
+GlobalId
+
+[IfcGloballyUniqueId](IfcGloballyUniqueId.htm)
+
+Assignment of a globally unique identifier within the entire software world.
+
+2
+
+OwnerHistory
+
+OPTIONAL [IfcOwnerHistory](IfcOwnerHistory.htm)
+
+Assignment of the information about the current ownership of that object, including owning actor, application, local identification and information captured about the recent changes of the object,
+
+NOTE Only the last modification is stored - either as addition, deletion or modification.
+
+IFC4-CHANGE The attribute has been changed to be OPTIONAL.
+
+3
+
+Name
+
+OPTIONAL [IfcLabel](IfcLabel.htm)
+
+Optional name for use by the participating software systems or users. For some subtypes of [IfcRoot](IfcRoot.htm) the insertion of the Name attribute may be required. This would be enforced by a where rule.
+
+4
+
+Description
+
+OPTIONAL [IfcText](IfcText.htm)
+
+Optional description, provided for exchanging informative comments.
+
+[IfcObjectDefinition](IfcObjectDefinition.htm) (7)
+
+*HasAssignments*
+
+SET \[0:?\] OF [IfcRelAssigns](IfcRelAssigns.htm) FOR RelatedObjects
+
+Reference to the relationship objects, that assign (by an association relationship) other subtypes of *[IfcObject](IfcObject.htm)* to this object instance. Examples are the association to products, processes, controls, resources or groups.
+
+*Nests*
+
+SET \[0:1\] OF [IfcRelNests](IfcRelNests.htm) FOR RelatedObjects
+
+References to the decomposition relationship being a nesting. It determines that this object definition is a part within an ordered whole/part decomposition relationship. An object occurrence or type can only be part of a single decomposition (to allow hierarchical structures only).
+
+IFC4-CHANGE The inverse attribute datatype has been added and separated from *Decomposes* defined at *[IfcObjectDefinition](IfcObjectDefinition.htm)*.
+
+*IsNestedBy*
+
+SET \[0:?\] OF [IfcRelNests](IfcRelNests.htm) FOR RelatingObject
+
+References to the decomposition relationship being a nesting. It determines that this object definition is the whole within an ordered whole/part decomposition relationship. An object or object type can be nested by several other objects (occurrences or types).
+
+IFC4-CHANGE The inverse attribute datatype has been added and separated from *IsDecomposedBy* defined at *[IfcObjectDefinition](IfcObjectDefinition.htm)*.
+
+*HasContext*
+
+SET \[0:1\] OF [IfcRelDeclares](IfcRelDeclares.htm) FOR RelatedDefinitions
+
+References to the context providing context information such as project unit or representation context. It should only be asserted for the uppermost non-spatial object.
+
+IFC4-CHANGE The inverse attribute datatype has been added.
+
+*IsDecomposedBy*
+
+SET \[0:?\] OF [IfcRelAggregates](IfcRelAggregates.htm) FOR RelatingObject
+
+References to the decomposition relationship being an aggregation. It determines that this object definition is whole within an unordered whole/part decomposition relationship. An object definition can be aggregated by several other objects (occurrences or parts).
+
+IFC4-CHANGE The inverse attribute datatype has been changed from the supertype *[IfcRelDecomposes](IfcRelDecomposes.htm)* to subtype *[IfcRelAggregates](IfcRelAggregates.htm)*.
+
+*Decomposes*
+
+SET \[0:1\] OF [IfcRelAggregates](IfcRelAggregates.htm) FOR RelatedObjects
+
+References to the decomposition relationship being an aggregation. It determines that this object definition is a part within an unordered whole/part decomposition relationship. An object definition can only be part of a single decomposition (to allow hierarchical structures only).
+
+IFC4-CHANGE The inverse attribute datatype has been changed from the supertype *[IfcRelDecomposes](IfcRelDecomposes.htm)* to subtype *[IfcRelAggregates](IfcRelAggregates.htm)*.
+
+*HasAssociations*
+
+SET \[0:?\] OF [IfcRelAssociates](IfcRelAssociates.htm) FOR RelatedObjects
+
+Reference to the relationship objects, that associates external references or other resource definitions to the object. Examples are the association to library, documentation or classification.
+
+[IfcObject](IfcObject.htm) (5)
+
+5
+
+ObjectType
+
+OPTIONAL [IfcLabel](IfcLabel.htm)
+
+The type denotes a particular type that indicates the object further. The use has to be established at the level of instantiable subtypes. In particular it holds the user defined type, if the enumeration of the attribute *PredefinedType* is set to USERDEFINED or when the concrete entity instantiated does not have a PredefinedType attribute. The latter is the case in some exceptional leaf classes and when instantiating [IfcBuiltElement](IfcBuiltElement.htm) directly.
+
+*IsDeclaredBy*
+
+SET \[0:1\] OF [IfcRelDefinesByObject](IfcRelDefinesByObject.htm) FOR RelatedObjects
+
+Link to the relationship object pointing to the declaring object that provides the object definitions for this object occurrence. The declaring object has to be part of an object type decomposition. The associated *[IfcObject](IfcObject.htm)*, or its subtypes, contains the specific information (as part of a type, or style, definition), that is common to all reflected instances of the declaring *[IfcObject](IfcObject.htm)*, or its subtypes.
+
+IFC4-CHANGE New inverse relationship, change made with upward compatibility for file based exchange.
+
+*Declares*
+
+SET \[0:?\] OF [IfcRelDefinesByObject](IfcRelDefinesByObject.htm) FOR RelatingObject
+
+Link to the relationship object pointing to the reflected object(s) that receives the object definitions. The reflected object has to be part of an object occurrence decomposition. The associated *[IfcObject](IfcObject.htm)*, or its subtypes, provides the specific information (as part of a type, or style, definition), that is common to all reflected instances of the declaring *[IfcObject](IfcObject.htm)*, or its subtypes.
+
+IFC4-CHANGE New inverse relationship, change made with upward compatibility for file based exchange.
+
+*IsTypedBy*
+
+SET \[0:1\] OF [IfcRelDefinesByType](IfcRelDefinesByType.htm) FOR RelatedObjects
+
+Set of relationships to the object type that provides the type definitions for this object occurrence. The then associated *[IfcTypeObject](IfcTypeObject.htm)*, or its subtypes, contains the specific information (or type, or style), that is common to all instances of *[IfcObject](IfcObject.htm)*, or its subtypes, referring to the same type.
+
+IFC4-CHANGE New inverse relationship, the link to *[IfcRelDefinesByType](IfcRelDefinesByType.htm)* was previously included in the inverse relationship *[IfcRelDefines](IfcRelDefines.htm)*. Change made with upward compatibility for file based exchange.
+
+*IsDefinedBy*
+
+SET \[0:?\] OF [IfcRelDefinesByProperties](IfcRelDefinesByProperties.htm) FOR RelatedObjects
+
+Set of relationships to property set definitions attached to this object. Those statically or dynamically defined properties contain alphanumeric information content that further defines the object.
+
+IFC4-CHANGE The data type has been changed from *[IfcRelDefines](IfcRelDefines.htm)* to *[IfcRelDefinesByProperties](IfcRelDefinesByProperties.htm)* with upward compatibility for file based exchange.
+
+[IfcProduct](IfcProduct.htm) (5)
+
+6
+
+ObjectPlacement
+
+OPTIONAL [IfcObjectPlacement](IfcObjectPlacement.htm)
+
+This establishes the object coordinate system and placement of the product in space. The placement can either be absolute (relative to the world coordinate system), relative (relative to the object placement of another product), or constrained (e.g. relative to grid axes, or to a linear positioning element). The type of placement is determined by the various subtypes of *[IfcObjectPlacement](IfcObjectPlacement.htm)*. An object placement must be provided if a representation is present.
+
+7
+
+Representation
+
+OPTIONAL [IfcProductRepresentation](IfcProductRepresentation.htm)
+
+Reference to the representations of the product, being either a representation (*[IfcProductRepresentation](IfcProductRepresentation.htm)*) or as a special case of a shape representation (*[IfcProductDefinitionShape](IfcProductDefinitionShape.htm)*). The product definition shape provides for multiple geometric representations of the shape property of the object within the same object coordinate system, defined by the object placement.
+
+*ReferencedBy*
+
+SET \[0:?\] OF [IfcRelAssignsToProduct](IfcRelAssignsToProduct.htm) FOR RelatingProduct
+
+Reference to the *[IfcRelAssignsToProduct](IfcRelAssignsToProduct.htm)* relationship, by which other products, processes, controls, resources or actors (as subtypes of *[IfcObjectDefinition](IfcObjectDefinition.htm)*) can be related to this product.
+
+*PositionedRelativeTo*
+
+SET \[0:?\] OF [IfcRelPositions](IfcRelPositions.htm) FOR RelatedProducts
+
+Reference to the *[IfcRelPositions](IfcRelPositions.htm)* relationship, which defines its relationship with a positioning element.
+
+*ReferencedInStructures*
+
+SET \[0:?\] OF [IfcRelReferencedInSpatialStructure](IfcRelReferencedInSpatialStructure.htm) FOR RelatedElements
+
+Reference to the objectified relationship *[IfcRelReferencedInSpatialStructure](IfcRelReferencedInSpatialStructure.htm)* may be used to relate a product to one or more spatial structure elements in addition to the one in which it is primarily contained.
+
+[IfcElement](IfcElement.htm) (13)
+
+8
+
+Tag
+
+OPTIONAL [IfcIdentifier](IfcIdentifier.htm)
+
+The tag (or label) identifier at the particular instance of a product, e.g. the serial number, or the position number. It is the identifier at the occurrence level.
+
+*FillsVoids*
+
+SET \[0:1\] OF [IfcRelFillsElement](IfcRelFillsElement.htm) FOR RelatedBuildingElement
+
+Reference to the *[IfcRelFillsElement](IfcRelFillsElement.htm)* relationship that puts the element as a filling into the opening created within another element.
+
+*ConnectedTo*
+
+SET \[0:?\] OF [IfcRelConnectsElements](IfcRelConnectsElements.htm) FOR RelatingElement
+
+Reference to the element connection relationship. The relationship then refers to the other element to which this element is connected to.
+
+*IsInterferedByElements*
+
+SET \[0:?\] OF [IfcRelInterferesElements](IfcRelInterferesElements.htm) FOR RelatedElement
+
+Reference to the interference relationship to indicate the element that is interfered. The relationship, if provided, indicates that this element has an interference with one or many other elements.
+
+NOTE There is no indication of precedence between *IsInterferedByElements* and *InterferesElements*.
+
+IFC4-CHANGE New inverse relationship.
+
+*InterferesElements*
+
+SET \[0:?\] OF [IfcRelInterferesElements](IfcRelInterferesElements.htm) FOR RelatingElement
+
+Reference to the interference relationship to indicate the element that interferes. The relationship, if provided, indicates that this element has an interference with one or many other elements.
+
+NOTE There is no indication of precedence between *IsInterferedByElements* and *InterferesElements*.
+
+IFC4-CHANGE New inverse relationship.
+
+*HasProjections*
+
+SET \[0:?\] OF [IfcRelProjectsElement](IfcRelProjectsElement.htm) FOR RelatingElement
+
+Projection relationship that adds a feature (using a Boolean union) to the *[IfcBuiltElement](IfcBuiltElement.htm)*.
+
+*HasOpenings*
+
+SET \[0:?\] OF [IfcRelVoidsElement](IfcRelVoidsElement.htm) FOR RelatingBuildingElement
+
+Reference to the *[IfcRelVoidsElement](IfcRelVoidsElement.htm)* relationship that creates an opening in an element. An element can incorporate zero-to-many openings. For each opening, that voids the element, a new relationship *[IfcRelVoidsElement](IfcRelVoidsElement.htm)* is generated.
+
+*IsConnectionRealization*
+
+SET \[0:?\] OF [IfcRelConnectsWithRealizingElements](IfcRelConnectsWithRealizingElements.htm) FOR RealizingElements
+
+Reference to the connection relationship with realizing element. The relationship, if provided, assigns this element as the realizing element to the connection, which provides the physical manifestation of the connection relationship.
+
+*ProvidesBoundaries*
+
+SET \[0:?\] OF [IfcRelSpaceBoundary](IfcRelSpaceBoundary.htm) FOR RelatedBuildingElement
+
+Reference to space boundaries by virtue of the objectified relationship *[IfcRelSpaceBoundary](IfcRelSpaceBoundary.htm)*. It defines the concept of an element bounding spaces.
+
+*ConnectedFrom*
+
+SET \[0:?\] OF [IfcRelConnectsElements](IfcRelConnectsElements.htm) FOR RelatedElement
+
+Reference to the element connection relationship. The relationship then refers to the other element that is connected to this element.
+
+*ContainedInStructure*
+
+SET \[0:1\] OF [IfcRelContainedInSpatialStructure](IfcRelContainedInSpatialStructure.htm) FOR RelatedElements
+
+Containment relationship to the spatial structure element, to which the element is primarily associated. This containment relationship has to be hierarchical, i.e. an element may only be assigned directly to zero or one spatial structure.
+
+*HasCoverings*
+
+SET \[0:?\] OF [IfcRelCoversBldgElements](IfcRelCoversBldgElements.htm) FOR RelatingBuildingElement
+
+Reference to *[IfcCovering](IfcCovering.htm)* by virtue of the objectified relationship *[IfcRelCoversBldgElements](IfcRelCoversBldgElements.htm)*. It defines the concept of an element having coverings associated.
+
+*HasSurfaceFeatures*
+
+SET \[0:?\] OF [IfcRelAdheresToElement](IfcRelAdheresToElement.htm) FOR RelatingElement
+
+Reference to the *[IfcRelAdheresToElement](IfcRelAdheresToElement.htm)* relationship that adheres a *[IfcSurfaceFeature](IfcSurfaceFeature.htm)* to an element. An element can incorporate zero-to-many surface features in one relationship.
+
+Click to show 34 hidden inherited attributes Click to hide 34 inherited attributes
+
+[IfcWall](IfcWall.htm) (1)
+
+9
+
+PredefinedType
+
+OPTIONAL [IfcWallTypeEnum](IfcWallTypeEnum.htm)
+
+Predefined generic type for a wall that is specified in an enumeration. There may be a property set given specifically for the predefined types.
+
+NOTE The *PredefinedType* shall only be used, if no *[IfcWallType](IfcWallType.htm)* is assigned, providing its own *[IfcWallType](IfcWallType.htm).PredefinedType*.
+
+IFC4-CHANGE The attribute has been added at the end of the entity definition.
+
+Table 6.1.3.41.P[](IfcWall.htm#Table-6.1.3.41.P)
+
+## 6.1.3.41.4 Formal propositions[](IfcWall.htm#6.1.3.41.4-Formal-propositions)
+
+Name
+
+Description
+
+CorrectPredefinedType
+
+Either the *PredefinedType* attribute is unset (e.g. because an *[IfcWallType](IfcWallType.htm)* is associated), or the inherited attribute *ObjectType* shall be provided, if the *PredefinedType* is set to USERDEFINED.
+
+```express
+NOT(EXISTS(PredefinedType)) OR
+ (PredefinedType <> IfcWallTypeEnum.USERDEFINED) OR
+ ((PredefinedType = IfcWallTypeEnum.USERDEFINED) AND EXISTS (SELF\IfcObject.ObjectType))
+```
+
+CorrectTypeAssigned
+
+Either there is no wall type object associated, i.e. the *IsTypedBy* inverse relationship is not provided, or the associated type object has to be of type *[IfcWallType](IfcWallType.htm)*.
+
+```express
+(SIZEOF(IsTypedBy) = 0) OR
+  ('IFC4X3_ADD2.IFCWALLTYPE' IN TYPEOF(SELF\IfcObject.IsTypedBy[1].RelatingType))
+```
+
+Table 6.1.3.41.Q[](IfcWall.htm#Table-6.1.3.41.Q)
+
+## 6.1.3.41.5 Property sets[](IfcWall.htm#6.1.3.41.5-Property-sets)
+
+-   [Pset\_ConcreteElementGeneral](Pset_ConcreteElementGeneral.htm)
+    -   AssemblyPlace
+    -   CastingMethod
+    -   StructuralClass
+    -   StrengthClass
+    -   ExposureClass
+    -   ReinforcementVolumeRatio
+    -   ReinforcementAreaRatio
+    -   DimensionalAccuracyClass
+    -   ConstructionToleranceClass
+    -   ConcreteCover
+    -   ConcreteCoverAtMainBars
+    -   ConcreteCoverAtLinks
+    -   ReinforcementStrengthClass
+-   [Pset\_Condition](Pset_Condition.htm)
+    -   AssessmentDate
+    -   AssessmentCondition
+    -   AssessmentDescription
+    -   AssessmentType
+    -   AssessmentMethod
+    -   LastAssessmentReport
+    -   NextAssessmentDate
+    -   AssessmentFrequency
+-   [Pset\_ConstructionAdministration](Pset_ConstructionAdministration.htm)
+    -   ProcurementMethod
+    -   SpecificationSectionNumber
+    -   SubmittalIdentifer
+-   [Pset\_ConstructionOccurence](Pset_ConstructionOccurence.htm)
+    -   InstallationDate
+    -   ModelNumber
+    -   TagNumber
+    -   AssetIdentifier
+-   [Pset\_ElementKinematics](Pset_ElementKinematics.htm)
+    -   CyclicPath
+    -   CyclicRange
+    -   LinearPath
+    -   LinearRange
+    -   MaximumAngularVelocity
+    -   MaximumConstantSpeed
+    -   MinimumTime
+-   [Pset\_EnvironmentalCondition](Pset_EnvironmentalCondition.htm)
+    -   ReferenceAirRelativeHumidity
+    -   ReferenceEnvironmentTemperature
+    -   MaximumAtmosphericPressure
+    -   StorageTemperatureRange
+    -   MaximumWindSpeed
+    -   OperationalTemperatureRange
+    -   MaximumRainIntensity
+    -   SaltMistLevel
+    -   SeismicResistance
+    -   SmokeLevel
+    -   MaximumSolarRadiation
+-   [Pset\_EnvironmentalImpactIndicators](Pset_EnvironmentalImpactIndicators.htm)
+    -   Reference
+    -   FunctionalUnitReference
+    -   IndicatorsUnit
+    -   LifeCyclePhase
+    -   ExpectedServiceLife
+    -   TotalPrimaryEnergyConsumptionPerUnit
+    -   WaterConsumptionPerUnit
+    -   HazardousWastePerUnit
+    -   NonHazardousWastePerUnit
+    -   ClimateChangePerUnit
+    -   AtmosphericAcidificationPerUnit
+    -   RenewableEnergyConsumptionPerUnit
+    -   NonRenewableEnergyConsumptionPerUnit
+    -   ResourceDepletionPerUnit
+    -   InertWastePerUnit
+    -   RadioactiveWastePerUnit
+    -   StratosphericOzoneLayerDestructionPerUnit
+    -   PhotochemicalOzoneFormationPerUnit
+    -   EutrophicationPerUnit
+-   [Pset\_EnvironmentalImpactValues](Pset_EnvironmentalImpactValues.htm)
+    -   TotalPrimaryEnergyConsumption
+    -   WaterConsumption
+    -   HazardousWaste
+    -   NonHazardousWaste
+    -   ClimateChange
+    -   AtmosphericAcidification
+    -   RenewableEnergyConsumption
+    -   NonRenewableEnergyConsumption
+    -   ResourceDepletion
+    -   InertWaste
+    -   RadioactiveWaste
+    -   StratosphericOzoneLayerDestruction
+    -   PhotochemicalOzoneFormation
+    -   Eutrophication
+    -   LeadInTime
+    -   Duration
+    -   LeadOutTime
+-   [Pset\_InstallationOccurrence](Pset_InstallationOccurrence.htm)
+    -   InstallationDate
+    -   AcceptanceDate
+    -   PutIntoOperationDate
+-   [Pset\_MaintenanceStrategy](Pset_MaintenanceStrategy.htm)
+    -   AssetCriticality
+    -   AssetFrailty
+    -   AssetPriority
+    -   MonitoringType
+    -   AccidentResponse
+-   [Pset\_MaintenanceTriggerCondition](Pset_MaintenanceTriggerCondition.htm)
+    -   ConditionTargetPerformance
+    -   ConditionMaintenanceLevel
+    -   ConditionReplacementLevel
+    -   ConditionDisposalLevel
+-   [Pset\_MaintenanceTriggerDuration](Pset_MaintenanceTriggerDuration.htm)
+    -   DurationTargetPerformance
+    -   DurationMaintenanceLevel
+    -   DurationReplacementLevel
+    -   DurationDisposalLevel
+-   [Pset\_MaintenanceTriggerPerformance](Pset_MaintenanceTriggerPerformance.htm)
+    -   TargetPerformance
+    -   PerformanceMaintenanceLevel
+    -   ReplacementLevel
+    -   DisposalLevel
+-   [Pset\_ManufacturerOccurrence](Pset_ManufacturerOccurrence.htm)
+    -   AcquisitionDate
+    -   BarCode
+    -   SerialNumber
+    -   BatchReference
+    -   AssemblyPlace
+    -   ManufacturingDate
+-   [Pset\_ManufacturerTypeInformation](Pset_ManufacturerTypeInformation.htm)
+    -   GlobalTradeItemNumber
+    -   ArticleNumber
+    -   ModelReference
+    -   ModelLabel
+    -   Manufacturer
+    -   ProductionYear
+    -   AssemblyPlace
+    -   OperationalDocument
+    -   SafetyDocument
+    -   PerformanceCertificate
+-   [Pset\_PrecastConcreteElementFabrication](Pset_PrecastConcreteElementFabrication.htm)
+    -   TypeDesignation
+    -   ProductionLotId
+    -   SerialNumber
+    -   PieceMark
+    -   AsBuiltLocationNumber
+    -   ActualProductionDate
+    -   ActualErectionDate
+-   [Pset\_PrecastConcreteElementGeneral](Pset_PrecastConcreteElementGeneral.htm)
+    -   TypeDesignation
+    -   CornerChamfer
+    -   ManufacturingToleranceClass
+    -   FormStrippingStrength
+    -   LiftingStrength
+    -   ReleaseStrength
+    -   MinimumAllowableSupportLength
+    -   InitialTension
+    -   TendonRelaxation
+    -   TransportationStrength
+    -   SupportDuringTransportDescription
+    -   SupportDuringTransportDocReference
+    -   HollowCorePlugging
+    -   CamberAtMidspan
+    -   BatterAtStart
+    -   BatterAtEnd
+    -   Twisting
+    -   Shortening
+    -   PieceMark
+    -   DesignLocationNumber
+-   [Pset\_ReinforcementBarPitchOfWall](Pset_ReinforcementBarPitchOfWall.htm)
+    -   Description
+    -   Reference
+    -   BarAllocationType
+    -   VerticalBarPitch
+    -   HorizontalBarPitch
+    -   SpacingBarPitch
+-   [Pset\_RepairOccurrence](Pset_RepairOccurrence.htm)
+    -   RepairContent
+    -   RepairDate
+    -   MeanTimeToRepair
+-   [Pset\_Risk](Pset_Risk.htm)
+    -   RiskName
+    -   RiskType
+    -   NatureOfRisk
+    -   RiskAssessmentMethodology
+    -   UnmitigatedRiskLikelihood
+    -   UnmitigatedRiskConsequence
+    -   UnmitigatedRiskSignificance
+    -   MitigationPlanned
+    -   MitigatedRiskLikelihood
+    -   MitigatedRiskConsequence
+    -   MitigatedRiskSignificance
+    -   MitigationProposed
+    -   AssociatedProduct
+    -   AssociatedActivity
+    -   AssociatedLocation
+-   [Pset\_RoadGuardElement](Pset_RoadGuardElement.htm) `PARAPET`
+    -   IsMoveable
+    -   IsTerminal
+    -   IsTransition
+    -   TerminalType
+-   [Pset\_ServiceLife](Pset_ServiceLife.htm)
+    -   ServiceLifeDuration
+    -   MeanTimeBetweenFailure
+-   [Pset\_Tolerance](Pset_Tolerance.htm)
+    -   ToleranceDescription
+    -   ToleranceBasis
+    -   OverallTolerance
+    -   HorizontalTolerance
+    -   OrthogonalTolerance
+    -   VerticalTolerance
+    -   PlanarFlatness
+    -   HorizontalFlatness
+    -   ElevationalFlatness
+    -   SideFlatness
+    -   OverallOrthogonality
+    -   HorizontalOrthogonality
+    -   OrthogonalOrthogonality
+    -   VerticalOrthogonality
+    -   OverallStraightness
+    -   HorizontalStraightness
+    -   OrthogonalStraightness
+    -   VerticalStraightness
+-   [Pset\_Uncertainty](Pset_Uncertainty.htm)
+    -   UncertaintyBasis
+    -   UncertaintyDescription
+    -   HorizontalUncertainty
+    -   LinearUncertainty
+    -   OrthogonalUncertainty
+    -   VerticalUncertainty
+-   [Pset\_WallCommon](Pset_WallCommon.htm)
+    -   Reference
+    -   Status
+    -   AcousticRating
+    -   FireRating
+    -   Combustible
+    -   SurfaceSpreadOfFlame
+    -   ThermalTransmittance
+    -   IsExternal
+    -   LoadBearing
+    -   ExtendToStructure
+    -   Compartmentation
+-   [Pset\_Warranty](Pset_Warranty.htm)
+    -   WarrantyIdentifier
+    -   WarrantyStartDate
+    -   IsExtendedWarranty
+    -   WarrantyPeriod
+    -   WarrantyContent
+    -   PointOfContact
+    -   Exclusions
+-   [Qto\_BodyGeometryValidation](Qto_BodyGeometryValidation.htm)
+    -   GrossSurfaceArea
+    -   NetSurfaceArea
+    -   GrossVolume
+    -   NetVolume
+    -   SurfaceGenusBeforeFeatures
+    -   SurfaceGenusAfterFeatures
+-   [Qto\_WallBaseQuantities](Qto_WallBaseQuantities.htm)
+    -   Length
+    -   Width
+    -   Height
+    -   GrossFootPrintArea
+    -   NetFootPrintArea
+    -   GrossSideArea
+    -   NetSideArea
+    -   GrossVolume
+    -   NetVolume
+    -   GrossWeight
+    -   NetWeight
+
+## 6.1.3.41.6 Concept usage[](IfcWall.htm#6.1.3.41.6-Concept-usage)
+
+Concept
+
+Usage
+
+Description
+
+[IfcRoot](IfcRoot.htm) (2)
+
+[Revision Control](../concepts/Object_Attributes/Revision_Control/content.html)
+
+General
+
+Ownership, history, and merge state is captured using [IfcOwnerHistory](IfcOwnerHistory.htm).
+
+[Software Identity](../concepts/Object_Attributes/Software_Identity/content.html)
+
+General
+
+[IfcRoot](IfcRoot.htm) assigns the globally unique ID. In addition it may provide for a name and a description about the concept.
+
+[IfcObjectDefinition](IfcObjectDefinition.htm) (9)
+
+[Classification Association](../concepts/Object_Association/Classification_Association/content.html)
+
+General
+
+Any object occurrence or object type can have a reference to a specific classification reference, i.e. to a particular facet within a classification system.
+
+[Aggregation](../concepts/Object_Composition/Aggregation/content.html)
+
+General
+
+*No description available.*
+
+[Approval Association](../concepts/Object_Association/Approval_Association/content.html)
+
+General
+
+*No description available.*
+
+[Constraint Association](../concepts/Object_Association/Constraint_Association/content.html)
+
+General
+
+*No description available.*
+
+[Document Association](../concepts/Object_Association/Document_Association/content.html)
+
+General
+
+*No description available.*
+
+[Library Association](../concepts/Object_Association/Library_Association/content.html)
+
+General
+
+*No description available.*
+
+[Material Association](../concepts/Object_Association/Material_Association/content.html)
+
+General
+
+*No description available.*
+
+[Material Single](../concepts/Object_Association/Material_Association/Material_Single/content.html)
+
+General
+
+*No description available.*
+
+[Nesting](../concepts/Object_Composition/Nesting/content.html)
+
+General
+
+*No description available.*
+
+[IfcObject](IfcObject.htm) (5)
+
+[Object Predefined Type](../concepts/Object_Attributes/Object_Predefined_Type/content.html)
+
+General
+
+*No description available.*
+
+[Object Typing](../concepts/Object_Definition/Object_Typing/content.html)
+
+General
+
+Any object occurrence can be typed by being assigned to a common object type utilizing this concept. A particular rule, restricting the applicable subtypes of *[IfcTypeObject](IfcTypeObject.htm)* that can be assigned, is introduced by overriding this concept at the level of subtypes of *[IfcObject](IfcObject.htm)*.
+
+This concept can be applied to the following resources:
+
+-   [IfcTypeObject](IfcTypeObject.htm)
+
+[Object User Identity](../concepts/Object_Attributes/Object_User_Identity/content.html)
+
+General
+
+An attribute *Name* and optionally *Description* can be used for all subypes of *[IfcObject](IfcObject.htm)*. For those subtypes, that have an object type definition, such as *[IfcBeam](IfcBeam.htm)* - *[IfcBeamType](IfcBeamType.htm)*, the common *Name* and optionally *Description* is associated with the object type.
+
+[Property Sets with Override](../concepts/Object_Definition/Property_Sets/Property_Sets_for_Objects/Property_Sets_with_Override/content.html)
+
+General
+
+Any object occurrence can hold property sets, either directly at the object occurrence as element specific property sets, or at the object type, as type property sets. In this case, the properties that are provided to the object occurrence are the combinations of element specific and type properties. In case that the same property (within the same property set) is defined both in occurrence and type properties, the property value of the occurrence property overrides the property value of the type property.
+
+[Assignment to Group](../concepts/Object_Assignment/Assignment_to_Group/content.html)
+
+General
+
+*No description available.*
+
+[IfcProduct](IfcProduct.htm) (18)
+
+[Body Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/content.html)
+
+General
+
+The body or solid model geometric representation of an *[IfcProduct](IfcProduct.htm)* is typically defined using a Tessellation or Brep. Subtypes may provide recommendations on other representation types that may be used. The following attribute values for the *[IfcShapeRepresentation](IfcShapeRepresentation.htm)* holding this geometric representation shall be used:
+
+-   *[IfcShapeRepresentation](IfcShapeRepresentation.htm).RepresentationIdentifier* = 'Body'
+-   *[IfcShapeRepresentation](IfcShapeRepresentation.htm).RepresentationType* = Typically 'Tessellation' or 'Brep'
+
+[Product Geometric Representation](../concepts/Product_Shape/Product_Geometric_Representation/content.html)
+
+General
+
+The geometric representation of any *[IfcProduct](IfcProduct.htm)* is provided by the *[IfcProductDefinitionShape](IfcProductDefinitionShape.htm)* allowing multiple geometric representations. It uses the *Product Placement* concept utilizing *[IfcLocalPlacement](IfcLocalPlacement.htm)* to establish an object coordinate system, in which all geometric representations are founded.
+
+NOTE A detailed specification of how to apply the local placement and which shape representaions are applicable is provided at the level of subtypes of *[IfcProduct](IfcProduct.htm)* and is further determined by the model view definition and implementer agreements.
+
+[Product Geometry Colour](../concepts/Product_Shape/Product_Geometry_Colour/content.html)
+
+General
+
+*No description available.*
+
+[Product Geometry Layer](../concepts/Product_Shape/Product_Geometry_Layer/content.html)
+
+General
+
+*No description available.*
+
+[Product Relative Positioning](../concepts/Object_Connectivity/Product_Relative_Positioning/content.html)
+
+General
+
+If the *[IfcProduct](IfcProduct.htm)* *Product Placement* is placed relative to an *[IfcPositioningElement](IfcPositioningElement.htm)* this relationship covers the information on which *[IfcPositioningElement](IfcPositioningElement.htm)* positions the *[IfcProduct](IfcProduct.htm)*.
+
+[Product Span Positioning](../concepts/Object_Connectivity/Product_Span_Positioning/content.html)
+
+General
+
+*No description available.*
+
+[Box Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Box_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[CoG Geometry](../concepts/Product_Shape/Product_Geometric_Representation/CoG_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Mapped Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Mapped_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Object Typing](../concepts/Object_Definition/Object_Typing/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+This concept can be applied to the following resources:
+
+-   [IfcTypeProduct](IfcTypeProduct.htm)
+
+[Product Local Placement](../concepts/Product_Shape/Product_Placement/Product_Local_Placement/content.html)
+
+General
+
+*No description available.*
+
+[Product Topology Representation](../concepts/Product_Shape/Product_Topology_Representation/content.html)
+
+General
+
+*No description available.*
+
+[Property Sets for Objects](../concepts/Object_Definition/Property_Sets/Property_Sets_for_Objects/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [Pset\_Risk](Pset_Risk.htm)
+-   [Pset\_Tolerance](Pset_Tolerance.htm)
+-   [Pset\_Uncertainty](Pset_Uncertainty.htm)
+
+[Quantity Sets](../concepts/Object_Definition/Quantity_Sets/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [Qto\_BodyGeometryValidation](Qto_BodyGeometryValidation.htm)
+
+[Reference Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Reference_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Reference SweptSolid Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Reference_Geometry/Reference_SweptSolid_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Reference SweptSolid PolyCurve Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Reference_Geometry/Reference_SweptSolid_Geometry/Reference_SweptSolid_PolyCurve_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Reference Tessellation Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Reference_Geometry/Reference_Tessellation_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[IfcElement](IfcElement.htm) (44)
+
+[Body AdvancedBrep Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedBrep_Geometry/content.html)
+
+General
+
+An *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes or by view definitions) may be represented as a single or multiple boundary representation models, which include advanced surfaces, usually refered to as NURBS surfaces. The 'AdvancedBrep' representation allows for the representation of complex free-form element shape.
+
+NOTE View definitions or implementer agreements may restrict or disallow the use of 'AdvancedBrep' geometry.
+
+[Body AdvancedSwept Directrix Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedSweptSolid_Geometry/Body_AdvancedSwept_Directrix_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body AdvancedSwept DiskSolid PolyCurve Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedSweptSolid_Geometry/Body_AdvancedSwept_DiskSolid_PolyCurve_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body AdvancedSwept Tapered Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedSweptSolid_Geometry/Body_AdvancedSwept_Tapered_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body Brep Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_Brep_Geometry/content.html)
+
+General
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented as a single or multiple Boundary Representation models (which are restricted to be faceted Brep's with or without voids). The Brep representation allows for the representation of complex element shape.
+
+![Brep representation](../figures/ifcbuildingelement-brep-layout1.gif)
+
+Figure 6.1.3.41.A — Building element body boundary representation[](IfcWall.htm#Figure-6.1.3.41.A-Building-element-body-boundary-representation)
+
+EXAMPLE  As shown in Figure 6.1.3.41.A, the Brep representation is given by an *[IfcShapeRepresentation](IfcShapeRepresentation.htm)*, which includes one or more items, all of type *[IfcFacetedBrep](IfcFacetedBrep.htm)*. In some cases it may be useful to also expose a simple representation as a bounding box representation of the same complex shape.
+
+[Body CSG Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_CSG_Geometry/content.html)
+
+General
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented as a CSG primitive or CSG tree. The CSG representation allows for the representation of complex element shape.
+
+NOTE View definitions or implementer agreements may restrict or disallow the use of 'CSG' geometry.
+
+[Body SectionedSolidHorizontal](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedSweptSolid_Geometry/Body_SectionedSolidHorizontal/content.html)
+
+General
+
+*No description available.*
+
+[Body SurfaceModel Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SurfaceModel_Geometry/content.html)
+
+General
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented as a single or multiple surface models, based on either shell or face based surface models. It may also include tessellated models.
+
+![surface model](../figures/ifcbuildingelement-surfacemodel-layout1.gif)
+
+Figure 6.1.3.41.B — Element surface model representation[](IfcWall.htm#Figure-6.1.3.41.B-Element-surface-model-representation)
+
+EXAMPLE As shown in Figure 6.1.3.41.B, the surface model representation is given by an *[IfcShapeRepresentation](IfcShapeRepresentation.htm)*, which includes a single item which is either an *[IfcShellBasedSurfaceModel](IfcShellBasedSurfaceModel.htm)*, or an *[IfcFaceBasedSurfaceModel](IfcFaceBasedSurfaceModel.htm)*. In some cases it may also be useful to expose a simple representation as a bounding box representation of the same complex shape.
+
+[Body SurfaceOrSolidModel Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SurfaceOrSolidModel_Geometry/content.html)
+
+General
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented as a mixed representation, including surface and solid models.
+
+[Body SweptSolid Composite Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/Body_SweptSolid_Composite_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body SweptSolid CompositeCurve Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/Body_SweptSolid_CompositeCurve_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body SweptSolid ParameterizedProfile Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/Body_SweptSolid_ParameterizedProfile_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body SweptSolid PolyCurve Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/Body_SweptSolid_PolyCurve_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body Tessellation Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_Tessellation_Geometry/content.html)
+
+Reference View
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented as a single or multiple tessellated surface models, in particular triangulated surface models.
+
+[Box Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Box_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+![bounding box](../figures/ifcbuildingelement-boundingbox-layout1.gif)
+
+Figure 6.1.3.41.C — Building element box representation[](IfcWall.htm#Figure-6.1.3.41.C-Building-element-box-representation)
+
+EXAMPLE  Any *[IfcElement](IfcElement.htm)* may be represented by a bounding box, which shows the maximum extent of the body within the object coordinate system established by the *[IfcObjectPlacement](IfcObjectPlacement.htm)*. As shown in Figure 6.1.3.41.C, the bounding box representation is given by an *[IfcShapeRepresentation](IfcShapeRepresentation.htm)* that includes a single item: an *[IfcBoundingBox](IfcBoundingBox.htm)*.
+
+[CoG Geometry](../concepts/Product_Shape/Product_Geometric_Representation/CoG_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The 'CoG', Center of Gravity, shape representation is used as a means to verify the correct import by comparing the CoG of the imported geometry with the explicily provided CoG created during export.
+
+[Element Interference](../concepts/Object_Connectivity/Element_Interference/content.html)
+
+General
+
+*No description available.*
+
+[Element Nesting](../concepts/Object_Composition/Nesting/Element_Nesting/content.html)
+
+General
+
+A host element can nest connected components. This should be used when there is a specific position or form factor to attach specific elements.
+
+EXAMPLE A sink has a pre-drilled hole to attach a faucet.
+
+[Element Projecting](../concepts/Object_Composition/Element_Projecting/content.html)
+
+General
+
+*No description available.*
+
+[Element Voiding Features](../concepts/Object_Composition/Element_Voiding/Element_Voiding_Features/content.html)
+
+General
+
+*No description available.*
+
+[FootPrint Annotation Geometry](../concepts/Product_Shape/Product_Geometric_Representation/FootPrint_Geometry/FootPrint_Annotation_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[FootPrint GeomSet PolyCurve Geometry](../concepts/Product_Shape/Product_Geometric_Representation/FootPrint_Geometry/FootPrint_GeomSet_Geometry/FootPrint_GeomSet_PolyCurve_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[FootPrint Geometry](../concepts/Product_Shape/Product_Geometric_Representation/FootPrint_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Mapped Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Mapped_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+Any *[IfcElement](IfcElement.htm)* (so far no further constraints are defined at the level of its subtypes) may be represented using the 'MappedRepresentation'. This shall be supported as it allows for reusing the geometry definition of a type at all occurrences of the same type. The results are more compact data sets.
+
+The same constraints, as given for 'SurfaceOrSolidModel', 'SurfaceModel', 'Tessellation', 'Brep', and 'AdvancedBrep' geometric representation, shall apply to the *[IfcRepresentationMap](IfcRepresentationMap.htm)*.
+
+[Product Grid Placement](../concepts/Product_Shape/Product_Placement/Product_Grid_Placement/content.html)
+
+General
+
+*No description available.*
+
+[Product Linear Placement](../concepts/Product_Shape/Product_Placement/Product_Linear_Placement/content.html)
+
+General
+
+Product placement with a *Product Linear Placement* template. It defines the local coordinate system based on the curve which is referenced by *[IfcLinearPlacement](IfcLinearPlacement.htm).RelativePlacement* which is an *[IfcAxis2PlacementLinear](IfcAxis2PlacementLinear.htm).Location* using an *[IfcPointByDistanceExpression](IfcPointByDistanceExpression.htm).BasisCurve*. The local coordinate system is based on the tangent of the curve at Location, its normal in the global Z plane and the cross product of the aforementioned vectors.
+
+[Product Local Placement](../concepts/Product_Shape/Product_Placement/Product_Local_Placement/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The object placement for any subtype of [IfcElement](IfcElement.htm) is defined by the *[IfcObjectPlacement](IfcObjectPlacement.htm)*, either *[IfcLocalPlacement](IfcLocalPlacement.htm)* or *[IfcGridPlacement](IfcGridPlacement.htm)*, which defines the local object coordinate system that is referenced by all geometric representations of that *[IfcElement](IfcElement.htm)*.
+
+[Property Sets for Objects](../concepts/Object_Definition/Property_Sets/Property_Sets_for_Objects/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [Pset\_Condition](Pset_Condition.htm)
+-   [Pset\_InstallationOccurrence](Pset_InstallationOccurrence.htm)
+-   [Pset\_MaintenanceStrategy](Pset_MaintenanceStrategy.htm)
+-   [Pset\_MaintenanceTriggerCondition](Pset_MaintenanceTriggerCondition.htm)
+-   [Pset\_MaintenanceTriggerDuration](Pset_MaintenanceTriggerDuration.htm)
+-   [Pset\_MaintenanceTriggerPerformance](Pset_MaintenanceTriggerPerformance.htm)
+-   [Pset\_RepairOccurrence](Pset_RepairOccurrence.htm)
+-   [Pset\_ConstructionAdministration](Pset_ConstructionAdministration.htm)
+-   [Pset\_ConstructionOccurence](Pset_ConstructionOccurence.htm)
+-   [Pset\_ElementKinematics](Pset_ElementKinematics.htm)
+-   [Pset\_EnvironmentalCondition](Pset_EnvironmentalCondition.htm)
+-   [Pset\_EnvironmentalImpactIndicators](Pset_EnvironmentalImpactIndicators.htm)
+-   [Pset\_EnvironmentalImpactValues](Pset_EnvironmentalImpactValues.htm)
+-   [Pset\_ManufacturerOccurrence](Pset_ManufacturerOccurrence.htm)
+-   [Pset\_ManufacturerTypeInformation](Pset_ManufacturerTypeInformation.htm)
+-   [Pset\_ServiceLife](Pset_ServiceLife.htm)
+-   [Pset\_Warranty](Pset_Warranty.htm)
+
+[Surface Feature Adherence](../concepts/Object_Composition/Surface_Feature_Adherence/content.html)
+
+General
+
+*No description available.*
+
+[Surface Sectioned Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/Surface_Sectioned_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Surface Tessellation Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/Surface_Tessellation_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body AdvancedSweptSolid Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_AdvancedSweptSolid_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body Clipping Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_Clipping_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Body SweptSolid Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Element Covering](../concepts/Object_Connectivity/Element_Covering/content.html)
+
+General
+
+*No description available.*
+
+[Element Occurrence Attributes](../concepts/Object_Attributes/Object_Occurrence_Attributes/Element_Occurrence_Attributes/content.html)
+
+General
+
+*No description available.*
+
+[Element Voiding](../concepts/Object_Composition/Element_Voiding/content.html)
+
+General
+
+*No description available.*
+
+[Lighting Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Lighting_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Object Typing](../concepts/Object_Definition/Object_Typing/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcElementType](IfcElementType.htm)
+
+[Profile 3D Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Profile_Geometry/Profile_3D_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Profile Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Profile_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Spatial Containment](../concepts/Object_Connectivity/Spatial_Structure/Spatial_Containment/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcSpatialElement](IfcSpatialElement.htm)
+
+[Surface 3D Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/Surface_3D_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[Surface Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/content.html)
+
+General
+
+*No description available.*
+
+[IfcBuiltElement](IfcBuiltElement.htm) (3)
+
+[Product Assignment](../concepts/Object_Assignment/Product_Assignment/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcTask](IfcTask.htm) - A task for operating on the wall.
+
+[Surface 3D Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/Surface_3D_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+Some *[IfcBuiltElement](IfcBuiltElement.htm)* may be represented by a surface as an abstract geometric representation. See each subtype for specific guidance.
+
+[Object Typing](../concepts/Object_Definition/Object_Typing/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcBuiltElementType](IfcBuiltElementType.htm)
+
+Click to show 81 hidden inherited concepts Click to hide 81 inherited concepts
+
+[IfcWall](IfcWall.htm) (15)
+
+[Axis 2D Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Axis_Geometry/Axis_2D_Geometry/content.html)
+
+General
+
+The wall axis is represented by a two-dimensional open curve within a particular shape representation. The 'Axis' shape representation is only used to locate the material layer set along the axis, if the *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is applied to the *[IfcWall](IfcWall.htm)*. In this case, the wall axis is used to apply the material layer set usage parameter to the wall geometry.
+
+-   Axis
+    -   *[IfcPolyline](IfcPolyline.htm)* having two Points, or *[IfcTrimmedCurve](IfcTrimmedCurve.htm)* with *BasisCurve* of Type *[IfcLine](IfcLine.htm)* for the 'SweptSolid' provided as *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)*. The axis curve lies on the x/y plane and is parallel to the x-axis of the object coordinate system.
+    -   *[IfcTrimmedCurve](IfcTrimmedCurve.htm)* with *BasisCurve* of Type *[IfcCircle](IfcCircle.htm)* for 'SweptSolid' provided as *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)*. The axis curve lies on the x/y plane of the object coordinate system, the tangent at the start is along the positive x-axis.
+
+![straight wall axis](../figures/ifcwallstandard_straigthwall_01-layout1.gif)
+
+Figure 6.1.3.41.D — Wall axis straight[](IfcWall.htm#Figure-6.1.3.41.D-Wall-axis-straight)
+
+Figure 6.1.3.41.D illustrates an axis representation for a straight wall. In case of a straight wall, the set of items shall include a single geometric representation item of type *[IfcPolyline](IfcPolyline.htm)* or *[IfcTrimmedCurve](IfcTrimmedCurve.htm)* with the *BasisCurve* being an *[IfcLine](IfcLine.htm)*. The *[IfcPolyline](IfcPolyline.htm)* or *[IfcTrimmedCurve](IfcTrimmedCurve.htm)* shall be parallel (here in a special case co-linear) to the x-axis of the object coordinate system. The direction shall be identical to the direction of the x-axis.
+
+![curved wall axis](../figures/ifcwallstandard_curvedwall_01-layout1.gif)
+
+Figure 6.1.3.41.E — Wall axis curved[](IfcWall.htm#Figure-6.1.3.41.E-Wall-axis-curved)
+
+Figure 6.1.3.41.E illustrates an axis representation for a curved wall. In case of a curved wall, the set of items shall include a single geometric representation item of type *[IfcTrimmedCurve](IfcTrimmedCurve.htm)*. The curve shall have a *BasisCurve* of type *[IfcCircle](IfcCircle.htm)*. The tangent of the *[IfcTrimmedCurve](IfcTrimmedCurve.htm)* shall be parallel at start to the x-axis of the object coordinate system. The direction shall be identical to the direction of the x-axis.
+
+[Body Clipping Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_Clipping_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The following additional constraints apply to the 'SweptSolid' representation, when an *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is assigned to the *[IfcSlab](IfcSlab.htm)*:
+
+-   Solid: *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)* is required
+-   Profile: *[IfcArbitraryClosedProfileDef](IfcArbitraryClosedProfileDef.htm)* and *[IfcRectangleProfileDef](IfcRectangleProfileDef.htm)* shall be supported.
+-   Extrusion: All extrusion directions shall be supported.
+-   Boolean result: The *[IfcBooleanClippingResult](IfcBooleanClippingResult.htm)* shall be supported, allowing for Boolean differences between the swept solid (here *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)*) and one or several *[IfcHalfSpaceSolid](IfcHalfSpaceSolid.htm)* (or subtypes).
+
+Figure 6.1.3.41.F illustrates a clipping for a straight wall using an *[IfcPolygonalBoundedHalfSpace](IfcPolygonalBoundedHalfSpace.htm)* as *SecondOperand* in the *[IfcBooleanClippingResult](IfcBooleanClippingResult.htm)*.
+
+![straight wall clipping](../figures/ifcwallstandard_straigthwall_03-layout1.gif)
+
+Figure 6.1.3.41.F — Wall body clipping straight[](IfcWall.htm#Figure-6.1.3.41.F-Wall-body-clipping-straight)
+
+Figure 6.1.3.41.G illustrates a clipping for a curved wall using an *[IfcHalfSpaceSolid](IfcHalfSpaceSolid.htm)* as *SecondOperand* in the *[IfcBooleanClippingResult](IfcBooleanClippingResult.htm)*.
+
+![curved wall clipping](../figures/ifcwallstandard_curvedwall_03-layout1.gif)
+
+Figure 6.1.3.41.G — Wall body clipping curved[](IfcWall.htm#Figure-6.1.3.41.G-Wall-body-clipping-curved)
+
+[Body SweptSolid Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Body_Geometry/Body_SweptSolid_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The following additional constraints apply to the 'SweptSolid' representation:
+
+-   Solid: *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)* is required
+-   Profile: *[IfcArbitraryClosedProfileDef](IfcArbitraryClosedProfileDef.htm)* and *[IfcRectangleProfileDef](IfcRectangleProfileDef.htm)* shall be supported.
+-   Extrusion: All extrusion directions shall be supported.
+
+Additional constraints apply to the 'SweptSolid' representation, when an *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* is used:
+
+-   Extrusion: The profile shall be extruded vertically, i.e., in the direction of the z-axis of the coordinate system of the referred spatial structure element. It might be further constraint to be in the direction of the global z-axis in implementers agreements. The extrusion axis shall be perpendicular to the swept profile, i.e. pointing into the direction of the z-axis of the *Position* of the *[IfcExtrudedAreaSolid](IfcExtrudedAreaSolid.htm)*.
+
+The profile of a wall is described in the ground view and extruded vertically. The profile (also identical with the foot print of the wall) is defined by the *[IfcArbitraryClosedProfileDef](IfcArbitraryClosedProfileDef.htm)* (excluding its subtypes). The profile is given with all wall connections already resolved.
+
+Figure 6.1.3.41.H illustrates a body representation for a straight wall. In case of a straight wall, the two sides of the profile shall be parallel to the wall axis, that is, the wall has a single unchanged thickness.
+
+![straight wall body](../figures/ifcwallstandard_straigthwall_02-layout1.gif)
+
+Figure 6.1.3.41.H — Wall body extrusion straight[](IfcWall.htm#Figure-6.1.3.41.H-Wall-body-extrusion-straight)
+
+Figure 6.1.3.41.I illustrates a body representation for a curved wall. In case of a curved wall, the two sides of the profile shall be parallel (with defined offset) to the wall axis, that is, the wall has a single unchanged thickness.
+
+![curved wall body](../figures/ifcwallstandard_curvedwall_02-layout1.gif)
+
+Figure 6.1.3.41.I — Wall body extrusion curved[](IfcWall.htm#Figure-6.1.3.41.I-Wall-body-extrusion-curved)
+
+[Element Decomposition](../concepts/Object_Composition/Aggregation/Element_Decomposition/content.html)
+
+General
+
+A wall may decomposed into parts such as framing and panels on each side. For efficiency, each part may reuse geometry using the mapped geometry concept.
+
+![voiding](../figures/ifcwall-partitioning.png)
+
+Figure 6.1.3.41.J — A wall decomposed into parts.[](IfcWall.htm#Figure-6.1.3.41.J-A-wall-decomposed-into-parts.)
+
+This concept can be applied to the following resources:
+
+-   [IfcMember](IfcMember.htm) - Studs, posts and similar elements
+-   [IfcMechanicalFastener](IfcMechanicalFastener.htm) - Fasteners that may be used to connect elements together with [IfcRelConnectsWithRealizingElements](IfcRelConnectsWithRealizingElements.htm)
+-   [IfcElementAssembly](IfcElementAssembly.htm) - Frame containing studs, tracks, and possibly insulation
+-   [IfcBuildingElementPart](IfcBuildingElementPart.htm) - Panels on each side such as gypsum (drywall) or cement board (tile backing) with fasteners
+
+[Element Voiding](../concepts/Object_Composition/Element_Voiding/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+As shown in Figure 6.1.3.41.K, openings within the composite wall are directly assigned to *[IfcWall](IfcWall.htm)* using *[IfcRelVoidsElement](IfcRelVoidsElement.htm)* pointing to *[IfcOpeningElement](IfcOpeningElement.htm)* and apply to all aggregated parts. If individual parts have cutting and other voiding features, then the decomposed parts have a separate voiding relationship *[IfcRelVoidsElement](IfcRelVoidsElement.htm)* pointing to *[IfcVoidingFeature](IfcVoidingFeature.htm)*.
+
+dot\_neato [IfcWall](IfcWall.htm) IfcWall [IfcRelVoidsElement](IfcRelVoidsElement.htm) IfcRelVoidsElement [IfcRelVoidsElement](IfcRelVoidsElement.htm)\->[IfcWall](IfcWall.htm) RelatingBuildingElement [IfcOpeningElement](IfcOpeningElement.htm) IfcOpeningElement [IfcRelVoidsElement](IfcRelVoidsElement.htm)\->[IfcOpeningElement](IfcOpeningElement.htm) RelatedOpeningElement [IfcRelAggregates](IfcRelAggregates.htm) IfcRelAggregates [IfcRelAggregates](IfcRelAggregates.htm)\->[IfcWall](IfcWall.htm) RelatingObject [IfcBuildingElementPart](IfcBuildingElementPart.htm) IfcBuildingElementPart [IfcRelAggregates](IfcRelAggregates.htm)\->[IfcBuildingElementPart](IfcBuildingElementPart.htm) RelatedObjects\[1\] IfcRelVoidsElement2 IfcRelVoidsElement IfcRelVoidsElement2->[IfcBuildingElementPart](IfcBuildingElementPart.htm) RelatingBuildingElement [IfcVoidingFeature](IfcVoidingFeature.htm) IfcVoidingFeature IfcRelVoidsElement2->[IfcVoidingFeature](IfcVoidingFeature.htm) RelatedOpeningElement
+
+Figure 6.1.3.41.K — How individual parts being cut may be expressed.[](IfcWall.htm#Figure-6.1.3.41.K-How-individual-parts-being-cut-may-be-expressed.)
+
+[Material Layer Set Usage](../concepts/Object_Association/Material_Association/Material_Layer_Set_Usage/content.html)
+
+General
+
+Figure 6.1.3.41.L illustrates assignment of *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm)* and *[IfcMaterialLayerSet](IfcMaterialLayerSet.htm)* to the *[IfcWallType](IfcWallType.htm)* and the *[IfcWall](IfcWall.htm)* occurrence.
+
+![Material layer set and usage](../figures/ifcwall_materialusage-01.png)
+
+Figure 6.1.3.41.L — Wall Standard Object Typing[](IfcWall.htm#Figure-6.1.3.41.L-Wall-Standard-Object-Typing)
+
+Figure 6.1.3.41.M illustrates material layer usage, where:
+
+-   The reference coordinate system is the local coordinate system established by the *ObjectPlacement* of the *[IfcWall](IfcWall.htm)*.
+-   The reference axis is the axis defined by the *[IfcShapeRepresentation](IfcShapeRepresentation.htm)* with *RepresentationType*\='Axis' as one of the wall's representations.
+-   The *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm).OffsetFromReferenceLine* is given as a distance from this axis.
+-   The *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm).OffsetFromReferenceLine* is the distance parallel to the reference axis and always within the base (XY) plane of the reference coordinate system. A positive value of *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm).OffsetFromReferenceLine* would then point into the positive y-axis of the reference coordinate system.
+-   The *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm).DirectionSense* defines how the *[IfcMaterialLayer](IfcMaterialLayer.htm)*'s are assigned to the reference axis. POSITIVE means in direction to the positive y-axis of the reference coordinate system.
+-   The *Thickness* of each *[IfcMaterialLayer](IfcMaterialLayer.htm)* is provided starting from the *OffsetFromReferenceLine* and in the direction given by *DirectionSense*. It is applied without any gap or overlap between two consecutive layers. The *TotalThickness* of the *[IfcMaterialLayerSet](IfcMaterialLayerSet.htm)* is the sum of all layer thicknesses.
+-   The *[IfcMaterialLayerSetUsage](IfcMaterialLayerSetUsage.htm).LayerSetDirection* is always AXIS2.
+-   The local placement of the wall uses the the x/y plane for the profile, and the z-axis as the extrusion direction for the wall body.
+
+![wall material layer set](../figures/ifcmateriallayersetusage_wall-01.png)
+
+Figure 6.1.3.41.M — Wall material layers[](IfcWall.htm#Figure-6.1.3.41.M-Wall-material-layers)
+
+[Object Typing](../concepts/Object_Definition/Object_Typing/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+This concept can be applied to the following resources:
+
+-   [IfcWallType](IfcWallType.htm)
+
+[Path Connectivity](../concepts/Object_Connectivity/Element_Connectivity/Path_Connectivity/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcWall](IfcWall.htm) - Walls with equal or lower priority are connected at RelatedElement.
+
+[Product Assignment](../concepts/Object_Assignment/Product_Assignment/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+This concept can be applied to the following resources:
+
+-   [IfcStructuralSurfaceMember](IfcStructuralSurfaceMember.htm) - An idealized structural member corresponding to the wall.
+-   [IfcTask](IfcTask.htm) - A task for operating on the wall.
+
+[Property Sets for Objects](../concepts/Object_Definition/Property_Sets/Property_Sets_for_Objects/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+This concept can be applied to the following resources:
+
+-   [Pset\_ConcreteElementGeneral](Pset_ConcreteElementGeneral.htm)
+-   [Pset\_PrecastConcreteElementFabrication](Pset_PrecastConcreteElementFabrication.htm)
+-   [Pset\_PrecastConcreteElementGeneral](Pset_PrecastConcreteElementGeneral.htm)
+-   [Pset\_RoadGuardElement](Pset_RoadGuardElement.htm) (only applies to `PARAPET)`
+-   [Pset\_ReinforcementBarPitchOfWall](Pset_ReinforcementBarPitchOfWall.htm)
+-   [Pset\_WallCommon](Pset_WallCommon.htm)
+
+[Quantity Sets](../concepts/Object_Definition/Quantity_Sets/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+This concept can be applied to the following resources:
+
+-   [Qto\_WallBaseQuantities](Qto_WallBaseQuantities.htm)
+
+[Spatial Containment](../concepts/Object_Connectivity/Spatial_Structure/Spatial_Containment/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The *[IfcWall](IfcWall.htm)*, as any subtype of *[IfcBuiltElement](IfcBuiltElement.htm)*, may participate alternatively in one of the two different containment relationships:
+
+-   the *Spatial Containment* (defined here), or
+-   the *Element Composition*.
+
+[Surface Geometry](../concepts/Product_Shape/Product_Geometric_Representation/Surface_Geometry/content.html)
+
+General
+
+This is a further elaboration on an inherited concept.
+
+The 'Surface' can be used to define a surfacic model of the building (e.g. for analytical purposes, or for reduced Level of Detail representation).
+
+[Element Openings](../concepts/Object_Composition/Element_Voiding/Element_Openings/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   [IfcDoor](IfcDoor.htm)
+-   [IfcWindow](IfcWindow.htm)
+
+[Material Set](../concepts/Object_Association/Material_Association/Material_Set/content.html)
+
+General
+
+This concept can be applied to the following resources:
+
+-   LoadBearing
+-   Insulation
+
+Table 6.1.3.41.R[](IfcWall.htm#Table-6.1.3.41.R)
+
+## 6.1.3.41.7 Examples[](IfcWall.htm#6.1.3.41.7-Examples)
+
+-   [![](../examples/building-elements/wall-extrusion/thumb.png)](../annex_e/building-elements/wall-extrusion.html)
+    
+    Figure 6.1.3.41.N[](IfcWall.htm#Figure-6.1.3.41.N)
+    
+    [Wall Extrusion](../annex_e/building-elements/wall-extrusion.html)
+    
+-   [![](../examples/construction-scheduling/construction-scheduling-task/thumb.png)](../annex_e/construction-scheduling/construction-scheduling-task.html)
+    
+    Figure 6.1.3.41.O[](IfcWall.htm#Figure-6.1.3.41.O)
+    
+    [Construction Scheduling Task](../annex_e/construction-scheduling/construction-scheduling-task.html)
+    
+
+## 6.1.3.41.8 Formal representation[](IfcWall.htm#6.1.3.41.8-Formal-representation)
+
+```express
+ENTITY IfcWall
+ SUPERTYPE OF (ONEOF
+	(IfcWallStandardCase))
+ SUBTYPE OF (IfcBuiltElement);
+	PredefinedType : OPTIONAL IfcWallTypeEnum;
+ WHERE
+	CorrectPredefinedType : NOT(EXISTS(PredefinedType)) OR
+ (PredefinedType <> IfcWallTypeEnum.USERDEFINED) OR
+ ((PredefinedType = IfcWallTypeEnum.USERDEFINED) AND EXISTS (SELF\IfcObject.ObjectType));
+	CorrectTypeAssigned : (SIZEOF(IsTypedBy) = 0) OR
+  ('IFC4X3_ADD2.IFCWALLTYPE' IN TYPEOF(SELF\IfcObject.IsTypedBy[1].RelatingType));
+END_ENTITY;
+```
+
+## 6.1.3.41.9 References[](IfcWall.htm#6.1.3.41.9-References)
+
+-   [IfcBuiltElement](IfcBuiltElement.htm)
+-   [IfcWallStandardCase](IfcWallStandardCase.htm)
+
+[Edit on Github](https://github.com/buildingSMART/IFC4.3.x-development/blob/master//docs/schemas/shared/IfcSharedBldgElements/Entities/IfcWall.md)
+
+  
+
+Is this page difficult to understand? [Let us know!](https://github.com/buildingSMART/IFC4.3.x-development/issues/371)
+
+Jump to section
+
+### 6.1.3.41.10 Changelog[](IfcWall.htm#6.1.3.41.10-Changelog)
+
+#### 6.1.3.41.10.1 IFC4[](IfcWall.htm#6.1.3.41.10.1-IFC4)
+
+-   attribute, PredefinedType
+-   where rule, CorrectPredefinedType
+-   where rule, CorrectTypeAssigned
+-   where rule, WR1
+
+#### 6.1.3.41.10.2 IFC4.3\_ADD2[](IfcWall.htm#6.1.3.41.10.2-IFC4.3-ADD2)
+
+-   supertype, Changed from "IfcBuildingElement" to "[IfcBuiltElement](IfcBuiltElement.htm)"
+
+[![Creative Commons License](../../lib/i.creativecommons.org/l/by-nd/4.0/88x31.png)](http://creativecommons.org/licenses/by-nd/4.0/) Copyright © 1996-2022 buildingSMART International Limited. Some rights reserved. Any technical documentation made available by buildingSMART International Limited is the copyrighted work of buildingSMART International Limited and is owned by buildingSMART International Limited. The Industry Foundation Classes are published under Creative Commons Attribution-NoDerivatives 4.0 International (CC BY-ND 4.0). Read the [full license text here](https://creativecommons.org/licenses/by-nd/4.0/legalcode). For more information please refer to our [IP Policy.](https://buildingsmart-1xbd3ajdayi.netdna-ssl.com/wp-content/uploads/2021/06/bSI-Intellectual-Property-Policy.pdf)

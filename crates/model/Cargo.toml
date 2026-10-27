@@ -1,0 +1,18 @@
+[package]
+name = "omnim-model"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+omnim-core = { path = "../core" }
+omnim-sketch = { path = "../sketch" }
+uuid.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+json5.workspace = true
+truck-modeling.workspace = true
+truck-polymesh.workspace = true
+truck-topology.workspace = true
+truck-base.workspace = true

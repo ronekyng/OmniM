@@ -1,0 +1,27 @@
+[package]
+name = "omnim-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "omnim"
+path = "src/main.rs"
+
+[dependencies]
+omnim-core = { path = "../core" }
+omnim-model = { path = "../model" }
+omnim-omcom = { path = "../omcom" }
+omnim-ifc = { path = "../ifc" }
+omnim-amir = { path = "../amir" }
+omnim-sketch = { path = "../sketch" }
+axum.workspace = true
+tokio.workspace = true
+tower-http.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+uuid.workspace = true
+dirs.workspace = true
+
+[dev-dependencies]
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
