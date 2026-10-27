@@ -1,3 +1,10 @@
+---
+title: "OmniM RFC"
+status: design
+last_updated: 2026-10-27
+applies_to: "n/a (proposal)"
+evidence: "n/a (proposal)"
+---
 # OmniM RFC
 
 RFC（Request for Comments）文档用于讨论 OmniM 的重大设计变更。

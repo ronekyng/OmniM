@@ -1,3 +1,10 @@
+---
+title: "OmniM Domain Coverage"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM Domain Coverage
 
 ## 1. Overview
@@ -19,13 +26,15 @@ Building Engineering covers architectural, structural, MEP, and facility-related
 
 ### Core Objects
 
-| Category | Objects |
-|----------|---------|
-| Spatial | Site, Building, BuildingStorey, Space, Zone |
-| Architectural | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp |
-| Structural | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection |
-| MEP | Duct, Pipe, CableTray (straight→LayerExtrusion, bend→LinearComponent), Valve, Damper, Pump, Fan, AirTerminal |
-| Equipment | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture |
+> **Proto status** — ✅ in proto (`proto/omnim.proto`) · 🔀 partial (in proto, but the documented workflow/geometry is only partly implemented) · 🗓 planned-only (listed here, not in the `ObjectType` enum). Domain totals per `docs/research/COMPONENT_INVENTORY.md`: 155 listed / 51 in proto / 104 planned-only; Building 15/37 planned-only, Civil 31/41, Plant 28/39, Mechanical 30/38.
+
+| Category | Objects | Proto status |
+|----------|---------|--------------|
+| Spatial | Site, Building, BuildingStorey, Space, Zone | ✅ Site, Building, BuildingStorey, Space; 🗓 Zone |
+| Architectural | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Roof, Stair; 🗓 Ceiling, CurtainWall, Ramp |
+| Structural | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection | ✅ Beam, Column, Slab; 🗓 Footing, Pile, Brace, Truss, Rebar, Connection |
+| MEP | Duct, Pipe, CableTray (LinearComponent), Valve, Damper, Pump, Fan, AirTerminal | ✅ Duct, Pipe, CableTray, Valve, Pump, AirTerminal; 🗓 Damper, Fan |
+| Equipment | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture | ✅ Chiller, AHU, Transformer; 🗓 Boiler, Switchboard, Fixture |
 
 ### Key Workflows
 - BIM authoring and coordination
@@ -35,7 +44,7 @@ Building Engineering covers architectural, structural, MEP, and facility-related
 - Facility handover and asset management
 
 ### Standards Alignment
-- IFC 2x3 / IFC 4 / IFC 4x3
+- IFC 2x3 / IFC 4 subset (IFC 4x3 🗓 planned)
 - ISO 19650 information management
 - COBie asset handover
 
@@ -47,16 +56,18 @@ Civil Engineering covers infrastructure, transportation, land development, utili
 
 ### Core Objects
 
-| Category | Objects |
-|----------|---------|
-| Alignment | HorizontalAlignment, VerticalAlignment, Profile, Station |
-| Road | Road, Lane, Shoulder, PavementLayer, Median, Curb |
-| Bridge | Bridge, Pier, Abutment, Girder, Deck, Bearing, ExpansionJoint |
-| Tunnel | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage |
-| Hydraulic | Dam, Culvert, Channel, Drainage, RetentionBasin |
-| Utility | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank |
-| Terrain/Site | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent |
-| Earthwork | CutVolume, FillVolume, EarthworkBalance, RetainingWall |
+| Category | Objects | Proto status |
+|----------|---------|--------------|
+| Alignment | HorizontalAlignment, VerticalAlignment, Profile, Station | 🗓 all planned-only |
+| Road | Road, Lane, Shoulder, PavementLayer, Median, Curb | 🔀 Road; 🗓 Lane, Shoulder, PavementLayer, Median, Curb |
+| Bridge | Bridge, Pier, Abutment, Girder, Deck, Bearing, ExpansionJoint | 🔀 Bridge; ✅ Pier, Abutment; 🗓 Girder, Deck, Bearing, ExpansionJoint |
+| Tunnel | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage | 🔀 Tunnel; 🗓 Lining, Portal, Shaft, Segment, Ring, CrossPassage |
+| Hydraulic | Dam, Culvert, Channel, Drainage, RetentionBasin | ✅ Dam, Culvert; 🗓 Channel, Drainage, RetentionBasin |
+| Utility | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank | ✅ Manhole; 🗓 WaterPipe, SewerPipe, StormPipe, UtilityPole, DuctBank |
+| Terrain/Site | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | 🗓 all planned-only |
+| Earthwork | CutVolume, FillVolume, EarthworkBalance, RetainingWall | ✅ RetainingWall; 🗓 CutVolume, FillVolume, EarthworkBalance |
+
+> **Proto status** legend: ✅ in proto · 🔀 partial (in proto, simplified workflow) · 🗓 planned-only. Civil: 41 listed / 10 in proto / 31 planned-only.
 
 > **Bentley bridge/tunnel component details** (`docs/research/bentley_openroads_components.md`):
 > - **Bearing types** (§2.3.1): Elastomeric Pad, Pot, Disc, Mechanical
@@ -81,9 +92,9 @@ Civil Engineering covers infrastructure, transportation, land development, utili
 - Infrastructure asset management
 
 ### Standards Alignment
-- IFC 4x3 infrastructure extensions
-- LandXML
-- GeoJSON / Shapefile / GML
+- IFC 2x3 / IFC 4 subset; IFC 4x3 infrastructure extensions 🗓 planned
+- LandXML 🗓 planned
+- GeoJSON / Shapefile / GML 🗓 planned
 - National roadway and bridge standards
 
 ---
@@ -94,14 +105,16 @@ Civil Engineering covers infrastructure, transportation, land development, utili
 
 ### Core Objects
 
-| Category | Objects |
-|----------|---------|
-| Equipment | Tank, Vessel, Reactor, HeatExchanger, Pump, Compressor, Filter, Support |
-| Piping | Pipe, PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, Valve, ControlValve |
-| Instrumentation | Instrument, Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit |
-| Structure | StructuralSteel, Platform, Stair, Ladder, Handrail, Support |
-| Process | ProcessLine, System, Unit, Area, PipingSpec, EquipmentSpec |
-| Electrical | CableTray, Cable, Conduit, Panel, MotorControlCenter |
+| Category | Objects | Proto status |
+|----------|---------|--------------|
+| Equipment | Tank, Vessel, Reactor, HeatExchanger, Pump, Compressor, Filter, Support | ✅ Tank, Reactor, HeatExchanger, Pump, Compressor; 🗓 Vessel, Filter, Support |
+| Piping | Pipe, PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, Valve, ControlValve | ✅ Pipe, Valve; 🗓 PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, ControlValve |
+| Instrumentation | Instrument, Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit | ✅ Instrument; 🗓 Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit |
+| Structure | StructuralSteel, Platform, Stair, Ladder, Handrail, Support | ✅ StructuralSteel, Stair; 🗓 Platform, Ladder, Handrail, Support |
+| Process | ProcessLine, System, Unit, Area, PipingSpec, EquipmentSpec | 🗓 all planned-only |
+| Electrical | CableTray, Cable, Conduit, Panel, MotorControlCenter | ✅ CableTray; 🗓 Cable, Conduit, Panel, MotorControlCenter |
+
+> **Proto status** legend: ✅ in proto · 🔀 partial · 🗓 planned-only. Plant: 39 listed / 11 in proto / 28 planned-only.
 
 ### Key Workflows
 - Equipment layout
@@ -133,14 +146,16 @@ Mechanical Design covers parts, assemblies, mechanical systems, manufacturing-re
 
 ### Core Objects
 
-| Category | Objects |
-|----------|---------|
-| Product Structure | Assembly, SubAssembly, Part, Configuration, Variant |
-| Machine Elements | Gear, Shaft, Bearing, Coupling, Spring, Seal, Bushing |
-| Fasteners | Bolt, Nut, Washer, Screw, Rivet, Pin, ThreadedInsert |
-| Motion | Joint, Constraint, Axis, KinematicPair, Actuator |
-| Manufacturing | Hole, Pocket, Slot, Chamfer, Fillet, Thread, PMI |
-| Electrical Mechanical | Motor, Encoder, Sensor, Housing, Connector |
+| Category | Objects | Proto status |
+|----------|---------|--------------|
+| Product Structure | Assembly, SubAssembly, Part, Configuration, Variant | ✅ Assembly, Part; 🗓 SubAssembly, Configuration, Variant |
+| Machine Elements | Gear, Shaft, Bearing, Coupling, Spring, Seal, Bushing | ✅ Gear, Shaft, Bearing, Spring, Seal; 🗓 Coupling, Bushing |
+| Fasteners | Bolt, Nut, Washer, Screw, Rivet, Pin, ThreadedInsert | 🗓 all planned-only |
+| Motion | Joint, Constraint, Axis, KinematicPair, Actuator | 🗓 all planned-only |
+| Manufacturing | Hole, Pocket, Slot, Chamfer, Fillet, Thread, PMI | 🗓 all planned-only |
+| Electrical Mechanical | Motor, Encoder, Sensor, Housing, Connector | ✅ Motor; 🗓 Encoder, Sensor, Housing, Connector |
+
+> **Proto status** legend: ✅ in proto · 🔀 partial · 🗓 planned-only. Mechanical: 38 listed / 8 in proto / 30 planned-only.
 
 ### Key Workflows
 - Assembly modeling
@@ -219,7 +234,7 @@ Plant         ① Primitive                Tank, Pump           ③ LinearCompon
                ④ Assembly                 Transmitter,                     (SNO cutouts)
                (equipment assemblies)     ControlValve, JB,                 (panel cutouts)
                                          Panel, MCC, Support
-               (CableTray nuance: straight=LayerExtrusion, bend/tee=LinearComponent/Assembly)
+               (CableTray is Linear: LinearComponent — see §7.2; Pipe and Duct follow the same rule)
 Civil         ③ LinearComponent          Road, Bridge         ① Primitive
                (corridor modeling)        Tunnel, Culvert, Dam    (standalone elements)
                                          Pier: Cap=LinearComponent, Column=LinearComponent/Primitive,
@@ -253,11 +268,11 @@ This section describes the **correct user-facing creation workflow** for each co
 | Type | Picking Mode | Clicks | Workflow | GenRule |
 |------|-------------|--------|----------|---------|
 | **Wall** | Polyline path | 2+ | Draw wall centerline in plan view (2+ points) → assign WallType (layer stack) → set height → done | LayerExtrusion |
-| **Slab** | Closed boundary polygon | N | Draw closed boundary in plan view (N points, auto-close last→first) → assign FloorType (layer stack) → done | LayerExtrusion |
-| **Roof** | Extrusion profile + extent (or footprint) | 2 (extrusion) or N (footprint) | **Extrusion mode**: draw profile sketch + pick start/end extent. **Footprint mode**: draw closed boundary polygon → assign RoofType → done | LayerExtrusion |
-| **Floor** | Closed boundary polygon | N | Same as slab: draw closed boundary → assign FloorType → done | LayerExtrusion |
+| **Slab** | Path (closed) | — | Draw closed boundary in plan view (N points, auto-close last→first) → assign FloorType (layer stack) → done | LayerExtrusion |
+| **Roof** | Path (closed, footprint form) or Path (open, extrusion form) | — | **Extrusion mode**: draw profile sketch + pick start/end extent. **Footprint mode**: draw closed boundary polygon → assign RoofType → done | LayerExtrusion |
+| **Floor** | Path (closed) | — | Same as slab: draw closed boundary → assign FloorType → done | LayerExtrusion |
 
-> **Code gap**: All surface types currently use 2-point picking (same as wall path), but slab/roof/floor need N-point closed polygon. See [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.1.
+> **Implemented (2026-10-27)**: surface creation consumes a Path — wall as **Path(open)** via the panel form (centerline, `build_layered_path`), slab/roof/floor as **Path(closed)** via the region form (`build_layered_slab_path`, closes on first-point return or double-click/Enter). Point counts derive from the creation form (see [Data Model §1 dual-axis model](DATA_MODEL.md)). Residual kernel items: see [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.1.
 
 #### Linear Types (线构件)
 
@@ -279,10 +294,10 @@ This section describes the **correct user-facing creation workflow** for each co
 |------|-------------|--------|----------|---------|
 | **PointCloud** | Placement point | 1 | Pick placement point → reference point cloud file → done | PointCloudGeometry |
 | **TerrainModel** | Placement point | 1 | Pick placement point → provide source data (points file, contours, TIN) → done | TerrainModel |
-| **FeatureLine** | Polyline | N | Draw 3D polyline (N points, defining breakline) → assign elevation/style → done | CurveGeometry |
-| **ContourLine** | Polyline | N | Draw 2D polyline (N points, constant elevation) → assign elevation → done | CurveGeometry |
+| **FeatureLine** | Path (open) | — | Draw 3D polyline (N points, defining breakline) → assign elevation/style → done | CurveGeometry |
+| **ContourLine** | Path (open) | — | Draw 2D polyline (N points, constant elevation) → assign elevation → done | CurveGeometry |
 
-> **Code gap**: FeatureLine/ContourLine use 1-click placement, but need N-point polyline picking. See [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.3.
+> **Implemented (2026-10-27)**: FeatureLine/ContourLine are drawn as **Path(open)** through the `line` genrule (thin guide tube along the polyline) — a transitional surface; the target state is native Point-class (TIN/breakline) geometry (see [Data Model §1](DATA_MODEL.md)). Details: [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.3.
 
 #### Body Types (体构件)
 

@@ -1,3 +1,10 @@
+---
+title: "行业标准参考资料与平台调研"
+status: research
+last_updated: 2026-07-09
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # 行业标准参考资料与平台调研
 
 ## 目录结构

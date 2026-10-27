@@ -1,3 +1,10 @@
+---
+title: "元件库与系列库规范"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # 元件库与系列库规范
 
 > 状态：与 Phase 7 代码库同步。内容提取自 [DATA_MODEL.zh-CN.md](DATA_MODEL.zh-CN.md) 中
@@ -7,13 +14,17 @@
 ## 1. 在统一模型中的定位
 
 OmniM 把「一个东西**可以是什么**」（元件库）与「本项目**允许使用什么**」（系列库）
-分开。这对应 E3D/PDMS 中 CATALOGUE 模块与项目规格（SPECON）的分离，使设计纪律通过
-数据而非约定来强制执行。
+分开。这对应 E3D/PDMS 中 CATALOGUE 模块与项目规格（SPECON）的分离，设计意图是让设计
+纪律通过数据而非约定来执行（当前门禁仅检查可达性，见 §3.4）。
 
 - **元件库（Component Catalog）** —— 参数化三维构件定义（`ComponentDef`），全局存放于
   `Library.catalog`（`CatalogStore`），跨项目共享。
 - **系列库（Series Library / 等级库）** —— 规格决策树（`Series`），挂接在项目的
   `SeriesStore` 上，在特定约束下确认可用的元件。
+
+> **当前限制（🔀）**：**元件库是会话级全局静态**（`LIBRARY`），**不是** `Project` 的字段。
+> `Project` 持有 `SeriesStore`（`Project.series`）与外部系列引用，但从不持有目录（catalog）。
+> 目录定义在进程内共享，每个会话加载一次。
 
 两库均由 `crates/model/src/seed_catalog.rs` / `seed_materials.rs` 预置：新会话即拥有
 可用的钢结构、管道、混凝土、建筑、市政、设备、钢筋构件族，以及默认材质库。
@@ -58,6 +69,10 @@ OmniM 把「一个东西**可以是什么**」（元件库）与「本项目**�
 - `choices` —— 枚举取值（选择型参数）；
 - `description`。
 
+> **当前限制（🔀）**：这些边界会被声明并暴露给 UI，但实例化时不做校验。系列中的
+> `ParamConstraint.min/max/fixed` 同样不强制执行（见 §3.2/§3.4），只应用默认值。
+> 🗓 强制执行是目标。
+
 ### 2.3 ConnectorDef（P 点兼容）
 
 `ConnectorDef` 声明一个连接点；所有空间字段都是**表达式字符串**，可引用构件参数：
@@ -68,6 +83,11 @@ OmniM 把「一个东西**可以是什么**」（元件库）与「本项目**�
 - `connection_type_code` —— 用于耦合检查的连接类型码（见下）；
 - `role` —— proto `ConnectorRole`：`INLET`(1)/`OUTLET`(2)/`BIDIRECTIONAL`(3)/
   `MOUNT`(4)/`BRANCH`(5)。
+
+> **当前限制（🔀）**：`ConnectorDef` 只有 `direction` 向量，没有 `up`/基准轴，因此无法确定
+> 法兰螺栓孔朝向或阀杆朝向。`Project::connect()` 除两个对象存在外不做任何校验：不检查
+> 连接类型码、口径、压力等级，甚至不写入 `from_point/to_point`。下表的类型码分类只是
+> 元数据，不是强制兼容规则。🗓 完整 P 点兼容是目标。
 
 `catalog.rs` 中的 `ConnectorType` 与 `connector_code_map()` 提供跨平台分类映射：
 
@@ -83,8 +103,8 @@ OmniM 把「一个东西**可以是什么**」（元件库）与「本项目**�
 | `DUCT` | DuctEnd | — | — |
 | `VALVE-END` / `VALVE-STEM` | ValveEnd / ValveStem | `VALVE-END` | `P-VALVE`/`P-VSTEM` |
 
-对象之间的连接通常只在连接**类型码**匹配时建立——从而围绕同一个 P 点概念实现与
-Civil3D / E3D 风格的互通。
+对象之间的连接**当前不受**这些类型码约束：`connect()` 接受任意两个已存在对象（见上）。
+该分类保留为 Civil3D/E3D 风格 P 点互通的设计基础（🗓）。
 
 ### 2.4 发布与实例化流程
 
@@ -109,6 +129,13 @@ pub struct CatalogRef {
 
    保留溯源（由哪个系列确认、走了哪条分支、用了哪些值），并在定义或系列变更时支持
    再生（regeneration）。
+
+> **当前限制（🔀）**：`instantiate_from_series()` 只填 `ParamConstraint.default_value`；
+> **不**强制 `min/max/fixed`，也**不**把 `SpecComponent.material` 应用到创建的实例。
+> `instantiate_from_catalog()` 创建的是 `ObjectType::Component` 特征树实例，而过渡期的
+> `/api/genrule` 路径仍生成硬编码网格（`genrule_create_catalog`，`param_values:
+> HashMap::new()`）。特征树/BRep 是正式几何路径，genrule 网格路径属过渡实现。详见
+> `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md` §3 P0-4/P0-5。
 
 ### 2.5 内置库（种子数据）
 
@@ -158,6 +185,10 @@ pub struct Series {
   —— 收窄构件 `ParamDef` 的范围；可用 `fixed_value` 钉住某个参数（字符串/表达式
   形式，优先于开放范围）。
 
+> **当前限制（🔀）**：`ParamConstraint` 会被存储并暴露，但实例化时只消费
+> `default_value`。`min_value`、`max_value`、`step`、`fixed_value` 均不校验、不强制。
+> 🗓 强制执行是目标。
+
 `SelectionEngine::select(series, answers)` 遍历决策树：
 
 1. 从 `root_selector` 开始，调用方为每层 selector 提供一个答案字符串。
@@ -180,16 +211,20 @@ def-id——这就是规格门禁（§3.4）的实现基础。
   （selector、answer、spec component、constraint），并经库端点加载/保存
   `.omnimseries` 文件。
 
-### 3.4 规格强制规则（设计者限定于激活系列）
+### 3.4 规格强制规则（设计者限定于激活系列）—— 🔀 仅可达性检查
 
-`crates/model/src/project.rs::check_series_gate` 执行经典的 PDMS/SPECON 规则 ——
-**「系列激活后，只允许选择经系列确认的构件」**：
+`crates/model/src/project.rs::check_series_gate` 执行经典 PDMS/SPECON 规则的
+**仅可达性**版本：
 
 - **已加载系列且可达**（从任一已加载系列的决策树可达该 def-id）→ 允许。
 - **已加载系列但不可达** → 拒绝，错误形如
   `series gate: component '…' is not reachable from any loaded series. Load the appropriate
   series or use a series-approved component.`
 - **未加载任何系列** → 开放模式，全部目录构件可用。
+
+> **当前限制（🔀）**：门禁只检查可达性，**不**检查材质审批、参数范围、连接等级或任何
+> 其他规格属性。`SpecComponent.material` 不会在实例化时应用；`ParamConstraint` 边界
+> 不强制。因此“系列确认”仅意味着“可达”，而非“完整校验”。
 
 可达性同时按构件 UUID 与名称检查（SpecComponent 可能存任意一个；大小写不敏感作为
 兜底匹配）。
@@ -202,6 +237,11 @@ def-id——这就是规格门禁（§3.4）的实现基础。
 `LOAD_SERIES`（`path` + `source` = `"standalone" | "library"`）与 `LIST_SERIES`。
 Validator 会检查系列存在性（`CREATE_SERIES` 除外）与 `LoadSeries` 路径非空；每条已
 执行操作都会写入可撤销的反向 `Command`。
+
+> **当前限制（🔀）**：系列编辑 handler 当前直接写 `Project` / `SeriesStore`，因此这些
+> 变更**不在**撤销栈内，也不会保存。上句“写入可撤销的反向 `Command`”是目标态
+> （单一写入路径待办），不是当前实现。详见
+> `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md` §3 P0-2/P0-3。
 
 ## 4. 实例演练
 
@@ -220,7 +260,7 @@ Series Steel-Q355 (domain structural, EN 1993)
 ```
 
 `SelectionEngine::select(series, &["beam", "S355"])` → `Steel-Beam-IPE`，
-selector path `[q1, q2_material]`，确认材质 `S355`。
+selector path `[q1, q2_material]`，规格中记录材质 `S355`（🔀 仅为元数据——实例化时不会应用到实例）。
 
 ### 4.2 管道系列 `CS150`
 
@@ -233,11 +273,11 @@ Series CS150 (domain plant, ASME B31.3)
     answer "ELBOW"  → SpecComponent Elbow-LR-CS, material A106-B
 ```
 
-实例化：答案 `["PIPE", "STD"]` 选中 `Pipe-CS`；执行器创建一个 OmniObject，解析出
-DN（如 DN 100），记录 `CatalogRef { component_def_id, series_id: CS150,
-selector_path: [gt, sch], param_values { dn: 100.0, length: 6000.0 } }`，并把包含关系
-/属性操作纳入同一条 OmniCommand。在 CS150 已加载的情况下，尝试实例化该系列不可达的
-构件（如梁）会被系列门禁**拒绝**。
+实例化：答案 `["PIPE", "STD"]` 选中 `Pipe-CS`；当前 handler **直接**创建 OmniObject
+（🔀 不经 Executor、无撤销/保存——单一写入路径是目标态），解析出 DN（如 DN 100），
+记录 `CatalogRef { component_def_id, series_id: CS150, selector_path: [gt, sch],
+param_values { dn: 100.0, length: 6000.0 } }`，并应用包含关系/属性操作。在 CS150
+已加载的情况下，尝试实例化该系列不可达的构件（如梁）会被系列门禁**拒绝**。
 
 ### 4.3 定义一个新目录构件
 

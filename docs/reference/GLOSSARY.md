@@ -1,3 +1,10 @@
+---
+title: "OmniM Glossary"
+status: reference
+last_updated: 2026-10-27
+applies_to: "crates/server, proto"
+evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
+---
 # OmniM Glossary
 
 This document defines all terminology used in the OmniM system with Chinese translations, descriptions, and code references.
@@ -11,11 +18,22 @@ OmniM uses a four-layer object hierarchy:
 | Layer | Chinese | English | Description | Code Reference |
 |-------|---------|---------|-------------|----------------|
 | Object | 对象 | OmniObject | Base class for all entities including buildings, equipment, parts, etc. | `web/src/shared/types.ts:OmniObject` |
-| Component | 构件 | Component | A 3D geometric body composed of one or more features; the geometric representation of an Object | `crates/model/src/lib.rs:ComponentDef` |
+| Component | 构件（实例容器） | Component | Instanced container node that groups Features into one logical 3D body; its enum value is `ObjectType::Component` | `crates/model/src/project.rs:OmniObject` |
 | Feature | 特征 | Feature | An operation that generates 3D geometry from a sketch (extrude, revolve, loft, etc.) | `crates/model/src/feature.rs:Feature` |
 | Sketch | 草图 | Sketch | A 2D geometric profile containing entities and constraints; input for features | `crates/sketch/src/lib.rs:Sketch` |
 | Entity | 图元 | SketchEntity | A single geometric element in a sketch (line, circle, rectangle, etc.) | `crates/sketch/src/lib.rs:SketchEntity` |
 | Constraint | 约束 | SketchConstraint | A rule that constrains geometric relationships between entities (horizontal, vertical, tangent, etc.) | `crates/sketch/src/lib.rs:SketchConstraint` |
+
+**ComponentDef vs Component vs Series (disambiguation):**
+
+- **`ComponentDef`** — a *catalog definition* (`crates/model/src/catalog.rs`): a parametric
+  recipe with params, connectors, and a `feature_tree_id`. It is not an object in a project.
+- **`Component`** — an *instanced container* in a project (a `Feature` container node). Its
+  enum value in `OmniObject.object_type` is `ObjectType::Component` (`OBJECT_TYPE_COMPONENT`).
+  Catalog instantiation creates one of these; it is not the same thing as `ComponentDef`.
+- **`Series`** — a *spec decision tree* (Selector → Answer → SpecComponent), not "a set of
+  same-kind objects". It approves reachable `ComponentDef`s; it is not a collection of
+  object instances.
 
 **Parent-child relationship:**
 ```
@@ -27,7 +45,9 @@ OmniObject
         └── Feature ...
 ```
 
-**Series (系列)**: A collection of same-class objects, filtered by a selector decision tree.
+**Series (系列)**: A **spec decision tree** (Selector → Answer → SpecComponent) used to
+approve catalog components. It is **not** a set/collection of same-kind object instances;
+the instances that result from its leaves are ordinary project objects.
 
 ---
 
@@ -94,14 +114,19 @@ OmniM supports 50+ object types, grouped by engineering domain.
 | `OBJECT_TYPE_PIER` (207) | 桥墩 | Pier | Bridge pier |
 | `OBJECT_TYPE_MANHOLE` (208) | 检查井 | Manhole | Manhole |
 | `OBJECT_TYPE_ABUTMENT` (209) | 桥台 | Abutment | Bridge abutment |
-| `OBJECT_TYPE_CUT_VOLUME` (220) | 挖方量 | Cut Volume | Excavation volume between two surfaces |
-| `OBJECT_TYPE_FILL_VOLUME` (221) | 填方量 | Fill Volume | Fill volume between two surfaces |
-| `OBJECT_TYPE_GRADING_SURFACE` (222) | 平整曲面 | Grading Surface | Designed graded surface |
-| `OBJECT_TYPE_SLOPE` (223) | 边坡 | Slope | Embankment or cut slope |
+| 🗓 `OBJECT_TYPE_CUT_VOLUME` (220) | 挖方量 | Cut Volume | Excavation volume between two surfaces |
+| 🗓 `OBJECT_TYPE_FILL_VOLUME` (221) | 填方量 | Fill Volume | Fill volume between two surfaces |
+| 🗓 `OBJECT_TYPE_GRADING_SURFACE` (222) | 平整曲面 | Grading Surface | Designed graded surface |
+| 🗓 `OBJECT_TYPE_SLOPE` (223) | 边坡 | Slope | Embankment or cut slope |
 | `OBJECT_TYPE_FEATURE_LINE` (224) | 特征线 | Feature Line | 3D breakline for grading control |
 | `OBJECT_TYPE_CONTOUR_LINE` (225) | 等高线 | Contour Line | Elevation contour line |
-| `OBJECT_TYPE_SITE_COMPONENT` (226) | 场地构件 | Site Component | Reusable site layout element |
-| `OBJECT_TYPE_EARTHWORK_BALANCE` (227) | 土方平衡 | Earthwork Balance | Cut/fill balance analysis result |
+| 🗓 `OBJECT_TYPE_SITE_COMPONENT` (226) | 场地构件 | Site Component | Reusable site layout element |
+| 🗓 `OBJECT_TYPE_EARTHWORK_BALANCE` (227) | 土方平衡 | Earthwork Balance | Cut/fill balance analysis result |
+
+> 🗓 = **planned, not in ObjectType enum** (`proto/omnim.proto`). These nine rows
+> (CutVolume, FillVolume, GradingSurface, Slope, SiteComponent, EarthworkBalance,
+> ControlValve, Cable, Conduit) are research/design targets only; creating them through the
+> API will not produce the listed enum value.
 
 ### 2.4 Plant Elements
 
@@ -117,9 +142,11 @@ OmniM supports 50+ object types, grouped by engineering domain.
 | `OBJECT_TYPE_FITTING` (307) | 管件 | Pipe Fitting | Elbow/tee/reducer, etc. |
 | `OBJECT_TYPE_COMPRESSOR` (308) | 压缩机 | Compressor | Gas compressor |
 | `OBJECT_TYPE_INSTRUMENT` (309) | 仪表 | Instrument | Process instrument/sensor |
-| `OBJECT_TYPE_CONTROL_VALVE` (310) | 调节阀 | Control Valve | Valve with actuator + positioner |
-| `OBJECT_TYPE_CABLE` (311) | 电缆 | Cable | Power/signal/control cable |
-| `OBJECT_TYPE_CONDUIT` (312) | 导管 | Conduit | Cable protection conduit |
+| 🗓 `OBJECT_TYPE_CONTROL_VALVE` (310) | 调节阀 | Control Valve | Valve with actuator + positioner |
+| 🗓 `OBJECT_TYPE_CABLE` (311) | 电缆 | Cable | Power/signal/control cable |
+| 🗓 `OBJECT_TYPE_CONDUIT` (312) | 导管 | Conduit | Cable protection conduit |
+
+> 🗓 = **planned, not in ObjectType enum** (`proto/omnim.proto`); see the note under §2.3.
 
 > **Pipe fitting types** (E3D catalog, `docs/research/aveva_e3d_primitives.md §4.2`): ELBO (elbow), BEND (bend), TEE (tee), VALV (valve), FLAN (flange), GASK (gasket), REDUCER (reducer), VENT (vent), DRAIN (drain), CAP (cap), OLET (olet). These are parameterized catalog entries defined under `OBJECT_TYPE_FITTING`.
 
@@ -147,7 +174,7 @@ OmniM supports 50+ object types, grouped by engineering domain.
 | Enum Value | Chinese | English | Description |
 |------------|---------|---------|-------------|
 | `OBJECT_TYPE_GENERIC` (999) | 通用 | Generic | Generic/uncategorized object |
-| `OBJECT_TYPE_COMPONENT` (500) | 构件 | Component | Component definition (catalog) |
+| `OBJECT_TYPE_COMPONENT` (500) | 构件（实例容器） | Component | Instanced component container (`ComponentDef` is the catalog definition) |
 
 ---
 
@@ -662,7 +689,7 @@ See: `default_catalog_component()` in `crates/model/src/gen_rule/mod.rs`,
 
 ## 17b. Series Library (等级库 / 系列库)
 
-> **Independent module**: SeriesStore is an **independent module**, not a part of Library or Project. It defines spec decision trees (Series → Selector → SpecComponent) that reference Library content by ComponentDef ID. Series can reside in three places: (1) project-private SeriesStore (embedded in `.omnim` file), (2) external `.omnimseries` files referenced by path, (3) built-in seeded series. Only components reachable through loaded series can be used (series gate).
+> **Independent module**: SeriesStore is an **independent module**, not a part of Library. A Project holds its own private SeriesStore instance (`Project.series`). It defines spec decision trees (Series → Selector → SpecComponent) that reference Library content by ComponentDef ID. Series can reside in three places: (1) project-private SeriesStore (embedded in `.omnim` file), (2) external `.omnimseries` files referenced by path, (3) built-in seeded series. Only components reachable through loaded series can be used (series gate — reachability only, 🔀).
 
 Spec decision tree for project-approved component selection. A Series contains a tree of Selector nodes (questions → answers) that lead to SpecComponent leaf nodes, each referencing a ComponentDef by ID with parameter constraints.
 
@@ -789,7 +816,7 @@ Three independent frontend modules correspond to the three-layer backend archite
 
 > **Research ref**: Bentley OpenRoads Terrain Model (`docs/research/bentley_openroads_components.md §6.1`).
 
-A `TerrainModel` is a **6th geometry type** alongside the 5 GenRule types. It represents an irregular triangulated network (TIN) surface and is **not** a sweep/loft/boolean — it does not fit any of the 5 GenRule categories. See [Data Model §6.8](../specification/DATA_MODEL.md#68-terrain-model-terrainmodel-tin-surface).
+A `TerrainModel` is a **6th geometry type** alongside the 5 GenRule types. It represents an irregular triangulated network (TIN) surface and is **not** a sweep/loft/boolean — it does not fit any of the 5 GenRule categories. See [Data Model §6.8](../specification/DATA_MODEL.md#68-terrainmodel-tin-surface).
 
 | Concept | Chinese | Description |
 |---------|---------|-------------|
@@ -807,7 +834,7 @@ Used for: LinearComponent End Condition daylight solving, Cut/Fill volume comput
 
 > **Research ref**: AVEVA Instrumentation Loop/Tag (`docs/research/e3d_instrumentation_components.md §4`).
 
-A `LogicalObject` is a geometry-less engineering entity (Tag/Loop/LineNumber) that references physical objects via `member_object_ids`. It is a new base type parallel to `Object`. See [Data Model §9](../specification/DATA_MODEL.md#69-logical-object-logicalobject-tag--loop--linenumber).
+A `LogicalObject` is a geometry-less engineering entity (Tag/Loop/LineNumber) that references physical objects via `member_object_ids`. It is a new base type parallel to `Object`. See [Data Model §9](../specification/DATA_MODEL.md#69-logicalobject-tag--loop--linenumber).
 
 | Concept | Chinese | Description |
 |---------|---------|-------------|
@@ -828,7 +855,7 @@ Key principles: no geometry, no GenRule, no feature tree; holds references to ph
 
 > **Research ref**: SOLIDWORKS 21 mate types (`docs/research/solidworks_components.md §4`).
 
-A `Constraint` governs degrees of freedom between Assembly child components. Stored in `RelationStore` alongside connections. See [Data Model §6.12](../specification/DATA_MODEL.md#612-constraint-system-constraint-mates).
+A `Constraint` governs degrees of freedom between Assembly child components. Stored in `RelationStore` alongside connections. See [Data Model §6.12](../specification/DATA_MODEL.md#612-constraint-system-mates).
 
 | Class | Chinese | Types |
 |-------|---------|-------|
@@ -840,7 +867,7 @@ A `Constraint` governs degrees of freedom between Assembly child components. Sto
 
 > **Research ref**: Tekla ConnectionBase (`docs/research/tekla_components.md §3`).
 
-A `ConnectionScript` is a processual script component reference used by Assembly GenRule to generate steel connections (with optional stiffeners, end-plates, bolts driven by condition parameters). See [Data Model §6.11](../specification/DATA_MODEL.md#611-assembly-enhancement).
+A `ConnectionScript` is a processual script component reference used by Assembly GenRule to generate steel connections (with optional stiffeners, end-plates, bolts driven by condition parameters). See [Data Model §6.11](../specification/DATA_MODEL.md#611-assembly-enhancements).
 
 **Tekla ConnectionBase plugin architecture** (`docs/research/tekla_components.md §3.3`): ConnectionScript follows the Tekla ConnectionBase contract:
 1. **Input contract**: The script receives main part(s), secondary part(s), positions, and a polygon (via `ComponentInput` pattern — `AddInputObject`, `AddInputPositions`, `AddInputPolygon`; order-sensitive)
@@ -852,7 +879,7 @@ A `ConnectionScript` is a processual script component reference used by Assembly
 
 > **Research ref**: Bentley OBM beam variation (`docs/research/bentley_openroads_components.md §2.1.3`).
 
-The cross-section interpolation method for `CrossSectionSegment`, extended from a single linear mode to 6 methods: Constant, Linear, Parabolic Up/Down, Circular Up/Down. See [Data Model §6.4](../specification/DATA_MODEL.md#64-linearcomponent-linearcomponent).
+The cross-section interpolation method for `CrossSectionSegment`, extended from a single linear mode to 6 methods: Constant, Linear, Parabolic Up/Down, Circular Up/Down. See [Data Model §6.4](../specification/DATA_MODEL.md#64-linearcomponent).
 
 ---
 
@@ -1072,3 +1099,12 @@ The cross-section interpolation method for `CrossSectionSegment`, extended from 
 | PMI | Product Manufacturing Information | 产品制造信息 | Manufacturing annotation information |
 | LOD | Level of Detail | 细节层次 | Model detail level |
 | COBie | Construction Operations Building Information Exchange | 施工运维信息交换 | Operations data exchange format |
+
+## 附加词条：语义名/创成分类/路径（2026-10-27）
+
+| Term | 中文 | Definition |
+|------|------|------------|
+| Path（路径） | 路径 | The unified artifact of path-based creation: `Path { points, closed }`. Open paths drive panel walls/feature lines/road alignments; closed paths drive region slabs/roofs/floors. Unifies the former `path[]`/`boundary[]`/`alignment[]` spellings (alias-normalized server-side; unified contract pending implementation — see status/ROADMAP.md "Accepted Designs"). |
+| Genesis（创成） | 创成方式 | The per-instance creation method — its geometry class (Surface/Linear/Point/Body) + implementation family (GenRule) + form. Recorded on the object instance, never inferred from the object's semantic name. One ObjectType (e.g. Wall) may legally have several genesis classes (see Data Model §1 dual-axis model). |
+| Form（形态） | 形态 | A sub-variant within an implementation family, explicitly enumerated (LayerExtrusion: `panel`/`region`; roof: `footprint`/`extrusion-profile`). UI pick modes derive from the form. |
+| Authorization matrix（授权矩阵） | 授权矩阵 | Governance table keyed by `(objectType, genesis class/form)`: which creation methods are legal for which semantic names. Out-of-matrix genrule requests are rejected (400). See Data Model §1 "Governance". |

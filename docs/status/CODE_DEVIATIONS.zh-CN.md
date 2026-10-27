@@ -1,3 +1,10 @@
+---
+title: "代码与文档模型的偏差（Code-Level Deviations）"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # 代码与文档模型的偏差（Code-Level Deviations）
 
 > 本文档为 [CODE_DEVIATIONS.md](CODE_DEVIATIONS.md) 的简体中文对照版本，章节与表格与英文原版完全一致。
@@ -119,5 +126,46 @@ Rust 后端未发现偏差。
 
 ### 测试
 - `stateMachine.test.ts` 覆盖 idle/picking/configuring 全流程含多点累积；polygon 闭合与 span 过滤用例已随残留项补上（multi-point picking describe 块，6 用例）。
+
+---
+
+## 6. 写入路径、持久化与几何路径偏差 — **Known**（2026-10-27）
+
+**状态：Known — 2026-10-27。** 依据：[DOC_AUDIT_2026-10-27](DOC_AUDIT_2026-10-27.zh-CN.md)附录 A 对 `crates/server/src/lib.rs` 的静态扫描，并做了代码抽查。逐端点矩阵见 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。以下各项均未解决。面向建模者的逐对象能力视图见 [CAPABILITY_MATRIX.zh-CN.md](../CAPABILITY_MATRIX.zh-CN.md)。
+
+### 6.1 单一写入路径被违反（审计 P0-2）
+
+**文档模型**（ADR-0006、PLATFORM_ARCH §1、DATA_FLOW §0）：所有变更都经 `Validator` + `Executor`，并进入撤销栈。
+
+**代码现状：** 持有 `project.write()` 的 **55** 个 handler 中，只有 **13** 个出现 executor；约 **42** 个直接修改 `Project`，不产生撤销条目。例如：`update_object`、`transform_object`、`set_parent`、`connect`、`create_material`/`assign_material`、`update_sketch`/`solve_sketch`/`update_sketch_entity`、`import_ifc`、`instantiate_from_catalog`，以及全部系列编辑 handler。改名、赋材质、连接管道、编辑系列、导入 IFC、放置目录构件都无法撤销。
+
+### 6.2 “自动保存”不成立；默认启动完全不保存（审计 P0-3）
+
+**文档模型**：变更会自动持久化。
+
+**代码现状：** 只有 **5** 个 handler 调用 `Project::save(...)`：`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`。`POST /api/objects`、`/api/genrule`、`/api/omcom`、`/api/catalog/instantiate`、`/api/import/ifc`，以及所有 `/api/series/*` 编辑都不会保存。此外，`main.rs` 在项目路径为默认 `project.omnim` 时把 `save_path` 设为 `None`，因此默认启动完全不落盘。`scripts/dev-server.sh` 会透传 `OMNIM_PROJECT`，但默认值为 `project.omnim`，所以默认用该脚本启动同样不持久化。
+
+### 6.3 几何路径分裂（审计 P0-4）
+
+**文档模型**：目录/系列驱动几何生成。
+
+**代码现状：** 三条并行路径产生不同的对象类型与几何来源：
+
+- `/api/genrule`（工具栏）：硬编码 `build_wall`/`build_slab`/`build_road`/`build_pipe` 网格，`param_values` 为空，对象类型为 `Wall`/`Slab`/`Road`/`Pipe`。
+- `/api/catalog/instantiate`（构件面板）：特征树 → BRep/网格（官方路径），但创建 `ObjectType::Component`（不是 `Wall`/`Beam`/…），无撤销、不保存。
+- `/api/import/ifc`：导入网格，映射类型，无撤销、不保存。
+
+官方几何路径是特征树/BRep 管线；genrule 直通属于遗留/过渡方案。见 [DATA_FLOW.zh-CN.md §4](../architecture/DATA_FLOW.zh-CN.md#4-d-目录--系列实例化)。
+
+### 6.4 系列门禁、材质、连接弱于文档（审计 P0-5）
+
+**文档模型**：系列门禁强制使用批准构件、材质与连接兼容性。
+
+**代码现状：**
+
+- `check_series_gate()` 只检查构件是否可从某个系列可达（`crates/model/src/project.rs:88-103`），不校验材质、参数范围或连接等级。
+- `instantiate_from_series()` 只填充 `ParamConstraint.default_value`，不强制 `min/max/fixed`，也**不应用** `SpecComponent.material`（`crates/model/src/project.rs:368-386`）。
+- `Project::connect()` 只检查两个对象是否存在，不校验连接点、类型码、口径或压力等级，也不写入 `from_point`/`to_point`（`crates/model/src/project.rs:105-121`）。
+- `ConnectorDef` 只有 `direction`，没有 `up`/基准轴，无法确定法兰螺栓孔或阀杆朝向（`proto/omnim.proto:506-518`）。
 
 ---

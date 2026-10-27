@@ -1,3 +1,10 @@
+---
+title: "OmniM 领域覆盖范围"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM 领域覆盖范围
 
 ## 1. 概述
@@ -19,13 +26,15 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 
 ### 核心对象
 
-| 类别 | 对象 |
-|------|------|
-| 空间 | Site, Building, BuildingStorey, Space, Zone |
-| 建筑 | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp |
-| 结构 | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection |
-| MEP | Duct, Pipe, CableTray (直段→LayerExtrusion, 弯头→LinearComponent), Valve, Damper, Pump, Fan, AirTerminal |
-| 设备 | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture |
+> **Proto 状态** —— ✅ 已进 proto（`proto/omnim.proto`）· 🔀 部分（已进 proto，但文档所述工作流/几何仅部分实现）· 🗓 仅计划（此列出，但不在 `ObjectType` 枚举中）。各领域计数见 `docs/research/COMPONENT_INVENTORY.md`：共 155 个列出 / 51 个在 proto / 104 个仅计划；建筑 15/37 仅计划、土木 31/41、工厂 28/39、机械 30/38。
+
+| 类别 | 对象 | Proto 状态 |
+|------|------|------------|
+| 空间 | Site, Building, BuildingStorey, Space, Zone | ✅ Site, Building, BuildingStorey, Space；🗓 Zone |
+| 建筑 | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Roof, Stair；🗓 Ceiling, CurtainWall, Ramp |
+| 结构 | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection | ✅ Beam, Column, Slab；🗓 Footing, Pile, Brace, Truss, Rebar, Connection |
+| MEP | Duct, Pipe, CableTray (LinearComponent), Valve, Damper, Pump, Fan, AirTerminal | ✅ Duct, Pipe, CableTray, Valve, Pump, AirTerminal；🗓 Damper, Fan |
+| 设备 | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture | ✅ Chiller, AHU, Transformer；🗓 Boiler, Switchboard, Fixture |
 
 ### 关键工作流
 - BIM 创建与协调
@@ -35,7 +44,7 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 - 设施移交与资产管理
 
 ### 标准对齐
-- IFC 2x3 / IFC 4 / IFC 4x3
+- IFC 2x3 / IFC 4 子集（IFC 4x3 🗓 计划中）
 - ISO 19650 信息管理
 - COBie 资产移交
 
@@ -47,15 +56,18 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 
 ### 核心对象
 
-| 类别 | 对象 |
-|------|------|
-| 线形 | HorizontalAlignment, VerticalAlignment, Profile, Station |
-| 道路 | Road, Lane, Shoulder, PavementLayer, Median, Curb |
-| 桥梁 | Bridge, Pier, Abutment, Girder, Deck, Bearing, ExpansionJoint |
-| 隧道 | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage |
-| 水利 | Dam, Culvert, Channel, Drainage, RetentionBasin |
-| 公用设施 | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank |
-| 土石方 | TerrainModel, CutVolume, FillVolume, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent, EarthworkBalance, RetainingWall |
+| 类别 | 对象 | Proto 状态 |
+|------|------|------------|
+| 线形 | HorizontalAlignment, VerticalAlignment, Profile, Station | 🗓 全部仅计划 |
+| 道路 | Road, Lane, Shoulder, PavementLayer, Median, Curb | 🔀 Road；🗓 Lane, Shoulder, PavementLayer, Median, Curb |
+| 桥梁 | Bridge, Pier, Abutment, Girder, Deck, Bearing, ExpansionJoint | 🔀 Bridge；✅ Pier, Abutment；🗓 Girder, Deck, Bearing, ExpansionJoint |
+| 隧道 | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage | 🔀 Tunnel；🗓 Lining, Portal, Shaft, Segment, Ring, CrossPassage |
+| 水利 | Dam, Culvert, Channel, Drainage, RetentionBasin | ✅ Dam, Culvert；🗓 Channel, Drainage, RetentionBasin |
+| 公用设施 | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank | ✅ Manhole；🗓 WaterPipe, SewerPipe, StormPipe, UtilityPole, DuctBank |
+| 土石方/场地 | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | 🗓 全部仅计划 |
+| 土方 | CutVolume, FillVolume, EarthworkBalance, RetainingWall | ✅ RetainingWall；🗓 CutVolume, FillVolume, EarthworkBalance |
+
+> **Proto 状态**图例：✅ 已进 proto · 🔀 部分（已进 proto，工作流简化）· 🗓 仅计划。土木：列出 41 / proto 10 / 仅计划 31。
 
 > **Bentley 桥梁/隧道构件细节**（`docs/research/bentley_openroads_components.md`）：
 > - **支座类型**（§2.3.1）：板式橡胶支座（Elastomeric Pad）、盆式支座（Pot）、圆盘支座（Disc）、机械式支座（Mechanical）
@@ -80,9 +92,9 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 - 基础设施资产管理
 
 ### 标准对齐
-- IFC 4x3 基础设施扩展
-- LandXML
-- GeoJSON / Shapefile / GML
+- IFC 2x3 / IFC 4 子集；IFC 4x3 基础设施扩展 🗓 计划中
+- LandXML 🗓 计划中
+- GeoJSON / Shapefile / GML 🗓 计划中
 - 国家道路与桥梁标准
 
 ---
@@ -93,14 +105,16 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 
 ### 核心对象
 
-| 类别 | 对象 |
-|------|------|
-| 设备 | Tank, Vessel, Reactor, HeatExchanger, Pump, Compressor, Filter, Support |
-| 管道 | Pipe, PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, Valve |
-| 仪表 | Instrument, Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit |
-| 结构 | StructuralSteel, Platform, Stair, Ladder, Handrail, Support |
-| 工艺 | ProcessLine, System, Unit, Area, PipingSpec, EquipmentSpec |
-| 电气 | CableTray, Cable, Conduit, Panel, MotorControlCenter |
+| 类别 | 对象 | Proto 状态 |
+|------|------|------------|
+| 设备 | Tank, Vessel, Reactor, HeatExchanger, Pump, Compressor, Filter, Support | ✅ Tank, Reactor, HeatExchanger, Pump, Compressor；🗓 Vessel, Filter, Support |
+| 管道 | Pipe, PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, Valve, ControlValve | ✅ Pipe, Valve；🗓 PipeSegment, Elbow, Tee, Reducer, Flange, Nozzle, ControlValve |
+| 仪表 | Instrument, Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit | ✅ Instrument；🗓 Sensor, Transmitter, ControlValve, JunctionBox, Cable, Conduit |
+| 结构 | StructuralSteel, Platform, Stair, Ladder, Handrail, Support | ✅ StructuralSteel, Stair；🗓 Platform, Ladder, Handrail, Support |
+| 工艺 | ProcessLine, System, Unit, Area, PipingSpec, EquipmentSpec | 🗓 全部仅计划 |
+| 电气 | CableTray, Cable, Conduit, Panel, MotorControlCenter | ✅ CableTray；🗓 Cable, Conduit, Panel, MotorControlCenter |
+
+> **Proto 状态**图例：✅ 已进 proto · 🔀 部分 · 🗓 仅计划。工厂：列出 39 / proto 11 / 仅计划 28。
 
 > **AVEVA 仪表/电气模块结构**（`docs/research/e3d_instrumentation_components.md §1.4-§1.5`）：AVEVA 仪表系统包含 4 个模块——Instrument Engineer（索引/规范）、Wiring Manager（端子/回路）、Designer（安装图）、Browser/Calculation 工具。AVEVA 电气系统包含 3 个模块——Engineer、Wiring Manager、Designer。OmniM 将这些统一为单一的逻辑对象 + 装配体模型：Instrument Engineer ↔ LogicalObject Manager、Wiring Manager ↔ Relation Manager、Designer ↔ Assembly GenRule。
 >
@@ -132,14 +146,16 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 
 ### 核心对象
 
-| 类别 | 对象 |
-|------|------|
-| 产品结构 | Assembly, SubAssembly, Part, Configuration, Variant |
-| 机械元件 | Gear, Shaft, Bearing, Coupling, Spring, Seal, Bushing |
-| 紧固件 | Bolt, Nut, Washer, Screw, Rivet, Pin, ThreadedInsert |
-| 运动 | Joint, Constraint, Axis, KinematicPair, Actuator |
-| 制造 | Hole, Pocket, Slot, Chamfer, Fillet, Thread, PMI |
-| 机电 | Motor, Encoder, Sensor, Housing, Connector |
+| 类别 | 对象 | Proto 状态 |
+|------|------|------------|
+| 产品结构 | Assembly, SubAssembly, Part, Configuration, Variant | ✅ Assembly, Part；🗓 SubAssembly, Configuration, Variant |
+| 机械元件 | Gear, Shaft, Bearing, Coupling, Spring, Seal, Bushing | ✅ Gear, Shaft, Bearing, Spring, Seal；🗓 Coupling, Bushing |
+| 紧固件 | Bolt, Nut, Washer, Screw, Rivet, Pin, ThreadedInsert | 🗓 全部仅计划 |
+| 运动 | Joint, Constraint, Axis, KinematicPair, Actuator | 🗓 全部仅计划 |
+| 制造 | Hole, Pocket, Slot, Chamfer, Fillet, Thread, PMI | 🗓 全部仅计划 |
+| 机电 | Motor, Encoder, Sensor, Housing, Connector | ✅ Motor；🗓 Encoder, Sensor, Housing, Connector |
+
+> **Proto 状态**图例：✅ 已进 proto · 🔀 部分 · 🗓 仅计划。机械：列出 38 / proto 8 / 仅计划 30。
 
 ### 关键工作流
 - 装配建模
@@ -215,7 +231,7 @@ Filter     ⑤ BooleanSubtract
             ④ Assembly              Transmitter,                 (SNO 剪切)
             (设备装配体)            ControlValve, JB,            (面板开孔)
                                     Panel, MCC, Support
-           (CableTray 细节: 直段=LayerExtrusion, 弯头/三通=LinearComponent/Assembly)
+           (CableTray 属线构件：LinearComponent —— 见 §7.2；Pipe 与 Duct 同理)
 市政       ③ LinearComponent       Road, Bridge      ① Primitive
            (数维线构件/走廊)        Tunnel, Culvert, Dam  (独立构件)
                                    Pier: 盖梁=LinearComponent, 柱=LinearComponent/Primitive,
@@ -248,11 +264,11 @@ Filter     ⑤ BooleanSubtract
 | 类型 | 点选方式 | 点击次数 | 创建流程 | GenRule |
 |------|---------|---------|---------|---------|
 | **Wall（墙）** | 折线路径 | 2+ | 在平面图中绘制墙中心线（2+点）→ 指定 WallType（层叠结构）→ 设置高度 → 完成 | LayerExtrusion |
-| **Slab（楼板）** | 闭合边界多边形 | N | 在平面图中绘制闭合边界（N点，自动闭合末点→首点）→ 指定 FloorType（层叠结构）→ 完成 | LayerExtrusion |
+| **Slab（楼板）** | Path（闭合） | — | 在平面图中绘制闭合路径（自动闭合末点→首点）→ 指定 FloorType（层叠结构）→ 完成 | LayerExtrusion |
 | **Roof（屋顶）** | 拉伸轮廓+范围（或足迹） | 2（拉伸）或 N（足迹） | **拉伸模式**：绘制轮廓草图 + 拾取起点/终点范围。**足迹模式**：绘制闭合边界多边形 → 指定 RoofType → 完成 | LayerExtrusion |
 | **Floor（地板）** | 闭合边界多边形 | N | 同楼板：绘制闭合边界 → 指定 FloorType → 完成 | LayerExtrusion |
 
-> **代码偏差**：所有面构件当前使用 2 点点选（同墙路径），但 slab/roof/floor 需要 N 点闭合多边形。参见 [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.1。
+> **已实现（2026-10-27）**：面构件创建统一消费 Path——墙走 **Path（开放）**（panel 形态·中心线，`build_layered_path`）；slab/roof/floor 走 **Path（闭合）**（region 形态，`build_layered_slab_path`，回首点或双击/回车闭合）。点数由创建形态（form）推导（见[数据模型 §1 双轴模型](DATA_MODEL.zh-CN.md)）。内核残留见 [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.1。
 
 #### 线构件
 
@@ -274,10 +290,10 @@ Filter     ⑤ BooleanSubtract
 |------|---------|---------|---------|---------|
 | **PointCloud（点云）** | 放置点 | 1 | 拾取放置点 → 引用点云文件 → 完成 | PointCloudGeometry |
 | **TerrainModel（地形）** | 放置点 | 1 | 拾取放置点 → 提供源数据（点文件、等高线、TIN）→ 完成 | TerrainModel |
-| **FeatureLine（特征线）** | 折线 | N | 绘制 3D 折线（N点，定义断裂线）→ 指定高程/样式 → 完成 | CurveGeometry |
-| **ContourLine（等高线）** | 折线 | N | 绘制 2D 折线（N点，等高）→ 指定高程 → 完成 | CurveGeometry |
+| **FeatureLine（特征线）** | Path（开放） | — | 绘制 3D 折线（定义断裂线）→ 指定高程/样式 → 完成 | CurveGeometry |
+| **ContourLine（等高线）** | Path（开放） | — | 绘制 2D 折线（等高）→ 指定高程 → 完成 | CurveGeometry |
 
-> **代码偏差**：FeatureLine/ContourLine 使用 1 点放置，但需要 N 点折线点选。参见 [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.3。
+> **已实现（2026-10-27）**：FeatureLine/ContourLine 按 **Path（开放）** 绘制，经 `line` genrule 生成沿折线的细导管——属过渡实现；目标态为点构件原生的 TIN/断线几何（见[数据模型 §1](DATA_MODEL.zh-CN.md)）。详见 [CODE_DEVIATIONS.md](../status/CODE_DEVIATIONS.md) §3.3。
 
 #### 体构件
 

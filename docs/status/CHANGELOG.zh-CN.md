@@ -1,3 +1,10 @@
+---
+title: "变更日志（Changelog）"
+status: history
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # 变更日志（Changelog）
 
 本文件记录 OmniM 项目的所有重要变更。仅包含阶段性实质性摘要——这不是提交日志。
@@ -19,7 +26,7 @@
 
 ### 新增
 - `docs/` 重组为 `architecture/`、`guides/`、`specification/`、`reference/`、`status/`、`RFC/`（每篇中英双语），新增文档门户（`docs/README.md`）。
-- 新参考文档：全量 REST API 参考（`reference/API.md`，对照 `crates/server/src/lib.rs` 审计约 100 条路由）。
+- 新参考文档：全量 REST API 参考（`reference/API.md`，对照 `crates/server/src/lib.rs` 审计出 **78** 条去重路由）。
 - 新规范：元件库与系列库（`specification/CATALOG_SERIES.md`）、数据流、架构决策记录（6 条种子 ADR）。
 - 新指南：快速开始、构建、架构地图、测试。
 - RFC-0001：Omcom 文本 DSL（草案）——把原来的"文本 DSL"愿景归位为未实现的设计提案。
@@ -46,6 +53,7 @@
 ### 修复
 - 整个 workspace 编译警告清零（未用变量/导入、多余 `mut`）。
 - 文档内部链接全部校验（0 坏链）。
+- 审计整改（docs/status/DOC_AUDIT_2026-10-27）：快速开始命令纠正（真实控制台语法、`/api/undo`、原始文本 IFC 导入）并加显著持久化警告；README 愿景/现状隔离；IFC_EXTENSION 按“部分 IFC”现实重写；ADR-0006 标记为“已接受（目标）——部分实现”并附偏差说明；新增 `architecture/WRITE_PATHS.md`；路由数纠正为 78；CODE_DEVIATIONS §6 记录审计 P0；中文 DATA_MODEL 对齐（+371 行：§5.6、§5.7.1、§16.4、§16a、§17、章节重编号、围栏修复）；DOMAINS/GLOSSARY 增加 proto 状态列；新增 `CAPABILITY_MATRIX` 与 `MODELER_HANDBOOK`；全部 71 篇文档加 front matter；新增 `scripts/check_docs.py`（链接/围栏/编号/双语对齐）。代码级 P0（单一写入路径、保存策略、几何收敛、系列强制性）已记入 ROADMAP 技术债待办。
 
 ### 未实现（已知缺口）
 - 不变：仅 REST（无 WebSocket/实时协作）、JSON 文件持久化（无数据库/版本历史）、无 WASM 共享内核、无桌面/移动打包（见 `PLATFORM_ARCH` 未来方向章节）。
@@ -135,7 +143,7 @@
 
 ## 基线（当前运行时）
 
-- Axum REST 服务器（约 100 条路由）+ JSON 文件（`.omnim`）持久化；**无 WebSocket/实时协作，无数据库/版本历史/审计追踪**。
+- Axum REST 服务器（**78** 条去重路由）+ JSON 文件（`.omnim`）持久化；**无 WebSocket/实时协作，无数据库/版本历史/审计追踪**。
 - AMIR AI 引擎（OpenAI/Anthropic/Mock 提供方）：自然语言→OmniCommand 翻译、聊天、逆向模型描述。
 - 手写 IFC（2x3/4）导入/导出，**实体覆盖不完整**；无 STEP/DXF/GIS/glTF 支持。
 - Web UI：基于 three.js 的工作台、草图编辑器、构件编辑器、系列/库管理器、AI 聊天、Omcom 控制台。

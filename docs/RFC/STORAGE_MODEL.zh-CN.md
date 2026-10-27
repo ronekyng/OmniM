@@ -1,3 +1,10 @@
+---
+title: "OmniM 存储模型"
+status: design
+last_updated: 2026-10-27
+applies_to: "n/a (proposal)"
+evidence: "n/a (proposal)"
+---
 # OmniM 存储模型
 
 ## 1. 概述
@@ -125,11 +132,11 @@ Library（`CatalogStore` + `ComponentStore` + `FeatureTreeRegistry`）在 sessio
 
 ---
 
-## 5. 客户端缓存
+## 6. 客户端缓存
 
 客户端缓存是**临时的** —— 它可以随时被清除并从服务器重新获取。它存在的唯一目的是提升性能。
 
-### 5.1 Object Cache
+### 6.1 Object Cache
 
 | 属性 | 值 |
 |------|-----|
@@ -144,7 +151,7 @@ Library（`CatalogStore` + `ComponentStore` + `FeatureTreeRegistry`）在 sessio
 - 可见对象的生命周期记录
 - 选中对象的关系数据
 
-### 5.2 Geometry Cache
+### 6.2 Geometry Cache
 
 | 属性 | 值 |
 |------|-----|
@@ -159,7 +166,7 @@ Library（`CatalogStore` + `ComponentStore` + `FeatureTreeRegistry`）在 sessio
 - 用于参数化编辑操作的 BRep 几何数据
 - 用于空间查询的包围体层次结构
 
-### 5.3 Render Cache
+### 6.3 Render Cache
 
 | 属性 | 值 |
 |------|-----|
@@ -175,9 +182,9 @@ Library（`CatalogStore` + `ComponentStore` + `FeatureTreeRegistry`）在 sessio
 
 ---
 
-## 6. 缓存同步
+## 7. 缓存同步
 
-### 6.1 读路径(服务器 → 客户端缓存)
+### 7.1 读路径(服务器 → 客户端缓存)
 
 ```
 Client requests data
@@ -193,7 +200,7 @@ Store in client cache with version tag
 Return data
 ```
 
-### 6.2 写路径(客户端 → 服务器)
+### 7.2 写路径(客户端 → 服务器)
 
 ```
 User performs action (e.g., move wall)
@@ -215,7 +222,7 @@ Client updates cache with confirmed version
 Server broadcasts change notification to other clients via WebSocket
 ```
 
-### 6.3 缓存失效
+### 7.3 缓存失效
 
 | 触发条件 | 操作 |
 |----------|------|
@@ -227,31 +234,31 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 7. 关键设计原则
+## 8. 关键设计原则
 
-### 7.1 服务器权威
+### 8.1 服务器权威
 - 服务器是唯一的数据真相来源
 - 所有写入都通过服务器端 AMIR 执行
 - 客户端缓存始终是可丢弃的
 
-### 7.2 通过缓存提升性能
+### 8.2 通过缓存提升性能
 - 客户端缓存确保即时 3D 渲染和响应式交互
 - 基于视口的预取预测用户需求
 - LOD 感知的几何缓存最小化数据传输
 
-### 7.3 协作
+### 8.3 协作
 - 通过 WebSocket 实时变更通知
 - 多用户近实时地看到彼此的变更
 - 服务器按顺序解决冲突
 
-### 7.4 可扩展性
+### 8.4 可扩展性
 - 服务器水平扩展(读副本、负载均衡)
 - 几何 CDN 用于大文件分发
 - 边缘服务器用于地理分布式团队
 
 ---
 
-## 8. 性能目标
+## 9. 性能目标
 
 | 指标 | 目标 |
 |------|------|
@@ -266,7 +273,7 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 9. 备份与完整性
+## 10. 备份与完整性
 
 ### 服务器端备份
 - 每日完整数据库备份
@@ -282,7 +289,7 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 10. 待解决问题
+## 11. 待解决问题
 
 1. 对于水平扩展,使用 PostgreSQL 还是分布式 NewSQL(TiDB、CockroachDB)?
 2. 不同设备类别的最佳客户端缓存大小是多少?

@@ -1,3 +1,10 @@
+---
+title: "OmniCommand Reference — the typed command system"
+status: reference
+last_updated: 2026-10-27
+applies_to: "crates/server, proto"
+evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
+---
 # OmniCommand Reference — the typed command system
 
 Last updated: 2026-10-27

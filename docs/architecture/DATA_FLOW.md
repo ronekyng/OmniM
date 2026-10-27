@@ -1,3 +1,10 @@
+---
+title: "OmniM — Data Flows"
+status: current
+last_updated: 2026-10-27
+applies_to: "crates/, web/"
+evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+---
 # OmniM — Data Flows
 
 This document describes the **end-to-end data flows that actually exist in the code today**, based on
@@ -8,17 +15,20 @@ The architectural overview lives in [PLATFORM_ARCH.md](PLATFORM_ARCH.md); this p
 
 ---
 
-## 0. The Universal Mutation Rule
+## 0. The Universal Mutation Rule — TARGET, not current
 
-Before the specific flows: **every write to the `Project` — whether triggered by a mouse click, an AI answer, or a REST
-call — becomes an `OmniCommand`** (schema in `proto/omcom.proto`, types in `omnim-omcom`) and then flows through:
+The **target** (ADR-0006) is that every write to the `Project` — whether triggered by a mouse click, an AI answer, or
+a REST call — becomes an `OmniCommand` and flows through:
 
 ```
 OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (gather errors; abort if any)
             ──▶ Executor::execute(cmd, &mut Project) ─▶ ExecutionResult + undo/redo entry
 ```
 
-This single choke point is the backbone of every diagram below.
+**Current state does not match this.** A static scan of `crates/server/src/lib.rs` found 55 handlers holding
+`project.write()`, of which 13 mention the executor; roughly **42 mutate `Project` directly**, outside the undo stack.
+Only five handlers save. See [WRITE_PATHS.md](WRITE_PATHS.md) for the per-endpoint matrix. The diagrams below show the
+target shape where it applies, and call out the direct-write paths where it does not.
 
 ---
 
@@ -40,7 +50,7 @@ The bread-and-butter flow, e.g. "create a wall" clicked in the toolbar:
 │   • route handler acquires project.write() + executor.write()   │
 │   • assembles OmniCommand{ action, operations:[…] }             │
 │   • Executor::execute() → validates → mutates Project           │
-│   • Project::save(save_path) — auto-save the .omnim JSON file   │
+│   • no save: POST /api/objects is not a saving handler          │
 │   • returns object/JSON (or error status)                       │
 └──────────────────────────────┬──────────────────────────────────┘
                                │ 200 OK
@@ -66,6 +76,9 @@ Notes grounded in code:
   `omnim-model` (mesh_gen.rs), and the browser is a pure display client.
 - There is **no push channel**: after each mutation the UI re-pulls state (queries invalidated after the
   call resolves). No WebSocket exists in the codebase.
+- This diagram applies only to executor-path endpoints. Rename, transform, reparent, connect, material assignment,
+  sketch update/solve, IFC import, catalog instantiate, and series edits **write `Project` directly** (no undo,
+  usually no save) — see [WRITE_PATHS.md](WRITE_PATHS.md).
 
 ### Mermaid version
 
@@ -80,7 +93,7 @@ sequenceDiagram
     S->>O: OmniCommand → validate → execute
     O->>M: mutate Project
     O-->>S: ExecutionResult
-    S->>M: Project::save(.omnim) auto-save
+    Note over S,M: no save for this handler
     S-->>U: 200 JSON
     U->>M: GET /api/mesh /api/tree
     M-->>U: mesh + tree JSON
@@ -131,11 +144,11 @@ What happens in code:
 ```mermaid
 sequenceDiagram
     U as Web UI (Library manager / import actions)
-    S as omnim-server /api/ifc/*
+    S as omnim-server (import/export)
     I as omnim-ifc (hand-written STEP parser)
     M as omnim-model
     Note over I,M: EXPORT path
-    U->>S: request export
+    U->>S: GET /api/export/ifc
     S->>M: read current Project
     M-->>S: objects/geometry
     S->>I: serialize Project → STEP text
@@ -143,11 +156,11 @@ sequenceDiagram
     S-->>U: file download
 
     Note over I,M: IMPORT path
-    U->>S: upload .ifc file
+    U->>S: POST /api/import/ifc (raw IFC text)
     S->>I: parse text (hand-written, no IFC crate)
     I-->>S: parsed IFC records + mapped geometry (geometry.rs)
-    S->>M: build OmniCommand(s) creating objects
-    M-->>S: mutated Project (goes through Validator+Executor, then auto-save)
+    S->>M: insert parsed objects/materials/lifecycle directly into Project
+    M-->>S: mutated Project (no Validator/Executor, no undo, no save)
     S-->>U: imported objects
 ```
 
@@ -156,8 +169,11 @@ Facts from the code:
 - `omnim-ifc` contains a **hand-written parser and serializer** (no `ifc`-ecosystem Rust crate is used — ADR-0005).
 - Coverage is **partial** — a subset of **IFC 2x3 and IFC 4** entities/attributes; unsupported entities are skipped
   rather than rejected wholesale.
-- Imports do **not** native-write into the `Project`; they are converted into `OmniCommand`s (or into model-building
-  calls invoked through the same command path) so imported content lands on the undo stack like any other mutation.
+- **Import writes `Project` directly.** `import_ifc` inserts parsed objects/materials/lifecycle records into the
+  aggregate (and `mode=replace` overwrites the whole project). It does **not** translate the file into `OmniCommand`s,
+  so imported content is **not undoable** and is **not saved** (see the implementation note in ADR-0005 and
+  [WRITE_PATHS.md](WRITE_PATHS.md)).
+- The request body is **raw IFC text**, not multipart — `curl --data-binary @file.ifc`, not `curl -F`.
 - Sample IFC files under `fixtures/ifc/` (`simple.ifc`, `test_building.ifc`, `part.ifc`, …) exercise this flow.
 
 ---
@@ -165,15 +181,16 @@ Facts from the code:
 ## 4. (d) Catalog / series instantiation
 
 The PARAGON-style **component catalog** and SPECON-style **series library** live in `omnim-model`
-(`catalog.rs`, `seed_catalog.rs`, `series_store.rs`, `library.rs`).
+(`catalog.rs`, `seed_catalog.rs`, `series_store.rs`, `library.rs`). Catalog definitions are served from the
+library/seed catalog; `Project` stores series (`Project.series`) and external series references, **not** a
+`catalog` field.
 
 ```mermaid
 flowchart TD
-    A[Seed catalog<br/>seed_catalog.rs ~2200 LOC] -->|load/build| B[Project.catalog]
-    U[Web UI CatalogBrowser<br/>SeriesBrowser] -->|POST /api/catalog/...<br/>/api/series/...| S[omnim-server]
-    S -->|build OmniCommand<br/>instantiate component, pick series size| O[omnim-omcom Executor]
-    O -->|validate + execute| M[omnim-model::Project]
-    M --> F[feature tree / feature_template.rs<br/>GenRule generators]
+    A[Seed catalog / library<br/>seed_catalog.rs] -->|served to UI| U[Web UI catalog & series panels]
+    U -->|POST /api/catalog/instantiate| S[omnim-server]
+    S -->|direct Project write<br/>no executor, no undo| M[omnim-model::Project]
+    M --> F[feature tree / feature_template.rs<br/>official geometry path]
     F --> G[geometry.rs / brep.rs → mesh_gen.rs]
     G --> J[(mesh JSON served to three.js)]
 ```
@@ -184,12 +201,17 @@ Narrative:
    parameter-driven part definition).
 2. **Series:** a series binds one catalog component to a family of dimensioned variants (SPECON-style), so a user picks
    a **series + size** rather than raw dimensions.
-3. **Instantiation:** choosing one produces an *instantiate* `OmniCommand`; execution adds an object to the project tree,
-   parameters filled from the chosen series' record.
+3. **Instantiation:** `POST /api/catalog/instantiate` currently **writes `Project` directly** — it does not go through
+   the Executor, has no undo entry, and does not save. It creates an `ObjectType::Component` (not `Wall`/`Beam`/…),
+   with parameters filled from the chosen series record.
 4. **Generation:** the new object's feature tree (`GenRule` generator, `feature_template.rs`) drives geometry building
    (`brep.rs` via the truck kernel) and tessellation (`mesh_gen.rs`), which is then served to the three.js viewer.
 
-Everything downstream of the catalog pick therefore looks like flow §1; only the *start* differs.
+**Geometry-path split (important).** The catalog feature tree → BRep/mesh pipeline is the **official geometry path**.
+The toolbar's `/api/genrule` route is a **legacy/transitional pass-through**: it emits hardcoded mesh primitives and
+leaves `param_values` empty. The same wall can therefore arrive as `Wall` (genrule), `Component` (catalog), or a
+mapped IFC type (import), with different undo/save behavior. See [WRITE_PATHS.md](WRITE_PATHS.md) and
+[CODE_DEVIATIONS.md §6](../status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27).
 
 ---
 
@@ -205,14 +227,17 @@ flowchart LR
     C --> E[SharedProject: Arc RwLock Project]
     D --> E
     E --> F[omnim-server handles all /api requests]
-    F -->|every mutation: Project::save on state.save_path| G[.omnim JSON file rewritten]
-    F -->|manual/console save endpoints| G
+    F -->|save_path = None for default project.omnim| X[nothing persisted]
+    F -->|only 5 handlers, only when save_path is Some| G[.omnim JSON file rewritten]
 ```
 
 Mechanics:
 
-- **One file per process.** `omnim-server::ServerConfig { project, save_path, halt }`. `save_path` is `Some` when
-  `OMNIM_PROJECT` points to a writable path, `None` when the default placeholder is used (then nothing is auto-saved).
+- **One file per process.** `omnim-server::ServerConfig { project, save_path, ... }`. `main.rs` sets `save_path`
+  to `None` when the project path is exactly `project.omnim`; only a non-default `OMNIM_PROJECT` yields `Some`.
+- **Partial saves even when enabled.** Only `update_object`, `add_feature`, `update_feature`, `remove_feature`,
+  and `rebuild_component` call `Project::save(path)`. Creating objects, `/api/genrule`, `/api/omcom`, catalog
+  instantiation, IFC import, and series edits are never saved. See [WRITE_PATHS.md](WRITE_PATHS.md).
 - **Full-rewrite, not incremental.** Each save serializes the **entire `Project`** to JSON and rewrites the file.
   There is no journal, no WAL, no checkpointing.
 - **Crash window:** a kill between mutation and successful write can leave the file stale or (theoretically) truncated;
@@ -220,7 +245,7 @@ Mechanics:
 - **No history.** One file = one snapshot. Undo/redo lives only in in-memory `Executor` state.
 - **Size risk:** for very large projects (big `seed_catalog` expansions), full serialization of a monolithic file is
   inherently O(project size) per mutation. This is the concrete motivation behind the planned database-backed
-  persistence (see [PLATFORM_ARCH.md §9](PLATFORM_ARCH.md#sec-future)).
+  persistence (see [PLATFORM_ARCH.md §9](PLATFORM_ARCH.md#9-future-directions-not-yet-implemented)).
 
 ---
 

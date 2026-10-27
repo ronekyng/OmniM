@@ -1,3 +1,10 @@
+---
+title: "OmniM Documentation"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "verified against the docs tree 2026-10-27"
+---
 # OmniM Documentation
 
 [English](README.md) | [中文](README.zh-CN.md)
@@ -14,6 +21,12 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Document Status Legend](#document-status-legend)
 
 ## By Role
+
+### 🧱 I want to model
+- [Modeler Handbook](MODELER_HANDBOOK.md) — domain-by-domain task flows, real UI/API steps, and honest gaps ([中文](MODELER_HANDBOOK.zh-CN.md))
+- [Capability Matrix](CAPABILITY_MATRIX.md) — per-object capability rows: create, host, connect, measure, IFC, proto status ([中文](CAPABILITY_MATRIX.zh-CN.md))
+- [Getting Started](guides/GETTING_STARTED.md) — build, launch, and first interactions ([中文](guides/GETTING_STARTED.zh-CN.md))
+- ⚠️ **Persistence warning:** the default launch does **not** save. Set `OMNIM_PROJECT` to a non-default file and read the warning in [Getting Started](guides/GETTING_STARTED.md) before modeling.
 
 ### 🚀 I want to try it
 - [Getting Started](guides/GETTING_STARTED.md) — build the server, run the web UI, first steps ([中文](guides/GETTING_STARTED.zh-CN.md))
@@ -61,6 +74,8 @@ docs/
 ├── RFC/             # Open design proposals (text DSL, storage model)
 └── research/        # Background research; not part of the contract
 ```
+
+Two modeler-facing references sit at the docs root: [Modeler Handbook](MODELER_HANDBOOK.md) · [Capability Matrix](CAPABILITY_MATRIX.md).
 
 ## Document Status Legend
 

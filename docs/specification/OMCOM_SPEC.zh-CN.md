@@ -1,3 +1,10 @@
+---
+title: "Omcom 规范 — 统一工程命令体系"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # Omcom 规范 — 统一工程命令体系
 
 > 状态：与 Phase 7 代码库同步。本文描述 `proto/omcom.proto`、`crates/omcom`、`crates/amir`

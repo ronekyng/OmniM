@@ -1,3 +1,10 @@
+---
+title: "AMIR Specification (AI Intermediate Representation)"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # AMIR Specification (AI Intermediate Representation)
 
 ## 1. Purpose

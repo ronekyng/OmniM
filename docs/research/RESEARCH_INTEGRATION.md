@@ -1,3 +1,10 @@
+---
+title: "跨平台调研整合分析 — 选择与实施策略"
+status: research
+last_updated: 2026-08-07
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # 跨平台调研整合分析 — 选择与实施策略
 
 > 基于 8 份平台调研文档的综合分析（含场地/地形专项调研）

@@ -1,6 +1,15 @@
+---
+title: "OmniM Unified Data Model"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM Unified Data Model
 
 > **Last updated: 2026-10-27, audited against code** (`proto/omnim.proto`, `proto/omcom.proto`, `crates/model/**`, `crates/sketch/**`, `crates/ifc/**`). Blocks marked *design specification* describe the target model and are not yet in the proto/code; capabilities marked 🗓 Planned are design goals awaiting implementation.
+>
+> **Dual-track maintenance obligation**: `DATA_MODEL.zh-CN.md` is a **maintained translation** of this document. When editing this English document, update the Chinese twin in the same change: keep section numbering, tables, and proto blocks aligned. Do not let either side drift.
 
 ## 1. Overview
 
@@ -102,7 +111,32 @@ Across all four engineering domains, component geometry is conceptually classifi
 
 > **Cross-platform reference**: The 4-class taxonomy is derived from the cross-platform analysis (`docs/research/comparative_analysis.md §2-4`): Revit Wall/Floor/Roof (surface), Revit Beam/Column + Civil 3D Corridor (linear), point clouds + TIN surfaces (point), E3D primitives + SolidWorks parts (body).
 
-**Library vs Project**: The **Library** is a **session-level global singleton** holding the master Component Catalog (`CatalogStore`), Component templates (`ComponentStore`), and feature tree templates (`FeatureTreeRegistry`). It is loaded once per session and shared across all projects. The **SeriesStore** is an **independent module** — it defines spec decision trees that reference Library content by ComponentDef ID. The **Project** holds a private `SeriesStore` (project-specific series) and `external_series_refs` (references to external series). Project does **not** hold a Library reference. See [§14](#14-component-catalog-元件库-paragon) and [§15](#15-series-library-系列库--等级库--specon).
+#### Semantic name vs. Genesis class (dual-axis model)
+
+The classification above binds to **how an instance is created (its Genesis / 创成方式)**, not to the object's semantic name:
+
+- **ObjectType (`Wall`, `Slab`, `Pipe`…) = the semantic role** in its domain: which IFC class it maps to, which domain it belongs to, what it hosts (doors/windows host on walls; rooms are enclosed by walls), and how it is quantified (surfaces/finishes for surface-panel objects; linear metres/DN for linear ones; unit count for bodies).
+- **Genesis class (Surface / Linear / Point / Body) = the creation method of *this instance***, recorded per object (its GenRule/catalog feature tree), never inferred from the name.
+
+**One semantic name can legally have multiple genesis classes** — this is how irregular components are covered without new ObjectTypes. The wall spectrum:
+
+| Wall created as | Genesis class | Scenario |
+|---|---|---|
+| Centerline + layered thickness | **Surface · panel** | Standard straight/L-shaped walls (the current default) |
+| Closed sketch boundary | **Surface · region** | Face-based wall pieces, thick wall slabs, grandstand side walls |
+| Primitive/boolean/freeform operations | **Body** | Sculpted/double-curved curtain walls, Revit-style in-place / massing-driven walls |
+| Alignment + varying section + terrain target | **Linear** | Retaining walls/slope walls/curbs — genuinely civil linear components |
+
+#### Governance: classification decides the implementation
+
+1. **Same class → one implementation family**: all Surface objects (wall/slab/roof/floor) share the LayerExtrusion family — one LayerEditor semantics, one preview language, one layer-template system, one validation entry. "A slab differs from a pipe" (family boundary), "a slab resembles a wall" (same family, different Form) — both true.
+2. **One family, many Forms, Forms are enumerated**: LayerExtrusion has `panel` (open centerline) and `region` (closed boundary); roof adds footprint/extrusion-profile; slab adds rect-quick/polygon. The UI's pick mode derives from the *form* (`form → pickMode`), not from ad-hoc per-type tables.
+3. **No cross-class implementation**: an implementation carrying another class's semantics (DN, elbows, terrain targets for walls; LayerExtrusion for pipes) is forbidden. Note: a wall's *LayerExtrusion generator* may share the low-level "constant section swept along a path" primitive with LinearComponent — that primitive carries no class semantics and lives below classification ("classification decides the implementation" governs GenRule families, not geometry utilities).
+4. **Authorization matrix, keyed by `(objectType, genesis class/form)`**: the genrule dispatch checks the matrix (defaults: wall→panel, slab/floor→region, beam/pipe/duct→constant-section linear, tank/pump/valve→primitive…); any combination outside the matrix returns "creation method not authorized for this object type" and a 400. Extended authority — e.g. `wall × Linear` (with a terrain target, i.e. retaining wall) — is granted explicitly by adding a matrix row, then implemented.
+
+> Model source: agreed in the 2026-10-27 path-abstraction discussion (migration history in status/CHANGELOG.md); this subsection is the design contract. Implementation backlog: see status/ROADMAP.md → "Accepted Designs Pending Implementation".
+
+**Library vs Project**: The **Library** is a **session-level global singleton** holding the master Component Catalog (`CatalogStore`), Component templates (`ComponentStore`), and feature tree templates (`FeatureTreeRegistry`). It is loaded once per session and shared across all projects. The **SeriesStore** is an **independent module** — it defines spec decision trees that reference Library content by ComponentDef ID. The **Project** holds a private `SeriesStore` (project-specific series) and `external_series_refs` (references to external series). Project does **not** hold a Library reference. See [§14](#14-component-catalog-元件库--paragon) and [§15](#15-series-library-系列库--等级库--specon).
 
 ---
 
@@ -566,6 +600,7 @@ enum ConstraintType {
   TRACTION = 28;           // traction constraint (contact)
   TORSION_CONTINUITY = 29; // G3 torsion continuity
 }
+```
 
 > **Planned sketch entities** (from SOLIDWORKS, `docs/research/solidworks_components.md §4.0`): `Slot` (3 variants: Straight/Arc/Conical), `Conic` (endpoints + Rho value — elliptical/parabolic/hyperbolic based on Rho), `Parabola`, `SketchText` (extrudable/cuttable 3D text), `BeltChain` (pulley/sprocket layout sketch), `EquationCurve` (parametric equation-driven curve). Designed as additions to the `SketchEntity` oneof above — 🗓 Planned, not yet in proto/omcom.proto or `omnim_sketch`.
 

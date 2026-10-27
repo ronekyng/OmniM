@@ -1,3 +1,10 @@
+---
+title: "架构地图"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "commands and paths verified in the repo 2026-10-27"
+---
 # 架构地图
 
 [English](ARCHITECTURE_MAP.md) | [简体中文](ARCHITECTURE_MAP.zh-CN.md)

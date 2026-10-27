@@ -1,3 +1,10 @@
+---
+title: "AMIR 规范 (AI 中间表示层)"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # AMIR 规范 (AI 中间表示层)
 
 ## 1. 目的

@@ -1,3 +1,10 @@
+---
+title: "Bentley OpenBridge Designer / OpenRoads / OpenTunnel Designer 内置构件逻辑研究"
+status: research
+last_updated: 2026-08-07
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # Bentley OpenBridge Designer / OpenRoads / OpenTunnel Designer 内置构件逻辑研究
 
 > 调研日期：2026-08-07

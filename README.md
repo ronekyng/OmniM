@@ -15,10 +15,12 @@
 
 OmniM is an **AI-Native Engineering Project Lifecycle Platform**. It unifies project data, 3D models, information models, documents, schedules, costs, assets, and operational data across Building Engineering, Civil Engineering, 3D Plant Design, and Mechanical Design. OmniM provides one continuous data foundation from planning, design, procurement, construction, commissioning, asset, operation & maintenance, production, to decommissioning.
 
+> **Vision vs current state.** This README describes the product vision. For what the code actually does today, see the [Roadmap](docs/status/ROADMAP.md), the [Format Compatibility matrix](docs/status/FORMAT_COMPAT.md), the [Code Deviations ledger](docs/status/CODE_DEVIATIONS.md), and the [write-path snapshot](docs/architecture/WRITE_PATHS.md). Features marked 🗓 Planned are design goals, not implemented capabilities.
+
 At the core of OmniM are three layers:
 - **Component Catalog (元件库)** — a master library of parametric 3D component definitions (inspired by PDMS PARAGON), each defined using the same sketch→constraint→feature pipeline
 - **Series Library (系列库/等级库)** — project-approved component subsets with spec-driven selection trees (inspired by PDMS SPECON), enforcing engineering standards by constraining available component types, sizes, and materials
-- **Omcom (OmniM Command)** — the unified modeling text DSL; all paths (command window, GUI, AI dialog) converge into Omcom instructions to operate the information model
+- **Omcom (OmniM Command)** — the typed command layer (`OmniCommand` + Validator/Executor) and web console; a free-form text DSL is 🗓 Planned. Target: all paths (command window, GUI, AI dialog) converge into the same command pipeline.
 
 ---
 
@@ -43,7 +45,7 @@ At the core of OmniM are three layers:
 
 &gt; **Current Stage: Phase 8 — Domain Extensions**
 &gt;
-&gt; OmniM is in active development. Phases 1–7 are complete (core data model & typed command executor, constraint solver & sketch system, feature engine & BRep kernel, component catalog & series library, catalog component modeling, GenRule refactoring & default templates, user interface). Phase 8 (domain extensions) is in progress. See [status/ROADMAP.md](docs/status/ROADMAP.md) and [status/CHANGELOG.md](docs/status/CHANGELOG.md).
+&gt; OmniM is in active development. Phases 1–7 are delivered, with **Phase 1 partial** (the typed `OmniCommand` schema + executor exist; the nom-based Omcom text DSL does not). Phase 8 (domain extensions) is in progress; Phase 9 (AMIR) has been partially delivered ahead of schedule. See [status/ROADMAP.md](docs/status/ROADMAP.md) and [status/CHANGELOG.md](docs/status/CHANGELOG.md). The server currently exposes **78** deduplicated REST routes; **no WebSocket, no database, and no automatic save by default**.
 
 ---
 
@@ -66,12 +68,13 @@ Traditional engineering software suffers from:
 ## Key Features
 
 ### 🎯 Unified Data Model
-- **IFC Superset**: Native compatibility with IFC 2x3, IFC 4, and 4x3
+- **IFC-aligned model**: partial IFC 2x3 / IFC 4 import/export today; IFC 4x3-specific entities are 🗓 Planned. See [FORMAT_COMPAT](docs/status/FORMAT_COMPAT.md).
 - **Multi-Domain Extensions**: Civil, Plant, and Mechanical domain extensions
 - **Unified Classification**: Single object classification tree across all domains
 - **Rich Relation System**: Containment, connection, spatial, and semantic relationships
 
-### ☁️ Cloud-First Storage with Client Caching
+### ☁️ Cloud-First Storage with Client Caching — 🗓 Planned
+> Not implemented. Today: one in-memory `Project`, optional single JSON file (`.omnim`), no database.
 - **Server-Authoritative**: All data stored on the server; single source of truth
 - **Client Caching**: Ephemeral cache for 3D rendering and production-grade responsiveness
 - **Viewport-Based Prefetch**: Only data in current view is cached and streamed
@@ -79,24 +82,25 @@ Traditional engineering software suffers from:
 - **Geometry Streaming**: Progressive LOD-aware download via HTTP Range
 
 ### 🖥️ Cross-Platform Client
-- **Web**: Browser-based, zero install (WASM + WebGPU)
-- **Desktop**: Native apps for Windows, macOS, and Linux (Tauri)
-- **Mobile**: iOS and Android apps (React Native)
-- **Shared Core**: All platforms share a common Rust/WASM core for AMIR, geometry, and domain logic
+- **Web**: ✅ current — browser SPA (React + three.js). WASM/WebGPU in-browser engine is 🗓 Planned.
+- **Desktop**: 🗓 Planned — native apps for Windows, macOS, and Linux (Tauri)
+- **Mobile**: 🗓 Planned — iOS and Android apps (React Native)
+- **Shared Core**: 🗓 Planned — no WASM build of the Rust engine exists today; the server owns the domain logic.
+- **Performance**: no cross-platform 60 FPS guarantee is claimed; rendering performance is client- and scene-dependent.
 
-### 🎯 Omcom Text DSL Instruction System
-- **Prompt → Omcom Text DSL**: Natural language compiles to deterministic Omcom text commands via AMIR
-- **Omcom → Model**: Text DSL parsed and executed to create/modify geometry and data
-- **Model → Omcom**: Reverse parsing converts existing models back to Omcom text sequences
-- **Validator Sandbox**: All Omcom instructions validated before execution
-- **Unified Entry**: Command window, GUI, and AI dialog all produce Omcom text DSL
+### 🎯 Typed OmniCommand + Omcom Console
+- **Prompt → OmniCommand**: natural language compiles to structured, validated commands via AMIR
+- **Omcom console**: executes a JSON `OmniCommand`, the `CREATE_OBJECT <type> <name>` shortcut, or `UNDO`/`REDO`
+- **Omcom Text DSL**: 🗓 Planned — draft [RFC-0001](docs/RFC/README.md); the nom parser does not exist
+- **Validator Sandbox**: executor-path commands are validated before execution (not every REST handler; see [WRITE_PATHS](docs/architecture/WRITE_PATHS.md))
+- **Unified Entry**: target architecture (ADR-0006); the single write path is only partially implemented today
 
 ### 📦 Component Catalog & Spec Library
 - **Component Library (元件库)**: Master catalog of parametric 3D component definitions — beams (IPE/HEA/HEB), pipes (CS/SS), fittings (elbows, tees, flanges), valves, equipment, and building elements
 - **Series Library (系列库/等级库)**: PDMS-style spec trees that select project-approved components with constrained size/material ranges
 - **PARAGON-inspired**: Components defined using the same sketch→constraint→feature pipeline as project objects, with connection points (P-points) and type codes for compatibility matching
 - **SPECON-inspired**: Decision tree selection engine (Question→Answer→Selector/SpecComponent) for pipe specs, structural series, and equipment libraries
-- **Standards Enforcement**: Designers can only use components in the project's active series — prevents non-standard parts
+- **Standards Enforcement**: 🔀 Partial — the current gate only checks component reachability; material/parameter/connection checks are not enforced (see [CODE_DEVIATIONS §6](docs/status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27))
 
 ### 📐 Parametric Modeling & Geometry
 - **2D Constrained Sketch**: Lines, arcs, circles, splines on sketch planes with geometric constraints
@@ -105,7 +109,7 @@ Traditional engineering software suffers from:
 - **Construction History**: Feature tree with dependency regeneration and rollback
 - **Parameter System**: Named parameters with expression-driven values
 - **BRep Kernel**: Precise boundary representation with boolean operations, fillets, chamfers
-- **Catalog-Driven Generation**: Project objects instantiated from catalog components, not hardcoded functions
+- **Feature-tree generation**: the official geometry path is catalog feature tree → BRep/mesh. The `/api/genrule` toolbar pass-through that emits hardcoded primitives is **legacy/transitional**.
 - **Mesh Generation**: Parametric primitives (Box, Cylinder, Sphere, Cone), Layered extrusions, Linear components
 
 ### 🔄 Engineering Project Lifecycle Management
@@ -123,22 +127,16 @@ Traditional engineering software suffers from:
 
 ## AMIR + Omcom
 
-AMIR is the AI-to-Omcom translation layer, and Omcom is the unified modeling **text DSL** format.
+AMIR is the AI-to-command translation layer. **Omcom** today is the typed `OmniCommand` system plus a thin web console; a free-form **text DSL** is 🗓 Planned ([RFC-0001](docs/RFC/README.md)).
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐     ┌──────────────┐     ┌─────────────────┐
-│  Natural        │────▶│      AMIR       │────▶│   Omcom Text   │────▶│    Parser    │────▶│  Engineering    │
-│  Language Prompt│     │  (AI Translator)│     │     DSL        │     │ (nom → Proto)│     │     Model       │
+│  Natural        │────▶│      AMIR       │────▶│   OmniCommand  │────▶│  Validator / │────▶│  Engineering    │
+│  Language Prompt│     │  (AI Translator)│     │   (typed JSON) │     │   Executor   │     │     Model       │
 └─────────────────┘     └─────────────────┘     └─────────────────┘     └──────────────┘     └─────────────────┘
-       ▲                        │                       │
-       │                        ▼                       ▼
-       │               (JSON Structured          (Engineers type
-       │                 Intent Inside)           commands here)
-       └─────────────────────────────────────────────────────────────┘
-                          Bidirectional (AI ↔ Omcom DSL)
 ```
 
-All paths (AI dialog, command window, GUI, OS CLI) ultimately converge into Omcom text DSL, parsed by a nom-based parser, and executed by a unified Executor.
+AMIR-generated commands enter the Validator/Executor. **Target:** all paths (AI dialog, command console, GUI, OS CLI) converge on the same command pipeline (ADR-0006). **Current:** that is only partially true — many REST handlers write `Project` directly (see [WRITE_PATHS](docs/architecture/WRITE_PATHS.md)).
 
 [Read Omcom Specification →](docs/specification/OMCOM_SPEC.md)
 [Read AMIR Specification →](docs/specification/AMIR_SPEC.md)
@@ -211,7 +209,8 @@ Object
 
 | Format | Import | Export | Notes |
 |--------|--------|--------|-------|
-| IFC 2x3/4x3 | ✅ Planned | ✅ Planned | Primary BIM format |
+| IFC 2x3/4 | ✅ Partial | ✅ Partial | Hand-written parser; partial entity coverage |
+| IFC 4x3 | 🗓 Planned | 🗓 Planned | No 4x3-specific entities yet |
 | STEP AP203/AP242 | ✅ Planned | ✅ Planned | Mechanical CAD format |
 | GIS (Shapefile, GeoJSON) | ✅ Planned | ✅ Planned | Geospatial data |
 | DWG/DXF | ✅ Planned | ✅ Planned | 2D CAD drawings |
@@ -228,6 +227,7 @@ Object
 - [Documentation Portal](docs/README.md) - Full documentation index by role ([中文](docs/README.zh-CN.md))
 - [Platform Architecture](docs/architecture/PLATFORM_ARCH.md) - Current implementation ([中文](docs/architecture/PLATFORM_ARCH.zh-CN.md))
 - [Data Flow](docs/architecture/DATA_FLOW.md) - End-to-end flows ([中文](docs/architecture/DATA_FLOW.zh-CN.md))
+- [Write Paths](docs/architecture/WRITE_PATHS.md) - Per-endpoint save/undo snapshot ([中文](docs/architecture/WRITE_PATHS.zh-CN.md))
 - [Decision Records](docs/architecture/DECISIONS.md) - Architecture decision log ([中文](docs/architecture/DECISIONS.zh-CN.md))
 - [Data Model](docs/specification/DATA_MODEL.md) - Unified engineering data model ([中文](docs/specification/DATA_MODEL.zh-CN.md))
 - [Omcom Specification](docs/specification/OMCOM_SPEC.md) - Unified typed command system ([中文](docs/specification/OMCOM_SPEC.zh-CN.md))
@@ -255,17 +255,18 @@ See the detailed [Roadmap document](docs/status/ROADMAP.md) for the complete pha
 
 ### Current Status
 
-- **Phase 1**: Core Data Model & Omcom DSL — ✅ Complete
+- **Phase 1**: Core Data Model & Omcom DSL — 🔀 Partial (typed commands + executor; text DSL not implemented)
 - **Phase 2**: Constraint Solver & Sketch System — ✅ Complete
 - **Phase 3**: Feature Engine & BRep Kernel — ✅ Complete
 - **Phase 4**: Component Catalog & Series Library — ✅ Complete
 - **Phase 5**: Catalog Component Modeling — ✅ Complete
 - **Phase 6**: GenRule Refactoring & Default Templates — ✅ Complete
-- **Phase 7**: User Interface — ✅ Complete
+- **Phase 7**: User Interface — ✅ Complete (one noted gap)
 - **Phase 8**: Domain Extensions — 🔄 In Progress
-- **Phase 9**: AMIR AI Compilation — 📅 Planned
+- **Phase 9**: AMIR AI Compilation — 🔄 Partial (delivered early; gaps remain)
 - **Phase 10**: Multi-User / Cloud — 📅 Planned
-- **Phase 11**: IFC/STEP Format Compatibility — 📅 Planned
+- **Phase 11**: IFC/STEP Format Compatibility — 🔀 Partial
+- **Phase 12**: Analysis & Ecosystem — 📅 Planned
 
 [Read full Roadmap →](docs/status/ROADMAP.md)
 

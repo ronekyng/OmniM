@@ -1,3 +1,10 @@
+---
+title: "Getting Started"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "commands and paths verified in the repo 2026-10-27"
+---
 # Getting Started
 
 [English](GETTING_STARTED.md) | [简体中文](GETTING_STARTED.zh-CN.md)
@@ -13,7 +20,12 @@ This guide gets you from a fresh clone to an interactive session with OmniM in r
 | npm | Ships with Node | Only needed for the web UI. |
 | Optional: `protoc` | Not required as a separate install | `crates/core/build.rs` uses `prost-build`, which bundles its own protobuf codegen. |
 
-No database, no external services. The server persists to a plain JSON file.
+No database, no external services. State lives in memory and can be written to a plain JSON file — but **saving is off by default** (see the warning below).
+
+> ⚠️ **Persistence warning — the default launch does NOT save mutations.**
+> `crates/server/src/main.rs` sets `save_path = None` whenever the project path is exactly `project.omnim` (i.e. `OMNIM_PROJECT` is unset, or set to `project.omnim`). With `save_path = None`, no handler writes the project file at all.
+> Even with a non-default `OMNIM_PROJECT`, only **five** handlers call `Project::save(...)`: `update_object`, `add_feature`, `update_feature`, `remove_feature`, and `rebuild_component` (static scan in the 2026-10-27 audit; see [WRITE_PATHS.md](../architecture/WRITE_PATHS.md)). Creating objects, `/api/genrule`, `/api/omcom`, catalog instantiation, IFC import, and series edits do **not** persist.
+> To enable the save path, launch with a non-default path, e.g. `OMNIM_PROJECT=./dev-project.omnim cargo run -p omnim-server --bin omnim`. `scripts/dev-server.sh` forwards `OMNIM_PROJECT` but defaults it to `project.omnim`, so the default script launch does not persist either.
 
 ## 5-Minute Quickstart
 
@@ -28,7 +40,7 @@ cargo run -p omnim-server --bin omnim
 On startup it:
 
 - loads the library from `~/.omnim/library.omnimlib` if present (falls back to the built-in seeded catalog),
-- loads the project from `./project.omnim` (or `$OMNIM_PROJECT`), creating a new one named "OmniM Project" if the file doesn't exist,
+- loads the project from `project.omnim` in the server's working directory (the crate dir under `cargo run`), or from `$OMNIM_PROJECT`, creating a new one named "OmniM Project" if the file doesn't exist (nothing is saved by default — see the warning above),
 - serves REST APIs under `/api/*`.
 
 > Note: the literal `serve` argument sometimes typed after the binary name (`omnim serve`) is currently ignored — running plain `omnim` does the same thing.
@@ -50,28 +62,42 @@ Open <http://localhost:5173> in a browser. (There is also `scripts/dev-server.sh
 Once the app loads, try these in any order:
 
 - **Create an object via the UI.** Use the main toolbar / create menu to add a component or an object. It appears in the object tree (left panel) and, if it has geometry, in the 3D viewer. Click a tree item to see its properties in the properties panel.
-- **Try the Omcom console.** Open the command/console panel at the bottom and type a simple command, e.g.:
+- **Try the Omcom console.** Open the command/console panel at the bottom. The console accepts:
+  - a **JSON `OmniCommand`** envelope, or
+  - the shortcut **`CREATE_OBJECT <type> <name>`**, e.g.:
 
-  ```text
-  CREATE Object name:"Wall-01"
-  ```
+    ```text
+    CREATE_OBJECT WALL Wall-01
+    ```
 
-  then try `UNDO` to roll it back. Omcom is the unified modeling DSL — everything the UI or the AI does ultimately becomes an Omcom instruction. You can also hit the HTTP endpoint directly:
+  - the shortcuts `UNDO` and `REDO`.
+
+  A free-form text DSL (`CREATE Object …`) is **not** implemented — it remains a draft ([RFC-0001](../RFC/README.md)). The Omcom console is a thin client over the typed command executor, not a separate modeling language.
+
+  You can also hit the HTTP endpoints directly. To execute a command, post a full `OmniCommand` envelope to `/api/omcom`:
 
   ```bash
   curl -X POST localhost:3000/api/omcom -H "Content-Type: application/json" \
-    -d '{"command": "UNDO"}'
+    -d '{"version":"1.0","id":"demo-1","action":1,"operations":[{"create_object":{"type":"WALL","name":"Wall-01","description":"","geometry":null,"properties":[],"parent_id":""}}]}'
+  ```
+
+  Undo has its own endpoint — `/api/omcom` does **not** accept `{"command":"UNDO"}`:
+
+  ```bash
+  curl -X POST localhost:3000/api/undo
   ```
 
 - **Try the AI chat (keyless mock provider).** AMIR is the AI-instruction layer (`crates/amir`). Without any configuration, it runs with a **mock provider** that needs no API key — open the AI chat panel (`web/src/app/components/AiChat.tsx`) and type something like *"create a wall named W1"*. Real LLM usage (OpenAI / Anthropic) requires env keys — see [BUILDING.md](BUILDING.md).
-- **Try multi-point picking (N-point creation).** Pick a tool, then: an **L-shaped wall** — click 3 corners, Enter → layered path with mitered corners; a **slab** — click 3+ polygon corners and return to the first point (or double-click) to close → layered footprint; a **feature line** — click N points → polyline guide tube. Backspace removes the last picked point, Escape cancels. The echo hint above the viewport tracks your mode and point count.
-- **Import an IFC file.** A few `.ifc` fixtures live under `fixtures/ifc/`: `simple.ifc`, `part.ifc`, `part40.ifc`, `test.ifc`, `test_building.ifc`. Use the UI's import action, or:
+- **Try path-based creation (Path).** Pick a tool, then: an **L-shaped wall** — click 3 corners, Enter → layered path with mitered corners; a **slab** — click 3+ polygon corners and return to the first point (or double-click) to close → layered footprint; a **feature line** — click N points → polyline guide tube. Backspace removes the last picked point, Escape cancels. The echo hint above the viewport tracks your mode and point count.
+- **Import an IFC file.** A few `.ifc` fixtures live under `fixtures/ifc/`: `simple.ifc`, `part.ifc`, `part40.ifc`, `test.ifc`, `test_building.ifc`. Use the UI's import action, or (from the repository root):
 
   ```bash
-  curl -X POST localhost:3000/api/import/ifc -F "file=@../../fixtures/ifc/simple.ifc"
+  curl -X POST localhost:3000/api/import/ifc \
+    --data-binary @fixtures/ifc/simple.ifc \
+    -H 'Content-Type: text/plain'
   ```
 
-  Then check `/api/tree` or the object tree panel to see what came in.
+  The endpoint takes **raw IFC text**, not a multipart upload, so `curl -F` does not work. Then check `/api/tree` or the object tree panel to see what came in. Import writes objects directly into the in-memory project and does not save the file (see the persistence warning above).
 
 ## Where to Explore Next
 

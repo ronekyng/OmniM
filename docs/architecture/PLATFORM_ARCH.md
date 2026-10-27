@@ -1,3 +1,10 @@
+---
+title: "OmniM — Current Architecture"
+status: current
+last_updated: 2026-10-27
+applies_to: "crates/, web/"
+evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+---
 # OmniM — Current Architecture
 
 > **Scope note:** This document describes the **actual, implemented architecture** of OmniM as it exists in the codebase today.
@@ -27,10 +34,14 @@ Concrete design goals visible in the implementation:
    **serde-JSON only** — there is no gRPC, no runtime protobuf encoding (see §6).
 2. **One engine, many frontends.** The engine is a set of pure Rust crates; the browser UI is one consumer of it, and a
    native wgpu viewer is another (standalone) one.
-3. **Every mutation goes through one gate.** All mutating paths — REST handlers, AI-generated commands — produce an
-   `OmniCommand`, which is validated and executed by the **same `Validator` + `Executor`** with full undo/redo.
+3. **One mutation gate — TARGET, not current.** The target design is that every mutating path — REST handlers, AI-generated
+   commands — produces an `OmniCommand`, validated and executed by the **same `Validator` + `Executor`** with undo/redo.
+   **Current state:** this is only partially true. A static scan found 55 handlers holding `project.write()`, of which
+   only 13 mention the executor; roughly **42 mutate `Project` directly** with no undo entry. See
+   [WRITE_PATHS.md](WRITE_PATHS.md).
 4. **No hidden infrastructure.** No database, no WebSocket, no message broker. The entire application state is one
-   `Project` value held in memory and persisted as a single JSON file.
+   `Project` value held in memory and *conditionally* persisted as a single JSON file — saving is **off by default**
+   and only five handlers save even when enabled (see §7).
 
 ---
 
@@ -46,8 +57,10 @@ Concrete design goals visible in the implementation:
                         HTTP/JSON   │  /api/*   (Vite dev proxy → :3000)
 ┌───────────────────────────────────▼────────────────────────────────┐
 │                     omnim-server  (Axum)                            │
-│  ~100 REST routes · AppState = Arc<RwLock<Project>>                 │
-│  OmniCommand construction · auto-save to JSON file on mutation      │
+│  78 REST routes · AppState = Arc<RwLock<Project>>                   │
+│  TARGET: one Validator/Executor for every mutation                  │
+│  CURRENT: ~42 handlers write Project directly (WRITE_PATHS.md)     │
+│  Save: off by default; 5 handlers save when save_path is Some       │
 │  static file serving for web/ build                                  │
 └───────┬───────────────────┬────────────────────┬───────────────────┘
         │                   │                    │
@@ -69,8 +82,10 @@ Concrete design goals visible in the implementation:
         │
         ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│  Persistence: a single .omnim JSON file                             │
-│  (default project.omnim; overridable with OMNIM_PROJECT)            │
+│  Persistence: a single .omnim JSON file (TARGET + current format)   │
+│  default project.omnim; OMNIM_PROJECT overrides                     │
+│  save_path = None for project.omnim → no mutations persisted        │
+│  even when enabled, only 5 handlers call save (WRITE_PATHS.md)      │
 │  No database. No version history store.                            │
 └────────────────────────────────────────────────────────────────────┘
 
@@ -108,7 +123,7 @@ omnim-renderer: removed 2026-10-27 (was depending on omnim-core + omnim-model on
 | `omnim-omcom` | ~3,650 | The command layer. `Validator::validate(&OmniCommand, &Project)` → list of errors; `Executor::execute(&OmniCommand, &mut Project)` → `ExecutionResult`, with a **full undo/redo stack and transaction grouping**. Every legitimate mutation of the project is an `OmniCommand`. |
 | `omnim-ifc` | ~1,590 | **Hand-written** STEP/IFC file parser (no IFC crate dependency), import and export, partially covering **IFC 2x3 and IFC 4**. Includes IFC geometry mapping. |
 | `omnim-amir` | ~2,300 | AI intent engine ("AMIR"): natural-language → intent → `OmniCommand` generation (`generator.rs`, ~1,018 LOC), prompt parsing, context building, **reverse generation** (describe an existing model in NL, `reverse.rs`), templates, feedback. LLM providers via reqwest HTTP: **OpenAI / Anthropic / Mock**. |
-| `omnim-server` | ~3,700 | Axum HTTP server. ~100 REST routes under `/api/*`, `AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + save path. Builds `OmniCommand`s for requests, auto-saves the JSON project file after mutations, serves the built `web/` static directory. Binds `0.0.0.0:3000` by default (`OMNIM_HOST`/`OMNIM_PORT` overridable). **No WebSocket, no database.** |
+| `omnim-server` | ~3,700 | Axum HTTP server. **78** deduplicated REST routes under `/api/*`, `AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + save path. Some requests (create/delete object, genrule, omcom, structural sketch ops) build `OmniCommand`s and go through the Executor; many others mutate `Project` directly. Saves the JSON project file from only five handlers, and only when a non-default project path is configured — see [WRITE_PATHS.md](WRITE_PATHS.md). Serves the built `web/` static directory. Binds `0.0.0.0:3000` by default (`OMNIM_HOST`/`OMNIM_PORT` overridable). **No WebSocket, no database.** |
 *`omnim-renderer` (a standalone native wgpu/winit viewer) was removed from the workspace on 2026-10-27 as dead weight — it was depended on by nothing; a native viewer would be re-proposed via RFC.*
 
 > Note: `omnim-core` provides the manifest types (shared enums, `Version`, etc.); the concrete `Project` and its
@@ -121,37 +136,45 @@ a third of total engine code, confirming that the domain model — not infrastru
 
 ---
 
-## 4. Key Data Flow: HTTP request → mutation → JSON save
+## 4. Key Data Flow: HTTP request → mutation (and whether it saves)
 
-One representative mutation path (e.g. renaming an object via `PUT /api/objects/:id`):
+**Target path (ADR-0006).** Every mutation should build an `OmniCommand`, run through `Validator` + `Executor`,
+record undo history, and then save. **Current code only follows this for a minority of handlers** (13 of 55 write
+handlers mention the executor; none of those save). One representative *executor-path* mutation, e.g.
+`POST /api/objects`:
 
 ```
-Browser (React)  ──PUT /api/objects/{id}──▶  Axum route handler
-                                               │  acquires state.project.write()
-                                               │  acquires state.executor.write()
-                                               │  builds OmniCommand{action, operations...}
-                                               ▼
-                                       omnim-omcom Executor::execute()
-                                               │  validates via Validator first
-                                               │  mutates omnim-model::Project
-                                               │  records undo/redo entry
-                                               ▼
-                                     Project updated in memory
-                                               ▼
-                                if state.save_path is Some:
-                                   Project::save(path)  → .omnim JSON file rewritten
-                                               ▼
-                                  200/4xx JSON response to browser
+Browser (React)  ──POST /api/objects──▶  Axum route handler
+                                          │  acquires state.project.write()
+                                          │  acquires state.executor.write()
+                                          │  builds OmniCommand{action, operations...}
+                                          ▼
+                                  omnim-omcom Executor::execute()
+                                          │  validates via Validator first
+                                          │  mutates omnim-model::Project
+                                          │  records undo/redo entry
+                                          ▼
+                                Project updated in memory
+                                          ▼
+                             (no save: create_object is not one of
+                              the five saving handlers)
+                                          ▼
+                             200/4xx JSON response to browser
 ```
 
-Conventions in the handler code:
+What actually happens in the handler code:
 
-- Read routes take `state.project.read().await`; mutating routes take both `project.write()` and `executor.write()`.
-- Most mutating routes do **not** construct raw operation objects; instead they call the Executor with an
-  `OmniCommand` assembled inline (action enum + operations list from `omcom.proto`), keeping the undo stack
-  consistent across every write.
-- Auto-save failure is logged to stderr and does not fail the request (`save_path` is `None` when the project
-  file is the default, meaning the running server may deliberately not persist).
+- Read routes take `state.project.read().await`.
+- Executor-path routes take both `project.write()` and `executor.write()` and assemble an inline `OmniCommand`.
+- **Direct-write routes** take only `project.write()` and mutate `Project` (`update_object`, `transform_object`,
+  `set_parent`, `connect`, material assign, sketch solve, IFC import, catalog instantiate, series edits, …).
+  These have **no undo entry**.
+- **Saving:** only `update_object`, `add_feature`, `update_feature`, `remove_feature`, and `rebuild_component`
+  call `Project::save(path)`, and only when `state.save_path` is `Some` (a non-default `OMNIM_PROJECT`).
+  The default launch uses `save_path = None`, so nothing is persisted. Auto-save failure is logged to stderr and
+  does not fail the request.
+
+The complete current matrix is in [WRITE_PATHS.md](WRITE_PATHS.md).
 
 Full end-to-end flows (click→render, NL→command, IFC in/out, catalog instantiation, save/load) are documented in
 [DATA_FLOW.md](DATA_FLOW.md).
@@ -196,8 +219,13 @@ the types are already in place.
 
 **Current: single JSON file, single in-memory project.**
 
-- The constructor `omnim_server::ServerConfig { project, save_path, ... }` decides whether auto-save is on.
-- Mutations call `Project::save(path)`, rewriting the whole `.omnim` file; loads read the same file on startup.
+- `ServerConfig { project, save_path, ... }` decides whether the save path is enabled. `main.rs` sets
+  `save_path = None` when the project file is the default `project.omnim`; only a non-default `OMNIM_PROJECT`
+  yields `Some`.
+- Even when `save_path` is `Some`, **only five handlers** call `Project::save(path)`: `update_object`,
+  `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`. They rewrite the whole `.omnim` file;
+  loads read the same file on startup.
+- **The default launch therefore persists nothing.** See [WRITE_PATHS.md](WRITE_PATHS.md) for the per-endpoint matrix.
 - `.omnim` files (`project.omnim` at the repo root, `fixtures/my-project.omnim`) are example dumps.
 
 **Limits of this model** (these are real, not planned removal):
@@ -214,14 +242,16 @@ These limits constrain OmniM to a **local/desktop-class** deployment today.
 
 ## 8. Security / Concurrency Model
 
-- **Concurrency:** a single `tokio::sync::RwLock<Project>` guards all state. Interior writes (e.g. building an
-  `OmniCommand` inside a read-lock-held section) are avoided; mutating routes acquire `write()` along with
-  `executor.write()` to stamp undo history. This is correct but entirely single-process — it is not a distributed
-  lock and gives no cross-server coordination.
+- **Concurrency:** a single `tokio::sync::RwLock<Project>` guards all state. Executor-path routes acquire `write()`
+  along with `executor.write()` to stamp undo history; direct-write routes acquire only `project.write()` (and
+  therefore record no undo entry). This is correct but entirely single-process — it is not a distributed lock
+  and gives no cross-server coordination.
 - **Security:** the Axum layer performs **no authentication or authorization** — routes accept any request that can
   reach the port. This is intentional for a local dev/demo server and is listed as a known, planned gap (see §9).
-- **Trust boundaries:** because LLM-generated commands flow through the **same** `Validator` as user-driven commands,
-  the AI path cannot bypass domain validation — an important structural safety property (see ADR-0006).
+- **Trust boundaries:** LLM-generated commands flow through the **same** `Validator` as executor-path user
+  commands, so the AI path cannot bypass domain validation — an important structural safety property.
+  This does **not** mean every REST route is validated: many handlers write `Project` directly (see
+  [WRITE_PATHS.md](WRITE_PATHS.md)), so the ADR-0006 invariant is a target, not a present guarantee.
 - **CORS/egress:** default bind is `0.0.0.0:3000` (fine for a personal machine, exposes a LAN surface today);
   `omnim-amir` makes outbound HTTPS calls LLM providers via `reqwest`.
 

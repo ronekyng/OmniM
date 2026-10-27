@@ -1,6 +1,15 @@
+---
+title: "OmniM 统一数据模型"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM 统一数据模型
 
 > **最后更新：2026-10-27，已对照代码审计**（`proto/omnim.proto`、`proto/omcom.proto`、`crates/model/**`、`crates/sketch/**`、`crates/ifc/**`）。标注 *设计规范* 的内容为目标模型，尚未落入 proto/代码；标注 🗓 计划中 的能力是尚未实现的设计目标。
+>
+> **双轨维护义务**：`DATA_MODEL.zh-CN.md` 是英文版的**持续维护译文**。修改英文文档时，必须在同一次变更中同步更新中文版：保持章节编号、表格与 proto 代码块一致，不得任其分叉。
 
 ## 1. 概述
 
@@ -100,7 +109,32 @@ OmniM 采用 **统一几何内核 + 分层语义** 的架构，在同一个几�
 
 > **跨平台参考**：四类构件分类源自跨平台分析（`docs/research/comparative_analysis.md §2-4`）：Revit Wall/Floor/Roof（面构件）、Revit Beam/Column + Civil 3D Corridor（线构件）、点云 + TIN 曲面（点构件）、E3D 基本体 + SolidWorks 零件（体构件）。
 
-**Library vs Project**：**Library** 是 **session 级全局单例**，持有主元件目录（`CatalogStore`）、构件模板库（`ComponentStore`）和特征树模板（`FeatureTreeRegistry`）。一次加载，跨项目共享。**SeriesStore** 是 **独立模块**——它定义选择器决策树，通过 ComponentDef ID 引用 Library 中的内容。**Project** 持有私有的 `SeriesStore`（项目内建的系列）和 `external_series_refs`（外部系列引用）。Project **不持有** Library 引用。参见 [§13](#13-构件目录元件库--paragon) 和 [§14](#14-系列库等级库--specon)。
+#### 语义名 vs 创成分类（双轴模型）
+
+上述分类绑定的是**该实例如何被创建（创成方式 / Genesis）**，而不是对象语义名：
+
+- **ObjectType（`Wall`/`Slab`/`Pipe`…）= 领域语义角色**：决定映射到哪个 IFC 类、归属哪个领域、宿主关系（门窗宿主于墙、房间由墙围合）与量算口径（面构件按面积/饰面，线构件按延长米/DN，体构件按个数）。
+- **创成分类（面/线/点/体）= 该实例的创建方式**，记录在对象实例上（其 GenRule/目录特征树），**从不由名字推导**。
+
+**同一语义名可以合法拥有多个创成分类**——这正是异形构件的解法，不需要新对象类型。墙的形态谱：
+
+| 墙的创建方式 | 创成分类 | 场景 |
+|---|---|---|
+| 中心线 + 层叠厚度 | **面构件 · panel** | 标准直墙/L 形折墙（当前默认） |
+| 闭合草图边界 | **面构件 · region** | 面基墙片、厚墙块、看台侧壁 |
+| 体元/布尔/自由曲面操作 | **体构件** | 雕塑/双曲面幕墙墙、Revit 式 in-place/Massing 生成 |
+| 对齐线 + 变截面 + 地形目标 | **线构件** | 挡土墙/护坡/路缘——本质是土木线形构件 |
+
+#### 治理规则：分类决定实现方式
+
+1. **同类 → 同一实现家族**：所有面构件（墙/板/顶/地面）共享 LayerExtrusion 家族——同一 LayerEditor 语义、同一预览语言、同一层模板体系、同一校验入口。于是"板与管道不同"（家族边界）与"板与墙相似"（同族不同形态）同时成立。
+2. **一族多形态，形态显式枚举**：LayerExtrusion 含 `panel`（开放中心线）与 `region`（闭合边界）两形态；屋顶额外含 footprint/extrusion-profile；板加 rect-quick/polygon。UI 拾取模式由**形态**推导（`form → pickMode`），而不是每种类型各写一套交互。
+3. **禁止跨类实现**：携带另一类语义的实现（墙获得 DN/弯头/地形目标；管获得 LayerExtrusion）一律禁止。注意：墙的 *LayerExtrusion 生成器* 可以在线构件之下共享"恒定截面沿路径扫掠"这一底层原语——它不携带类语义、位于分类之下，"分类决定实现"约束的是 GenRule 家族，不是几何工具函数。
+4. **授权矩阵，键为 `(objectType, 创成分类/形态)`**：genrule 分派时查矩阵（默认：wall→panel、slab/floor→region、beam/pipe/duct→等截面线性、tank/pump/valve→primitive…）；矩阵外组合返回"该创成方式未授权给此对象类型"并 400。新增授权——例如 `wall × Linear`（带地形目标，即挡土墙）——通过显式添加矩阵行获得，随实现落地。
+
+> 模型来源：2026-10-27 路径（Path）抽象讨论中议定（迁移沿革见 status/CHANGELOG.md）；本小节即设计契约。实现待办见 status/ROADMAP.md → "Accepted Designs Pending Implementation"。
+
+**Library vs Project**：**Library** 是 **session 级全局单例**，持有主元件目录（`CatalogStore`）、构件模板库（`ComponentStore`）和特征树模板（`FeatureTreeRegistry`）。一次加载，跨项目共享。**SeriesStore** 是 **独立模块**——它定义选择器决策树，通过 ComponentDef ID 引用 Library 中的内容。**Project** 持有私有的 `SeriesStore`（项目内建的系列）和 `external_series_refs`（外部系列引用）。Project **不持有** Library 引用。参见 [§14](#14-构件目录元件库--paragon) 和 [§15](#15-系列库等级库--specon)。
 
 ---
 
@@ -230,7 +264,7 @@ enum ObjectStatus {
 
 > **当前已实现**（Rust 结构体，`crates/model/src/object.rs`）：`id`、`name`、`description`、`object_type`、`status`、`properties`、`property_sets`、`geometry`、`material_id`（可选；上文以 `material` 表示）、`parent_id`（结构树父节点）、`tags`、`ifc_class`，以及建模字段 `features`、`sketch_ids`、`dirty`、`catalog_ref`。上方 `ObjectStatus` 取值与 `proto/omnim.proto` 完全一致。
 >
-> **🗓 计划中的字段**（结构体与 proto 均未有）：`transform`（每对象世界变换；当前通过 API `PUT /api/objects/{id}/transform` 在接口层应用）、`created_at`/`created_by`、`modified_at`/`modified_by`、`version_id`、`previous_version_id`（版本/审计记录见 §10，本身也是设计规范）、`ad_id`（§16）、`pbs_ids`（§17）、`crs_id`（§19）。
+> **🗓 计划中的字段**（结构体与 proto 均未有）：`transform`（每对象世界变换；当前通过 API `PUT /api/objects/{id}/transform` 在接口层应用）、`created_at`/`created_by`、`modified_at`/`modified_by`、`version_id`、`previous_version_id`（版本/审计记录见 §10，本身也是设计规范）、`ad_id`（§18）、`pbs_ids`（§19）、`crs_id`（§21）。
 
 ---
 
@@ -517,9 +551,11 @@ message SketchCircle {
   double center_x = 1; double center_y = 2;
   double radius = 3;
 }
+```
 
 > **计划中的草图图元**（源自 SOLIDWORKS，`docs/research/solidworks_components.md §4.0`）：`Slot`（3 种变体：Straight/Arc/Conical）、`Conic`（端点 + Rho 值——基于 Rho 值的椭圆/抛物线/双曲线）、`Parabola`、`SketchText`（可拉伸/切除的 3D 文本）、`BeltChain`（带轮/链轮布局草图）、`EquationCurve`（参数方程驱动曲线）。设计为 `SketchEntity` oneof 的扩展——🗓 计划中，尚未进入 proto/omcom.proto 或 `omnim_sketch`。
 
+```protobuf
 message Constraint {
   string id = 1;
   ConstraintType type = 2;
@@ -564,11 +600,45 @@ enum ConstraintType {
   TRACTION = 28;           // 牵引约束（接触）
   TORSION_CONTINUITY = 29; // G3 扭转连续性
 }
-
-> **计划中的 3D 草图约束**（源自 SOLIDWORKS，`docs/research/solidworks_components.md §4.1`）：`Collinear`（已在 =9 处）、`Coradial`、`EqualCurvature`、`EqualCurveLength`、`MergePoints`、`Pierce`、`FixSlot`、`OnEdge`、`OnPlane`、`OnSurface`、`TangentToFace`、`Traction`、`TorsionContinuity`——对 3D 草图机械设计至关重要。设计为 `ConstraintType` 枚举的扩展——🗓 计划中，尚未进入 proto/omcom.proto 或 `omnim_sketch`。
 ```
 
-### 5.6 特征建模（基于草图的 3D 操作）
+> **计划中的 3D 草图约束**（源自 SOLIDWORKS，`docs/research/solidworks_components.md §4.1`）：`Collinear`（已在 =9 处）、`Coradial`、`EqualCurvature`、`EqualCurveLength`、`MergePoints`、`Pierce`、`FixSlot`、`OnEdge`、`OnPlane`、`OnSurface`、`TangentToFace`、`Traction`、`TorsionContinuity`——对 3D 草图机械设计至关重要。设计为 `ConstraintType` 枚举的扩展——🗓 计划中，尚未进入 proto/omcom.proto 或 `omnim_sketch`。
+
+### 5.6 构件容器（Component Container）
+
+构件是项目树中的容器节点，将多个特征组织为一个逻辑三维体。构件是用户在项目树中交互的主要节点（例如 "Beam-001"、"Column-A"、"Wall-S1"）。
+
+构件持有一个有序的特征列表（构建历史）。每个特征都是**一等实体**，拥有自己的缓存几何。构件的最终几何是按顺序合并全部特征的结果。
+
+```protobuf
+message Component {
+  string id = 1;
+  string name = 2;
+  repeated string feature_ids = 3;   // 有序的特征列表
+  repeated string sketch_ids = 4;    // 本构件持有的草图
+  string parent_id = 5;              // 树父级（Component 或 Project）
+  Transform transform = 6;           // 局部放置
+  MeshGeometry merged_geometry = 7;  // 合并全部特征几何的结果
+}
+```
+
+关键关系：
+- 一个**构件**包含多个**特征**（构建历史）
+- 每个**特征**引用一个或多个**草图**作为其 2D 轮廓
+- 构件内的特征构成有依赖顺序的链
+- 每个**特征**拥有自己的缓存**几何**（MeshGeometry）
+- 构件的 `merged_geometry` 由重建管线计算
+
+项目树层级：`Project → Component → Feature → Sketch`
+
+```
+Component: "Beam-001"
+  ├── Feature 1: Extrude (sketch: beam_profile, depth=6.0)  → geometry: mesh
+  ├── Feature 2: Boolean (subtract: feature1, feature3)      → geometry: mesh
+  └── Feature 3: Extrude (sketch: hole_profile, depth=0.3)   → geometry: mesh
+```
+
+### 5.7 特征建模（基于草图的 3D 操作）
 
 特征是**一等 3D 实体**，位于 Component 内部。每个特征：
 1. 引用一个或多个**草图**作为其 2D 轮廓
@@ -721,7 +791,93 @@ enum BooleanOperationType {
   - rollback_to(id) → 设置游标，隐藏后续特征
 ```
 
-### 5.7 参数系统
+### 5.7.1 特征面板 UI（Revit 风格）
+
+构件编辑器在左侧使用**特征面板（Feature Panel）**，类似 Revit 的属性面板。这是管理构件内特征的主要界面。
+
+**布局（Revit 风格工作流）：**
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ [← Back] Component Editor  [Sketch ▾] [+ Sketch]            │
+├───────────┬──────────────────────────────────────────────────┤
+│ Feature   │  Row1: [Select][Line][Circle][Arc]              │
+│ Panel     │       [H][V][∥][⊥][L=][D=][∠][⚓]              │
+│ (左边栏)   │       [Solve] [Del]                             │
+│           │  Row2: [⬍Ext][↻Rev][⟿Swp][ℳLft][⊖Bool]...     │
+│ ≡ Ext-1  │──────────────────────────────────────────────────│
+│   sk: sk-0│  ┌────────────────────────────────────────┐     │
+│   d: 1.0  │  │                                        │     │
+│   [✏️][🗑️]│  │        2D Canvas / 3D Preview          │     │
+│           │  │                                        │     │
+│ ≡ Rev-1  │  └────────────────────────────────────────┘     │
+│   sk: sk-1│──────────────────────────────────────────────────│
+│   a: 2π   │  Status: Solved · Entities: 5 · 2D             │
+│   [✏️][🗑️]│                                                 │
+│           │                                                 │
+│ [Rebuild] │                                                 │
+└───────────┴──────────────────────────────────────────────────┘
+
+Drawing Mode (after clicking a feature ribbon button):
+┌──────────────────────────────────────────────────────────────┐
+│ [← Back] Component Editor  [Sketch ▾]                       │
+├───────────┬──────────────────────────────────────────────────┤
+│ Feature   │  Row1: [Select][Line][Circle][Arc]              │
+│ Panel     │       [H][V][∥][⊥][L=][D=][∠][⚓]              │
+│           │       [✓ Done] [✗ Cancel]  ← replaces Solve/Del │
+│           │  Row2: [⬍Ext][↻Rev][⟿Swp][...] (disabled)      │
+│           │──────────────────────────────────────────────────│
+│           │  ⚠ 正在绘制 Extrude 轮廓 — 完成后点击 Done      │
+│           │  ┌────────────────────────────────────────┐     │
+│           │  │                                        │     │
+│           │  │        2D Canvas (drawing active)      │     │
+│           │  │                                        │     │
+│           │  └────────────────────────────────────────┘     │
+│           │──────────────────────────────────────────────────│
+│           │  Status: Drawing Extrude · Entities: 3 · 2D     │
+└───────────┴──────────────────────────────────────────────────┘
+```
+
+**特征类型及其输入：**
+
+| 特征类型 | 类别 | 必需输入 | 参数 |
+|---|---|---|---|
+| **Extrude** | 创建 | 1个轮廓 sketch | depth, direction_x/y/z, is_symmetric, draft_angle |
+| **Revolve** | 创建 | 1个轮廓 sketch + 1个轴线 sketch | angle, axis_origin_x/y/z, axis_direction_x/y/z |
+| **Sweep** | 创建 | 1个轮廓 sketch + 1个路径 sketch | (无额外参数) |
+| **Loft** | 创建 | 2+个截面 sketch | (无额外参数) |
+| **Boolean** | 修改 | 前面2个Feature的输出 | operation (union/subtract/intersect) |
+| **Chamfer** | 修改 | 前面Feature的输出 | edge_indices, distance |
+| **Fillet** | 修改 | 前面Feature的输出 | edge_indices, radius |
+| **Pattern** | 修改 | 前面Feature的输出 | pattern_type, count, spacing |
+| **Shell** | 修改 | 前面Feature的输出 | wall_thickness |
+
+**特征面板操作（Revit 风格工作流）：**
+
+1. **添加 Feature**：点击工具栏 Feature 按钮（如 "⬍ Extrude"）→ 自动创建 Sketch → 进入 2D 绘图模式 → 用户绘制轮廓 → 点击 "✓ Done" → 弹出参数对话框（sketch 已自动关联）→ 填写参数 → 确认创建
+2. **编辑 Feature**：双击 FeaturePanel 中的 feature 卡片（或点击 ✏️）→ 打开 AddFeatureDialog（预填参数和 sketch）→ 修改参数 → 保存
+3. **删除 Feature**：点击 feature 卡片的 🗑️ 按钮 → 确认 → 删除
+4. **拖拽排序**：拖拽 feature 卡片调整顺序 → 更新 order 字段
+5. **重建**：点击 "Rebuild All" → 按新顺序重建所有 feature
+
+**Drawing Mode 状态机：**
+
+```
+idle → [点击 Feature 按钮] → creatingFeature(type, sketchId)
+  → 自动创建 Sketch → loadSketch → setTab('component') → setActiveTool('line')
+  → 用户在 2D Canvas 绘制轮廓
+  → [点击 "✓ Done"] → editingFeature(sketch_id=自动关联)
+  → 弹出 AddFeatureDialog → 用户设置参数
+  → [确认] → api.addFeature() → creatingFeature=null → editingFeature=null → idle
+  → [点击 "✗ Cancel"] → creatingFeature=null → idle
+```
+
+**Component 入口：**
+
+- **创建**：主视图工具栏 "+ Component" 按钮 → 创建 component → 跳转到编辑器 `?component={id}`
+- **编辑**：主视图 Object Tree 右键菜单 "Edit" → 跳转到编辑器 `?component={id}`
+
+### 5.8 参数系统
 
 命名参数及其表达式驱动特征尺寸。参数之间可以通过表达式相互引用。
 
@@ -1455,7 +1611,7 @@ enum SpatialRelationType {
 }
 ```
 
-> **设计规范（🗓 计划中）**：`SpatialRelation` 尚未进入 `proto/omnim.proto`——关系系统当前实现 Containment 与 Connection（`RelationStore`，`crates/model/src/relation.rs`）。空间谓词查询（相交/包含/…）需依赖 §11 的空间索引，而索引本身也尚未实现。
+> **设计规范（🗓 计划中）**：`SpatialRelation` 尚未进入 `proto/omnim.proto`——关系系统当前实现 Containment 与 Connection（`RelationStore`，`crates/model/src/relation.rs`）。空间谓词查询（相交/包含/…）需依赖 §12 的空间索引，而索引本身也尚未实现。
 
 ---
 
@@ -1541,7 +1697,7 @@ enum ChangeType {
 
 ## 11. 分类映射
 
-### 10.1 IFC 映射
+### 11.1 IFC 映射
 
 核心建筑构件直接映射到 IFC 类。已对照 `crates/ifc/src/lib.rs`（`export_ifc_class()`）验证：
 
@@ -1572,7 +1728,7 @@ enum ChangeType {
 
 ---
 
-## 11. 索引与查询优化
+## 12. 索引与查询优化
 
 查询性能的设计目标；当前 `ObjectStore`（`crates/model/src/store.rs`）为 ID→对象映射并支持父节点查找——下列物理索引 🗓 计划中：
 
@@ -1593,7 +1749,7 @@ enum ChangeType {
 
 ---
 
-## 12. 待解决问题
+## 13. 待解决问题
 
 1. 如何处理同一对象的不同细节层次（LOD）？
 2. 是否应为导入的对象保留参数化历史？
@@ -1603,11 +1759,11 @@ enum ChangeType {
 
 ---
 
-## 13. 构件目录（元件库 / PARAGON）
+## 14. 构件目录（元件库 / PARAGON）
 
 元件库是所有参数化三维构件定义的母库，属于 **Library**（session 级全局单例），不属于 Project。Project 通过 Series 间接访问 Library，从不直接持有 Library 引用。每个构件使用与常规参数化模型相同的草图→约束→特征管线建模，然后发布到目录中供复用。
 
-### 13.1 核心概念
+### 14.1 核心概念
 
 | 概念 | PDMS 对应 | 说明 |
 |------|-----------|------|
@@ -1618,7 +1774,7 @@ enum ChangeType {
 
 **内建构件（In-Place Component）**（源自 Revit，`docs/research/revit_components.md §3.1`）：一个 Component 可以标记为 `in_place`（项目本地、不可重用、不可提升至目录）。与位于 Library 的 CatalogStore 中且可跨项目重用的标准 `ComponentDef` 不同，内建构件直接在项目的 Object Store 中定义，不能被系列引用，也不可通过 `catalog list` 获取。这一区别对应于 Revit 的"内建体量"与"可载入族"范式。`in_place` 标记位于项目中的 `Component` 消息上——它没有 `ComponentDef` 和 `CatalogRef`。
 
-### 13.2 数据模型
+### 14.2 数据模型
 
 ```protobuf
 message ComponentDef {
@@ -1706,7 +1862,7 @@ enum ConnectorRole {
 }
 ```
 
-### 13.3 目录组织
+### 14.3 目录组织
 
 ```
 ComponentLib
@@ -1741,11 +1897,11 @@ ComponentLib
 
 ---
 
-## 14. 系列库（等级库 / SPECON）
+## 15. 系列库（等级库 / SPECON）
 
 系列库是**独立模块**——它定义选择器决策树，通过 ComponentDef ID 引用 Library 中的内容。一个系列（等级库）是一个**决策树**，它选择哪些构件可用，并对参数范围做出约束。系列可以存在于三个位置：(1) 项目私有的 SeriesStore（嵌入在 `.omnim` 文件中），(2) 外部 `.omnimseries` 文件（按路径引用），(3) 系统内置种子系列。
 
-### 14.1 核心概念
+### 15.1 核心概念
 
 | 概念 | PDMS 对应 | 说明 |
 |------|-----------|------|
@@ -1755,7 +1911,7 @@ ComponentLib
 | **Question** | QUES | 决策标准（如"generic_type?"、"material?"） |
 | **Answer** | ANSW | 匹配值（如"ELBO"、"FLAN"）或数值范围 |
 
-### 14.2 数据模型
+### 15.2 数据模型
 
 ```protobuf
 message Series {
@@ -1813,7 +1969,7 @@ message CatalogRef {
 }
 ```
 
-### 14.3 选择算法
+### 15.3 选择算法
 
 当设计师通过系列创建对象时：
 
@@ -1836,9 +1992,11 @@ message CatalogRef {
 
 ---
 
-## 15. 各领域系列树设计
+## 16. 各领域系列树设计
 
-### 15.1 建筑：现浇混凝土结构 (C30)
+### 16.1 建筑领域
+
+#### 系列："现浇混凝土结构 (C30)"
 
 ```
 Selector: "element_type?"
@@ -1864,7 +2022,7 @@ Selector: "element_type?"
     └── raft → t=300..1000
 ```
 
-### 15.2 建筑：钢结构 (Q355)
+#### 系列："钢结构 (Q355)"
 
 ```
 Selector: "element_type?"
@@ -1882,7 +2040,78 @@ Selector: "element_type?"
     └── CHS → D=50..200
 ```
 
-### 15.3 工厂：管道等级 (碳钢150磅级)
+#### 系列："砌体结构 (Masonry)"
+
+```
+Selector: "element_type?"
+└── Answer: "wall"
+    └── Selector: "function?"
+        ├── Answer: "bearing" → SpecComponent: MasonryWall-Bearing
+        │   └── constraints: thickness=190,290,390, height≤6000
+        ├── Answer: "non_bearing" → SpecComponent: MasonryWall-NonBearing
+        │   └── constraints: thickness=100,150,190, height≤4000
+        └── Answer: "cavity" → SpecComponent: MasonryWall-Cavity
+            └── constraints: outer=100, inner=100, cavity=50..150
+```
+
+#### 系列："门窗系列 (Doors & Windows)"
+
+```
+Selector: "element_type?"
+├── Answer: "door"
+│   └── Selector: "type?"
+│       ├── Answer: "single" → SpecComponent: Door-Single
+│       │   └── constraints: width=700..1200, height=2000..2400
+│       ├── Answer: "double" → SpecComponent: Door-Double
+│       │   └── constraints: width=1200..2400, height=2000..2400
+│       ├── Answer: "sliding" → SpecComponent: Door-Sliding
+│       │   └── constraints: width=1500..3000, height=2000..2400
+│       ├── Answer: "fire" → SpecComponent: Door-Fire
+│       │   └── constraints: width=700..1200, height=2000..2400,
+│       │       rating=30,60,90,120
+│       └── Answer: "overhead" → SpecComponent: Door-Overhead
+│           └── constraints: width=2400..6000, height=2400..5000
+└── Answer: "window"
+    └── Selector: "type?"
+        ├── Answer: "fixed" → SpecComponent: Window-Fixed
+        │   └── constraints: width=600..3000, height=600..2400
+        ├── Answer: "casement" → SpecComponent: Window-Casement
+        │   └── constraints: width=600..1800, height=600..1800
+        ├── Answer: "sliding" → SpecComponent: Window-Sliding
+        │   └── constraints: width=1200..4000, height=600..2400
+        └── Answer: "bay" → SpecComponent: Window-Bay
+            └── constraints: width=1500..4000, height=1500..2400
+```
+
+### 16.2 土木领域
+
+#### 系列："公路 (GB JTG B01)"
+
+```
+Selector: "road_class?"
+├── Answer: "expressway"
+│   └── Selector: "design_speed?"
+│       ├── Answer: "120" → SpecComponent: Road-Expressway-120
+│       │   └── constraints: lanes=2..4, lane_width=3.75, median=2..3m
+│       ├── Answer: "100" → SpecComponent: Road-Expressway-100
+│       │   └── constraints: lanes=2..4, lane_width=3.75, median=2m
+│       └── Answer: "80" → SpecComponent: Road-Expressway-80
+│           └── constraints: lanes=2..4, lane_width=3.75, median=2m
+├── Answer: "arterial"
+│   └── Selector: "design_speed?"
+│       ├── Answer: "60" → SpecComponent: Road-Arterial-60
+│       │   └── constraints: lanes=2..6, lane_width=3.5
+│       └── Answer: "40" → SpecComponent: Road-Arterial-40
+│           └── constraints: lanes=2..4, lane_width=3.5
+├── Answer: "collector" → SpecComponent: Road-Collector
+│   └── constraints: lanes=2, lane_width=3.25..3.5
+└── Answer: "local" → SpecComponent: Road-Local
+    └── constraints: lanes=2, lane_width=3.0..3.25
+```
+
+### 16.3 工厂领域（PDMS 兼容管道等级）
+
+#### 系列："CS150（碳钢，Class 150）"
 
 以 PDMS SPECON 风格定义的管道等级系列：
 
@@ -1918,28 +2147,202 @@ Selector: "generic_type?"
 └── CAP → Cap-CS, DN=15..600
 ```
 
-### 15.4 道路：公路 (GB JTG B01)
+#### 系列："SS300（不锈钢，Class 300）"
 
 ```
-Selector: "road_class?"
-├── expressway → Selector: "design_speed?"
-│   ├── 120 → lanes=2..4, lane_width=3.75
-│   ├── 100 → lanes=2..4, lane_width=3.75
-│   └── 80 → lanes=2..4, lane_width=3.75
-├── arterial → Selector: "design_speed?"
-│   ├── 60 → lanes=2..6, lane_width=3.5
-│   └── 40 → lanes=2..4, lane_width=3.5
-├── collector → lanes=2, lane_width=3.25..3.5
-└── local → lanes=2, lane_width=3.0..3.25
+Same structure as CS150 but:
+- material=SS304/SS316 (A312-TP304, A403-WP304, A182-F304)
+- pressure_class=300
+- DN range: 15..400 (SS typically smaller range)
+- gasket=SpiralWound (stainless/graphite)
+- Connection type codes differ (e.g., RF for stainless typically)
+```
+
+### 16.4 设备领域
+
+#### 系列："泵标准系列 (Pump Standard)"
+
+```
+Selector: "pump_type?"
+├── Answer: "centrifugal" → SpecComponent: Pump-Centrifugal
+│   └── constraints: flow=1..1000m³/h, head=10..200m, speed=1450/2900rpm
+│       casing=CI/CS/SS, impeller=Bronze/SS
+├── Answer: "positive_displacement" → SpecComponent: Pump-PD
+│   └── constraints: flow=0.1..100m³/h, head=50..500m, type=Gear/Screw/Diaphragm
+└── Answer: "submersible" → SpecComponent: Pump-Submersible
+    └── constraints: flow=1..500m³/h, head=5..150m, motor=OilFilled/WaterFilled
+```
+
+#### 系列："储罐标准系列 (Tank Standard)"
+
+```
+Selector: "tank_type?"
+├── Answer: "vertical" → SpecComponent: Tank-Vertical
+│   └── constraints: volume=1..10000m³, D/H=0.5..2, roof=Fixed/Floating/Dome
+├── Answer: "horizontal" → SpecComponent: Tank-Horizontal
+│   └── constraints: volume=1..500m³, L/D=2..6, ends=Elliptical/Hemispherical
+└── Answer: "sphere" → SpecComponent: Tank-Sphere
+    └── constraints: volume=100..50000m³, pressure=atmospheric..2MPa
 ```
 
 ---
 
-## 16. 行政分区（Administrative Division）
+## 16a. 特征模板系统与型材库
+
+特征模板系统弥合了**构件目录定义**与实际三维几何生成之间的差距。它定义 ComponentDef 的参数如何映射为具体的 Sketch + Feature 操作，从而产出 BRep 实体。
+
+### 16a.1 架构
+
+```
+ComponentDef (catalog entry)
+    │ params: height, width, length, ...
+    │ feature_tree_id ──────────────────────┐
+    ▼                                       ▼
+FeatureTreeTemplate                     FeatureTreeRegistry
+    │ features: [Extrude, Revolve, ...]      (named template store)
+    │ param_bindings: {comp→feat}
+    ▼
+instantiate_template()
+    │
+    ├── profile::generate(ProfileType) → Vec<Point3D>
+    │       Generates closed 2D profile polygon from parameters
+    │       (I-section, box, circle, annulus, rectangle, L-shape)
+    │
+    ├── create_profile_sketch() → Sketch
+    │       Wraps profile points into a solved Sketch entity
+    │
+    ├── Feature::new_extrude/revolve/...()
+    │       Creates Feature from sketch + resolved parameters
+    │
+    └── project.rebuild_component()
+            Executes Feature Engine (truck-modeling BRep)
+            → tessellated MeshGeometry
+```
+
+### 16a.2 型材库
+
+`profile` 模块（`crates/model/src/profile/`）提供参数化 2D 截面生成器：
+
+| 型材类型 | 函数 | 参数 | 用途 |
+|-------------|----------|------------|----------|
+| `IShape` | `i_section()` | height, width, web_thickness, flange_thickness | IPE、HEA、HEB 梁 |
+| `BoxShape` | `box_section()` | width, height, thickness | SHS、RHS 空心截面 |
+| `Rectangle` | `rectangle()` | width, height | 混凝土梁、柱 |
+| `Circle` | `circle()` | radius, segments | 实心棒、管道外径 |
+| `Annulus` | `annulus()` | outer_radius, inner_radius, segments | 管道截面 |
+| `LShape` | `l_section()` | leg1, leg2, thickness | 角钢截面 |
+| `UShape` | `u_section()` | height, width, web_thickness, flange_thickness | U/C 型槽钢 |
+| `TShape` | `t_section()` | height, width, web_thickness, flange_thickness | T 型截面 |
+| `PipeSchedule` | `resolve_pipe_schedule_profile()` | DN, schedule, segments | ASME 管道表驱动的管道 |
+| `ParametricRect` | params-resolved rectangle | width_param, height_param | 两点墙/板创建 |
+
+### 16a.3 特征树模板
+
+```rust
+pub struct FeatureTreeTemplate {
+    pub id: String,
+    pub name: String,
+    pub features: Vec<FeatureTemplateStep>,
+    pub param_bindings: HashMap<String, String>,  // comp_param → feat_param
+}
+
+pub struct FeatureTemplateStep {
+    pub name: String,
+    pub feature_type: FeatureType,      // Extrude / Revolve / Sweep / ...
+    pub profile_type: Option<ProfileType>,
+    pub aux_profile_type: Option<ProfileType>, // second profile (Loft profile1 / Sweep path)
+    pub depth_expr: Option<String>,      // e.g., "length", "1.5 * DN"
+    pub angle_expr: Option<String>,
+    pub direction: Vector3D,
+    pub is_cut: bool,
+    pub boolean_op: Option<BooleanOp>,
+    pub pattern_counts: Option<(usize, usize, usize)>,
+}
+```
+
+### 16a.4 参数解析
+
+参数通过 `resolve_param()` 解析，支持：
+- **直接查找**：`"length"` → `params["length"]`
+- **简单算术**：`"1.5 * DN"` → `1.5 * params["DN"]`
+- **字面量**：`"360"` → `360.0`
+
+### 16a.5 ASME B36.10M 管道壁厚表
+
+`pipe_schedule` 模块提供 ASME B36.10M 壁厚查表：
+
+```
+pipe_schedule::wall_thickness(DN=100, schedule="40") → 6.02mm
+pipe_schedule::outer_diameter(DN=100) → 114.3mm
+```
+
+支持 DN 15–600 与 schedule 5S、10S、40、80、160。还提供不锈钢变体（`wall_thickness_ss()`、`resolve_pipe_schedule_profile_ss()`）、ASME B16.9 弯头中心至端面尺寸，以及 ASME B16.5 Class 150/300 法兰表（`crates/model/src/profile/pipe_schedule.rs`）。
+
+### 16a.6 构件实例化流程
+
+```
+GUI: Select Steel-Beam-IPE from project's Available Components Panel, set height=300, length=6000
+
+Server: POST /api/catalog/instantiate
+{
+  "component_def_id": "Steel-Beam-IPE",
+  "instance_name": "my_beam",
+  "params": { "height": 300, "length": 6000 },
+  "position": { "x": 0, "y": 0, "z": 0 }
+}
+
+Backend:
+  1. Look up ComponentDef in catalog
+  2. Resolve FeatureTreeTemplate from feature_tree_id
+  3. Merge default params + overrides
+  4. Create Component object with catalog metadata
+  5. For each FeatureTemplateStep:
+     a. profile::generate(ProfileType, resolved_params) → profile points
+     b. Create Sketch from profile points
+     c. Create Feature (Extrude/Revolve/etc.) with resolved depth/angle
+  6. rebuild_component() → BRep extrusion → tessellated mesh
+  7. Return new component ID
+
+Response: { "component_id": "...", "name": "my_beam" }
+```
+
+---
+
+## 17. 对象 → 目录引用
+
+当项目对象通过系列从目录构件创建时，它会携带对来源的引用：
+
+```protobuf
+message CatalogRef {
+  string component_def_id = 1;          // Which ComponentDef
+  string series_id = 2;                 // Which Series (spec)
+  string selector_path = 3;             // Path through the decision tree
+  map<string, double> param_values = 4; // Instance parameter values
+}
+```
+
+该引用存储在 `OmniObject` 上：
+
+```protobuf
+message OmniObject {
+  // ... existing fields ...
+  optional CatalogRef catalog_ref = 20;  // Reference to catalog definition
+}
+```
+
+这支持：
+- **可追溯性**：每个对象都知道自己来自哪个目录构件与规格
+- **再生**：修改目录构件定义会更新所有实例
+- **采购**：直接从规格构件生成 BOM
+- **标准执行**：验证项目中所有对象都符合其规格
+
+---
+
+## 18. 行政分区（Administrative Division）
 
 行政分区建模项目所在的地理/行政层级。这与空间坐标系不同——它提供的是**管辖背景**，用于审批、合规、土地用途和报告。
 
-### 16.1 层级结构
+### 18.1 层级结构
 
 | 层级 | 标准 | 示例 |
 |------|------|------|
@@ -1953,7 +2356,7 @@ Selector: "road_class?"
 | **街区** | 城市规划 | C12 地块、Lot 47 |
 | **地块** | 不动产登记 | G2024-0015 地块 |
 
-### 16.2 数据模型
+### 18.2 数据模型
 
 ```protobuf
 message AdministrativeDivision {
@@ -1989,14 +2392,14 @@ message GeoBoundary {
 }
 ```
 
-### 16.3 用途
+### 18.3 用途
 
 - **项目**关联到一个或多个 AdministrativeDivision（如场地跨越南山区+福田区）
 - 行政分区提供**适用标准**（建筑规范、环保法规、消防规范）
 - **报表**按行政边界汇总对象
 - **地块**是最细粒度，映射到不动产登记
 
-### 16.4 范围：仅参考数据
+### 18.4 范围：仅参考数据
 
 行政分区数据**不在 AMIR 和 Omcom 的范围内**。这是来自政府公报的不可变参考数据：
 - **不存在**用于创建、编辑或删除 AD 记录的 Omcom 动词
@@ -2006,7 +2409,7 @@ message GeoBoundary {
 
 ---
 
-## 17. 项目分解结构（Project Breakdown Structure）
+## 19. 项目分解结构（Project Breakdown Structure）
 
 项目分解结构（PBS）定义项目工作范围的层次化分解。与行政分区（地理/政治）或空间层次（物理放置）不同，PBS 是一种**管理和工程分解**，遵循特定领域的惯例。
 
@@ -2019,7 +2422,7 @@ PBS 通过**项目初始化和配置**管理，而非通过建模命令：
 - 对象通过声明式规则**自动或手动分配**到 PBS 节点（例如"L2 楼层中的所有梁 → PBS: Tower/L2/Structural-Zone"）
 - PBS 树在建模期间只读，不被 Omcom 命令改变
 
-### 17.1 支持的分解惯例
+### 19.1 支持的分解惯例
 
 | 惯例 | 领域 | 标准 |
 |------|------|------|
@@ -2029,7 +2432,7 @@ PBS 通过**项目初始化和配置**管理，而非通过建模命令：
 | **项目→标段→区段→构件** | 土木（线性） | GB/T 51253-2017 |
 | **项目→系统→子系统→装配体→零件** | 机械 | STEP AP242 |
 
-### 17.2 数据模型
+### 19.2 数据模型
 
 ```protobuf
 message ProjectBreakdownNode {
@@ -2071,7 +2474,7 @@ enum BreakdownConvention {
 }
 ```
 
-### 17.3 领域示例
+### 19.3 领域示例
 
 **建筑：**
 ```
@@ -2115,7 +2518,7 @@ enum BreakdownConvention {
 
 ---
 
-## 18. 行政分区、项目分解结构与空间层次的关系
+## 20. 行政分区、项目分解结构与空间层次的关系
 
 这三种层次服务于不同目的，在数据模型中并存：
 
@@ -2125,7 +2528,7 @@ enum BreakdownConvention {
 | **项目分解（PBS）** | 管理/工程 | 塔楼→楼层→分区→梁 | 零件→项目群 |
 | **空间（包含）** | 物理放置 | 建筑→墙→开洞 | 子对象→场景 |
 
-### 18.1 交叉引用
+### 20.1 交叉引用
 
 ```protobuf
 message OmniObject {
@@ -2144,9 +2547,9 @@ message Project {
 }
 ```
 
-> **设计规范与已实现 `Project`（`crates/model/src/project.rs`）的差异**：已实现结构体持有 `name`、`objects`（ObjectStore）、`materials`、`lifecycle`、`relations`（Containment/Connection）、`administrative`、`breakdown`、`sketches`、`series`（SeriesStore）、`external_series_refs`、`measurements`——AD 关联与 PBS 树保存在专用存储中，而非 `ad_ids`/`root_pbs_node_id` 字段，且尚无 `coord_system` 字段（🗓 计划中，§19）。proto 中无 `Project` 消息；项目为 serde JSON。
+> **设计规范与已实现 `Project`（`crates/model/src/project.rs`）的差异**：已实现结构体持有 `name`、`objects`（ObjectStore）、`materials`、`lifecycle`、`relations`（Containment/Connection）、`administrative`、`breakdown`、`sketches`、`series`（SeriesStore）、`external_series_refs`、`measurements`——AD 关联与 PBS 树保存在专用存储中，而非 `ad_ids`/`root_pbs_node_id` 字段，且尚无 `coord_system` 字段（🗓 计划中，§21）。proto 中无 `Project` 消息；项目为 serde JSON。
 
-### 18.2 关键规则
+### 20.2 关键规则
 
 1. **一个项目属于 1+ 个行政分区**（其场地范围）
 2. **每个 OmniObject 属于恰好 1 个 PBS 叶子节点**（覆盖它的最细 PBS 层级）
@@ -2156,7 +2559,7 @@ message Project {
 6. **空间包含是物理的**（由几何放置决定，可自动检测）
 7. **AMIR 和 Omcom 仅操作工程模型内容**（对象、草图、特征、参数、目录构件）——从不操作 AD 或 PBS 结构
 
-### 18.3 数字化交付合规
+### 20.3 数字化交付合规
 
 这一三层次模型满足以下标准的结构要求：
 
@@ -2167,7 +2570,7 @@ message Project {
 
 ---
 
-## 19. 坐标系模型（Coordinate System Model）
+## 21. 坐标系模型（Coordinate System Model）
 
 > **设计规范（🗓 计划中）**：本节的 CRS 消息为目标模型——`CoordinateReferenceSystem`、`ProjectCoordinateSystem`、`LatLonHeight`、`HeightSystem` 均尚未存在于 `proto/omnim.proto` 或 `crates/model`，`OmniObject.crs_id` 也未实现（§3）。以下规则描述预期行为；CRS 配置仍是项目设置层面的设计工作。
 
@@ -2182,7 +2585,7 @@ OmniM 支持**双层坐标系**——每个项目有且仅有一个坐标系：
 
 一个项目有**且仅有一个坐标系**——子项目或标段共享同一个原点和 CRS。
 
-### 19.1 数据模型
+### 21.1 数据模型
 
 ```protobuf
 // 坐标参考系统
@@ -2237,7 +2640,7 @@ enum HeightSystem {
 }
 ```
 
-### 19.2 Project CRS 定义步骤
+### 21.2 Project CRS 定义步骤
 
 1. **选择 Global CRS**——如 CGCS2000 (EPSG:4490) 或 WGS84 (EPSG:4326)
 2. **选择高程系统**——如 1985 国家高程基准
@@ -2250,7 +2653,7 @@ enum HeightSystem {
 - **从测绘文件导入**（如 .csv、.txt 测站坐标）
 - **从 GIS 地图拾取**（未来功能）
 
-### 19.3 坐标变换
+### 21.3 坐标变换
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -2276,7 +2679,7 @@ enum HeightSystem {
 - 在 Global CRS 变体间切换（如 CGCS2000 ↔ WGS84）时，通过 PROJ 的七参数变换重新计算显示的原点坐标
 - 导出到 GIS 格式时使用完整的 PROJ 管线
 
-### 19.4 内置 CRS 注册表
+### 21.4 内置 CRS 注册表
 
 | 名称 | EPSG | 类型 | 说明 |
 |------|------|------|------|
@@ -2290,7 +2693,7 @@ enum HeightSystem {
 
 用户也可以通过 PROJ 字符串或 WKT 定义**自定义 CRS**。
 
-### 19.5 Omcom / AMIR 范围
+### 21.5 Omcom / AMIR 范围
 
 坐标系配置属于**项目设置**，非建模操作：
 - **不存在**用于 CRS 创建或换算的 Omcom 动词

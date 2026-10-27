@@ -1,3 +1,10 @@
+---
+title: "OmniM 项目全生命周期数据模型"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM 项目全生命周期数据模型
 
 ## 1. 概述

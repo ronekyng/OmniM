@@ -1,3 +1,10 @@
+---
+title: "Component Catalog & Series Library Specification"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # Component Catalog & Series Library Specification
 
 > Status: current as of the Phase 7 codebase. Extracted from the catalog-related parts of
@@ -8,14 +15,19 @@
 
 OmniM separates **what a thing can be** (the catalog) from **what is allowed in this
 project** (the series library). This mirrors the E3D/PDMS separation of a CATALOGUE module
-from a project specification (SPECON), and it keeps design discipline enforceable by data
-rather than by convention.
+from a project specification (SPECON), and it is **intended** to keep design discipline
+enforceable by data rather than by convention (the current gate is reachability-only; see §3.4).
 
 - **Component Catalog (元件库)** — parametric 3D component definitions (`ComponentDef`),
   stored globally in `Library.catalog` (`CatalogStore`) and shared across projects.
 - **Series Library (系列库 / 等级库)** — spec decision trees (`Series`), rooted in a
   `SeriesStore` attached to the project, which approve specific catalog components under
   specific constraints.
+
+> **Current limitation (🔀)**: the **Library is a session-global static** (`LIBRARY`), **not**
+> a field on `Project`. `Project` holds a `SeriesStore` (`Project.series`) and external
+> series references; it never holds a catalog. Catalog definitions are shared process-wide
+> and loaded once per session.
 
 Both libraries are seeded by `crates/model/src/seed_catalog.rs` /
 `seed_materials.rs` so a fresh session has working structural, piping, concrete, building,
@@ -62,6 +74,11 @@ Each parameter is typed (proto `ParamType` — LENGTH/ etc.), and carries:
 - `choices` — enumerated values (for selection-type params);
 - `description`.
 
+> **Current limitation (🔀)**: these bounds are declared and surfaced to the UI, but
+> instantiation does not validate them. `ParamConstraint.min/max/fixed` from a Series is
+> also not enforced (see §3.2/§3.4); only the default value is applied. 🗓 Enforcement is a
+> target.
+
 ### 2.3 ConnectorDef (P-point compatibility)
 
 `ConnectorDef` declares a connection point; all spatial fields are **expression strings**
@@ -74,6 +91,13 @@ that may reference component parameters:
 - `connection_type_code` — a connection-type key used for coupling checks (see below);
 - `role` — proto `ConnectorRole`: `INLET`(1) / `OUTLET`(2) / `BIDIRECTIONAL`(3) /
   `MOUNT`(4) / `BRANCH`(5).
+
+> **Current limitation (🔀)**: `ConnectorDef` carries only a `direction` vector — there is no
+> `up`/axis vector, so flange bolt-hole orientation or valve-stem orientation cannot be
+> determined. `Project::connect()` validates nothing beyond the existence of the two objects:
+> it does not check connector type codes, bore, pressure class, or even `from_point/to_point`.
+> The type-code taxonomy below is metadata, not an enforced compatibility rule. 🗓 Full
+> P-point compatibility is a target.
 
 `ConnectorType` + `connector_code_map()` in `catalog.rs` give a cross-platform taxonomy:
 
@@ -89,8 +113,9 @@ that may reference component parameters:
 | `DUCT` | DuctEnd | — | — |
 | `VALVE-END` / `VALVE-STEM` | ValveEnd / ValveStem | `VALVE-END` | `P-VALVE`/`P-VSTEM` |
 
-References between objects are normally constructed only where connector **type codes**
-line up — enabling Civil3D-style and E3D-style interchange around the same P-point concept.
+References between objects are **not** currently restricted by these type codes: `connect()`
+accepts any two existing objects (see the limitation above). The taxonomy is retained as the
+design basis for Civil3D/E3D-style P-point interchange (🗓).
 
 ### 2.4 Publishing & instantiation flow
 
@@ -119,6 +144,14 @@ pub struct CatalogRef {
 
    which preserves traceability (which series approved it, which branch was taken, which
    values were used) and supports regeneration when the definition or series changes.
+
+> **Current limitation (🔀)**: `instantiate_from_series()` fills only
+> `ParamConstraint.default_value`; it does **not** enforce `min/max/fixed` and does **not**
+> apply `SpecComponent.material` to the created instance. `instantiate_from_catalog()`
+> creates an `ObjectType::Component` feature-tree instance, while the transitional
+> `/api/genrule` path still builds hard-coded meshes (`genrule_create_catalog`,
+> `param_values: HashMap::new()`). Feature-tree/BRep is the official geometry path; the
+> genrule mesh path is transitional. See `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md` §3 P0-4/P0-5.
 
 ### 2.5 Built-in library (seeds)
 
@@ -167,6 +200,10 @@ pub struct Series {
   — narrows the component's `ParamDef` ranges; may pin a param with `fixed_value` (a
   string / expression form that takes precedence for open params).
 
+> **Current limitation (🔀)**: `ParamConstraint` is stored and surfaced, but only
+> `default_value` is consumed at instantiation. `min_value`, `max_value`, `step`, and
+> `fixed_value` are not validated or enforced. 🗓 Enforcement is a target.
+
 `SelectionEngine::select(series, answers)` walks the tree:
 
 1. Start at `root_selector`; the caller supplies an answer string per selector level.
@@ -193,16 +230,22 @@ def-ids reachable from any loaded series — this powers the spec gate (§3.4).
   decision trees (selectors, answers, spec components, constraints) and loads/saves
   `.omnimseries` files through the library endpoints.
 
-### 3.4 Spec enforcement rule (designers limited to active series)
+### 3.4 Spec enforcement rule (designers limited to active series) — 🔀 Reachability only
 
-`crates/model/src/project.rs::check_series_gate` enforces the classic PDMS/SPECON rule —
-**"only series-approved components are selectable when a series is active"**:
+`crates/model/src/project.rs::check_series_gate` enforces a **reachability-only** version of
+the classic PDMS/SPECON rule:
 
 - **Series loaded + component reachable** from any loaded series' decision tree → allowed.
 - **Series loaded + component NOT reachable** → rejected with
   `series gate: component '…' is not reachable from any loaded series. Load the appropriate
   series or use a series-approved component.`
 - **No series loaded** → open mode; all catalog components are allowed.
+
+> **Current limitation (🔀)**: the gate checks reachability only. It does **not** check
+> material approval, parameter ranges, connection class, or any other spec attribute.
+> `SpecComponent.material` is not applied at instantiation; `ParamConstraint` bounds are
+> not enforced. The "series-approved" wording therefore means "reachable", not "fully
+> validated".
 
 Reachability is checked both by component UUID and by name (spec components may store
 either identifier; matching is case-insensitive as a fallback).
@@ -215,6 +258,12 @@ Series authoring happens through the same Omcom pipeline (see
 (`path` + `source` = `"standalone" | "library"`), and `LIST_SERIES`. The Validator checks
 series existence (except `CREATE_SERIES`), non-empty `LoadSeries` paths; each executed
 series mutation takes an inverse `Command` for undo.
+
+> **Current limitation (🔀)**: series editing handlers currently write `Project` /
+> `SeriesStore` directly, so these mutations are **not** on the undo stack and are not
+> saved. The "inverse Command for undo" behaviour above is the target (single-write-path
+> backlog), not the current implementation. See `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md`
+> §3 P0-2/P0-3.
 
 ## 4. Worked examples
 
@@ -233,7 +282,8 @@ Series Steel-Q355 (domain structural, EN 1993)
 ```
 
 Selection (`SelectionEngine::select(series, &["beam", "S355"])`) → `Steel-Beam-IPE`,
-selector path `[q1, q2_material]`, approved material `S355`.
+selector path `[q1, q2_material]`, material `S355` recorded in the spec (🔀 metadata only —
+not applied to the instance at instantiation).
 
 ### 4.2 Piping series `CS150`
 
@@ -246,12 +296,12 @@ Series CS150 (domain plant, ASME B31.3)
     answer "ELBOW"  → SpecComponent Elbow-LR-CS, material A106-B
 ```
 
-Instantiation: answers `["PIPE", "STD"]` select `Pipe-CS`; the executor creates an
-OmniObject with a resolved DN (e.g. DN 100), records `CatalogRef { component_def_id,
-series_id: CS150, selector_path: [gt, sch], param_values { dn: 100.0, length: 6000.0 } }`,
-and links containment/property operations under the same OmniCommand. While CS150 is
-loaded, attempting to instantiate a beam component (not reachable in this series) is
-**rejected** by the series gate.
+Instantiation: answers `["PIPE", "STD"]` select `Pipe-CS`; the current handler creates an
+OmniObject **directly** (🔀 no Executor, no undo/save — single-write-path is a target) with a
+resolved DN (e.g. DN 100), records `CatalogRef { component_def_id, series_id: CS150,
+selector_path: [gt, sch], param_values { dn: 100.0, length: 6000.0 } }`, and applies the
+containment/property operations. While CS150 is loaded, attempting to instantiate a beam
+component (not reachable in this series) is **rejected** by the series gate.
 
 ### 4.3 Defining a new catalog component
 

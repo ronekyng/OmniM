@@ -1,3 +1,10 @@
+---
+title: "OmniM Storage Model"
+status: design
+last_updated: 2026-10-27
+applies_to: "n/a (proposal)"
+evidence: "n/a (proposal)"
+---
 # OmniM Storage Model
 
 ## 1. Overview
@@ -125,11 +132,11 @@ Resolution priority: project-private > external file > built-in seed.
 
 ---
 
-## 5. Client-Side Cache
+## 6. Client-Side Cache
 
 The client cache is **ephemeral** — it can be cleared and re-fetched from the server at any time. It exists solely for performance.
 
-### 5.1 Object Cache
+### 6.1 Object Cache
 
 | Property | Value |
 |----------|-------|
@@ -144,7 +151,7 @@ Cached content:
 - Lifecycle records for visible objects
 - Relationship data for selected objects
 
-### 5.2 Geometry Cache
+### 6.2 Geometry Cache
 
 | Property | Value |
 |----------|-------|
@@ -159,7 +166,7 @@ Cached content:
 - BRep geometry for parametric editing operations
 - Bounding volume hierarchy for spatial queries
 
-### 5.3 Render Cache
+### 6.3 Render Cache
 
 | Property | Value |
 |----------|-------|
@@ -175,9 +182,9 @@ Cached content:
 
 ---
 
-## 6. Cache Synchronization
+## 7. Cache Synchronization
 
-### 6.1 Read Path (Server → Client Cache)
+### 7.1 Read Path (Server → Client Cache)
 
 ```
 Client requests data
@@ -193,7 +200,7 @@ Store in client cache with version tag
 Return data
 ```
 
-### 6.2 Write Path (Client → Server)
+### 7.2 Write Path (Client → Server)
 
 ```
 User performs action (e.g., move wall)
@@ -215,7 +222,7 @@ Client updates cache with confirmed version
 Server broadcasts change notification to other clients via WebSocket
 ```
 
-### 6.3 Cache Invalidation
+### 7.3 Cache Invalidation
 
 | Trigger | Action |
 |---------|--------|
@@ -227,31 +234,31 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 7. Key Design Principles
+## 8. Key Design Principles
 
-### 7.1 Server-Authoritative
+### 8.1 Server-Authoritative
 - Server is the single source of truth
 - All writes go through server-side AMIR execution
 - Client cache is always disposable
 
-### 7.2 Performance via Caching
+### 8.2 Performance via Caching
 - Client cache ensures instant 3D rendering and responsive interactions
 - Viewport-based prefetching anticipates user needs
 - LOD-aware geometry caching minimizes data transfer
 
-### 7.3 Collaboration
+### 8.3 Collaboration
 - Real-time change notifications via WebSocket
 - Multiple users see each other's changes in near real-time
 - Server resolves conflicts sequentially
 
-### 7.4 Scalability
+### 8.4 Scalability
 - Server scales horizontally (read replicas, load balancing)
 - Geometry CDN for large file distribution
 - Edge servers for geographically distributed teams
 
 ---
 
-## 8. Performance Targets
+## 9. Performance Targets
 
 | Metric | Target |
 |--------|--------|
@@ -266,7 +273,7 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 9. Backup and Integrity
+## 10. Backup and Integrity
 
 ### Server-Side Backup
 - Daily full database backup
@@ -282,7 +289,7 @@ Server broadcasts change notification to other clients via WebSocket
 
 ---
 
-## 10. Open Questions
+## 11. Open Questions
 
 1. PostgreSQL vs distributed NewSQL (TiDB, CockroachDB) for horizontal scaling?
 2. What is the optimal client cache size for different device classes?

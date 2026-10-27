@@ -1,3 +1,10 @@
+---
+title: "Code-Level Deviations from Documented Model"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # Code-Level Deviations from Documented Model
 
 This document lists places where the codebase deviates from the documented conceptual model. Items marked **RESOLVED** have been fixed on the date indicated; remaining items are known gaps to be fixed in a future code development phase.
@@ -118,3 +125,44 @@ No deviation found in the Rust backend.
 
 ### Screens/tests
 - `stateMachine.test.ts` covers idle/picking/configuring flows incl. multi-point accumulation; polygon-close and span-filter cases to be added with the residue items.
+
+---
+
+## 6. Write Path, Persistence & Geometry-Path Deviations — **Known** (2026-10-27)
+
+**Status: Known — 2026-10-27.** Source: static scan of `crates/server/src/lib.rs` in [DOC_AUDIT_2026-10-27](DOC_AUDIT_2026-10-27.zh-CN.md) Appendix A, plus a spot-check of the code. The per-endpoint matrix is in [WRITE_PATHS.md](../architecture/WRITE_PATHS.md). None of these items is resolved. For a modeler-facing, per-object view of the same gaps, see [CAPABILITY_MATRIX.md](../CAPABILITY_MATRIX.md).
+
+### 6.1 Single write path is violated (audit P0-2)
+
+**Documented** (ADR-0006, PLATFORM_ARCH §1, DATA_FLOW §0): every mutation goes through `Validator` + `Executor` and lands on the undo stack.
+
+**Code status:** of **55** handlers holding `project.write()`, only **13** mention the executor; roughly **42** mutate `Project` directly with no undo entry. Examples: `update_object`, `transform_object`, `set_parent`, `connect`, `create_material`/`assign_material`, `update_sketch`/`solve_sketch`/`update_sketch_entity`, `import_ifc`, `instantiate_from_catalog`, and all series edit handlers. Renaming, assigning material, connecting pipes, editing series, importing IFC, and placing catalog components cannot be undone.
+
+### 6.2 Auto-save claim is false; default launch saves nothing (audit P0-3)
+
+**Documented**: mutations are persisted automatically.
+
+**Code status:** only **5** handlers call `Project::save(...)`: `update_object`, `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`. `POST /api/objects`, `/api/genrule`, `/api/omcom`, `/api/catalog/instantiate`, `/api/import/ifc`, and all `/api/series/*` edits never save. In addition, `main.rs` sets `save_path = None` when the project path is the default `project.omnim`, so the default launch persists nothing at all. `scripts/dev-server.sh` forwards `OMNIM_PROJECT` but defaults it to `project.omnim`, so the default script launch does not persist either.
+
+### 6.3 Geometry path is split (audit P0-4)
+
+**Documented**: catalog/series drive geometry generation.
+
+**Code status:** three parallel paths produce different object types and geometry sources:
+
+- `/api/genrule` (toolbar): hardcoded `build_wall`/`build_slab`/`build_road`/`build_pipe` mesh, `param_values` empty, object types `Wall`/`Slab`/`Road`/`Pipe`.
+- `/api/catalog/instantiate` (catalog panel): feature tree → BRep/mesh (official path), but creates `ObjectType::Component` (not `Wall`/`Beam`/…), with no undo and no save.
+- `/api/import/ifc`: imported mesh, mapped types, no undo and no save.
+
+The official geometry path is the feature tree/BRep pipeline; the genrule pass-through is legacy/transitional. See [DATA_FLOW.md §4](../architecture/DATA_FLOW.md#4-d-catalog--series-instantiation).
+
+### 6.4 Series gate, materials, connections are weaker than documented (audit P0-5)
+
+**Documented**: series gates enforce approved components, materials, and connection compatibility.
+
+**Code status:**
+
+- `check_series_gate()` only checks whether a component is reachable from a series (`crates/model/src/project.rs:88-103`); it does not validate material, parameter ranges, or connection rating.
+- `instantiate_from_series()` only fills `ParamConstraint.default_value`; it does not enforce `min/max/fixed`, and it does **not apply** `SpecComponent.material` (`crates/model/src/project.rs:368-386`).
+- `Project::connect()` only checks that both objects exist; it does not validate connector points, type codes, bore, or pressure rating, and does not write `from_point`/`to_point` (`crates/model/src/project.rs:105-121`).
+- `ConnectorDef` has only `direction`; there is no `up`/axis, so flange bolt-hole or valve-stem orientation cannot be determined (`proto/omnim.proto:506-518`).

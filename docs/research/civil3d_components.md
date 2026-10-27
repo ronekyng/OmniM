@@ -1,3 +1,10 @@
+---
+title: "Civil 3D 内置构件底层逻辑调研"
+status: research
+last_updated: 2026-07-09
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # Civil 3D 内置构件底层逻辑调研
 
 > 调研日期：2026-07-09

@@ -1,3 +1,10 @@
+---
+title: "Changelog"
+status: history
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # Changelog
 
 All notable changes to the OmniM project are documented in this file. Substantive phase summaries only — this is not a commit log.
@@ -19,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 - Reorganized `docs/` into `architecture/`, `guides/`, `specification/`, `reference/`, `status/`, `RFC/` (bilingual en/zh per file), with a docs portal (`docs/README.md`).
-- New reference: full REST API reference (`reference/API.md`, ~100 routes audited against `crates/server/src/lib.rs`).
+- New reference: full REST API reference (`reference/API.md`, **78** deduplicated routes audited against `crates/server/src/lib.rs`).
 - New specifications: Component Catalog & Series Library (`specification/CATALOG_SERIES.md`), Data Flow, Architecture Decision Records (6 seed ADRs).
 - New guides: Getting Started, Building, Architecture Map, Testing.
 - RFC-0001: Omcom Text DSL (Draft) — captures the former "text DSL" vision, now correctly framed as unimplemented.
@@ -46,6 +53,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Fixed
 - Compiler warnings reduced to zero across the workspace (unused vars/imports, needless `mut`).
 - All intradocumentation links verified (0 broken).
+- Audit remediation (docs/status/DOC_AUDIT_2026-10-27): quickstart commands corrected (real console syntax, `/api/undo`, raw-text IFC import) plus an explicit persistence warning; README vision/current-state separation; IFC_EXTENSION rewritten to match the partial-IFC reality; ADR-0006 marked "Accepted (target) — Partially implemented" with a deviation note; new `architecture/WRITE_PATHS.md`; route count corrected to 78; CODE_DEVIATIONS §6 records the audit P0s; Chinese DATA_MODEL aligned (+371 lines: §5.6, §5.7.1, §16.4, §16a, §17, renumbering, fence fixes); DOMAINS/GLOSSARY carry proto-status marks; new `CAPABILITY_MATRIX` and `MODELER_HANDBOOK`; front matter on all 71 docs; `scripts/check_docs.py` (links/fences/numbering/bilingual parity) added. Code-level P0s (single write path, save policy, geometry convergence, series enforcement) are recorded in the ROADMAP technical-debt backlog.
 
 ### Not implemented (known gaps)
 - Unchanged: REST-only (no WebSocket/real-time collaboration), JSON-file persistence (no DB/version history), no WASM shared core, no desktop/mobile packaging (see `PLATFORM_ARCH` future-directions section).
@@ -135,7 +143,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## Baseline (current runtime)
 
-- Axum REST server (~100 routes) with JSON-file (`.omnim`) persistence; **no WebSocket/real-time collaboration, no database/version history/audit trail**.
+- Axum REST server (**78** deduplicated routes) with JSON-file (`.omnim`) persistence; **no WebSocket/real-time collaboration, no database/version history/audit trail**.
 - AMIR AI engine (OpenAI/Anthropic/Mock providers): NL→OmniCommand translation, chat, reverse model description.
 - Hand-written IFC (2x3/4) import/export with **partial entity coverage**; no STEP/DXF/GIS/glTF support.
 - Web UI: three.js-based workspace, sketch editor, component editor, series/library managers, AI chat, Omcom console.

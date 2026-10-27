@@ -1,3 +1,10 @@
+---
+title: "OmniM 文档"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "verified against the docs tree 2026-10-27"
+---
 # OmniM 文档
 
 [English](README.md) | [中文](README.zh-CN.md)
@@ -13,6 +20,12 @@
 - [文档状态标记](#文档状态标记)
 
 ## 按角色查找
+
+### 🧱 我想建模
+- [建模者手册](MODELER_HANDBOOK.zh-CN.md) — 按领域组织的任务流程、真实 UI/API 步骤与如实缺口（[English](MODELER_HANDBOOK.md)）
+- [能力矩阵](CAPABILITY_MATRIX.zh-CN.md) — 逐对象能力行：创建、宿主、连接、测量、IFC、proto 状态（[English](CAPABILITY_MATRIX.md)）
+- [快速开始](guides/GETTING_STARTED.zh-CN.md) — 编译、启动与首次交互（[English](guides/GETTING_STARTED.md)）
+- ⚠️ **持久化警告：** 默认启动**不会保存**。建模前请把 `OMNIM_PROJECT` 设为非默认文件，并阅读[快速开始](guides/GETTING_STARTED.zh-CN.md)中的警告。
 
 ### 🚀 我想上手试用
 - [快速开始](guides/GETTING_STARTED.zh-CN.md) — 编译服务端、启动 Web 界面、迈出第一步
@@ -60,6 +73,8 @@ docs/
 ├── RFC/             # 开放设计提案（文本 DSL、存储模型）
 └── research/        # 背景调研；不属于契约的一部分
 ```
+
+两份面向建模者的参考文档位于 docs 根目录：[建模者手册](MODELER_HANDBOOK.zh-CN.md) · [能力矩阵](CAPABILITY_MATRIX.zh-CN.md)。
 
 ## 文档状态标记
 

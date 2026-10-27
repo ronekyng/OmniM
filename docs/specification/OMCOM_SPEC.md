@@ -1,3 +1,10 @@
+---
+title: "Omcom Specification — the Unified Engineering Command System"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # Omcom Specification — the Unified Engineering Command System
 
 > Status: current as of the Phase 7 codebase. This document describes what **exists** in

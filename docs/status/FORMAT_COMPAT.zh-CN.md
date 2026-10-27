@@ -1,3 +1,10 @@
+---
+title: "OmniM 格式兼容性矩阵"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # OmniM 格式兼容性矩阵
 
 **最后更新：2026-10-27**

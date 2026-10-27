@@ -1,3 +1,10 @@
+---
+title: "OmniM 开发路线图"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # OmniM 开发路线图
 
 **最后更新：2026-10-27**
@@ -158,7 +165,7 @@
 
 ## Phase 10：云服务器 & 协作 (2029) — 📅 计划中
 
-**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（约 100 条路由），**JSON 文件（`.omnim`）持久化**，完整撤销/重做状态历史，目录/系列文件端点。
+**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（去重后 78 条路由），**JSON 文件（`.omnim`）持久化**（经 `OMNIM_PROJECT` 选择开启），撤销/重做状态历史**端点覆盖不全**（见技术债待办），目录/系列文件端点。
 
 **未实现** 📅：PostgreSQL + PostGIS 存储、版本历史/审计追踪（目前仅 JSON 文件保存）、WebSocket 实时通知、几何流式传输、客户端缓存层、多用户协作/冲突解决、在线状态、协作 UI。服务器中**没有任何 WebSocket**。
 
@@ -175,10 +182,34 @@
 
 尚未开始：结构分析、碰撞检测、成本估算、插件生态。
 
+## 已定稿待实现的设计（Accepted Designs Pending Implementation）
+
+已议定并作为契约写入规范（specification），但尚未实现的设计。顺序按依赖关系而非日历排期，状态标记沿用上方图例。
+
+### 1. Path / 创成分类抽象—— 📅 已定稿，未实现
+
+**契约**：[数据模型 §1 —— 双轴模型与治理规则](../specification/DATA_MODEL.zh-CN.md)（2026-10-27 议定）。多点拾取统一为 `Path { points, closed }`；创成分类绑定实例的创建方式而非对象名；genrule 分派查询 `(objectType, 分类/形态)` 授权矩阵。
+
+| # | 交付项 | 估时 |
+|---|---|---|
+| 1.1 | 前端 `CreationForm.form` 字段（按类型默认 + 墙形态下拉），`form → 拾取模式/预览` 查表化取代逐类型散判断；状态机测试迁移 | 0.75d |
+| 1.2 | 服务端 `path { points, closed }` 契约 + 旧 `path[]`/`boundary[]`/`alignment[]` 别名归一；`(objectType, form)` 分派（400 带原因）；`layer_extrusion.rs` / `linear_component.rs` 模块头授权注释（§6.4 边界说明） | 0.75d |
+| 1.3 | 统一预览 `addPathPreview` 按形态选样式（panel → 逐段层盒 ghost + miter 含闭环；region → 轮廓 + 扇面填充） | 0.5d |
+| 1.4 | 分类之下的共享纯几何层（`iter_segments`/`merge_collinear`/按 open·closed 分派 `validate_path`）——纯重构，行为不变 | 0.25d |
+| 1.5 | 锁定多分类语义的种子 API 用例：面板墙（面·panel）、体量墙（体·布尔/雕刻）、挡土墙（线性·对齐 + 地形目标占位） | 0.25d |
+| 1.6 | 文档：API.md genrule 章节加入授权矩阵（1.2 落地前以设计注记出现）；GLOSSARY 已更新（路径/创成/形态/授权矩阵） | — |
+| | **合计** | **~2.5 天** |
+
+圆弧弯头（elbow，仅 LinearComponent 家族）刻意不在此范围——属 Phase 8 管道布线。
+
 ## 技术债待办
 
 在开发过程中记录的零散事项；按时机捡起，不排阶段：
 
+- **恢复单一写入路径（最高优先）** — ADR-0006 是已接受的目标架构，但约 42 个端点直接写 `Project`，不经 `Validator`/`Executor`、不进撤销栈（见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)）；仅 5 个 handler 落盘。后果：撤销不完整、编辑可能丢失。子项：直写端点收编为 `OmniCommand`（或经记录的验证适配器）、扩展撤销覆盖、加 CI lint 禁止执行器模块之外的 `project.write()`。证据：[CODE_DEVIATIONS §6](CODE_DEVIATIONS.zh-CN.md)、2026-10-27 审计。
+- **持久化策略** — 默认 `save_path=None` 导致默认启动完全不落盘，多数端点不保存。需定：每变更保存 vs 显式保存端点；随后把默认行为改安全（修复前保留文档警告）。证据：同上审计 P0-3。
+- **收敛几何生成路径** — 正式路径为目录特征树 → BRep（2026-10-27 决策）；`/api/genrule` 仍生成硬编码网格，目录实例化创建 `ObjectType::Component`，同一堵墙因入口不同而不同。子项：genrule 改为经特征树实例化、统一创建类型、回填 `param_values`/材质。证据：CODE_DEVIATIONS §6、P0-4。
+- **系列与连接强制性** — 系列门仅查可达性；`SpecComponent.material` 从不落地；`ParamConstraint` 的 min/max/fixed 不校验；`connect()` 不校验任何东西；`ConnectorDef` 缺 up/axis（无 P0/法兰朝向）。子项：ParamConstraint 校验、材质落地、连接兼容性校验、连接器轴向字段。证据：CODE_DEVIATIONS §6、P0-5。
 - **测试隔离重构** — model 测试共享 session 级全局 `static LIBRARY`（见[测试指南 → 已知不稳定测试](../guides/TESTING.zh-CN.md)）。已观察到一次并行测试偶发失败（`test_find_and_rebuild_catalog_instances`）；压力测试未能复现，但随着测试规模扩大，共享全局状态的依赖是真实风险。候选修复方案见测试指南。
 - **日志规范化** — 用结构化日志 crate（`tracing` 或 `log`）替换生产路径中零散的 `eprintln!`。当前残留输出仅为错误路径/启动探针。
 

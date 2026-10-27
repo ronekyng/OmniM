@@ -1,3 +1,10 @@
+---
+title: "跨平台内置构件逻辑对比分析与 OmniM 映射"
+status: research
+last_updated: 2026-07-09
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # 跨平台内置构件逻辑对比分析与 OmniM 映射
 
 > 初版调研日期：2026-07-09（Civil 3D / Revit / E3D 三平台）

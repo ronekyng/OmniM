@@ -1,3 +1,10 @@
+---
+title: "GenRule 体系设计分析 — 基于跨平台调研的反思"
+status: research
+last_updated: 2026-08-06
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # GenRule 体系设计分析 — 基于跨平台调研的反思
 
 > 分析日期：2026-08-06

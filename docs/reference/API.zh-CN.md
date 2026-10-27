@@ -1,6 +1,13 @@
+---
+title: "OmniM REST API 参考"
+status: reference
+last_updated: 2026-10-27
+applies_to: "crates/server, proto"
+evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
+---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **78 条路由（去重后，2026-10-27 审计）**。
 
 ## 目录
 
@@ -33,7 +40,7 @@
 - **无认证。** 服务器面向本地 / 单用户使用，没有 API Key、会话或令牌。
 - **无 WebSocket / 实时协作。** OmniM 仅提供 **REST** 接口，没有实时同步、事件流或在线状态。需要较新的状态时轮询 `GET /api/tree` 或 `GET /api/objects`；Web UI 在每次变更后简单重新拉取。
 - **内存中的单一项目。** 所有路由操作同一个共享 `Project`（`Arc<RwLock<Project>>`，即 `SharedProject`）。读共享读锁；写占用写锁，变更串行执行。
-- **撤销/重做后端。** 变更类端点（对象创建/删除、草图编辑、GenRule 创建）会把操作压入 Omcom 执行器的历史栈，通过 `GET /api/undo-status` 查询。
+- **撤销/重做后端（🔀 部分）。** 部分变更类端点（对象创建/删除、草图编辑、GenRule 创建）会把操作压入 Omcom 执行器的历史栈，通过 `GET /api/undo-status` 查询。许多直接写入端点（改名、属性、赋材质、连接、IFC 导入、目录实例化、系列编辑）**不会**，因此撤销并不完整。恢复单一写入路径是代码待办项。
 
 ## 基础 URL 约定
 
@@ -298,6 +305,7 @@ curl -sS -X PUT "$BASE/api/objects/obj-1/material" -H 'Content-Type: application
 
 - `GET /api/export/ifc` → `200`，`Content-Type: application/ifc`，`Content-Disposition: attachment; filename="project.ifc"`（原始 IFC STEP 文本）。
 - `POST /api/import/ifc` — 请求体为 **原始 IFC 文本**，不是 JSON。100 MB 的请求体上限主要为该路由服务。
+  - 仅支持 **IFC 2x3 / IFC 4 子集**（见 [FORMAT_COMPAT](../status/FORMAT_COMPAT.zh-CN.md)）；不支持 IFC 4x3 特有实体、材质/工程量/分类映射，也不承诺无损往返。
   - 查询参数：`normalize`（默认 `true` — 将导入几何平移到原点附近）与 `mode`（默认 `merge` | `replace` — 整体替换项目）。
   - 响应 `ImportIfcResponse`：`{ success, imported, objects, message }`。IFC 解析失败仍返回 HTTP `200`，`success: false`。
 
@@ -485,14 +493,14 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   |---|---|
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
-  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的 N 点折线 `[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
+  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的折线，即 Path（开放），`[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
   | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path[]`（墙中心线 `[x,y,z]` 点）或 `boundary[]`（slab/roof/floor 闭合轮廓）, `start_*`/`end_*`, `parent_id?`, `series_id?` |
   | `line` | `name`, `alignment`（`[x,y,z]` 点，≥ 2）, `diameter`, `parent_id?` — 生成细引导管线（`FeatureLine`） |
 
-  单位为米。`series_id` 非空时改走目录/系列实例化路径，而非直接生成网格。
+  单位为米。`series_id` 非空时改走目录/系列路径：它只用于选择 `ComponentDef` 以记录元数据/系列归属，几何仍由硬编码的 `build_wall`/`build_slab`/`build_road`/`build_pipe` 网格生成器产生（`param_values: HashMap::new()`）。这属过渡实现——经 `/api/catalog/instantiate` 的特征树/BRep 才是正式几何路径。
 
   分层构件的拾取高程（`path`/`boundary` 携带 `[x, y, z]`）：拾取的 z 不再被丢弃。
   - 墙体 `path`：z 值被保留；所有拾取 z 相等时，几何体落在该高程（bbox 最小 z = 拾取 z）。若 z 各不相同（斜坡路径），简化方案以**首点 z** 为基准高程并忽略其余差异（当前为纯平面拉伸，不支持逐点放坡）。

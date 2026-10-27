@@ -1,3 +1,10 @@
+---
+title: "RFC-0001：Omcom 文本 DSL"
+status: design
+last_updated: 2026-10-27
+applies_to: "n/a (proposal)"
+evidence: "n/a (proposal)"
+---
 # RFC-0001：Omcom 文本 DSL
 
 - **状态**：Draft（草案）

@@ -1,3 +1,10 @@
+---
+title: "OmniM Development Roadmap"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # OmniM Development Roadmap
 
 **Last updated: 2026-10-27**
@@ -158,7 +165,7 @@ Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN cove
 
 ## Phase 10: Cloud Server & Collaboration (2029) — 📅 Planned
 
-**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (~100 routes) with **JSON-file (`.omnim`) persistence**, full undo/redo state history, and catalog/series file endpoints.
+**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (78 deduplicated routes) with **JSON-file (`.omnim`) persistence** (opt-in via `OMNIM_PROJECT`), undo/redo state history with **partial endpoint coverage** (see Technical-Debt), and catalog/series file endpoints.
 
 **Not implemented** 📅: PostgreSQL + PostGIS storage, version history / audit trail (currently only JSON file save), WebSocket real-time notifications, geometry streaming, client cache layers, multi-user collaboration/Conflict resolution, presence, collaboration UI. There is **no WebSocket anywhere in the server**.
 
@@ -175,10 +182,34 @@ Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN cove
 
 Not started: structural analysis, clash detection, cost estimation, plugin ecosystem.
 
+## Accepted Designs Pending Implementation
+
+Designs agreed and documented as contracts (in the specification) but not yet implemented. Ordering below is practical (dependency-first), not calendar-based. Status marks follow the legend above.
+
+### 1. Path / Genesis abstraction（路径 + 创成分类）— 📅 Accepted, not implemented
+
+**Contract**: [DATA_MODEL §1 — dual-axis model & governance](../specification/DATA_MODEL.md) (agreed 2026-10-27). Multi-point picking unifies as `Path { points, closed }`; genesis class binds to the per-instance creation method, not the object name; genrule dispatch consults an `(objectType, class/form)` authorization matrix.
+
+| # | Deliverable | Est. |
+|---|---|---|
+| 1.1 | Front-end `CreationForm.form` field (per-type default + wall form dropdown), `form → pickMode/preview` lookup replaces scattered per-type switches; state-machine tests migrated | 0.75d |
+| 1.2 | Server `path { points, closed }` contract + legacy `path[]`/`boundary[]`/`alignment[]` alias normalization; `(objectType, form)` dispatch with 400 + reason; module-head authorization comments in `layer_extrusion.rs` / `linear_component.rs` (§6.4 boundary note) | 0.75d |
+| 1.3 | Unified preview `addPathPreview` by form (panel → per-segment layer ghost + miter incl. closed loop; region → outline + fan fill) | 0.5d |
+| 1.4 | Shared pure-geometry layer below classes (`iter_segments`/`merge_collinear`/`validate_path` dispatch by open/closed) — refactor only, behavior-preserving | 0.25d |
+| 1.5 | Seed API cases locking the multi-class semantics: surface-panel wall, body wall (boolean/sculpted), linear retaining wall (alignment + terrain target placeholder) | 0.25d |
+| 1.6 | Docs: API.md genrule section gains the authorization matrix (as design note until 1.2 lands); GLOSSARY already updated (Path/Genesis/Form/authorization matrix) | — |
+| | **Total** | **~2.5d** |
+
+Elbow (arc bend, LinearComponent family only) is deliberately out of scope here — Phase 8 pipe routing.
+
 ## Technical-Debt Backlog
 
 Unplanned-widow items recorded during development; pick up opportunistically, no scheduled phase:
 
+- **Restore the single write path（恢复单一写入路径）** — *highest priority*. ADR-0006 is the accepted target, but ~42 endpoints write `Project` directly with no `Validator`/`Executor`/undo (see [WRITE_PATHS](../architecture/WRITE_PATHS.md)); only 5 handlers save. Consequence: undo is incomplete and edits can be lost. Sub-items: route direct writes through `OmniCommand` (or a documented validated-command adapter), extend undo coverage, then enforce with a CI lint flagging `project.write()` outside the executor module. Evidence: [CODE_DEVIATIONS §6](CODE_DEVIATIONS.md), 2026-10-27 audit.
+- **Persistence policy（持久化策略）** — default `save_path=None` means the default launch never persists; most endpoints do not save. Decide: save-per-mutation vs explicit save endpoint, then make the default safe (and keep the docs warning until fixed). Evidence: same audit, P0-3.
+- **Converge geometry generation（收敛几何生成路径）** — official path is catalog feature tree → BRep (per ADR/decision 2026-10-27); `/api/genrule` still generates hard-coded meshes and catalog instantiation creates `ObjectType::Component`, so the same wall differs by entry point. Sub-items: make genrule instantiate through feature trees, unify the created type, backfill `param_values`/materials. Evidence: CODE_DEVIATIONS §6, P0-4.
+- **Series/connection enforcement（系列与连接强制性）** — series gate is reachability-only; `SpecComponent.material` never applied; `ParamConstraint` min/max/fixed not enforced; `connect()` validates nothing; `ConnectorDef` lacks up/axis (no P0/flange orientation). Sub-items: parameter-constraint validation, material application, connector compatibility check, connector axis/orientation fields. Evidence: CODE_DEVIATIONS §6, P0-5.
 - **Test isolation refactor（测试隔离重构）** — model tests share the session-level global `static LIBRARY` (see [TESTING guide → Known Flaky Tests](../guides/TESTING.md)). One intermittent parallel-test failure has been observed (`test_find_and_rebuild_catalog_instances`); not reproducible under stress, but the shared-global dependency is a real risk as the test surface grows. Candidate fixes listed in the guide.
 - **Logging standardization（日志规范化）** — replace ad-hoc `eprintln!` in production paths with a structured logging crate (`tracing` or `log`). Current residual prints are error-path/startup probes only.
 

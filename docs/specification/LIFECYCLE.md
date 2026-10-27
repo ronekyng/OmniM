@@ -1,3 +1,10 @@
+---
+title: "OmniM Project Lifecycle Data Model"
+status: design
+last_updated: 2026-10-27
+applies_to: "proto/, crates/model"
+evidence: "n/a (design contract)"
+---
 # OmniM Project Lifecycle Data Model
 
 ## 1. Overview

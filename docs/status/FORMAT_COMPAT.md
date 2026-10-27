@@ -1,3 +1,10 @@
+---
+title: "OmniM Format Compatibility Matrix"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "audited against code 2026-10-27"
+---
 # OmniM Format Compatibility Matrix
 
 **Last updated: 2026-10-27**

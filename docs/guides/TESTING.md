@@ -1,3 +1,10 @@
+---
+title: "Testing Guide"
+status: current
+last_updated: 2026-10-27
+applies_to: "repo"
+evidence: "commands and paths verified in the repo 2026-10-27"
+---
 # Testing Guide
 
 [English](TESTING.md) | [简体中文](TESTING.zh-CN.md)

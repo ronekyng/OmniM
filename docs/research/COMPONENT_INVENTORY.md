@@ -1,3 +1,10 @@
+---
+title: "Component Inventory & Research Coverage"
+status: research
+last_updated: 2026-08-07
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # Component Inventory & Research Coverage
 
 > 更新日期：2026-08-07（Phase 1-4 调研完成：SolidWorks / Bentley / Tekla / E3D Instrumentation）

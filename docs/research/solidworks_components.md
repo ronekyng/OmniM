@@ -1,3 +1,10 @@
+---
+title: "SOLIDWORKS 内置构件体系调研"
+status: research
+last_updated: 2026-08-07
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # SOLIDWORKS 内置构件体系调研
 
 > 调研日期：2026-08-07

@@ -1,3 +1,10 @@
+---
+title: "OmniM — 数据流"
+status: current
+last_updated: 2026-10-27
+applies_to: "crates/, web/"
+evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+---
 # OmniM — 数据流
 
 本文描述**当前代码中真实存在的端到端数据流**,依据 `crates/server/src/lib.rs`、
@@ -8,17 +15,20 @@
 
 ---
 
-## 0. 通用变更规则
+## 0. 通用变更规则 —— 这是目标,不是现状
 
-先讲贯穿所有流程的规则:**对 `Project` 的每一次写入——无论是鼠标点击、AI 回复还是 REST 调用——
-都会变成一条 `OmniCommand`**(schema 定义于 `proto/omcom.proto`,类型位于 `omnim-omcom`),然后经过:
+**目标**(ADR-0006)是:**对 `Project` 的每一次写入——无论是鼠标点击、AI 回复还是 REST 调用——
+都会变成一条 `OmniCommand`**,然后经过:
 
 ```
 OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;有错即中止)
             ──▶ Executor::execute(cmd, &mut Project) ─▶ ExecutionResult + 撤销/重做条目
 ```
 
-这一唯一咽喉点是下文所有图的基础。
+**当前代码并不符合。** 对 `crates/server/src/lib.rs` 的静态扫描发现:55 个 handler 持有 `project.write()`,
+其中 13 个出现 executor;约 **42 个直接修改 `Project`**,不在撤销栈内。只有 5 个 handler 保存。
+逐端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。下文的图在适用处展示目标形态,
+在不适用处明确标出直接写路径。
 
 ---
 
@@ -40,7 +50,7 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;
 │   • 处理器获取 project.write() + executor.write()               │
 │   • 就地拼装 OmniCommand{ action, operations:[…] }              │
 │   • Executor::execute() → 校验 → 修改 Project                   │
-│   • Project::save(save_path) — 自动保存 .omnim JSON 文件        │
+│   • 不保存：POST /api/objects 不属于会保存的 handler             │
 │   • 返回对象/JSON(或错误状态码)                                 │
 └──────────────────────────────┬──────────────────────────────────┘
                                │ 200 OK
@@ -66,6 +76,8 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;
   浏览器是纯粹的展示客户端。
 - **没有推送通道**:每次变更后 UI 重新拉取状态(调用 resolve 后使相关 query 失效)。
   代码库中不存在 WebSocket。
+- 本图只适用于 executor 路径的端点。改名、移动、改父级、连接、赋材质、草图更新/求解、IFC 导入、
+  目录实例化、系列编辑都**直接写 `Project`**(无撤销,通常也不保存)——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 
 ### Mermaid 版本
 
@@ -80,7 +92,7 @@ sequenceDiagram
     S->>O: OmniCommand → validate → execute
     O->>M: 修改 Project
     O-->>S: ExecutionResult
-    S->>M: Project::save(.omnim) 自动保存
+    Note over S,M: 该 handler 不保存
     S-->>U: 200 JSON
     U->>M: GET /api/mesh /api/tree
     M-->>U: 网格 + 对象树 JSON
@@ -134,11 +146,11 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant U as Web UI (库管理 / 导入操作)
-    participant S as omnim-server /api/ifc/*
+    participant S as omnim-server (导入/导出)
     participant I as omnim-ifc (手写 STEP 解析器)
     participant M as omnim-model
     Note over I,M: 导出路径
-    U->>S: 请求导出
+    U->>S: GET /api/export/ifc
     S->>M: 读取当前 Project
     M-->>S: 对象/几何
     S->>I: 将 Project 序列化为 STEP 文本
@@ -146,11 +158,11 @@ sequenceDiagram
     S-->>U: 文件下载
 
     Note over I,M: 导入路径
-    U->>S: 上传 .ifc 文件
+    U->>S: POST /api/import/ifc(原始 IFC 文本)
     S->>I: 解析文本(手写,不依赖 IFC crate)
     I-->>S: 解析出的 IFC 记录 + 映射的几何 (geometry.rs)
-    S->>M: 构造创建对象的 OmniCommand(s)
-    M-->>S: Project 被修改(走 Validator+Executor,随后自动保存)
+    S->>M: 把解析出的对象/材料/生命周期直接插入 Project
+    M-->>S: Project 被修改(不经 Validator/Executor,无撤销,不保存)
     S-->>U: 导入得到的对象
 ```
 
@@ -159,25 +171,26 @@ sequenceDiagram
 - `omnim-ifc` 包含**手写的解析器与序列化器**(没有使用任何 IFC 生态的 Rust crate —— ADR-0005)。
 - 覆盖范围**是局部的** —— 仅覆盖 **IFC 2x3 与 IFC 4** 的一个子集;不支持的实体被跳过,
   而不是整体报错。
-- 导入**不会**原生直写 `Project`;而是转换成 `OmniCommand`(或通过同一命令路径触发的
-  建模调用),这样导入内容与其他变更一样进入撤销栈。
+- **导入直接写 `Project`。** `import_ifc` 把解析出的对象/材料/生命周期记录插入聚合根
+  (`mode=replace` 时整体覆盖项目)。它**不会**把文件转换成 `OmniCommand`,因此导入内容
+  **不可撤销**,也**不会保存**(见 ADR-0005 的实现说明与 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md))。
+- 请求体是**原始 IFC 文本**,不是 multipart —— 用 `curl --data-binary @file.ifc`,不是 `curl -F`。
 - `fixtures/ifc/` 下的示例 IFC 文件(`simple.ifc`, `test_building.ifc`, `part.ifc` 等)
   就是用来跑通这条流的。
-
 ---
 
 ## 4. (d) 目录 / 系列实例化
 
 PARAGON 式**组件目录**与 SPECON 式**系列库**位于 `omnim-model`
-(`catalog.rs`, `seed_catalog.rs`, `series_store.rs`, `library.rs`)。
+(`catalog.rs`, `seed_catalog.rs`, `series_store.rs`, `library.rs`)。目录定义由库/种子目录提供;
+`Project` 只存系列(`Project.series`)与外部系列引用,**没有** `catalog` 字段。
 
 ```mermaid
 flowchart TD
-    A[种子目录<br/>seed_catalog.rs 约 2200 行] -->|加载/构建| B[Project.catalog]
-    U[Web UI CatalogBrowser<br/>SeriesBrowser] -->|POST /api/catalog/...<br/>/api/series/...| S[omnim-server]
-    S -->|构造 OmniCommand<br/>实例化组件、选定系列规格| O[omnim-omcom Executor]
-    O -->|validate + execute| M[omnim-model::Project]
-    M --> F[特性树 / feature_template.rs<br/>GenRule 生成器]
+    A[种子目录 / 库<br/>seed_catalog.rs] -->|提供给 UI| U[Web UI 目录与系列面板]
+    U -->|POST /api/catalog/instantiate| S[omnim-server]
+    S -->|直接写 Project<br/>无 executor、无撤销| M[omnim-model::Project]
+    M --> F[特性树 / feature_template.rs<br/>官方几何路径]
     F --> G[geometry.rs / brep.rs → mesh_gen.rs]
     G --> J[(网格 JSON 交给 three.js)]
 ```
@@ -187,12 +200,17 @@ flowchart TD
 1. **目录条目:** 每个目录组件声明一套参数 schema 与默认参数(PARAGON 式参数驱动的零件定义)。
 2. **系列:** 一个系列把一个目录组件绑定到一组带尺寸的变体(SPECON 式),用户选择的是
    **系列 + 规格**,而非裸尺寸。
-3. **实例化:** 选定后产生一条 *instantiate* `OmniCommand`;执行时在项目树中新增对象,
-   参数取自所选系列的记录。
+3. **实例化:** `POST /api/catalog/instantiate` 当前**直接写 `Project`** —— 不经 Executor,
+   不产生撤销条目,也不保存。它创建的是 `ObjectType::Component`(不是 `Wall`/`Beam`/…),
+   参数取自所选系列记录。
 4. **生成:** 新对象的特性树(`GenRule` 生成器,`feature_template.rs`)驱动几何构建
    (`brep.rs`,走 truck 内核)与网格剖分(`mesh_gen.rs`),最终交给 three.js 查看器。
 
-因此从目录选定之后的一切流程都与 §1 相同,只是**起点**不同。
+**几何路径分裂(重要)。** 目录特征树 → BRep/网格 是**官方几何路径**。工具栏的 `/api/genrule`
+是**遗留/过渡直通路径**:它生成硬编码网格图元,并让 `param_values` 保持为空。因此同一堵墙可能以
+`Wall`(genrule)、`Component`(目录)或 IFC 映射类型(导入)出现,撤销/保存行为各不相同。
+见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md) 与
+[CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27)。
 
 ---
 
@@ -208,15 +226,17 @@ flowchart LR
     C --> E[SharedProject: Arc RwLock Project]
     D --> E
     E --> F[omnim-server 处理所有 /api 请求]
-    F -->|每次变更: 使用 state.save_path 调 Project::save| G[重写 .omnim JSON 文件]
-    F -->|手动/控制台保存端点| G
+    F -->|默认 project.omnim 时 save_path=None| X[不持久化任何内容]
+    F -->|仅 5 个 handler，且 save_path 为 Some| G[重写 .omnim JSON 文件]
 ```
 
 机制细节:
 
-- **一进程一文件。** `omnim_server::ServerConfig { project, save_path, ... }`。
-  `OMNIM_PROJECT` 指向可写路径时 `save_path` 为 `Some`;使用默认占位文件时为 `None`
-  (此时不自动保存)。
+- **一进程一文件。** `omnim_server::ServerConfig { project, save_path, ... }`。`main.rs` 在项目路径
+  恰好为 `project.omnim` 时把 `save_path` 设为 `None`;只有非默认 `OMNIM_PROJECT` 才得到 `Some`。
+- **即使开启也只保存部分变更。** 只有 `update_object`、`add_feature`、`update_feature`、`remove_feature`、
+  `rebuild_component` 调用 `Project::save(path)`。创建对象、`/api/genrule`、`/api/omcom`、目录实例化、
+  IFC 导入、系列编辑都不会保存。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 - **整体重写,非增量。** 每次保存把**整个 `Project`** 序列化成 JSON 并重写文件。
   没有日志(journal)、没有 WAL、没有检查点。
 - **崩溃窗口:** 若进程在"变更成功"与"成功写盘"之间被杀,文件会落后甚至(理论上)截断;

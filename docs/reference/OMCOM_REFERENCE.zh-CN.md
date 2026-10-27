@@ -1,3 +1,10 @@
+---
+title: "OmniCommand 参考 — 类型化命令系统"
+status: reference
+last_updated: 2026-10-27
+applies_to: "crates/server, proto"
+evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
+---
 # OmniCommand 参考 — 类型化命令系统
 
 最后更新：2026-10-27

@@ -1,3 +1,10 @@
+---
+title: "OmniM — 架构决策记录(Architecture Decision Records)"
+status: current
+last_updated: 2026-10-27
+applies_to: "crates/, web/"
+evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+---
 # OmniM — 架构决策记录(Architecture Decision Records)
 
  OmniM 的架构决策记录(ADR)索引。
@@ -33,8 +40,8 @@
 | [ADR-0002](#adr-0002-二维草图约束采用-slvs-库) | 二维草图约束采用 slvs 库 | Accepted |
 | [ADR-0003](#adr-0003-brep-建模采用-truck-内核) | BRep 建模采用 truck 内核 | Accepted |
 | [ADR-0004](#adr-0004-json-文件持久化单-project-rwlock) | JSON 文件持久化(单 Project,RwLock)及其已知局限 | Accepted |
-| [ADR-0005](#adr-0005-手写-ifc-解析器而非-ifc-crate) | 手写 IFC 解析器,而非 ifc crate | Accepted |
-| [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator) | 所有变更路径统一走 Executor/Validator | Accepted |
+| [ADR-0005](#adr-0005-手写-ifc-解析器而非-ifc-crate) | 手写 IFC 解析器,而非 ifc crate | Accepted（含一条实现说明） |
+| [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator目标) | 所有变更路径统一走 Executor/Validator（目标） | Accepted (target) — Partially implemented |
 
 ---
 
@@ -120,15 +127,17 @@ OmniM 不重写 CSG 或 NURBS 数学。
 
 **决策**
 把**整个 `Project`** 持久化为单个 `.omnim` JSON 文件。启动时从 `OMNIM_PROJECT`(默认仓库根目录的
-`project.omnim`)读取。每次被接受的变更后,服务器再次整体落盘(`save_path` 调 `Project::save`);
+`project.omnim`)读取。仅当 `OMNIM_PROJECT` 不是恰好 `project.omnim` 时才启用保存(`save_path = Some`);
+使用默认路径时 `save_path` 为 `None`。**即使开启,也只有 5 个 handler 会保存**
+(`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`)。
+此前"每次被接受的变更都会自动落盘"的说法不成立 —— 见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 没有增量日志、没有 WAL、没有快照轮转。`Arc<RwLock<Project>>` 守护状态
-(见 `server/src/lib.rs`, `model/src/project.rs`)。使用默认占位文件时 `save_path` 为 `None`,
-即运行中的服务器可以不自动保存。
+(见 `server/src/lib.rs`, `model/src/project.rs`)。
 
 **后果**
 - (+) 极易检查、diff、拷贝,甚至手工编辑;零基础设施。
 - (+) 即使版本不匹配,状态也可读取(serde 默认值填补空缺)。
-- (−) 每次变更整体重写文件是 O(项目大小);写盘中途崩溃可能留下截断文件 ——
+- (−) 每次保存整体重写文件是 O(项目大小);写盘中途崩溃可能留下截断文件 ——
   目前尚未使用原子重命名的落盘模式。
 - (−) 没有多进程安全:两个服务器共享同一文件会互相破坏。
 - (−) 没有真正的历史。撤销/重做只存在于 `Executor` 的内存状态。
@@ -148,7 +157,8 @@ OmniM 必须读入并产出 IFC/STEP 文件(IFC 2x3 / IFC 4 子集)。生态里�
 **决策**
 在 `omnim-ifc` 中**手工编写**解析器与序列化器(不依赖任何 IFC crate)。解析器映射我们选定的
 IFC 2x3/4 记录与几何子集,在 `lib.rs`/`geometry.rs` 中显式控制。不支持的实体被**跳过**,
-而不是整体失败。导入内容被转换成 `OmniCommand`,不会绕过变更管线(见 ADR-0006)。
+而不是整体失败。ADR 的原意是让导入内容被转换成 `OmniCommand`,
+从而不绕过变更管线(见 ADR-0006);**当前实现并未这样做**(见下方实现说明)。
 
 **后果**
 - (+) 零外部 IFC 依赖;对产生/消费哪个子集有精确控制。
@@ -158,11 +168,17 @@ IFC 2x3/4 记录与几何子集,在 `lib.rs`/`geometry.rs` 中显式控制。不
   如 `simple.ifc`, `test_building.ifc`, `part.ifc`)。
 - 若 schema 覆盖需求超出可手工维护的范围,应重新审视此决策。
 
+> **实现说明(2026-10-27)。** `POST /api/import/ifc` **不会**把文件转换成 `OmniCommand`。
+> `import_ifc`(`crates/server/src/lib.rs`)解析 IFC 文本后,把得到的对象、材料、生命周期记录
+> **直接插入 `Project`**(`mode=replace` 会覆盖整个项目)。因此导入内容不可撤销,也不会保存。
+> 该偏差记录于 [CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27),
+> 端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+
 ---
 
-### ADR-0006. 所有变更路径统一走 Executor/Validator
+### ADR-0006. 所有变更路径统一走 Executor/Validator（目标）
 
-**状态:** Accepted
+**状态:** Accepted (target) — Partially implemented
 
 **背景**
 变更的来源有多个:REST 处理器、web UI 中的 Omcom 控制台、以及 AI 意图引擎(AMIR 生成的
@@ -182,3 +198,19 @@ IFC 2x3/4 记录与几何子集,在 `lib.rs`/`geometry.rs` 中显式控制。不
 - (+) 以后添加业务规则或审计钩子只需要改一处。
 - (−) 每次变更多一次命令构造 + 校验的开销 —— 在单 Project 内存模型的尺度上可接受。
 - (−) 服务器处理器代码更啰嗦(要构造命令结构体);为正确性接受的取舍。
+
+**偏差(2026-10-27)——状态是目标,不是现状。**
+
+对 `crates/server/src/lib.rs` 的静态扫描([DOC_AUDIT_2026-10-27](../status/DOC_AUDIT_2026-10-27.zh-CN.md)附录 A)发现:
+
+- **55** 个 handler 持有 `project.write()`;
+- 其中只有 **13** 个出现 executor;
+- 约 **42** 个直接修改 `Project`,不产生撤销条目;
+- 只有 **5** 个调用 `Project::save(...)` —— 且没有任何 executor 路径的 handler 保存。默认
+  `project.omnim` 路径下 `save_path` 为 `None`,因此默认启动完全不落盘。
+
+代表性的直接写端点:`update_object`、`transform_object`、`set_parent`、`connect`、`create_material` /
+`assign_material`、`update_sketch` / `solve_sketch`、`update_sketch_entity`、`import_ifc`、
+`instantiate_from_catalog`,以及全部系列编辑 handler。完整矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md);
+偏差记录于 [CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27)。
+恢复该不变量是路线图事项,本条 ADR 目前不能把它当作既成事实。

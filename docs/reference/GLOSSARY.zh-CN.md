@@ -1,3 +1,10 @@
+---
+title: "OmniM 术语表 (Glossary)"
+status: reference
+last_updated: 2026-10-27
+applies_to: "crates/server, proto"
+evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
+---
 # OmniM 术语表 (Glossary)
 
 本文档定义 OmniM 系统中所有术语的中英文对照、含义说明及代码引用。
@@ -11,11 +18,21 @@ OmniM 采用四层对象层级模型：
 | 层级 | 中文 | 英文 | 说明 | 代码位置 |
 |------|------|------|------|----------|
 | Object | 对象 | OmniObject | 系统中所有实体的基类，包括建筑、设备、零件等 | `web/src/shared/types.ts:OmniObject` |
-| Component | 构件 | Component | 由一个或多个特征组成的三维几何体，是 Object 的几何表示 | `crates/model/src/lib.rs:ComponentDef` |
+| Component | 构件（实例容器） | Component | 将多个特征组织为一个逻辑三维体的实例容器节点；其枚举值为 `ObjectType::Component` | `crates/model/src/project.rs:OmniObject` |
 | Feature | 特征 | Feature | 从草图生成三维实体的操作（拉伸、旋转、放样等） | `crates/model/src/feature.rs:Feature` |
 | Sketch | 草图 | Sketch | 二维几何轮廓，包含图元和约束，是特征的输入 | `crates/sketch/src/lib.rs:Sketch` |
 | Entity | 图元 | SketchEntity | 草图中的单个几何元素（线、圆、矩形等） | `crates/sketch/src/lib.rs:SketchEntity` |
 | Constraint | 约束 | SketchConstraint | 限制图元之间几何关系的规则（水平、垂直、相切等） | `crates/sketch/src/lib.rs:SketchConstraint` |
+
+**ComponentDef / Component / Series 辨析：**
+
+- **`ComponentDef`** —— *目录定义*（`crates/model/src/catalog.rs`）：带参数、连接点和
+  `feature_tree_id` 的参数化配方，不是项目中的对象。
+- **`Component`** —— 项目中的*实例容器*（`Feature` 容器节点）。它在
+  `OmniObject.object_type` 中的枚举值为 `ObjectType::Component`
+  （`OBJECT_TYPE_COMPONENT`）。目录实例化创建的是它，与 `ComponentDef` 不是同一概念。
+- **`Series`** —— *规格决策树*（Selector → Answer → SpecComponent），不是“同类对象的
+  集合”。它确认可达的 `ComponentDef`，不是对象实例的集合。
 
 **父子关系**：
 ```
@@ -27,7 +44,8 @@ OmniObject
         └── Feature ...
 ```
 
-**系列 (Series)**：同类对象的集合，通过选择器决策树筛选可用构件。
+**系列 (Series)**：用于确认目录构件的**规格决策树**（Selector → Answer → SpecComponent）。
+它**不是**同类对象实例的集合；其叶节点产生的实例是普通项目对象。
 
 ---
 
@@ -94,14 +112,18 @@ OmniM 支持 50+ 种对象类型，按工程领域分组。
 | `OBJECT_TYPE_PIER` (207) | 桥墩 | Pier | 桥梁墩台 |
 | `OBJECT_TYPE_MANHOLE` (208) | 检查井 | Manhole | 市政检查井 |
 | `OBJECT_TYPE_ABUTMENT` (209) | 桥台 | Abutment | 桥梁桥台 |
-| `OBJECT_TYPE_CUT_VOLUME` (220) | 挖方量 | Cut Volume | 两曲面之间的挖方量 |
-| `OBJECT_TYPE_FILL_VOLUME` (221) | 填方量 | Fill Volume | 两曲面之间的填方量 |
-| `OBJECT_TYPE_GRADING_SURFACE` (222) | 平整曲面 | Grading Surface | 设计整平面 |
-| `OBJECT_TYPE_SLOPE` (223) | 边坡 | Slope | 填方或挖方边坡 |
+| 🗓 `OBJECT_TYPE_CUT_VOLUME` (220) | 挖方量 | Cut Volume | 两曲面之间的挖方量 |
+| 🗓 `OBJECT_TYPE_FILL_VOLUME` (221) | 填方量 | Fill Volume | 两曲面之间的填方量 |
+| 🗓 `OBJECT_TYPE_GRADING_SURFACE` (222) | 平整曲面 | Grading Surface | 设计整平面 |
+| 🗓 `OBJECT_TYPE_SLOPE` (223) | 边坡 | Slope | 填方或挖方边坡 |
 | `OBJECT_TYPE_FEATURE_LINE` (224) | 特征线 | Feature Line | 用于整平控制的 3D 特征线 |
 | `OBJECT_TYPE_CONTOUR_LINE` (225) | 等高线 | Contour Line | 高程等高线 |
-| `OBJECT_TYPE_SITE_COMPONENT` (226) | 场地构件 | Site Component | 可复用的场地布局构件 |
-| `OBJECT_TYPE_EARTHWORK_BALANCE` (227) | 土方平衡 | Earthwork Balance | 挖填平衡分析结果 |
+| 🗓 `OBJECT_TYPE_SITE_COMPONENT` (226) | 场地构件 | Site Component | 可复用的场地布局构件 |
+| 🗓 `OBJECT_TYPE_EARTHWORK_BALANCE` (227) | 土方平衡 | Earthwork Balance | 挖填平衡分析结果 |
+
+> 🗓 = **计划中，不在 ObjectType 枚举内**（`proto/omnim.proto`）。这九行
+> （CutVolume、FillVolume、GradingSurface、Slope、SiteComponent、EarthworkBalance、
+> ControlValve、Cable、Conduit）仅为调研/设计目标；通过 API 创建不会得到所列枚举值。
 
 ### 2.4 工厂设计 (Plant Elements)
 
@@ -117,9 +139,11 @@ OmniM 支持 50+ 种对象类型，按工程领域分组。
 | `OBJECT_TYPE_FITTING` (307) | 管件 | Pipe Fitting | 弯头/三通/变径等 |
 | `OBJECT_TYPE_COMPRESSOR` (308) | 压缩机 | Compressor | 气体压缩机 |
 | `OBJECT_TYPE_INSTRUMENT` (309) | 仪表 | Instrument | 过程仪表/传感器 |
-| `OBJECT_TYPE_CONTROL_VALVE` (310) | 调节阀 | Control Valve | 带执行器+定位器的阀门 |
-| `OBJECT_TYPE_CABLE` (311) | 电缆 | Cable | 电力/信号/控制电缆 |
-| `OBJECT_TYPE_CONDUIT` (312) | 导管 | Conduit | 电缆保护导管 |
+| 🗓 `OBJECT_TYPE_CONTROL_VALVE` (310) | 调节阀 | Control Valve | 带执行器+定位器的阀门 |
+| 🗓 `OBJECT_TYPE_CABLE` (311) | 电缆 | Cable | 电力/信号/控制电缆 |
+| 🗓 `OBJECT_TYPE_CONDUIT` (312) | 导管 | Conduit | 电缆保护导管 |
+
+> 🗓 = **计划中，不在 ObjectType 枚举内**（`proto/omnim.proto`）；见 §2.3 的说明。
 
 > **管件类型**（E3D 目录，`docs/research/aveva_e3d_primitives.md §4.2`）：ELBO（弯头）、BEND（弯管）、TEE（三通）、VALV（阀门）、FLAN（法兰）、GASK（垫片）、REDUCER（大小头）、VENT（排气口）、DRAIN（排液口）、CAP（管帽）、OLET（管座）。这些是定义在 `OBJECT_TYPE_FITTING` 下的参数化目录条目。
 >
@@ -147,7 +171,7 @@ OmniM 支持 50+ 种对象类型，按工程领域分组。
 | 枚举值 | 中文 | 英文 | 说明 |
 |--------|------|------|------|
 | `OBJECT_TYPE_GENERIC` (999) | 通用 | Generic | 通用/未分类对象 |
-| `OBJECT_TYPE_COMPONENT` (500) | 构件 | Component | 构件定义（目录） |
+| `OBJECT_TYPE_COMPONENT` (500) | 构件（实例容器） | Component | 实例化的构件容器（`ComponentDef` 才是目录定义） |
 
 ---
 
@@ -679,7 +703,7 @@ GenRule 是将领域语义映射到几何图元的规则系统。
 
 ## 17b. 系列库 (Series Library / 等级库)
 
-> **独立模块**：SeriesStore 是独立模块，不属于 Library 或 Project。它定义选择器决策树（Series → Selector → SpecComponent），通过 ComponentDef ID 引用 Library 内容。系列可以存在于：(1) 项目私有 SeriesStore（嵌入 `.omnim` 文件），(2) 外部 `.omnimseries` 文件按路径引用，(3) 系统内置种子系列。只有通过项目系列可达的构件才能使用（series gate）。
+> **独立模块**：SeriesStore 是独立模块，不属于 Library。Project 持有自己的私有 SeriesStore 实例（`Project.series`）。它定义选择器决策树（Series → Selector → SpecComponent），通过 ComponentDef ID 引用 Library 内容。系列可以存在于：(1) 项目私有 SeriesStore（嵌入 `.omnim` 文件），(2) 外部 `.omnimseries` 文件按路径引用，(3) 系统内置种子系列。只有通过项目系列可达的构件才能使用（series gate —— 仅可达性检查，🔀）。
 
 | 系列名称 | 领域 | 标准 | 构件 |
 |---------|------|------|------|
@@ -817,7 +841,7 @@ Project 中的对象，带缓存几何、特征历史、
 
 > **调研参考**：AVEVA Instrumentation Loop/Tag（`docs/research/e3d_instrumentation_components.md §4`）。
 
-`LogicalObject` 是无几何的工程实体（Tag/Loop/LineNumber），通过 `member_object_ids` 引用物理对象。是与 `Object` 并列的新基类型。参见 [数据模型 §6.9](../specification/DATA_MODEL.zh-CN.md#69-逻辑对象logicalobject-tag--loop--linenumber)。
+`LogicalObject` 是无几何的工程实体（Tag/Loop/LineNumber），通过 `member_object_ids` 引用物理对象。是与 `Object` 并列的新基类型。参见 [数据模型 §6.9](../specification/DATA_MODEL.zh-CN.md#69-逻辑对象-logicalobject-tag--loop--linenumber)。
 
 | 概念 | 中文 | 说明 |
 |------|------|------|
@@ -838,7 +862,7 @@ Project 中的对象，带缓存几何、特征历史、
 
 > **调研参考**：SOLIDWORKS 21 类配合（`docs/research/solidworks_components.md §4`）。
 
-`Constraint` 约束 Assembly 子对象之间的自由度关系。存储在 `RelationStore` 中，与连接并列。参见 [数据模型 §6.12](../specification/DATA_MODEL.zh-CN.md#612-约束系统constraint-mates)。
+`Constraint` 约束 Assembly 子对象之间的自由度关系。存储在 `RelationStore` 中，与连接并列。参见 [数据模型 §6.12](../specification/DATA_MODEL.zh-CN.md#612-约束系统-constraint-mates)。
 
 | 类别 | 中文 | 类型 |
 |------|------|------|
@@ -862,7 +886,7 @@ Project 中的对象，带缓存几何、特征历史、
 
 > **调研参考**：Bentley OBM 拼装梁变截面（`docs/research/bentley_openroads_components.md §2.1.3`）。
 
-`CrossSectionSegment` 的横断面插值方法，从单一线性扩展为 6 种：Constant、Linear、Parabolic Up/Down、Circular Up/Down。参见 [数据模型 §6.4](../specification/DATA_MODEL.zh-CN.md#64-线构件-lineancomponent)。
+`CrossSectionSegment` 的横断面插值方法，从单一线性扩展为 6 种：Constant、Linear、Parabolic Up/Down、Circular Up/Down。参见 [数据模型 §6.4](../specification/DATA_MODEL.zh-CN.md#64-线构件-linearcomponent)。
 
 ---
 
@@ -1082,3 +1106,12 @@ Project 中的对象，带缓存几何、特征历史、
 | PMI | Product Manufacturing Information | 产品制造信息 | 制造标注信息 |
 | LOD | Level of Detail | 细节层次 | 模型精细度级别 |
 | COBie | Construction Operations Building Information Exchange | 施工运维信息交换 | 运维数据交换格式 |
+
+## 附加词条：语义名/创成分类/路径（2026-10-27）
+
+| 术语 | 英文 | 定义 |
+|------|------|------|
+| 路径 | Path | 路径式创建（Path）的统一产物：`Path { points, closed }`。开放路径驱动面板墙/特征线/道路线形；闭合路径驱动区域板/屋顶/地面。统一原 `path[]`/`boundary[]`/`alignment[]` 三种拼写（服务端别名归一；统一契约待实现——见 status/ROADMAP.md "Accepted Designs"）。 |
+| 创成方式 | Genesis | 实例级的创建方式——其几何分类（面/线/点/体）+ 实现家族（GenRule）+ 形态。记录在对象实例上，从不由对象语义名推导。一个 ObjectType（如 Wall）可合法拥有多个创成分类（见数据模型 §1 双轴模型）。 |
+| 形态 | Form | 实现家族内的子变体，显式枚举（LayerExtrusion：`panel`/`region`；屋顶：`footprint`/`extrusion-profile`）。UI 拾取模式由形态推导。 |
+| 授权矩阵 | Authorization matrix | 以 `(objectType, 创成分类/形态)` 为键的治理表：哪些创建方式对哪些语义名合法。矩阵外的 genrule 请求被拒绝（400）。见数据模型 §1 治理规则。 |

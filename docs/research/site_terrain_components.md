@@ -1,3 +1,10 @@
+---
+title: "CAD/BIM 平台场地与地形构件逻辑研究"
+status: research
+last_updated: 2026-08-07
+applies_to: "n/a (research)"
+evidence: "n/a (background research)"
+---
 # CAD/BIM 平台场地与地形构件逻辑研究
 
 > 调研日期：2026-08-07

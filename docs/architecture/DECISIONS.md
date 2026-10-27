@@ -1,3 +1,10 @@
+---
+title: "OmniM — Architecture Decision Records"
+status: current
+last_updated: 2026-10-27
+applies_to: "crates/, web/"
+evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+---
 # OmniM — Architecture Decision Records
 
 This is the index of Architecture Decision Records (ADRs) for OmniM.
@@ -34,8 +41,8 @@ Rules:
 | [ADR-0002](#adr-0002-slvs-library-for-2d-sketch-constraints) | slvs library for 2D sketch constraints | Accepted |
 | [ADR-0003](#adr-0003-truck-kernel-for-brep-modeling) | truck kernel for BRep modeling | Accepted |
 | [ADR-0004](#adr-0004-json-file-persistence-single-project-rwlock) | JSON-file persistence (single Project, RwLock) | Accepted |
-| [ADR-0005](#adr-0005-hand-written-ifc-parser) | Hand-written IFC parser rather than an ifc crate | Accepted |
-| [ADR-0006](#adr-0006-unified-executorvalidator-for-all-mutation-paths) | Unified Executor/Validator for all mutation paths | Accepted |
+| [ADR-0005](#adr-0005-hand-written-ifc-parser) | Hand-written IFC parser rather than an ifc crate | Accepted (one implementation note) |
+| [ADR-0006](#adr-0006-unified-executorvalidator-for-all-mutation-paths-target) | Unified Executor/Validator for all mutation paths (target) | Accepted (target) — Partially implemented |
 
 ---
 
@@ -123,14 +130,12 @@ branching, are explicitly **planned** but not implemented (see [PLATFORM_ARCH.md
 
 **Decision**
 Persist the **entire `Project`** as a single `.omnim` JSON file. At startup, the file is loaded from `OMNIM_PROJECT` (default `project.omnim`, resolved against the server's CWD).
-On every accepted mutation (`register` handler), server auto-saves the file again; there is no incremental
-journal, no WAL, no snapshot rotation. Public API surface: `Arc<RwLock<Project>>` guards state (see
-`server/src/lib.rs`, `model/src/project.rs`).
+Saving is enabled only when `OMNIM_PROJECT` is not exactly `project.omnim` (`save_path = Some`); with the default path `save_path` is `None`. **Even when enabled, only five handlers save** (`update_object`, `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`). The earlier claim that "every accepted mutation auto-saves" is not true today — see [WRITE_PATHS.md](WRITE_PATHS.md). There is no incremental journal, no WAL, no snapshot rotation. Public API surface: `Arc<RwLock<Project>>` guards state (see `server/src/lib.rs`, `model/src/project.rs`).
 
 **Consequences**
 - (+) Trivial to inspect, diff, copy, and hand-edit files; zero infra.
 - (+) State is always readable, even across version mismatches (serde defaults fill in gaps).
-- (−) Whole-file rewrite per mutation is O(project size); a crash mid-write can truncate the file — no
+- (−) Whole-file rewrite per save is O(project size); a crash mid-write can truncate the file — no
   atomic-rename pattern is currently used.
 - (−) No multi-process safety: two servers sharing the file corrupt it.
 - (−) No real history. Undo/redo lives only in-memory in `Executor` state.
@@ -150,8 +155,9 @@ custom partial-coverage semantics awkward (OmniM only needs the entities it can 
 **Decision**
 Write the **parser and serializer by hand** in `omnim-ifc` (no IFC crate dependency). The parser maps a chosen
 subset of IFC 2x3/4 records and geometry, controlled explicitly in `lib.rs`/`geometry.rs`. Non-supported
-entities are **skipped**, not fail-whole. Imports are converted into `OmniCommand`s so nothing bypasses the
-mutation pipeline (see ADR-0006).
+entities are **skipped**, not fail-whole. The ADR's original intent was that imports be converted into `OmniCommand`s
+so nothing bypasses the mutation pipeline (see ADR-0006); **the implementation does not do this today** (see the
+implementation note below).
 
 **Consequences**
 - (+) Zero external IFC dependency; precise control over which subset is produced/consumed.
@@ -161,11 +167,18 @@ mutation pipeline (see ADR-0006).
   `fixtures/ifc/`, e.g. `simple.ifc`, `test_building.ifc`, `part.ifc`).
 - Revisit if/when schema coverage requirements outgrow the hand-rolled subset.
 
+> **Implementation note (2026-10-27).** `POST /api/import/ifc` does **not** translate the file into `OmniCommand`s.
+> `import_ifc` (`crates/server/src/lib.rs`) parses IFC text and inserts the resulting objects, materials, and
+> lifecycle records **directly into `Project`** (`mode=replace` overwrites the project). Imported content is
+> therefore not undoable and is not saved. This is recorded in
+> [CODE_DEVIATIONS.md §6](../status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27)
+> and in the endpoint matrix at [WRITE_PATHS.md](WRITE_PATHS.md).
+
 ---
 
-### ADR-0006. Unified Executor/Validator for all mutation paths
+### ADR-0006. Unified Executor/Validator for all mutation paths (target)
 
-**Status:** Accepted
+**Status:** Accepted (target) — Partially implemented
 
 **Context**
 Mutations originate from *several* sources: REST handlers, console (Omcom console in web UI), and the AI intent
@@ -187,3 +200,19 @@ same Validator/Executor. No path writes to `Project` sidewise (except read-only 
 - (−) Every mutation costs one command serialization + validation round — acceptable at the scale of one
   in-memory project.
 - (−) Server-side handler code is more verbose (building command structs), a tradeoff accepted for correctness.
+
+**Deviation (2026-10-27) — status is target, not current.**
+
+A static scan of `crates/server/src/lib.rs` (Appendix A of [DOC_AUDIT_2026-10-27](../status/DOC_AUDIT_2026-10-27.zh-CN.md)) found:
+
+- **55** handlers hold `project.write()`;
+- only **13** of them mention the executor;
+- **~42** mutate `Project` directly, with no undo entry; and
+- only **5** call `Project::save(...)` — and none of the executor-path handlers do. With the default
+  `project.omnim` path, `save_path` is `None`, so the default launch persists nothing.
+
+Representative direct writes: `update_object`, `transform_object`, `set_parent`, `connect`, `create_material` /
+`assign_material`, `update_sketch` / `solve_sketch`, `update_sketch_entity`, `import_ifc`,
+`instantiate_from_catalog`, and all series edit handlers. The full matrix is in [WRITE_PATHS.md](WRITE_PATHS.md);
+the deviations are tracked in [CODE_DEVIATIONS.md §6](../status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27).
+Restoring this invariant is a roadmap item, not something this ADR can assert today.
