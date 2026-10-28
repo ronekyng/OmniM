@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-10-27
+last_updated: 2026-10-28
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图阶段组织。
 
-**最后更新：2026-10-27**
+**最后更新：2026-10-28**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,14 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-10-28] — Git 分支与工作流规范
+
+### 新增
+- 分支模型定稿：`main`（发布基线）+ `develop`（staging，推送至 `origin/develop`）；短期 `<type>/<phase>-<slug>` 分支；新规范先走 `docs/*` 再走 `feat/*`（文档先行）。见[分支与工作流指南](../guides/BRANCHING.zh-CN.md)。
+- 提交规范（Conventional Commits，scope 取 crate/area 名）与合并策略：任务 squash 合入 `develop`；`release/*`/`hotfix/*` 以 merge commit 合入 `main`；每次 `main` 变动后立即回合并 `develop`。
+- 阶段式 annotated tag（`phase-7` 基线、`phase-8`、`phase-8.1`、`phase-8-rc.1`）；项目仍不使用语义化版本。
+- 配套工具：`.github/workflows/ci.yml`（fmt/clippy/test/web 构建/docs 检查）、PR base/head 守卫（`scripts/ci/branch_guard.py`）、PR 模板、`.gitattributes`、本地钩子（`.githooks/commit-msg`、`.githooks/pre-push`）、提交模板（`.gitmessage`）、一键配置（`scripts/setup-git.sh`）。
 
 ## [2026-10-27] — 文档重组与死代码清理
 

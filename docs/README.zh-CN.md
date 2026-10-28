@@ -30,6 +30,7 @@ evidence: "verified against the docs tree 2026-10-27"
 ### 🚀 我想上手试用
 - [快速开始](guides/GETTING_STARTED.zh-CN.md) — 编译服务端、启动 Web 界面、迈出第一步
 - [构建指南](guides/BUILDING.zh-CN.md) — 工具链、环境变量、脚本、故障排查
+- [Git 分支与工作流](guides/BRANCHING.zh-CN.md) — 分支模型、提交规范、合并与发布规则
 
 ### 🧭 我想理解系统
 - [平台架构](architecture/PLATFORM_ARCH.zh-CN.md) — 当前实现的分层架构

@@ -31,6 +31,7 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 ### 🚀 I want to try it
 - [Getting Started](guides/GETTING_STARTED.md) — build the server, run the web UI, first steps ([中文](guides/GETTING_STARTED.zh-CN.md))
 - [Building](guides/BUILDING.md) — toolchain, environment variables, scripts, troubleshooting ([中文](guides/BUILDING.zh-CN.md))
+- [Branching & Workflow](guides/BRANCHING.md) — branch model, commit convention, merge and release rules ([中文](guides/BRANCHING.zh-CN.md))
 
 ### 🧭 I want to understand the system
 - [Platform Architecture](architecture/PLATFORM_ARCH.md) — current implementation, layer by layer ([中文](architecture/PLATFORM_ARCH.zh-CN.md))

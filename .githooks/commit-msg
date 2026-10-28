@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Commit message check (Conventional Commits for OmniM).
+
+Exits 1 unless the first line matches:
+    <type>(<scope>)?: <summary>   or   <type>!: <summary>
+Valid types: feat fix docs refactor test chore perf build ci revert
+Merge commits ("Merge ...") and revert headers ("Revert ...") are allowed.
+Optional scoping: type(scope)! or type(scope) followed by ':'.
+"""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+
+# note: plain string (not a tuple) — it is interpolated into the regex below
+TYPES = "feat|fix|docs|refactor|test|chore|perf|build|ci|revert"
+HEADER_RE = re.compile(
+    rf"^({TYPES})(\((?:core|model|sketch|omcom|server|ifc|amir|web|proto|docs|scripts)\))?!?: .{{1,80}}$"
+)
+ALLOWED_PREFIX = re.compile(r"^(Merge|Revert) ")
+
+
+def main() -> int:
+    if len(sys.argv) < 2:
+        print("usage: commit-msg <file>", file=sys.stderr)
+        return 1
+    lines = Path(sys.argv[1]).read_text(encoding="utf-8", errors="replace").splitlines()
+    header = lines[0] if lines else ""
+
+    if header.startswith("#"):
+        print("commit-msg: 提交信息不能为空 (commit message is empty/comment only)")
+        return 1
+    if ALLOWED_PREFIX.match(header):
+        return 0
+    if HEADER_RE.match(header):
+        return 0
+
+    print(
+        "commit-msg: 首行需符合 '<type>(<scope>): <摘要>'\n"
+        f"  实际: {header!r}\n"
+        f"  type 取值: feat fix docs refactor test chore perf build ci revert\n"
+        f"  scope 取值: core model sketch omcom server ifc amir web proto docs scripts",
+        file=sys.stderr,
+    )
+    return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

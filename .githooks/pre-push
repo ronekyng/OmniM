@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Blocks direct pushes to shared branches (main/develop) as a local fallback
+# for GitHub branch protection. Bypass intentionally possible with --no-verify.
+set -euo pipefail
+
+remote="$1"
+shift
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/develop)
+      echo "pre-push: 拒绝直接推送共享分支 $remote_ref" >&2
+      echo "pre-push: 请使用短期分支 + PR（见 docs/guides/BRANCHING.zh-CN.md）" >&2
+      echo "pre-push: release/* 与 hotfix/* 的 PR 合并走网页端，不受此钩子影响" >&2
+      exit 1
+      ;;
+    refs/tags/*)
+      # tag pushes are allowed; releases are tagged on main after PR merge
+      ;;
+  esac
+done
+
+exit 0

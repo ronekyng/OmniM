@@ -1,0 +1,9 @@
+<type>(<scope>): <摘要（一句话，现在是什么状态/做了什么）>
+
+为什么这样改（中文正文，写动机与取舍），关联文档:
+docs/specification/XXX.md §N
+
+# ---- 有效 type: feat fix docs refactor test chore perf build ci revert ----
+# 有效 scope: core model sketch omcom server ifc amir web proto docs scripts
+# 破坏性变更加 !: 例 feat(proto)!: ...，并在正文写迁移办法
+# 可选页脚: Refs: docs/status/ROADMAP.zh-CN.md / Phase: 8

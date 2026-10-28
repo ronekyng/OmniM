@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-10-27
+last_updated: 2026-10-28
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -21,6 +21,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-10-28] — Git branching & workflow policy
+
+### Added
+- Branching policy: `main` (release baseline) + `develop` (staging, pushed to `origin/develop`); short-lived `<type>/<phase>-<slug>` branches; docs-first split (`docs/*` before `feat/*` for new specifications). See [BRANCHING](../guides/BRANCHING.md).
+- Commit convention (Conventional Commits, scopes from crate/area names) and merge policy (squash into `develop`, merge-commit `release/*` → `main`, immediate `main` → `develop` back-merge after every release/hotfix).
+- Phase-style annotated tags (`phase-7` baseline, `phase-8`, `phase-8.1`, `phase-8-rc.1`); the project still does not use SemVer.
+- Tooling: `.github/workflows/ci.yml` (fmt/clippy/test/web build/docs check), PR base/head guard (`scripts/ci/branch_guard.py`), PR template, `.gitattributes`, local hooks (`.githooks/commit-msg`, `.githooks/pre-push`), commit template (`.gitmessage`), one-shot setup (`scripts/setup-git.sh`).
 
 ## [2026-10-27] — Documentation reorganization & dead-code cleanup
 
