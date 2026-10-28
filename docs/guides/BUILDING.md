@@ -59,7 +59,8 @@ Environment variables (read in `crates/server/src/main.rs` and `crates/amir/src/
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `OMNIM_PROJECT` | `project.omnim` | Project file to load (created if missing). Saving is enabled **only** when this value is not exactly `project.omnim`; even then only five handlers save (see [Persistence](#persistence)). On `cargo run`, the CWD is the **crate dir** (`crates/server/`), so use `../project.omnim` or an absolute path to point at files in the repo root. |
+| `OMNIM_PROJECT` | `project.omnim` | Project file to load **and save** (created if missing). On `cargo run`, the CWD is the **crate dir** (`crates/server/`), so use `../project.omnim` or an absolute path to point at files in the repo root. |
+| `OMNIM_EPHEMERAL` | unset | `1`/`true`/`yes` runs the server fully in memory — no file writes at all. |
 | `OMNIM_HOST` | `0.0.0.0` | Bind host. |
 | `OMNIM_PORT` | `3000` | Bind port. |
 | `AMIR_PROVIDER` | `mock` | LLM provider: `mock` (no key needed), `openai`, or `anthropic`. |
@@ -78,18 +79,16 @@ Data files:
 
 ### Persistence
 
-Persistence is **off by default and partial even when enabled**. The exact behavior in `crates/server/src/main.rs` and `crates/server/src/lib.rs` is:
+Persistence is **on by default** (as of 2026-10-28). The exact behavior in `crates/server/src/main.rs` is:
 
 1. `project_file = OMNIM_PROJECT`, defaulting to the literal `project.omnim`.
-2. `save_path = None` if `project_file == "project.omnim"`; otherwise `save_path = Some(project_file)`.
-3. Handlers save **only** when `state.save_path` is `Some` **and** the handler is one of the five that call `Project::save(...)`: `update_object`, `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`.
+2. `save_path = Some(project_file)` **unless `OMNIM_EPHEMERAL` is `1`/`true`/`yes`**, which disables all file writes.
+3. `Project::save` writes atomically: serialize to `{path}.tmp`, then rename over the target. Failures to save are logged (`Auto-save failed: ...`) and do not fail the request. A failing request never persists — the in-memory mutation already exists.
 
-Consequences:
+Coverage is still partial:
 
-- Plain `cargo run -p omnim-server --bin omnim` (no env) never persists mutations.
-- `OMNIM_PROJECT=project.omnim` is still treated as the default and does **not** enable saving.
-- `scripts/dev-server.sh` forwards `OMNIM_PROJECT`, but its default is `project.omnim` — so the default script launch also does not persist. Export a different path before running it (e.g. `OMNIM_PROJECT=./dev-project.omnim scripts/dev-server.sh`) to enable the save path.
-- Creating objects, `/api/genrule`, `/api/omcom`, catalog instantiation, IFC import, and series edits are **not saved**, even with a non-default path. Full endpoint-by-endpoint status is in [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
+- **Saved** (executor path): create/delete object, `/api/omcom`, `/api/undo`, `/api/redo`, `/api/genrule`, sketch mutations (create/delete/entity/constraint), plus `update_object` and the four feature handlers; explicit `POST /api/project/save`.
+- **Saved**: everything else, including transform/parent/connect, materials, measurements, administrative/breakdown, series, catalog definitions, catalog instantiation and IFC import. Only `.omnimlib` import into the session-global library is outside project persistence. Full matrix in [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
 
 Debug notes: the literal `serve` argument typed after the binary is ignored. Logging is plain `eprintln!` in places; a cold start regenerates proto types via `crates/core/build.rs` (`OUT_DIR`).
 
@@ -125,7 +124,7 @@ Scripts live in `scripts/` and all resolve paths relative to the repo root (`cd 
 
 - **Port 3000 already in use.** Either run `scripts/stop-server.sh`, or pick another port: `OMNIM_PORT=3100 cargo run -p omnim-server --bin omnim` (then point the Vite proxy at that port). Old server instances of this very project are the usual culprit — `dev-server.sh` kills them for you.
 - **AI chat doesn't call a real LLM.** With no env configured, `AmirConfig::from_env()` defaults `AMIR_PROVIDER` to `mock`, which produces canned responses. To use a real provider, export `AMIR_PROVIDER=openai|anthropic` plus `AMIR_API_KEY` (or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`). This mock fallback is by design, so keyless demos work offline.
-- **Project data didn't persist / reappear.** This is expected unless BOTH conditions hold: (1) `OMNIM_PROJECT` is a non-default path (an absolute path or something other than `project.omnim`), and (2) the action you took is one of the five saving handlers (`update_object`, add/update/remove feature, rebuild component). Object creation, genrule, `/api/omcom`, catalog instantiation, IFC import, and series edits are not saved. See [Persistence](#persistence) and [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
+- **Project data didn't persist / reappear.** Defaults persist to `project.omnim` / `$OMNIM_PROJECT`; check that `OMNIM_EPHEMERAL` is not `1`/`true`/`yes` and that the server CWD points at the file you expect. `.omnimlib` imports are library state, not project state. Full matrix: [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
 - **Bad library file at `~/.omnim/library.omnimlib`.** A parse failure logs a warning and silently uses the seeded catalog; delete or fix the file to stop the warning.
 - **WSL2 networking.** `dev-server.sh` prints a WSL2 eth0 IP; from Windows use that URL instead of localhost if localhost forwarding doesn't work.
 - **Stale `scripts/update_roadmap.py`.** It's a one-off, left in place; not part of any build/test flow. Ignore it.

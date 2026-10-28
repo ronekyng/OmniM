@@ -263,6 +263,8 @@ impl OmcomGenerator {
         // Create modify operation
         let op = c::Operation {
             op: Some(c::operation::Op::ModifyObject(c::ModifyObjectOperation {
+                new_ifc_class: None,
+                new_tags: None,
                 object_id: target_id,
                 new_name,
                 new_description: new_desc,
@@ -630,6 +632,7 @@ impl OmcomGenerator {
                 name: format!("sketch-on-{}", parent_ref),
                 origin: None,
                 normal: None,
+                component_id: String::new(),
             })),
         };
         Ok(vec![make_command(c::Action::CreateObject, "sketch", None, vec![op])])
@@ -649,6 +652,8 @@ impl OmcomGenerator {
                 is_cut: false,
                 input_sketch_ids: vec![sketch_ref.to_string()],
                 axis_sketch_id: String::new(),
+                name: None,
+                lod: None,
             })),
         };
         let name = format!("Extrude-{}", sketch_ref);
@@ -669,6 +674,8 @@ impl OmcomGenerator {
                 is_cut: false,
                 input_sketch_ids: vec![sketch_ref.to_string()],
                 axis_sketch_id: String::new(),
+                name: None,
+                lod: None,
             })),
         };
         let name = format!("Revolve-{}", sketch_ref);
@@ -701,6 +708,8 @@ impl OmcomGenerator {
                 is_cut: false,
                 input_sketch_ids: Vec::new(),
                 axis_sketch_id: String::new(),
+                name: None,
+                lod: None,
             })),
         };
         let name = format!("{}-on-{}", feature_type, parent_ref);
@@ -731,6 +740,8 @@ impl OmcomGenerator {
                 is_cut: operation != "union" && operation != "intersect",
                 input_sketch_ids: vec![target_ref.to_string(), tool_ref.to_string()],
                 axis_sketch_id: String::new(),
+                name: None,
+                lod: None,
             })),
         };
         let name = format!("Boolean-{}-{}", operation, target_ref);

@@ -22,6 +22,18 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-28] — 单一写入路径与持久化（Wave 1）
+
+### 变更（Changed）
+- **单一写入路径恢复**（审计 P0-2）：所有变更 REST handler 都构造 `OmniCommand` 并经 `Validator` + `Executor`，或在持锁时委托 `Executor`。直写 `Project` 从 **42 → 0**；新增 op 覆盖材质、草图/构件/目录细节、系列、生命周期、测量、管理区/分解、目录实例化与 `load_series`。
+- **持久化默认开启**（审计 P0-3）：变更写入 `$OMNIM_PROJECT`（默认 `project.omnim`）；`OMNIM_EPHEMERAL=1` 关闭写入。`Project::save` 为原子写（`{path}.tmp` → rename，自动建父目录）。新增路由 `POST /api/project/save`（去重后 79 条）。
+- **撤销/重做覆盖完整**：端点级测试位于 `crates/server/tests/write_paths.rs` 与 `instantiate_import.rs`，覆盖对象/属性/材质、草图、构件、目录定义、系列、生命周期、测量、管理区/分解、实例化与 IFC 导入。修复了连接删除、生命周期记录、记录关联三处原有的错误撤销/重做。
+- **IFC 导入为单步事务**：`Command::ReplaceProject { before, after }`——undo 恢复导入前项目，redo 重放。**目录预览改为只读**（在一次性项目上构建）；目录实例化把对象与生成的草图记录为一条命令。
+- **CI 守卫**：`scripts/check_write_paths.py`（要求 0 直写）与 `scripts/check_docs.py` 接入 CI；`scripts/test-all.sh` 现在依次跑两者、`cargo test` 与 web 单测。
+
+### 修复（Fixed）
+- 已记录例外：`section_handler`（仅缓存刷新锁）、`import_ifc`（单条整项目命令）、`POST /api/catalog/import`（会话级全局 `LIBRARY`，非项目状态）。见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)。
+
 ## [2026-10-28] — Git 分支与工作流规范
 
 ### 新增

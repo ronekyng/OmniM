@@ -13,6 +13,9 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
+pub mod mutation;
+use mutation::ApiError;
+
 /// Shared application state: project + Omcom executor + AMIR AI engine
 pub struct AppState {
     pub project: SharedProject,
@@ -54,6 +57,7 @@ fn build_router(state: SharedState) -> Router {
     Router::new()
         .route("/api/health", get(health))
         .route("/api/project", get(get_project))
+        .route("/api/project/save", post(save_project))
         .route("/api/tree", get(get_tree))
         .route("/api/stats", get(get_stats))
         .route("/api/objects", get(list_objects))
@@ -142,6 +146,22 @@ async fn health() -> &'static str { "ok" }
 
 async fn get_project(State(state): State<SharedState>) -> Json<Project> {
     Json(state.project.read().await.clone())
+}
+
+/// POST /api/project/save — explicit persistence point.
+///
+/// Independent of `OMNIM_EPHEMERAL`-driven auto-save, the client can force a
+/// save. Responds 200 with the path that was written, or 400 when persistence
+/// is disabled, 500 on write failure.
+async fn save_project(
+    State(state): State<SharedState>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let Some(path) = state.save_path.clone() else {
+        return Err((StatusCode::BAD_REQUEST, "persistence is disabled (OMNIM_EPHEMERAL=1)".into()));
+    };
+    let p = state.project.read().await;
+    p.save(&path).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("save failed: {}", e)))?;
+    Ok(Json(serde_json::json!({ "success": true, "saved": path })))
 }
 
 #[derive(Serialize, Clone)]
@@ -254,26 +274,38 @@ async fn create_object(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    let obj_id = result.created_ids.first().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let obj_id = result.created_ids.first().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
 
-    // If parent_id was specified, set up the containment relationship
+    // If parent_id was specified, set up the containment relationship through
+    // the executor (MoveObject) so it lands on the undo stack too.
     if let Some(ref pid) = req.parent_id {
         if !pid.is_empty() {
-            let _ = p.set_parent(obj_id, pid);
+            let op = c::Operation {
+                op: Some(c::operation::Op::MoveObject(c::MoveObjectOperation {
+                    object_id: obj_id.clone(),
+                    new_parent_id: pid.clone(),
+                })),
+            };
+            exe.execute(&mutation::envelope(c::Action::MoveObject, vec![op]), &mut p);
         }
     }
 
-    let obj = p.objects.get_mut(obj_id).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+    let obj = p.objects.get(&obj_id).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
 
     // Apply extra fields not supported by Omcom CreateObject protocol
-    if let Some(ifc_class) = &req.ifc_class {
-        obj.ifc_class = ifc_class.clone();
-    }
-    if let Some(tags) = req.tags {
-        obj.add_tags(tags);
+    if req.ifc_class.is_some() || req.tags.is_some() {
+        if let Some(obj) = p.objects.get_mut(&obj_id) {
+            if let Some(ifc_class) = &req.ifc_class {
+                obj.ifc_class = ifc_class.clone();
+            }
+            if let Some(tags) = req.tags.clone() {
+                obj.add_tags(tags);
+            }
+        }
     }
 
-    Ok(Json(obj.clone()))
+    mutation::persist(&state.save_path, &p);
+    Ok(Json(obj))
 }
 
 #[derive(Deserialize)]
@@ -288,18 +320,23 @@ async fn update_object(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateObjectRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let obj = p.objects.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(name) = req.name { obj.name = name; }
-    if let Some(desc) = req.description { obj.description = desc; }
-    if let Some(ifc_class) = req.ifc_class { obj.ifc_class = ifc_class; }
-    if let Some(tags) = req.tags { obj.add_tags(tags); }
-    if let Some(ref path) = state.save_path {
-        if let Err(e) = p.save(path) {
-            eprintln!("Auto-save failed: {}", e);
-        }
+) -> Result<(), ApiError> {
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
     }
+    let result = mutation::apply(
+        &state,
+        c::Action::ModifyObject,
+        vec![mutation::op_modify_object(
+            &id,
+            req.name,
+            req.description,
+            req.ifc_class,
+            req.tags,
+        )],
+    )
+    .await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -316,25 +353,25 @@ async fn update_properties(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<UpdatePropertiesRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let obj = p.objects.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(name) = req.name { obj.name = name; }
-    if let Some(desc) = req.description { obj.description = desc; }
-    if let Some(ifc_class) = req.ifc_class { obj.ifc_class = ifc_class; }
-    if let Some(tags) = req.tags { obj.add_tags(tags); }
+) -> Result<(), ApiError> {
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    let mut ops = vec![mutation::op_modify_object(
+        &id,
+        req.name,
+        req.description,
+        req.ifc_class,
+        req.tags,
+    )];
     if let Some(properties) = req.properties {
         for (name, value) in properties {
-            obj.set_property(&name, string_property(value));
+            ops.push(mutation::op_set_property(&id, &name, &value));
         }
     }
+    let result = mutation::apply(&state, c::Action::SetProperty, ops).await?;
+    mutation::require_success(result)?;
     Ok(())
-}
-
-fn string_property(value: String) -> omnim_core::PropertyValue {
-    omnim_core::PropertyValue {
-        value_type: Some(omnim_core::property_value::ValueType::StringValue(value)),
-    }
 }
 
 async fn delete_object(
@@ -345,6 +382,7 @@ async fn delete_object(
     let mut exe = state.executor.write().await;
     let obj = p.objects.remove(&id).ok_or(StatusCode::NOT_FOUND)?;
     exe.record_delete(&obj);
+    mutation::persist(&state.save_path, &p);
     Ok(())
 }
 
@@ -358,10 +396,17 @@ async fn set_property(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<SetPropertyRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let obj = p.objects.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    obj.set_property(&req.name, string_property(req.value));
+) -> Result<(), ApiError> {
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    let result = mutation::apply(
+        &state,
+        c::Action::SetProperty,
+        vec![mutation::op_set_property(&id, &req.name, &req.value)],
+    )
+    .await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -414,57 +459,22 @@ async fn transform_object(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<TransformObjectRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let obj = p.objects.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let geom = obj.geometry.as_mut().ok_or(StatusCode::BAD_REQUEST)?;
-    let geom_id = geom.id.clone();
-    let lod = geom.level_of_detail;
-    let mesh = omnim_model::geometry::geometry_to_mesh(geom).ok_or(StatusCode::BAD_REQUEST)?;
-    let origin = req.origin.unwrap_or_else(|| mesh_center(&mesh));
-    let pre = omnim_core::Transform {
-        matrix: vec![],
-        translation: Some(omnim_core::Point3D { x: -origin.x, y: -origin.y, z: -origin.z }),
-        rotation: None,
-        scale: None,
+) -> Result<(), ApiError> {
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    let op = c::Operation {
+        op: Some(c::operation::Op::TransformGeometry(c::TransformGeometryOperation {
+            object_id: id.clone(),
+            translation: req.translation,
+            rotation: req.rotation,
+            scale: req.scale,
+            pivot: req.origin,
+        })),
     };
-    let main = omnim_core::Transform {
-        matrix: vec![],
-        translation: req.translation,
-        rotation: req.rotation,
-        scale: req.scale,
-    };
-    let post = omnim_core::Transform {
-        matrix: vec![],
-        translation: Some(origin),
-        rotation: None,
-        scale: None,
-    };
-    let shifted = omnim_model::geometry::transform_mesh(&mesh, &pre);
-    let transformed = omnim_model::geometry::transform_mesh(&shifted, &main);
-    let transformed = omnim_model::geometry::transform_mesh(&transformed, &post);
-    let bbox = omnim_model::geometry::compute_bbox(&transformed);
-    *geom = omnim_core::Geometry {
-        id: geom_id,
-        r#type: omnim_core::GeometryType::Mesh as i32,
-        representation: Some(omnim_core::geometry::Representation::Mesh(transformed)),
-        bbox: Some(bbox),
-        level_of_detail: lod,
-    };
+    let result = mutation::apply(&state, c::Action::TransformGeometry, vec![op]).await?;
+    mutation::require_success(result)?;
     Ok(())
-}
-
-fn mesh_center(mesh: &omnim_core::MeshGeometry) -> omnim_core::Point3D {
-    if mesh.vertices.is_empty() {
-        return omnim_core::Point3D { x: 0.0, y: 0.0, z: 0.0 };
-    }
-    let mut min = omnim_core::Point3D { x: f64::INFINITY, y: f64::INFINITY, z: f64::INFINITY };
-    let mut max = omnim_core::Point3D { x: f64::NEG_INFINITY, y: f64::NEG_INFINITY, z: f64::NEG_INFINITY };
-    for v in &mesh.vertices {
-        min.x = min.x.min(v.x); min.y = min.y.min(v.y); min.z = min.z.min(v.z);
-        max.x = max.x.max(v.x); max.y = max.y.max(v.y); max.z = max.z.max(v.z);
-    }
-    omnim_core::Point3D { x: (min.x + max.x) / 2.0, y: (min.y + max.y) / 2.0, z: (min.z + max.z) / 2.0 }
 }
 
 #[derive(Deserialize)]
@@ -476,18 +486,51 @@ async fn set_parent(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<SetParentRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.set_parent(&id, &req.parent_id).map_err(|_| StatusCode::BAD_REQUEST)
+) -> Result<(), ApiError> {
+    // Same semantics as Project::set_parent: reparent + spatial containment,
+    // now as two undoable ops.
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    let ops = vec![
+        mutation::op_relationship(c::operation::Op::MoveObject(c::MoveObjectOperation {
+            object_id: id.clone(),
+            new_parent_id: req.parent_id.clone(),
+        })),
+        mutation::op_relationship(c::operation::Op::AddContainment(c::Containment {
+            parent_id: req.parent_id,
+            child_id: id,
+            r#type: c::ContainmentType::Spatial as i32,
+        })),
+    ];
+    let result = mutation::apply(&state, c::Action::MoveObject, ops).await?;
+    mutation::require_success(result)?;
+    Ok(())
 }
 
 async fn connect(
     State(state): State<SharedState>,
     Path((from, to)): Path<(String, String)>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.connect(&from, &to, omnim_core::ConnectionType::Structural)
-        .map_err(|_| StatusCode::BAD_REQUEST)
+) -> Result<(), ApiError> {
+    // Old behavior: Project::connect validated both endpoints exist and used a
+    // Structural connection — preserved via the AddConnection command.
+    let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(c::Connection {
+        from_object_id: from.clone(),
+        to_object_id: to.clone(),
+        r#type: omnim_core::ConnectionType::Structural as i32,
+        from_point: None,
+        to_point: None,
+        connection_detail: String::new(),
+    }))];
+    if !state.project.read().await.objects.contains(&from) {
+        return Err(ApiError::not_found(format!("object '{}' not found", from)));
+    }
+    if !state.project.read().await.objects.contains(&to) {
+        return Err(ApiError::not_found(format!("object '{}' not found", to)));
+    }
+    let result = mutation::apply(&state, c::Action::AddConnection, ops).await?;
+    mutation::require_success(result)?;
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -506,16 +549,16 @@ async fn list_materials(State(state): State<SharedState>) -> Json<Vec<omnim_core
 async fn create_material(
     State(state): State<SharedState>,
     Json(req): Json<CreateMaterialRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let category = parse_category(&req.category);
-    p.materials.insert(omnim_core::Material {
-        id: req.id,
+) -> Result<(), ApiError> {
+    let material = omnim_core::Material {
+        id: req.id.clone(),
         name: req.name,
-        category: category as i32,
+        category: parse_category(&req.category) as i32,
         density: req.density.unwrap_or(0.0),
         ..Default::default()
-    });
+    };
+    let result = mutation::apply(&state, c::Action::CreateMaterial, vec![mutation::op_create_material(material)]).await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -528,9 +571,17 @@ async fn assign_material(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AssignMaterialRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.set_material(&id, &req.material_id).map_err(|_| StatusCode::BAD_REQUEST)
+) -> Result<(), ApiError> {
+    if !state.project.read().await.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    let ops = vec![mutation::op_relationship(c::operation::Op::SetMaterial(c::SetMaterialOperation {
+        object_id: id,
+        material_id: req.material_id,
+    }))];
+    let result = mutation::apply(&state, c::Action::SetMaterial, ops).await?;
+    mutation::require_success(result)?;
+    Ok(())
 }
 
 // ── Measurement endpoints ──
@@ -552,22 +603,58 @@ struct CreateMeasurementRequest {
 async fn create_measurement(
     State(state): State<SharedState>,
     Json(req): Json<CreateMeasurementRequest>,
-) -> Json<omnim_model::Measurement> {
-    let mut p = state.project.write().await;
-    let mut m = omnim_model::Measurement::new(&req.r#type, req.points, req.value, &req.color.unwrap_or_else(|| "#44ff88".into()));
-    if let Some(label) = req.label {
-        m.label = label;
-    }
-    p.measurements.add(m.clone());
-    Json(m)
+) -> Result<Json<omnim_model::Measurement>, ApiError> {
+    let op = c::operation::Op::CreateMeasurement(c::CreateMeasurementOperation {
+        measurement_type: req.r#type,
+        points: req
+            .points
+            .iter()
+            .map(|p| c::Point3D { x: p.x, y: p.y, z: p.z })
+            .collect(),
+        value: req.value,
+        label: req.label,
+        color: req.color,
+    });
+    let result =
+        mutation::apply(&state, c::Action::CreateMeasurement, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("measurement creation returned no id"))?;
+    let p = state.project.read().await;
+    let measurement = p
+        .measurements
+        .all()
+        .iter()
+        .find(|m| m.id == id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("created measurement vanished"))?;
+    Ok(Json(measurement))
 }
 
 async fn delete_measurement(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.measurements.remove(&id).ok_or(StatusCode::NOT_FOUND)?;
+) -> Result<(), ApiError> {
+    if !state
+        .project
+        .read()
+        .await
+        .measurements
+        .all()
+        .iter()
+        .any(|m| m.id == id)
+    {
+        return Err(ApiError::not_found(format!("measurement '{}' not found", id)));
+    }
+    let op = c::operation::Op::DeleteMeasurement(c::DeleteMeasurementOperation {
+        measurement_id: id,
+    });
+    let result =
+        mutation::apply(&state, c::Action::DeleteMeasurement, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -587,35 +674,55 @@ async fn list_lifecycle(State(state): State<SharedState>) -> Json<Vec<omnim_core
 async fn create_lifecycle(
     State(state): State<SharedState>,
     Json(req): Json<CreateLifecycleRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let phase = parse_phase(&req.phase);
-    let id = format!("lr-{}", p.lifecycle.len() + 1);
-    p.lifecycle.insert(omnim_core::ProjectLifecycleRecord {
-        id,
-        phase: phase as i32,
-        record_type: req.record_type,
+) -> Result<(), ApiError> {
+    let op = c::operation::Op::CreateLifecycleRecord(c::CreateLifecycleRecordOperation {
+        phase: parse_phase(&req.phase) as i32,
         name: req.name,
         description: req.description.unwrap_or_default(),
+        record_type: req.record_type,
         related_object_ids: Vec::new(),
-        related_document_ids: Vec::new(),
         properties: Vec::new(),
-        status: omnim_core::RecordStatus::Draft as i32,
-        planned_start: None, planned_finish: None,
-        actual_start: None, actual_finish: None,
-        planned_cost: 0.0, actual_cost: 0.0,
-        responsible_party: String::new(),
-        version_id: String::new(),
     });
+    let result = mutation::apply(
+        &state,
+        c::Action::CreateLifecycleRecord,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
 async fn link_record(
     State(state): State<SharedState>,
     Path((record_id, obj_id)): Path<(String, String)>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.link_record_to_object(&record_id, &obj_id).map_err(|_| StatusCode::BAD_REQUEST)
+) -> Result<(), ApiError> {
+    if state
+        .project
+        .read()
+        .await
+        .lifecycle
+        .get(&record_id)
+        .is_none()
+    {
+        return Err(ApiError::bad_request(format!(
+            "record '{}' not found",
+            record_id
+        )));
+    }
+    let op = c::operation::Op::LinkRecordToObject(c::LinkRecordToObjectOperation {
+        record_id,
+        object_id: obj_id,
+        link_role: String::new(),
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::LinkRecordToObject,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
+    Ok(())
 }
 
 // ============================================================
@@ -660,19 +767,34 @@ struct CreateAdminRequest {
 async fn create_administrative(
     State(state): State<SharedState>,
     Json(req): Json<CreateAdminRequest>,
-) -> Result<Json<AdminDivResponse>, StatusCode> {
-    let mut p = state.project.write().await;
-    let level = parse_admin_level(&req.level);
-    let mut div = omnim_model::AdministrativeDivision::new(level, &req.name, &req.code);
-    if let Some(native) = &req.native_name {
-        div.native_name = native.clone();
-    }
-    if let Some(parent_id) = &req.parent_id {
-        div.parent_id = Some(parent_id.clone());
-    }
-    let id = p.administrative.insert(div);
-    let d = p.administrative.get(&id).unwrap();
-    Ok(Json(admin_to_response(d)))
+) -> Result<Json<AdminDivResponse>, ApiError> {
+    let op = c::operation::Op::CreateAdministrativeDivision(
+        c::CreateAdministrativeDivisionOperation {
+            level: parse_admin_level(&req.level) as i32,
+            name: req.name,
+            code: req.code,
+            native_name: req.native_name,
+            parent_id: req.parent_id,
+        },
+    );
+    let result = mutation::apply(
+        &state,
+        c::Action::CreateAdministrativeDivision,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("administrative division creation returned no id"))?;
+    let p = state.project.read().await;
+    let division = p
+        .administrative
+        .get(&id)
+        .ok_or_else(|| ApiError::internal("created administrative division vanished"))?;
+    Ok(Json(admin_to_response(division)))
 }
 
 async fn get_administrative(
@@ -689,9 +811,23 @@ async fn get_administrative(
 async fn delete_administrative(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.administrative.remove(&id).ok_or(StatusCode::NOT_FOUND)?;
+) -> Result<(), ApiError> {
+    if state.project.read().await.administrative.get(&id).is_none() {
+        return Err(ApiError::not_found(format!(
+            "administrative division '{}' not found",
+            id
+        )));
+    }
+    let op = c::operation::Op::DeleteAdministrativeDivision(
+        c::DeleteAdministrativeDivisionOperation { division_id: id },
+    );
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteAdministrativeDivision,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -768,20 +904,32 @@ struct CreateBreakdownRequest {
 async fn create_breakdown(
     State(state): State<SharedState>,
     Json(req): Json<CreateBreakdownRequest>,
-) -> Result<Json<BreakdownResponse>, StatusCode> {
-    let mut p = state.project.write().await;
-    let level = parse_breakdown_level(&req.level);
-    let convention = parse_breakdown_convention(&req.convention);
-    let mut node = omnim_model::BreakdownNode::new(level, &req.name, convention);
-    if let Some(code) = &req.code {
-        node.code = code.clone();
-    }
-    if let Some(parent_id) = &req.parent_id {
-        node.parent_id = Some(parent_id.clone());
-    }
-    let id = p.breakdown.insert(node);
-    let n = p.breakdown.get(&id).unwrap();
-    Ok(Json(breakdown_to_response(n)))
+) -> Result<Json<BreakdownResponse>, ApiError> {
+    let op = c::operation::Op::CreateBreakdownNode(c::CreateBreakdownNodeOperation {
+        level: parse_breakdown_level(&req.level) as i32,
+        name: req.name,
+        convention: parse_breakdown_convention(&req.convention) as i32,
+        code: req.code,
+        parent_id: req.parent_id,
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::CreateBreakdownNode,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("breakdown node creation returned no id"))?;
+    let p = state.project.read().await;
+    let node = p
+        .breakdown
+        .get(&id)
+        .ok_or_else(|| ApiError::internal("created breakdown node vanished"))?;
+    Ok(Json(breakdown_to_response(node)))
 }
 
 async fn get_breakdown(
@@ -798,9 +946,19 @@ async fn get_breakdown(
 async fn delete_breakdown(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    p.breakdown.remove(&id).ok_or(StatusCode::NOT_FOUND)?;
+) -> Result<(), ApiError> {
+    if state.project.read().await.breakdown.get(&id).is_none() {
+        return Err(ApiError::not_found(format!(
+            "breakdown node '{}' not found",
+            id
+        )));
+    }
+    let op = c::operation::Op::DeleteBreakdownNode(c::DeleteBreakdownNodeOperation {
+        node_id: id,
+    });
+    let result =
+        mutation::apply(&state, c::Action::DeleteBreakdownNode, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -837,10 +995,20 @@ async fn link_breakdown_object(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<LinkObjectRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let node = p.breakdown.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    node.link_object(&req.object_id);
+) -> Result<(), ApiError> {
+    if state.project.read().await.breakdown.get(&id).is_none() {
+        return Err(ApiError::not_found(format!(
+            "breakdown node '{}' not found",
+            id
+        )));
+    }
+    let op = c::operation::Op::LinkBreakdownObject(c::LinkBreakdownObjectOperation {
+        node_id: id,
+        object_id: req.object_id,
+    });
+    let result =
+        mutation::apply(&state, c::Action::LinkBreakdownObject, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -853,10 +1021,25 @@ async fn link_breakdown_admin(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<LinkAdminRequest>,
-) -> Result<(), StatusCode> {
-    let mut p = state.project.write().await;
-    let node = p.breakdown.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    node.link_administrative_division(&req.division_id);
+) -> Result<(), ApiError> {
+    if state.project.read().await.breakdown.get(&id).is_none() {
+        return Err(ApiError::not_found(format!(
+            "breakdown node '{}' not found",
+            id
+        )));
+    }
+    let op =
+        c::operation::Op::LinkBreakdownAdministrative(c::LinkBreakdownAdministrativeOperation {
+            node_id: id,
+            division_id: req.division_id,
+        });
+    let result = mutation::apply(
+        &state,
+        c::Action::LinkBreakdownAdministrative,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
     Ok(())
 }
 
@@ -867,6 +1050,7 @@ async fn execute_omcom(
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
     let result = exe.execute(&instr, &mut p);
+    mutation::persist(&state.save_path, &p);
     Ok(Json(result))
 }
 
@@ -1670,24 +1854,33 @@ async fn list_sketches(
 async fn create_sketch(
     State(state): State<SharedState>,
     Json(req): Json<CreateSketchRequest>,
-) -> Result<Json<SketchResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
+) -> Result<Json<SketchResponse>, ApiError> {
     let origin = req.origin.map(|o| c::Point3D { x: o.x, y: o.y, z: o.z })
         .unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
     let normal = req.normal.map(|n| c::Vector3D { x: n.x, y: n.y, z: n.z })
         .unwrap_or(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
-    let mut sketch = omnim_sketch::Sketch::new(&req.name, origin, normal);
-    if let Some(ref comp_id) = req.component_id {
-        if p.objects.get(comp_id).map(|o| o.object_type != c::ObjectType::Component as i32).unwrap_or(true) {
-            return Err((StatusCode::BAD_REQUEST, format!("Component '{}' not found", comp_id)));
+    let component_id = req.component_id.clone().unwrap_or_default();
+    if !component_id.is_empty() {
+        let bad = state.project.read().await.objects.get(&component_id)
+            .map(|o| o.object_type != c::ObjectType::Component as i32).unwrap_or(true);
+        if bad {
+            return Err(ApiError::bad_request(format!("Component '{}' not found", component_id)));
         }
-        sketch.component_id = Some(comp_id.clone());
     }
-    let sketch_id = sketch.id.clone();
-    let resp = sketch_to_response(&sketch);
-    p.sketches.insert(sketch);
-    state.executor.write().await.record_sketch_create(&sketch_id);
-    Ok(Json(resp))
+    let op = c::operation::Op::CreateSketch(c::CreateSketchOperation {
+        name: req.name,
+        origin: Some(origin),
+        normal: Some(normal),
+        component_id,
+    });
+    let result = mutation::apply(&state, c::Action::CreateSketch, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let sketch_id = result.created_ids.first().cloned()
+        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch creation returned no id"))?;
+    let p = state.project.read().await;
+    let sketch = p.sketches.get(&sketch_id)
+        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "created sketch vanished"))?;
+    Ok(Json(sketch_to_response(sketch)))
 }
 
 async fn get_sketch(
@@ -1704,15 +1897,14 @@ async fn get_sketch(
 async fn delete_sketch(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    match p.sketches.remove(&id) {
-        Some(sketch) => {
-            state.executor.write().await.record_sketch_delete(&sketch);
-            Ok(StatusCode::NO_CONTENT)
-        }
-        None => Err((StatusCode::NOT_FOUND, format!("Sketch {} not found", id))),
+) -> Result<StatusCode, ApiError> {
+    if state.project.read().await.sketches.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", id)));
     }
+    let op = c::operation::Op::DeleteSketch(c::DeleteSketchOperation { sketch_id: id });
+    let result = mutation::apply(&state, c::Action::DeleteSketch, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -1725,16 +1917,20 @@ async fn update_sketch(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateSketchRequest>,
-) -> Result<Json<omnim_sketch::Sketch>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-    if let Some(origin) = req.origin {
-        sketch.origin = c::Point3D { x: origin.x, y: origin.y, z: origin.z };
+) -> Result<Json<omnim_sketch::Sketch>, ApiError> {
+    if state.project.read().await.sketches.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", id)));
     }
-    if let Some(name) = req.name {
-        sketch.name = name;
-    }
+    let op = c::operation::Op::UpdateSketch(c::UpdateSketchOperation {
+        sketch_id: id.clone(),
+        origin: req.origin.map(|o| c::Point3D { x: o.x, y: o.y, z: o.z }),
+        name: req.name,
+    });
+    let result = mutation::apply(&state, c::Action::UpdateSketch, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    let p = state.project.read().await;
+    let sketch = p.sketches.get(&id)
+        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch vanished"))?;
     Ok(Json(sketch.clone()))
 }
 
@@ -1742,42 +1938,40 @@ async fn add_sketch_entity(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddEntityRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
+) -> Result<Json<serde_json::Value>, ApiError> {
+    if state.project.read().await.sketches.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", id)));
+    }
 
     let entity_type = match req.entity_type.as_str() {
-        "point" => omnim_sketch::SketchEntityType::Point,
-        "line" => omnim_sketch::SketchEntityType::Line,
-        "circle" => omnim_sketch::SketchEntityType::Circle,
-        "arc" => omnim_sketch::SketchEntityType::Arc,
-        "rectangle" => omnim_sketch::SketchEntityType::Rectangle,
-        "polygon" => omnim_sketch::SketchEntityType::Polygon,
-        "ellipse" => omnim_sketch::SketchEntityType::Ellipse,
-        "spline" => omnim_sketch::SketchEntityType::Spline,
-        "polyline" => omnim_sketch::SketchEntityType::Polyline,
-        _ => return Err((StatusCode::BAD_REQUEST, format!("Unknown entity type: {}", req.entity_type))),
+        "point" => c::SketchEntityType::SketchPoint,
+        "line" => c::SketchEntityType::SketchLine,
+        "circle" => c::SketchEntityType::SketchCircle,
+        "arc" => c::SketchEntityType::SketchArc,
+        "rectangle" => c::SketchEntityType::SketchRectangle,
+        "polygon" => c::SketchEntityType::SketchPolygon,
+        "ellipse" => c::SketchEntityType::SketchEllipse,
+        "spline" => c::SketchEntityType::SketchSpline,
+        "polyline" => c::SketchEntityType::SketchPolyline,
+        _ => return Err(ApiError::bad_request(format!("Unknown entity type: {}", req.entity_type))),
     };
 
-    let points: Vec<c::Point3D> = req.points.iter()
-        .map(|p| c::Point3D { x: p.x, y: p.y, z: p.z })
-        .collect();
-
-    let radius = req.radius.unwrap_or(0.0);
-    let sides = req.sides.unwrap_or(0);
-
-    let entity = omnim_sketch::SketchEntity {
-        id: uuid::Uuid::new_v4().to_string(),
-        entity_type,
-        points,
-        radius,
-        sides,
-        construction: req.construction,
-    };
-
-    let idx = sketch.add_entity(entity.clone());
-    state.executor.write().await.record_sketch_add_entity(&id, idx, &entity);
+    let op = c::operation::Op::AddSketchEntity(c::AddSketchEntityOperation {
+        sketch_id: id.clone(),
+        entity: Some(c::SketchEntityData {
+            id: String::new(),
+            entity_type: entity_type as i32,
+            points: req.points.iter().map(|p| c::Point3D { x: p.x, y: p.y, z: p.z }).collect(),
+            radius: req.radius.unwrap_or(0.0),
+            sides: req.sides.unwrap_or(0),
+            construction: req.construction,
+        }),
+    });
+    let result = mutation::apply(&state, c::Action::AddSketchEntity, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    let p = state.project.read().await;
+    let idx = p.sketches.get(&id).and_then(|s| s.entities.len().checked_sub(1))
+        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch entity creation returned no index"))?;
     Ok(Json(serde_json::json!({ "index": idx })))
 }
 
@@ -1785,47 +1979,56 @@ async fn add_sketch_constraint(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddConstraintRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
+) -> Result<Json<serde_json::Value>, ApiError> {
+    if state.project.read().await.sketches.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", id)));
+    }
 
     let constraint_type = match req.constraint_type.as_str() {
-        "horizontal" => omnim_sketch::SketchConstraintType::Horizontal,
-        "vertical" => omnim_sketch::SketchConstraintType::Vertical,
-        "coincident" => omnim_sketch::SketchConstraintType::Coincident,
-        "parallel" => omnim_sketch::SketchConstraintType::Parallel,
-        "perpendicular" => omnim_sketch::SketchConstraintType::Perpendicular,
-        "length" => omnim_sketch::SketchConstraintType::Length,
-        "distance" => omnim_sketch::SketchConstraintType::Distance,
-        "angle" => omnim_sketch::SketchConstraintType::Angle,
-        "radius" => omnim_sketch::SketchConstraintType::Radius,
-        "diameter" => omnim_sketch::SketchConstraintType::Diameter,
-        "tangent" => omnim_sketch::SketchConstraintType::Tangent,
-        "symmetric" => omnim_sketch::SketchConstraintType::Symmetric,
-        "fixed" => omnim_sketch::SketchConstraintType::Fixed,
-        "at_midpoint" => omnim_sketch::SketchConstraintType::AtMidpoint,
-        "equal_length" => omnim_sketch::SketchConstraintType::EqualLength,
-        "equal_radius" => omnim_sketch::SketchConstraintType::EqualRadius,
-        "pt_on_line" => omnim_sketch::SketchConstraintType::PtOnLine,
-        "pt_on_circle" => omnim_sketch::SketchConstraintType::PtOnCircle,
-        "same_orientation" => omnim_sketch::SketchConstraintType::SameOrientation,
-        _ => return Err((StatusCode::BAD_REQUEST, format!("Unknown constraint type: {}", req.constraint_type))),
+        "horizontal" => c::SketchConstraintType::SketchHorizontal,
+        "vertical" => c::SketchConstraintType::SketchVertical,
+        "coincident" => c::SketchConstraintType::SketchCoincident,
+        "parallel" => c::SketchConstraintType::SketchParallel,
+        "perpendicular" => c::SketchConstraintType::SketchPerpendicular,
+        "length" => c::SketchConstraintType::SketchLength,
+        "distance" => c::SketchConstraintType::SketchDistance,
+        "angle" => c::SketchConstraintType::SketchAngle,
+        "radius" => c::SketchConstraintType::SketchRadius,
+        "diameter" => c::SketchConstraintType::SketchDiameter,
+        "tangent" => c::SketchConstraintType::SketchTangent,
+        "symmetric" => c::SketchConstraintType::SketchSymmetric,
+        "fixed" => c::SketchConstraintType::SketchFixed,
+        "at_midpoint" => c::SketchConstraintType::SketchAtMidpoint,
+        "equal_length" => c::SketchConstraintType::SketchEqualLength,
+        "equal_radius" => c::SketchConstraintType::SketchEqualRadius,
+        "pt_on_line" => c::SketchConstraintType::SketchPtOnLine,
+        "pt_on_circle" => c::SketchConstraintType::SketchPtOnCircle,
+        "same_orientation" => c::SketchConstraintType::SketchSameOrientation,
+        _ => return Err(ApiError::bad_request(format!("Unknown constraint type: {}", req.constraint_type))),
     };
 
-    let entity_refs: Vec<omnim_sketch::SketchPointRef> = req.entity_refs.iter()
-        .map(|(ei, pi)| omnim_sketch::SketchPointRef { entity_index: *ei, point_index: *pi })
+    // SketchPointRef indices are 1-based on the wire; the REST contract is 0-based.
+    let entity_refs: Vec<c::SketchPointRef> = req.entity_refs.iter()
+        .map(|(ei, pi)| c::SketchPointRef {
+            entity_index: (ei + 1) as i32,
+            point_index: (pi + 1) as i32,
+        })
         .collect();
 
-    let constraint = omnim_sketch::SketchConstraint {
-        id: uuid::Uuid::new_v4().to_string(),
-        constraint_type,
-        entity_refs,
-        value: req.value.unwrap_or(0.0),
-    };
-
-    let idx = sketch.add_constraint(constraint.clone());
-    state.executor.write().await.record_sketch_add_constraint(&id, idx, &constraint);
+    let op = c::operation::Op::AddSketchConstraint(c::AddSketchConstraintOperation {
+        sketch_id: id.clone(),
+        constraint: Some(c::SketchConstraintData {
+            id: String::new(),
+            constraint_type: constraint_type as i32,
+            entity_refs,
+            value: req.value.unwrap_or(0.0),
+        }),
+    });
+    let result = mutation::apply(&state, c::Action::AddSketchConstraint, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    let p = state.project.read().await;
+    let idx = p.sketches.get(&id).and_then(|s| s.constraints.len().checked_sub(1))
+        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch constraint creation returned no index"))?;
     Ok(Json(serde_json::json!({ "index": idx })))
 }
 
@@ -1839,81 +2042,98 @@ struct SolveResponse {
 async fn solve_sketch(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<Json<SolveResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-
-    let result = omnim_sketch::solver::solve(sketch);
-    Ok(Json(SolveResponse {
+) -> Result<Json<SolveResponse>, ApiError> {
+    // Solve runs through the Executor (undoable, matches post-image), but the
+    // response body needs the SolveResult details that the command protocol
+    // does not carry — derive them deterministically from a probe copy.
+    let probe = {
+        let p = state.project.read().await;
+        let sketch = p.sketches.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
+        sketch.clone()
+    };
+    let mut probe = probe;
+    let result = omnim_sketch::solver::solve(&mut probe);
+    let response = SolveResponse {
         success: result.success,
         dof: result.dof,
         message: result.message,
-    }))
+    };
+
+    let op = c::operation::Op::SolveSketch(c::SolveSketchOperation { sketch_id: id });
+    let result = mutation::apply(&state, c::Action::SolveSketch, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(Json(response))
 }
 
 async fn delete_sketch_entity(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-    if idx < sketch.entities.len() {
-        let entity = sketch.entities[idx].clone();
-        sketch.entities.remove(idx);
-        sketch.solved = false;
-        state.executor.write().await.record_sketch_delete_entity(&id, &entity);
-        Ok(StatusCode::NO_CONTENT)
-    } else {
-        Err((StatusCode::NOT_FOUND, format!("Entity index {} out of range", idx)))
+) -> Result<StatusCode, ApiError> {
+    {
+        let p = state.project.read().await;
+        let sketch = p.sketches.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
+        if idx >= sketch.entities.len() {
+            return Err(ApiError::not_found(format!("Entity index {} out of range", idx)));
+        }
     }
+    let op = c::operation::Op::DeleteSketchEntity(c::DeleteSketchEntityOperation {
+        sketch_id: id,
+        entity_index: (idx + 1) as i32,
+    });
+    let result = mutation::apply(&state, c::Action::DeleteSketchEntity, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 async fn update_sketch_entity(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
     Json(req): Json<UpdateEntityRequest>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-    if idx >= sketch.entities.len() {
-        return Err((StatusCode::NOT_FOUND, format!("Entity index {} out of range", idx)));
+) -> Result<StatusCode, ApiError> {
+    let p = state.project.read().await;
+    if p.sketches.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", id)));
     }
-    let entity = &mut sketch.entities[idx];
-    if let Some(points) = req.points {
-        entity.points = points.iter().map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: p.z }).collect();
+    if p.sketches.get(&id).map(|s| idx >= s.entities.len()).unwrap_or(true) {
+        return Err(ApiError::not_found(format!("Entity index {} out of range", idx)));
     }
-    if let Some(radius) = req.radius {
-        entity.radius = radius;
-    }
-    if let Some(sides) = req.sides {
-        entity.sides = sides;
-    }
-    if let Some(construction) = req.construction {
-        entity.construction = construction;
-    }
-    sketch.solved = false;
+    drop(p);
+    let op = c::operation::Op::UpdateSketchEntity(c::UpdateSketchEntityOperation {
+        sketch_id: id,
+        entity_index: (idx + 1) as i32,
+        points: req.points.map(|points| c::PointList {
+            values: points.iter().map(|p| c::Point3D { x: p.x, y: p.y, z: p.z }).collect(),
+        }),
+        radius: req.radius,
+        sides: req.sides,
+        construction: req.construction,
+    });
+    let result = mutation::apply(&state, c::Action::UpdateSketchEntity, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(StatusCode::NO_CONTENT)
 }
 
 async fn remove_sketch_constraint(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
-) -> Result<StatusCode, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-    if idx < sketch.constraints.len() {
-        let constraint = sketch.constraints[idx].clone();
-        sketch.constraints.remove(idx);
-        sketch.solved = false;
-        state.executor.write().await.record_sketch_remove_constraint(&id, &constraint);
-        Ok(StatusCode::NO_CONTENT)
-    } else {
-        Err((StatusCode::NOT_FOUND, format!("Constraint index {} out of range", idx)))
+) -> Result<StatusCode, ApiError> {
+    {
+        let p = state.project.read().await;
+        let sketch = p.sketches.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
+        if idx >= sketch.constraints.len() {
+            return Err(ApiError::not_found(format!("Constraint index {} out of range", idx)));
+        }
     }
+    let op = c::operation::Op::RemoveSketchConstraint(c::RemoveSketchConstraintOperation {
+        sketch_id: id,
+        constraint_index: (idx + 1) as i32,
+    });
+    let result = mutation::apply(&state, c::Action::RemoveSketchConstraint, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // ============================================================
@@ -1932,7 +2152,10 @@ async fn undo(
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
     match exe.undo(&mut p) {
-        Ok(msg) => Ok(Json(UndoRedoResponse { success: true, message: msg })),
+        Ok(msg) => {
+            mutation::persist(&state.save_path, &p);
+            Ok(Json(UndoRedoResponse { success: true, message: msg }))
+        }
         Err(e) => Ok(Json(UndoRedoResponse { success: false, message: e })),
     }
 }
@@ -1943,7 +2166,10 @@ async fn redo(
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
     match exe.redo(&mut p) {
-        Ok(msg) => Ok(Json(UndoRedoResponse { success: true, message: msg })),
+        Ok(msg) => {
+            mutation::persist(&state.save_path, &p);
+            Ok(Json(UndoRedoResponse { success: true, message: msg }))
+        }
         Err(e) => Ok(Json(UndoRedoResponse { success: false, message: e })),
     }
 }
@@ -2231,6 +2457,10 @@ async fn import_ifc(
             let imported_count = imported_proj.objects.len();
             let mode = query.mode.as_deref().unwrap_or("merge");
             let mut p = state.project.write().await;
+
+            // Bulk import is one whole-project transaction: snapshot before the
+            // write, then record the before/after pair on the undo stack.
+            let before = p.clone();
             if mode == "replace" {
                 *p = imported_proj;
             } else {
@@ -2245,6 +2475,12 @@ async fn import_ifc(
                 }
                 p.objects.rebuild_children();
             }
+            {
+                let mut exe = state.executor.write().await;
+                exe.record_project_replace(before, &p);
+            }
+            mutation::persist(&state.save_path, &p);
+
             Ok(Json(ImportIfcResponse {
                 success: true,
                 imported: imported_count,
@@ -2289,64 +2525,60 @@ async fn extrude_sketch_handler(
     Path(id): Path<String>,
     State(state): State<SharedState>,
     Json(req): Json<ExtrudeSketchRequest>,
-) -> Result<Json<FeatureResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-
-    if !sketch.solved {
-        let result = omnim_sketch::solver::solve(sketch);
-        if !result.success {
-            return Err((StatusCode::BAD_REQUEST, "Sketch is unsolvable".into()));
+) -> Result<Json<FeatureResponse>, ApiError> {
+    // Precheck: 404 for unknown sketch; unsolved sketches are test-solved on a
+    // probe copy so an unsolvable profile fails with the same 400 as before.
+    let must_solve = {
+        let p = state.project.read().await;
+        let sketch = p.sketches.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
+        if sketch.solved {
+            false
+        } else {
+            let mut probe = sketch.clone();
+            let result = omnim_sketch::solver::solve(&mut probe);
+            if !result.success {
+                return Err(ApiError::bad_request("Sketch is unsolvable"));
+            }
+            true
         }
-    }
-
-    let dir = omnim_core::Vector3D {
-        x: req.direction_x.unwrap_or(0.0),
-        y: req.direction_y.unwrap_or(0.0),
-        z: req.direction_z.unwrap_or(1.0),
     };
 
-    match omnim_sketch::profile::sketch_to_profile_2d(sketch)
-        .and_then(|profile2d| {
-            if profile2d.len() < 3 { return None; }
-            let profile3d: Vec<omnim_core::Point3D> = profile2d.iter()
-                .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: 0.0 })
-                .collect();
-            omnim_model::brep::extrude_brep(&profile3d, req.depth, dir, omnim_model::brep::DEFAULT_TOLERANCE)
-        }) {
-        Some(mg) => {
-            let geom = omnim_model::geometry::mesh_to_geometry(&mg);
-            let object_id = uuid::Uuid::new_v4().to_string();
-            let obj = omnim_model::OmniObject {
-                id: object_id.clone(),
-                name: format!("extrude-{}", &sketch.name),
-                description: format!("Extruded from sketch '{}' depth={}", sketch.name, req.depth),
-                object_type: omnim_core::ObjectType::Part as i32,
-                status: 0,
-                properties: vec![],
-                property_sets: vec![],
-                geometry: Some(geom),
-                material_id: None,
-                parent_id: None,
-                tags: vec![],
-                ifc_class: "IfcBuildingElementProxy".into(),
-                features: vec![],
-                sketch_ids: vec![],
-                dirty: false,
-                catalog_ref: None,
-            };
-            p.objects.insert(obj);
-            Ok(Json(FeatureResponse {
-                success: true,
-                message: format!("Extruded sketch with {} depth", req.depth),
-                vertices: mg.vertices.len(),
-                faces: mg.faces.len(),
-                object_id,
-            }))
-        }
-        None => Err((StatusCode::BAD_REQUEST, "Failed to extrude sketch — check profile".into())),
+    let mut ops = Vec::new();
+    if must_solve {
+        ops.push(mutation::op(c::operation::Op::SolveSketch(
+            c::SolveSketchOperation { sketch_id: id.clone() },
+        )));
     }
+    ops.push(mutation::op(c::operation::Op::ExtrudeSketch(
+        c::ExtrudeSketchOperation {
+            sketch_id: id,
+            depth: req.depth,
+            direction: Some(c::Vector3D {
+                x: req.direction_x.unwrap_or(0.0),
+                y: req.direction_y.unwrap_or(0.0),
+                z: req.direction_z.unwrap_or(1.0),
+            }),
+        },
+    )));
+    let result = mutation::apply(&state, c::Action::ExtrudeSketch, ops).await?;
+    let result = mutation::require_success(result)?;
+    let object_id = result.created_ids.last().cloned()
+        .ok_or_else(|| ApiError::internal("extrude created no object"))?;
+
+    let p = state.project.read().await;
+    let obj = p.objects.get(&object_id)
+        .ok_or_else(|| ApiError::internal("extruded object vanished"))?;
+    let mesh = obj.geometry.as_ref().and_then(omnim_model::geometry::geometry_to_mesh);
+    let (vertices, faces) = mesh.map(|m| (m.vertices.len(), m.faces.len()))
+        .unwrap_or((0, 0));
+    Ok(Json(FeatureResponse {
+        success: true,
+        message: format!("Extruded sketch with {} depth", req.depth),
+        vertices,
+        faces,
+        object_id,
+    }))
 }
 
 #[derive(Deserialize)]
@@ -2364,69 +2596,65 @@ async fn revolve_sketch_handler(
     Path(id): Path<String>,
     State(state): State<SharedState>,
     Json(req): Json<RevolveSketchRequest>,
-) -> Result<Json<FeatureResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let sketch = p.sketches.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))?;
-
-    if !sketch.solved {
-        let result = omnim_sketch::solver::solve(sketch);
-        if !result.success {
-            return Err((StatusCode::BAD_REQUEST, "Sketch is unsolvable".into()));
+) -> Result<Json<FeatureResponse>, ApiError> {
+    // Precheck: 404 for unknown sketch; unsolved sketches are test-solved on a
+    // probe copy so an unsolvable profile fails with the same 400 as before.
+    let must_solve = {
+        let p = state.project.read().await;
+        let sketch = p.sketches.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
+        if sketch.solved {
+            false
+        } else {
+            let mut probe = sketch.clone();
+            let result = omnim_sketch::solver::solve(&mut probe);
+            if !result.success {
+                return Err(ApiError::bad_request("Sketch is unsolvable"));
+            }
+            true
         }
-    }
-
-    let origin = omnim_core::Point3D {
-        x: req.axis_origin_x.unwrap_or(0.0),
-        y: req.axis_origin_y.unwrap_or(0.0),
-        z: req.axis_origin_z.unwrap_or(0.0),
-    };
-    let axis = omnim_core::Vector3D {
-        x: req.axis_direction_x.unwrap_or(0.0),
-        y: req.axis_direction_y.unwrap_or(0.0),
-        z: req.axis_direction_z.unwrap_or(1.0),
     };
 
-    match omnim_sketch::profile::sketch_to_profile_2d(sketch)
-        .and_then(|profile2d| {
-            if profile2d.len() < 3 { return None; }
-            let profile3d: Vec<omnim_core::Point3D> = profile2d.iter()
-                .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: 0.0 })
-                .collect();
-            omnim_model::brep::revolve_brep(&profile3d, req.angle, origin, axis, omnim_model::brep::DEFAULT_TOLERANCE)
-        }) {
-        Some(mg) => {
-            let geom = omnim_model::geometry::mesh_to_geometry(&mg);
-            let object_id = uuid::Uuid::new_v4().to_string();
-            let obj = omnim_model::OmniObject {
-                id: object_id.clone(),
-                name: format!("revolve-{}", &sketch.name),
-                description: format!("Revolved from sketch '{}' angle={}", sketch.name, req.angle),
-                object_type: omnim_core::ObjectType::Part as i32,
-                status: 0,
-                properties: vec![],
-                property_sets: vec![],
-                geometry: Some(geom),
-                material_id: None,
-                parent_id: None,
-                tags: vec![],
-                ifc_class: "IfcBuildingElementProxy".into(),
-                features: vec![],
-                sketch_ids: vec![],
-                dirty: false,
-                catalog_ref: None,
-            };
-            p.objects.insert(obj);
-            Ok(Json(FeatureResponse {
-                success: true,
-                message: format!("Revolved sketch with angle {}", req.angle),
-                vertices: mg.vertices.len(),
-                faces: mg.faces.len(),
-                object_id,
-            }))
-        }
-        None => Err((StatusCode::BAD_REQUEST, "Failed to revolve sketch — check profile".into())),
+    let mut ops = Vec::new();
+    if must_solve {
+        ops.push(mutation::op(c::operation::Op::SolveSketch(
+            c::SolveSketchOperation { sketch_id: id.clone() },
+        )));
     }
+    ops.push(mutation::op(c::operation::Op::RevolveSketch(
+        c::RevolveSketchOperation {
+            sketch_id: id,
+            angle: req.angle,
+            axis_origin: Some(c::Point3D {
+                x: req.axis_origin_x.unwrap_or(0.0),
+                y: req.axis_origin_y.unwrap_or(0.0),
+                z: req.axis_origin_z.unwrap_or(0.0),
+            }),
+            axis_direction: Some(c::Vector3D {
+                x: req.axis_direction_x.unwrap_or(0.0),
+                y: req.axis_direction_y.unwrap_or(0.0),
+                z: req.axis_direction_z.unwrap_or(1.0),
+            }),
+        },
+    )));
+    let result = mutation::apply(&state, c::Action::RevolveSketch, ops).await?;
+    let result = mutation::require_success(result)?;
+    let object_id = result.created_ids.last().cloned()
+        .ok_or_else(|| ApiError::internal("revolve created no object"))?;
+
+    let p = state.project.read().await;
+    let obj = p.objects.get(&object_id)
+        .ok_or_else(|| ApiError::internal("revolved object vanished"))?;
+    let mesh = obj.geometry.as_ref().and_then(omnim_model::geometry::geometry_to_mesh);
+    let (vertices, faces) = mesh.map(|m| (m.vertices.len(), m.faces.len()))
+        .unwrap_or((0, 0));
+    Ok(Json(FeatureResponse {
+        success: true,
+        message: format!("Revolved sketch with angle {}", req.angle),
+        vertices,
+        faces,
+        object_id,
+    }))
 }
 
 // ============================================================
@@ -2466,15 +2694,23 @@ async fn list_components(State(state): State<SharedState>) -> Json<Vec<Component
 async fn create_component_handler(
     State(state): State<SharedState>,
     Json(req): Json<CreateComponentRequest>,
-) -> Result<Json<ComponentResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let id = p.create_component(&req.name, req.parent_id.as_deref());
-    let obj = p.objects.get(&id).unwrap();
+) -> Result<Json<ComponentResponse>, ApiError> {
+    let op = c::operation::Op::CreateComponent(c::CreateComponentOperation {
+        name: req.name,
+        parent_id: req.parent_id.clone().unwrap_or_default(),
+    });
+    let result = mutation::apply(&state, c::Action::CreateComponent, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result.created_ids.first().cloned()
+        .ok_or_else(|| ApiError::internal("component creation returned no id"))?;
+    let p = state.project.read().await;
+    let obj = p.objects.get(&id)
+        .ok_or_else(|| ApiError::internal("created component vanished"))?;
     Ok(Json(ComponentResponse {
         id: obj.id.clone(),
         name: obj.name.clone(),
         feature_count: 0,
-        sketch_ids: vec![],
+        sketch_ids: obj.sketch_ids.clone(),
         parent_id: obj.parent_id.clone(),
     }))
 }
@@ -2501,15 +2737,18 @@ async fn get_component(
 async fn delete_component(
     Path(id): Path<String>,
     State(state): State<SharedState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let obj = p.objects.get_mut(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Component {} not found", id)))?;
-    if obj.object_type != c::ObjectType::Component as i32 {
-        return Err((StatusCode::BAD_REQUEST, format!("Object {} is not a Component", id)));
+) -> Result<Json<serde_json::Value>, ApiError> {
+    {
+        let p = state.project.read().await;
+        let obj = p.objects.get(&id)
+            .ok_or_else(|| ApiError::not_found(format!("Component {} not found", id)))?;
+        if obj.object_type != c::ObjectType::Component as i32 {
+            return Err(ApiError::bad_request(format!("Object {} is not a Component", id)));
+        }
     }
-    p.objects.remove(&id);
-    p.objects.rebuild_children();
+    let op = c::operation::Op::DeleteComponent(c::DeleteComponentOperation { component_id: id.clone() });
+    let result = mutation::apply(&state, c::Action::DeleteComponent, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true, "id": id})))
 }
 
@@ -2575,66 +2814,72 @@ async fn add_feature_handler(
     Path(component_id): Path<String>,
     State(state): State<SharedState>,
     Json(req): Json<AddFeatureRequest>,
-) -> Result<Json<FeatureResponseItem>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-
-    // Verify sketch exists
-    if p.sketches.get(&req.sketch_id).is_none() {
-        return Err((StatusCode::NOT_FOUND, format!("Sketch {} not found", req.sketch_id)));
+) -> Result<Json<FeatureResponseItem>, ApiError> {
+    // Verify sketch exists (same 404 as before; component errors surface as 400)
+    if state.project.read().await.sketches.get(&req.sketch_id).is_none() {
+        return Err(ApiError::not_found(format!("Sketch {} not found", req.sketch_id)));
     }
 
-    let dir = omnim_core::Vector3D {
-        x: req.direction_x.unwrap_or(0.0),
-        y: req.direction_y.unwrap_or(0.0),
-        z: req.direction_z.unwrap_or(1.0),
-    };
-
     let feature_type = match req.feature_type.to_lowercase().as_str() {
-        "revolve" => omnim_model::FeatureType::Revolve,
-        "sweep" => omnim_model::FeatureType::Sweep,
-        "loft" => omnim_model::FeatureType::Loft,
-        "fusion" => omnim_model::FeatureType::Fusion,
-        "lofted_fusion" => omnim_model::FeatureType::LoftedFusion,
-        "boolean" => omnim_model::FeatureType::Boolean,
-        "chamfer" => omnim_model::FeatureType::Chamfer,
-        "fillet" => omnim_model::FeatureType::Fillet,
-        "pattern" => omnim_model::FeatureType::Pattern,
-        "shell" => omnim_model::FeatureType::Shell,
-        _ => omnim_model::FeatureType::Extrude,
+        "revolve" => c::FeatureType::FeatureRevolve,
+        "sweep" => c::FeatureType::FeatureSweep,
+        "loft" => c::FeatureType::FeatureLoft,
+        "fusion" => c::FeatureType::FeatureFusion,
+        "lofted_fusion" => c::FeatureType::FeatureLoftedFusion,
+        "boolean" => c::FeatureType::FeatureBoolean,
+        "chamfer" => c::FeatureType::FeatureChamfer,
+        "fillet" => c::FeatureType::FeatureFillet,
+        "pattern" => c::FeatureType::FeaturePattern,
+        "shell" => c::FeatureType::FeatureShell,
+        _ => c::FeatureType::FeatureExtrude,
     };
 
-    let feature = omnim_model::Feature {
-        id: uuid::Uuid::new_v4().to_string(),
-        name: format!("{}-{}", req.feature_type, &req.sketch_id[..8]),
-        feature_type: feature_type.clone(),
-        sketch_id: req.sketch_id.clone(),
-        axis_sketch_id: req.axis_sketch_id.clone().unwrap_or_default(),
-        input_sketch_ids: req.input_sketch_ids.clone().unwrap_or_default(),
-        dependency_ids: Vec::new(),
-        depth: req.depth.unwrap_or(0.0),
-        direction: dir,
-        angle: req.angle.unwrap_or(0.0),
-        axis_origin: omnim_core::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-        axis_direction: omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
-        is_cut: req.is_cut.unwrap_or(false),
-        order: 0,
-        suppressed: false,
-        cached_geometry: None,
-        dirty: true,
-        lod: req.lod.unwrap_or(omnim_model::brep::DEFAULT_TOLERANCE),
-        boolean_op: None,
-        pattern_count_x: None,
-        pattern_count_y: None,
-        pattern_count_z: None,
+    // Two ops in one command: add the feature, then rebuild the component —
+    // an invalid rebuild now rolls the whole command back instead of leaving
+    // a newly added feature behind.
+    let feature_id = {
+        let result = mutation::apply(
+            &state,
+            c::Action::AddFeature,
+            vec![
+                mutation::op(c::operation::Op::AddFeature(c::AddFeatureOperation {
+                    component_id: component_id.clone(),
+                    feature_type: feature_type as i32,
+                    sketch_id: req.sketch_id.clone(),
+                    depth: req.depth.unwrap_or(0.0),
+                    direction: Some(c::Vector3D {
+                        x: req.direction_x.unwrap_or(0.0),
+                        y: req.direction_y.unwrap_or(0.0),
+                        z: req.direction_z.unwrap_or(1.0),
+                    }),
+                    angle: req.angle.unwrap_or(0.0),
+                    axis_origin: Some(c::Point3D { x: 0.0, y: 0.0, z: 0.0 }),
+                    axis_direction: Some(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }),
+                    is_cut: req.is_cut.unwrap_or(false),
+                    input_sketch_ids: req.input_sketch_ids.clone().unwrap_or_default(),
+                    axis_sketch_id: req.axis_sketch_id.clone().unwrap_or_default(),
+                    name: Some(format!("{}-{}", req.feature_type, &req.sketch_id[..8])),
+                    lod: Some(req.lod.unwrap_or(omnim_model::brep::DEFAULT_TOLERANCE)),
+                })),
+                mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
+                    component_id: component_id.clone(),
+                    feature_id: None,
+                })),
+            ],
+        )
+        .await?;
+        let result = mutation::require_success(result)?;
+        result.created_ids.first().cloned()
+            .ok_or_else(|| ApiError::internal("add_feature returned no feature id"))?
     };
 
-    let fid = p.add_feature(&component_id, feature)
-        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    let p = state.project.read().await;
+    let obj = p.objects.get(&component_id)
+        .ok_or_else(|| ApiError::internal("component vanished"))?;
+    let f = obj.features.iter().find(|f| f.id == feature_id)
+        .ok_or_else(|| ApiError::internal("added feature vanished"))?;
 
-    let obj = p.objects.get(&component_id).unwrap();
-    let f = obj.features.iter().find(|f| f.id == fid).unwrap();
-
-    let resp = FeatureResponseItem {
+    Ok(Json(FeatureResponseItem {
         id: f.id.clone(),
         name: f.name.clone(),
         feature_type: format!("{:?}", f.feature_type).to_lowercase(),
@@ -2647,16 +2892,7 @@ async fn add_feature_handler(
         order: f.order,
         suppressed: f.suppressed,
         dirty: f.dirty,
-    };
-    if let Err(e) = p.rebuild_component(&component_id) {
-        eprintln!("rebuild_component failed after add_feature: {}", e);
-    }
-    if let Some(ref path) = state.save_path {
-        if let Err(e) = p.save(path) {
-            eprintln!("Auto-save failed: {}", e);
-        }
-    }
-    Ok(Json(resp))
+    }))
 }
 
 #[derive(Deserialize)]
@@ -2683,62 +2919,93 @@ async fn update_feature_handler(
     Path((component_id, feature_id)): Path<(String, String)>,
     State(state): State<SharedState>,
     Json(req): Json<UpdateFeatureRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    p.update_feature(
-        &component_id, &feature_id,
-        req.sketch_id, req.axis_sketch_id, req.depth, req.angle, req.is_cut, req.suppressed,
-        req.input_sketch_ids, req.dependency_ids, req.direction, req.axis_origin, req.axis_direction,
-        req.lod,
-        req.boolean_op.map(|b| match b {
-            0 => omnim_model::BooleanOp::Union,
-            2 => omnim_model::BooleanOp::Intersect,
-            _ => omnim_model::BooleanOp::Subtract,
-        }),
-        req.pattern_count_x, req.pattern_count_y, req.pattern_count_z,
-    )
-        .map_err(|e| (StatusCode::NOT_FOUND, e))?;
-    if let Err(e) = p.rebuild_component(&component_id) {
-        eprintln!("rebuild_component failed after update_feature: {}", e);
-    }
-    if let Some(ref path) = state.save_path {
-        if let Err(e) = p.save(path) {
-            eprintln!("Auto-save failed: {}", e);
+) -> Result<Json<serde_json::Value>, ApiError> {
+    // Preserve the old 404s from Project::update_feature before touching state.
+    {
+        let p = state.project.read().await;
+        if let Some(obj) = p.objects.get(&component_id) {
+            if !obj.features.iter().any(|f| f.id == feature_id) {
+                return Err(ApiError::not_found(format!("feature '{}' not found", feature_id)));
+            }
+        } else {
+            return Err(ApiError::not_found(format!("component '{}' not found", component_id)));
         }
     }
+    // Two ops in one command: edit the feature, then rebuild the component.
+    let ops = vec![
+        mutation::op(c::operation::Op::UpdateFeature(c::UpdateFeatureOperation {
+            component_id: component_id.clone(),
+            feature_id: feature_id.clone(),
+            sketch_id: req.sketch_id.clone(),
+            axis_sketch_id: req.axis_sketch_id.clone(),
+            depth: req.depth,
+            angle: req.angle,
+            is_cut: req.is_cut,
+            suppressed: req.suppressed,
+            input_sketch_ids: req.input_sketch_ids.clone().map(|ids| c::TagList { values: ids }),
+            dependency_ids: req.dependency_ids.clone().map(|ids| c::TagList { values: ids }),
+            direction: req.direction.clone(),
+            axis_origin: req.axis_origin.clone(),
+            axis_direction: req.axis_direction.clone(),
+            lod: req.lod,
+            boolean_op: req.boolean_op,
+            pattern_count_x: req.pattern_count_x.map(|c| c as i32),
+            pattern_count_y: req.pattern_count_y.map(|c| c as i32),
+            pattern_count_z: req.pattern_count_z.map(|c| c as i32),
+        })),
+        mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
+            component_id: component_id.clone(),
+            feature_id: None,
+        })),
+    ];
+    let result = mutation::apply(&state, c::Action::UpdateFeature, ops).await?;
+    mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true})))
 }
 
 async fn remove_feature_handler(
     Path((component_id, feature_id)): Path<(String, String)>,
     State(state): State<SharedState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    p.remove_feature(&component_id, &feature_id)
-        .map_err(|e| (StatusCode::NOT_FOUND, e))?;
-    if let Err(e) = p.rebuild_component(&component_id) {
-        eprintln!("rebuild_component failed after remove_feature: {}", e);
-    }
-    if let Some(ref path) = state.save_path {
-        if let Err(e) = p.save(path) {
-            eprintln!("Auto-save failed: {}", e);
+) -> Result<Json<serde_json::Value>, ApiError> {
+    // Preserve the old 404s from Project::remove_feature before touching state.
+    {
+        let p = state.project.read().await;
+        if let Some(obj) = p.objects.get(&component_id) {
+            if !obj.features.iter().any(|f| f.id == feature_id) {
+                return Err(ApiError::not_found(format!(
+                    "feature '{}' not found in component '{}'", feature_id, component_id
+                )));
+            }
+        } else {
+            return Err(ApiError::not_found(format!("component '{}' not found", component_id)));
         }
     }
+    // Two ops in one command: remove the feature, then rebuild the component.
+    let ops = vec![
+        mutation::op(c::operation::Op::RemoveFeature(c::RemoveFeatureOperation {
+            component_id: component_id.clone(),
+            feature_id: feature_id.clone(),
+        })),
+        mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
+            component_id: component_id.clone(),
+            feature_id: None,
+        })),
+    ];
+    let result = mutation::apply(&state, c::Action::RemoveFeature, ops).await?;
+    mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true})))
 }
 
 async fn rebuild_component_handler(
     Path(id): Path<String>,
     State(state): State<SharedState>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    p.rebuild_component(&id)
-        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    if let Some(ref path) = state.save_path {
-        if let Err(e) = p.save(path) {
-            eprintln!("Auto-save failed: {}", e);
-        }
-    }
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let op = mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
+        component_id: id.clone(),
+        feature_id: None,
+    }));
+    let result = mutation::apply(&state, c::Action::RebuildFeatures, vec![op]).await?;
+    mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true})))
 }
 
@@ -2806,17 +3073,25 @@ struct CreateComponentDefRequest {
 }
 
 async fn create_component_def(
+    State(state): State<SharedState>,
     Json(req): Json<CreateComponentDefRequest>,
-) -> Json<omnim_model::catalog::ComponentDef> {
-    let mut comp = omnim_model::catalog::ComponentDef::new(&req.name, &req.category);
-    comp.description = req.description;
-    comp.ifc_class = req.ifc_class;
-    comp.standard_reference = req.standard_reference;
-    comp.tags = req.tags;
-    comp.domain = req.domain;
-    let comp_clone = comp.clone();
-    LIBRARY.write().unwrap().as_mut().unwrap().catalog.insert(comp);
-    Json(comp_clone)
+) -> Result<Json<omnim_model::catalog::ComponentDef>, ApiError> {
+    let op = c::operation::Op::DefineComponent(c::DefineComponentOperation {
+        name: req.name,
+        category: req.category,
+        description: req.description,
+        ifc_class: req.ifc_class,
+        standard_reference: req.standard_reference,
+        tags: req.tags,
+        domain: req.domain,
+    });
+    let result = mutation::apply(&state, c::Action::DefineComponent, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result.created_ids.first().cloned()
+        .ok_or_else(|| ApiError::internal("define_component returned no id"))?;
+    let comp = LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).cloned()
+        .ok_or_else(|| ApiError::internal("defined component vanished"))?;
+    Ok(Json(comp))
 }
 
 async fn get_component_def(
@@ -2826,12 +3101,18 @@ async fn get_component_def(
 }
 
 async fn delete_component_def(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
-    match LIBRARY.write().unwrap().as_mut().unwrap().catalog.remove(&id) {
-        Some(_) => Ok(StatusCode::NO_CONTENT),
-        None => Err(StatusCode::NOT_FOUND),
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
     }
+    let op = c::operation::Op::DeleteComponentDef(c::DeleteComponentDefOperation { component_id: id });
+    let result = mutation::apply(&state, c::Action::DeleteComponentDef, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -2861,14 +3142,16 @@ fn default_param_type() -> i32 { 1 }
 fn default_max_value() -> f64 { f64::MAX }
 
 async fn add_component_param(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddParamRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    comp.params.push(omnim_model::catalog::ParamDef {
-        name: req.name,
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::AddComponentParam(c::AddComponentParamOperation {
+        component_id: id,
+        param_name: req.name,
         param_type: req.param_type,
         default_value: req.default_value,
         min_value: req.min_value,
@@ -2879,6 +3162,10 @@ async fn add_component_param(
         choices: req.choices,
         description: req.description,
     });
+    let result = mutation::apply(&state, c::Action::AddComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::CREATED)
 }
 
@@ -2909,15 +3196,17 @@ struct AddConnectorRequest {
 fn default_dir_z() -> String { "1".into() }
 
 async fn add_connector(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddConnectorRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    comp.connectors.push(omnim_model::catalog::ConnectorDef {
-        id: req.connector_id,
-        name: req.connector_name,
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::AddConnector(c::AddConnectorOperation {
+        component_id: id,
+        connector_id: req.connector_id,
+        connector_name: req.connector_name,
         position_x_expr: req.position_x_expr,
         position_y_expr: req.position_y_expr,
         position_z_expr: req.position_z_expr,
@@ -2928,16 +3217,25 @@ async fn add_connector(
         connection_type_code: req.connection_type_code,
         role: req.role,
     });
+    let result = mutation::apply(&state, c::Action::AddConnector, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::CREATED)
 }
 
 async fn publish_component(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    comp.published = true;
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::PublishComponent(c::PublishComponentOperation { component_id: id });
+    let result = mutation::apply(&state, c::Action::PublishComponent, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::OK)
 }
 
@@ -2966,22 +3264,30 @@ struct UpdateComponentDefRequest {
 }
 
 async fn update_component_def(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateComponentDefRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(name) = req.name { comp.name = name; }
-    if let Some(cat) = req.category { comp.category = cat; }
-    if let Some(desc) = req.description { comp.description = desc; }
-    if let Some(cls) = req.ifc_class { comp.ifc_class = cls; }
-    if let Some(std) = req.standard_reference { comp.standard_reference = std; }
-    if let Some(tags) = req.tags { comp.tags = tags; }
-    if let Some(domain) = req.domain { comp.domain = domain; }
-    if let Some(mat) = req.allowed_materials { comp.allowed_materials = mat; }
-    if let Some(def_mat) = req.default_material { comp.default_material = def_mat; }
-    if let Some(props) = req.properties { comp.properties = props; }
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::UpdateComponentDef(c::UpdateComponentDefOperation {
+        component_id: id,
+        name: req.name,
+        category: req.category,
+        description: req.description,
+        ifc_class: req.ifc_class,
+        standard_reference: req.standard_reference,
+        tags: req.tags.map(|tags| c::TagList { values: tags }),
+        domain: req.domain,
+        allowed_materials: req.allowed_materials.map(|m| c::TagList { values: m }),
+        default_material: req.default_material,
+        properties: req.properties.unwrap_or_default(),
+    });
+    let result = mutation::apply(&state, c::Action::UpdateComponentDef, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::OK)
 }
 
@@ -3010,38 +3316,56 @@ struct UpdateParamRequest {
 }
 
 async fn update_component_param(
+    State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
     Json(req): Json<UpdateParamRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let param = comp.params.get_mut(idx).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(name) = req.name { param.name = name; }
-    if let Some(pt) = req.param_type { param.param_type = pt; }
-    if let Some(dv) = req.default_value { param.default_value = dv; }
-    if let Some(min) = req.min_value { param.min_value = min; }
-    if let Some(max) = req.max_value { param.max_value = max; }
-    if let Some(st) = req.step { param.step = st; }
-    if let Some(u) = req.unit { param.unit = u; }
-    if let Some(f) = req.formula { param.formula = f; }
-    if let Some(c) = req.choices { param.choices = c; }
-    if let Some(d) = req.description { param.description = d; }
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id)
+        .map(|comp| idx >= comp.params.len())
+        .unwrap_or(true)
+    {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::UpdateComponentParam(c::UpdateComponentParamOperation {
+        component_id: id,
+        param_index: (idx + 1) as i32,
+        name: req.name,
+        param_type: req.param_type,
+        default_value: req.default_value,
+        min_value: req.min_value,
+        max_value: req.max_value,
+        step: req.step,
+        unit: req.unit,
+        formula: req.formula,
+        choices: req.choices.map(|c| c::TagList { values: c }),
+        description: req.description,
+    });
+    let result = mutation::apply(&state, c::Action::UpdateComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::OK)
 }
 
 async fn delete_component_param(
+    State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if idx < comp.params.len() {
-        comp.params.remove(idx);
-        Ok(StatusCode::NO_CONTENT)
-    } else {
-        Err(StatusCode::NOT_FOUND)
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id)
+        .map(|comp| idx >= comp.params.len())
+        .unwrap_or(true)
+    {
+        return Err(StatusCode::NOT_FOUND);
     }
+    let op = c::operation::Op::DeleteComponentParam(c::DeleteComponentParamOperation {
+        component_id: id,
+        param_index: (idx + 1) as i32,
+    });
+    let result = mutation::apply(&state, c::Action::DeleteComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -3050,13 +3374,21 @@ struct AssignFeatureTreeRequest {
 }
 
 async fn assign_feature_tree(
+    State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AssignFeatureTreeRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut library = LIBRARY.write().unwrap();
-    let library = library.as_mut().unwrap();
-    let comp = library.catalog.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    comp.feature_tree_id = req.feature_tree_id;
+    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+        return Err(StatusCode::NOT_FOUND);
+    }
+    let op = c::operation::Op::AssignFeatureTree(c::AssignFeatureTreeOperation {
+        component_id: id,
+        feature_tree_id: req.feature_tree_id,
+    });
+    let result = mutation::apply(&state, c::Action::AssignFeatureTree, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    if !result.success {
+        return Err(StatusCode::BAD_REQUEST);
+    }
     Ok(StatusCode::OK)
 }
 
@@ -3125,18 +3457,114 @@ struct CreateSeriesRequest {
     standard_reference: String,
 }
 
+// 2026-10-28 Wave 1 Slice 4: read-only tree walks used to preserve the
+// handlers' 404 semantics before a command is applied.
+
+fn series_selector<'a>(
+    series: &'a omnim_model::series_store::Series,
+    selector_id: &str,
+) -> Option<&'a omnim_model::series_store::Selector> {
+    fn find<'a>(
+        selector: &'a omnim_model::series_store::Selector,
+        id: &str,
+    ) -> Option<&'a omnim_model::series_store::Selector> {
+        if selector.id == id {
+            return Some(selector);
+        }
+        for answer in &selector.answers {
+            if let omnim_model::series_store::AnswerOutcome::NextSelector(next) = &answer.outcome {
+                if let Some(found) = find(next, id) {
+                    return Some(found);
+                }
+            }
+        }
+        None
+    }
+    series.root_selector.as_ref().and_then(|root| find(root, selector_id))
+}
+
+fn series_has_spec_component(
+    series: &omnim_model::series_store::Series,
+    component_def_id: &str,
+) -> bool {
+    fn walk(
+        selector: &omnim_model::series_store::Selector,
+        component_def_id: &str,
+    ) -> bool {
+        selector.answers.iter().any(|answer| match &answer.outcome {
+            omnim_model::series_store::AnswerOutcome::Component(spec) => {
+                spec.component_def_id == component_def_id
+            }
+            omnim_model::series_store::AnswerOutcome::NextSelector(next) => {
+                walk(next, component_def_id)
+            }
+        })
+    }
+    series
+        .root_selector
+        .as_ref()
+        .map(|root| walk(root, component_def_id))
+        .unwrap_or(false)
+}
+
+fn series_has_param_constraint(
+    series: &omnim_model::series_store::Series,
+    component_def_id: &str,
+    param_index: usize,
+) -> bool {
+    fn walk(
+        selector: &omnim_model::series_store::Selector,
+        component_def_id: &str,
+        param_index: usize,
+    ) -> Option<bool> {
+        for answer in &selector.answers {
+            match &answer.outcome {
+                omnim_model::series_store::AnswerOutcome::Component(spec) => {
+                    if spec.component_def_id == component_def_id {
+                        return Some(param_index < spec.param_constraints.len());
+                    }
+                }
+                omnim_model::series_store::AnswerOutcome::NextSelector(next) => {
+                    if let Some(found) = walk(next, component_def_id, param_index) {
+                        return Some(found);
+                    }
+                }
+            }
+        }
+        None
+    }
+    series
+        .root_selector
+        .as_ref()
+        .and_then(|root| walk(root, component_def_id, param_index))
+        .unwrap_or(false)
+}
+
 async fn create_series_handler(
     State(state): State<SharedState>,
     Json(req): Json<CreateSeriesRequest>,
-) -> Json<omnim_model::series_store::Series> {
-    let mut p = state.project.write().await;
-    let mut series = omnim_model::series_store::Series::new(&req.name);
-    series.description = req.description;
-    series.domain = req.domain;
-    series.standard_reference = req.standard_reference;
-    let s = series.clone();
-    p.series.insert(series);
-    Json(s)
+) -> Result<Json<omnim_model::series_store::Series>, ApiError> {
+    let op = c::operation::Op::CreateSeries(c::CreateSeriesOperation {
+        name: req.name,
+        description: req.description,
+        domain: req.domain,
+        standard_reference: req.standard_reference,
+    });
+    let result =
+        mutation::apply(&state, c::Action::CreateSeries, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("series creation returned no id"))?;
+    let p = state.project.read().await;
+    let series = p
+        .series
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("created series vanished"))?;
+    Ok(Json(series))
 }
 
 async fn get_series(
@@ -3167,27 +3595,47 @@ async fn update_series_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<UpdateSeriesRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(name) = req.name { series.name = name; }
-    if let Some(desc) = req.description { series.description = desc; }
-    if let Some(domain) = req.domain { series.domain = domain; }
-    if let Some(std) = req.standard_reference { series.standard_reference = std; }
-    if let Some(phases) = req.applicable_phases { series.applicable_phases = phases; }
-    if let Some(meta) = req.metadata { series.metadata = meta; }
+) -> Result<StatusCode, ApiError> {
+    if state.project.read().await.series.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("series '{}' not found", id)));
+    }
+    let (replace_applicable_phases, applicable_phases) = match req.applicable_phases {
+        Some(phases) => (true, phases),
+        None => (false, Vec::new()),
+    };
+    let (replace_metadata, metadata) = match req.metadata {
+        Some(metadata) => (true, metadata),
+        None => (false, HashMap::new()),
+    };
+    let op = c::operation::Op::UpdateSeries(c::UpdateSeriesOperation {
+        series_id: id,
+        name: req.name,
+        description: req.description,
+        domain: req.domain,
+        standard_reference: req.standard_reference,
+        replace_applicable_phases,
+        applicable_phases,
+        replace_metadata,
+        metadata,
+    });
+    let result =
+        mutation::apply(&state, c::Action::UpdateSeries, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(StatusCode::OK)
 }
 
 async fn delete_series_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    match p.series.remove(&id) {
-        Some(_) => Ok(StatusCode::NO_CONTENT),
-        None => Err(StatusCode::NOT_FOUND),
+) -> Result<StatusCode, ApiError> {
+    if state.project.read().await.series.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("series '{}' not found", id)));
     }
+    let op = c::operation::Op::DeleteSeries(c::DeleteSeriesOperation { series_id: id });
+    let result =
+        mutation::apply(&state, c::Action::DeleteSeries, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -3200,13 +3648,18 @@ async fn add_selector_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddSelectorRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let selector = omnim_model::series_store::Selector::new(&req.selector_id, &req.question);
-    if series.root_selector.is_none() {
-        series.root_selector = Some(selector);
+) -> Result<StatusCode, ApiError> {
+    if state.project.read().await.series.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("series '{}' not found", id)));
     }
+    let op = c::operation::Op::AddSelector(c::AddSelectorOperation {
+        series_id: id,
+        selector_id: req.selector_id,
+        question: req.question,
+    });
+    let result =
+        mutation::apply(&state, c::Action::AddSelector, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
     Ok(StatusCode::CREATED)
 }
 
@@ -3227,35 +3680,32 @@ async fn add_answer_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddAnswerRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let answer = omnim_model::series_store::Answer {
-        id: req.answer_id,
-        value: req.answer_value,
+) -> Result<StatusCode, ApiError> {
+    let series_exists = {
+        let p = state.project.read().await;
+        match p.series.get(&id) {
+            None => false,
+            Some(series) => series_selector(series, &req.selector_id).is_some(),
+        }
+    };
+    if !series_exists {
+        return Err(ApiError::not_found(format!(
+            "series '{}' or selector '{}' not found",
+            id, req.selector_id
+        )));
+    }
+    let op = c::operation::Op::AddAnswer(c::AddAnswerOperation {
+        series_id: id,
+        selector_id: req.selector_id,
+        answer_id: req.answer_id,
+        answer_value: req.answer_value,
         is_numeric_range: req.is_numeric_range,
         range_min: req.range_min,
         range_max: req.range_max,
-        outcome: omnim_model::series_store::AnswerOutcome::Component(
-            omnim_model::series_store::SpecComponent::new("")
-        ),
-    };
-    // Find the selector and add the answer
-    if let Some(ref mut root) = series.root_selector {
-        let mut stack = vec![root];
-        while let Some(sel) = stack.pop() {
-            if sel.id == req.selector_id {
-                sel.answers.push(answer);
-                return Ok(StatusCode::CREATED);
-            }
-            for ans in &mut sel.answers {
-                if let omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) = ans.outcome {
-                    stack.push(next);
-                }
-            }
-        }
-    }
-    Err(StatusCode::NOT_FOUND)
+    });
+    let result = mutation::apply(&state, c::Action::AddAnswer, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::CREATED)
 }
 
 #[derive(Deserialize)]
@@ -3273,31 +3723,38 @@ async fn add_spec_component_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddSpecComponentRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let spec = omnim_model::series_store::SpecComponent::new(&req.component_def_id)
-        .material(&req.material)
-        .connection_type_code(&req.connection_type_code);
-    if let Some(ref mut root) = series.root_selector {
-        let mut stack = vec![root];
-        while let Some(sel) = stack.pop() {
-            if sel.id == req.selector_id {
-                for ans in &mut sel.answers {
-                    if ans.id == req.answer_id {
-                        ans.outcome = omnim_model::series_store::AnswerOutcome::Component(spec);
-                        return Ok(StatusCode::CREATED);
-                    }
-                }
-            }
-            for ans in &mut sel.answers {
-                if let omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) = ans.outcome {
-                    stack.push(next);
-                }
-            }
+) -> Result<StatusCode, ApiError> {
+    let series_exists = {
+        let p = state.project.read().await;
+        match p.series.get(&id) {
+            None => false,
+            Some(series) => series_selector(series, &req.selector_id)
+                .map(|selector| selector.answers.iter().any(|a| a.id == req.answer_id))
+                .unwrap_or(false),
         }
+    };
+    if !series_exists {
+        return Err(ApiError::not_found(format!(
+            "series '{}', selector '{}' or answer '{}' not found",
+            id, req.selector_id, req.answer_id
+        )));
     }
-    Err(StatusCode::NOT_FOUND)
+    let op = c::operation::Op::AddSpecComponent(c::AddSpecComponentOperation {
+        series_id: id,
+        selector_id: req.selector_id,
+        answer_id: req.answer_id,
+        component_def_id: req.component_def_id,
+        material: req.material,
+        connection_type_code: req.connection_type_code,
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::AddSpecComponent,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::CREATED)
 }
 
 #[derive(Deserialize)]
@@ -3320,33 +3777,38 @@ async fn add_param_constraint_handler(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddParamConstraintRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    let constraint = omnim_model::series_store::ParamConstraint::new(&req.param_name)
-        .with_default(req.default_value)
-        .with_range(req.min_value, req.max_value)
-        .with_step(req.step)
-        .with_fixed(&req.fixed_value);
-    if let Some(ref mut root) = series.root_selector {
-        let mut stack = vec![root];
-        while let Some(sel) = stack.pop() {
-            for ans in &mut sel.answers {
-                match &mut ans.outcome {
-                    omnim_model::series_store::AnswerOutcome::Component(ref mut sc) => {
-                        if sc.component_def_id == req.component_def_id {
-                            sc.param_constraints.push(constraint.clone());
-                            return Ok(StatusCode::CREATED);
-                        }
-                    }
-                    omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
-                        stack.push(next);
-                    }
-                }
-            }
+) -> Result<StatusCode, ApiError> {
+    let series_exists = {
+        let p = state.project.read().await;
+        match p.series.get(&id) {
+            None => false,
+            Some(series) => series_has_spec_component(series, &req.component_def_id),
         }
+    };
+    if !series_exists {
+        return Err(ApiError::not_found(format!(
+            "series '{}' or spec component '{}' not found",
+            id, req.component_def_id
+        )));
     }
-    Err(StatusCode::NOT_FOUND)
+    let op = c::operation::Op::AddParamConstraint(c::AddParamConstraintOperation {
+        series_id: id,
+        component_def_id: req.component_def_id,
+        param_name: req.param_name,
+        default_value: req.default_value,
+        min_value: req.min_value,
+        max_value: req.max_value,
+        step: req.step,
+        fixed_value: req.fixed_value,
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::AddParamConstraint,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::CREATED)
 }
 
 #[derive(Deserialize)]
@@ -3370,36 +3832,41 @@ async fn update_param_constraint_handler(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
     Json(req): Json<UpdateParamConstraintRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(ref mut root) = series.root_selector {
-        let mut stack = vec![root];
-        while let Some(sel) = stack.pop() {
-            for ans in &mut sel.answers {
-                match &mut ans.outcome {
-                    omnim_model::series_store::AnswerOutcome::Component(ref mut sc) => {
-                        if sc.component_def_id == req.component_def_id {
-                            if let Some(c) = sc.param_constraints.get_mut(idx) {
-                                if let Some(pn) = req.param_name { c.param_name = pn; }
-                                if let Some(dv) = req.default_value { c.default_value = dv; }
-                                if let Some(min) = req.min_value { c.min_value = min; }
-                                if let Some(max) = req.max_value { c.max_value = max; }
-                                if let Some(st) = req.step { c.step = st; }
-                                if let Some(fv) = req.fixed_value { c.fixed_value = fv; }
-                                return Ok(StatusCode::OK);
-                            }
-                            return Err(StatusCode::NOT_FOUND);
-                        }
-                    }
-                    omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
-                        stack.push(next);
-                    }
-                }
+) -> Result<StatusCode, ApiError> {
+    let series_exists = {
+        let p = state.project.read().await;
+        match p.series.get(&id) {
+            None => false,
+            Some(series) => {
+                series_has_param_constraint(series, &req.component_def_id, idx)
             }
         }
+    };
+    if !series_exists {
+        return Err(ApiError::not_found(format!(
+            "series '{}' or param constraint {} for '{}' not found",
+            id, idx, req.component_def_id
+        )));
     }
-    Err(StatusCode::NOT_FOUND)
+    let op = c::operation::Op::UpdateParamConstraint(c::UpdateParamConstraintOperation {
+        series_id: id,
+        component_def_id: req.component_def_id,
+        param_index: idx as u32,
+        param_name: req.param_name,
+        default_value: req.default_value,
+        min_value: req.min_value,
+        max_value: req.max_value,
+        step: req.step,
+        fixed_value: req.fixed_value,
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::UpdateParamConstraint,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::OK)
 }
 
 #[derive(Deserialize)]
@@ -3411,31 +3878,35 @@ async fn delete_param_constraint_handler(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
     Json(req): Json<DeleteParamConstraintRequest>,
-) -> Result<StatusCode, StatusCode> {
-    let mut p = state.project.write().await;
-    let series = p.series.get_mut(&id).ok_or(StatusCode::NOT_FOUND)?;
-    if let Some(ref mut root) = series.root_selector {
-        let mut stack = vec![root];
-        while let Some(sel) = stack.pop() {
-            for ans in &mut sel.answers {
-                match &mut ans.outcome {
-                    omnim_model::series_store::AnswerOutcome::Component(ref mut sc) => {
-                        if sc.component_def_id == req.component_def_id {
-                            if idx < sc.param_constraints.len() {
-                                sc.param_constraints.remove(idx);
-                                return Ok(StatusCode::NO_CONTENT);
-                            }
-                            return Err(StatusCode::NOT_FOUND);
-                        }
-                    }
-                    omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
-                        stack.push(next);
-                    }
-                }
+) -> Result<StatusCode, ApiError> {
+    let series_exists = {
+        let p = state.project.read().await;
+        match p.series.get(&id) {
+            None => false,
+            Some(series) => {
+                series_has_param_constraint(series, &req.component_def_id, idx)
             }
         }
+    };
+    if !series_exists {
+        return Err(ApiError::not_found(format!(
+            "series '{}' or param constraint {} for '{}' not found",
+            id, idx, req.component_def_id
+        )));
     }
-    Err(StatusCode::NOT_FOUND)
+    let op = c::operation::Op::DeleteParamConstraint(c::DeleteParamConstraintOperation {
+        series_id: id,
+        component_def_id: req.component_def_id,
+        param_index: idx as u32,
+    });
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteParamConstraint,
+        vec![mutation::op(op)],
+    )
+    .await?;
+    mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Deserialize)]
@@ -3509,28 +3980,25 @@ async fn load_series_handler(
     State(state): State<SharedState>,
     Json(req): Json<LoadSeriesRequest>,
 ) -> Result<Json<LoadSeriesResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let ext_store = omnim_model::series_store::SeriesStore::load_from_file(&req.path)
-        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-    let count = ext_store.len();
-    let mut names = Vec::new();
-    for s in ext_store.list() {
-        let id = s.id.clone();
-        let name = s.name.clone();
-        names.push(name.clone());
-        p.series.insert(s.clone());
-        let already_ref = p.external_series_refs.iter().any(|r| r.id == id);
-        if !already_ref {
-            p.external_series_refs.push(omnim_model::SeriesRef {
-                id,
-                name,
-                source: req.source.clone(),
-                path: Some(req.path.clone()),
-            });
-        }
+    let op = mutation::op(c::operation::Op::LoadSeries(c::LoadSeriesOperation {
+        path: req.path.clone(),
+        source: req.source.clone(),
+    }));
+    let result = mutation::apply(&state, c::Action::LoadSeries, vec![op])
+        .await
+        .map_err(|e| (e.status, e.message))?;
+    if !result.success {
+        return Err((StatusCode::BAD_REQUEST, result.message));
     }
+
+    let p = state.project.read().await;
+    let names: Vec<String> = result
+        .created_ids
+        .iter()
+        .filter_map(|id| p.series.get(id).map(|s| s.name.clone()))
+        .collect();
     Ok(Json(LoadSeriesResponse {
-        loaded_count: count,
+        loaded_count: names.len(),
         series_names: names,
     }))
 }
@@ -3561,31 +4029,38 @@ async fn instantiate_from_catalog(
     State(state): State<SharedState>,
     Json(req): Json<InstantiateRequest>,
 ) -> Result<Json<InstantiateResponse>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
-    let component_id = if req.skip_series_gate {
-        p.instantiate_catalog_component_skip_gate(
-            &req.component_def_id,
-            &req.instance_name,
-            &req.params,
-            req.position,
-            req.rotation_z,
-        )
-    } else {
-        p.instantiate_catalog_component(
-            &req.component_def_id,
-            &req.instance_name,
-            &req.params,
-            req.position,
-            req.rotation_z,
-        )
-    }.map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    let op = mutation::op(c::operation::Op::InstantiateCatalog(c::InstantiateCatalogOperation {
+        component_def_id: req.component_def_id.clone(),
+        instance_name: req.instance_name.clone(),
+        params: req.params.clone(),
+        position: req.position.clone(),
+        rotation_z: req.rotation_z,
+        skip_series_gate: req.skip_series_gate,
+    }));
+    let result = mutation::apply(&state, c::Action::InstantiateCatalog, vec![op])
+        .await
+        .map_err(|e| (e.status, e.message))?;
+    if !result.success {
+        return Err((StatusCode::BAD_REQUEST, result.message));
+    }
+    let component_id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "instantiate returned no id".into()))?;
 
-    let obj = p.objects.get(&component_id)
+    let p = state.project.read().await;
+    let obj = p
+        .objects
+        .get(&component_id)
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "created component not found".into()))?;
 
     Ok(Json(InstantiateResponse {
         component_id: obj.id.clone(),
-        object_type: format!("{:?}", c::ObjectType::try_from(obj.object_type).unwrap_or(c::ObjectType::Unspecified)),
+        object_type: format!(
+            "{:?}",
+            c::ObjectType::try_from(obj.object_type).unwrap_or(c::ObjectType::Unspecified)
+        ),
         name: obj.name.clone(),
     }))
 }
@@ -3599,24 +4074,31 @@ pub struct PreviewRequest {
 
 /// Preview a catalog component by creating a temporary instance and returning its mesh.
 async fn preview_catalog_component(
-    State(state): State<SharedState>,
+    State(_state): State<SharedState>,
     Json(req): Json<PreviewRequest>,
 ) -> Result<Json<c::MeshGeometry>, (StatusCode, String)> {
-    let mut p = state.project.write().await;
+    // Preview runs on a throwaway project: no write lock, no temporary object in
+    // the live project, and no transient state visible to concurrent readers.
+    let mut preview_project = Project::new("preview");
     let preview_name = format!("__preview_{}", req.component_def_id);
-    let component_id = p.instantiate_catalog_component(
-        &req.component_def_id,
-        &preview_name,
-        &req.params,
-        None,
-        0.0,
-    ).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    let component_id = preview_project
+        .instantiate_catalog_component_skip_gate(
+            &req.component_def_id,
+            &preview_name,
+            &req.params,
+            None,
+            0.0,
+        )
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
 
-    let obj = p.objects.get(&component_id)
+    let obj = preview_project
+        .objects
+        .get(&component_id)
         .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "preview component not found".into()))?;
 
-    // Extract mesh from the component's geometry
-    let mesh = obj.geometry.as_ref()
+    let mesh = obj
+        .geometry
+        .as_ref()
         .and_then(|g| g.representation.as_ref())
         .and_then(|rep| {
             if let c::geometry::Representation::Mesh(m) = rep {
@@ -3633,10 +4115,5 @@ async fn preview_catalog_component(
         });
 
     // Catalog geometry is millimetres; scale to metres for the preview scene.
-    let mesh = omnim_model::geometry::scale_mesh(&mesh, 0.001);
-
-    // Clean up the preview component
-    p.objects.remove(&component_id);
-
-    Ok(Json(mesh))
+    Ok(Json(omnim_model::geometry::scale_mesh(&mesh, 0.001)))
 }

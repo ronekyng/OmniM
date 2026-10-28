@@ -1356,11 +1356,22 @@ impl Project {
         Ok(())
     }
 
+    /// Atomic save: serialize to `{path}.tmp` then rename over `{path}`.
+    /// A crash mid-write can never leave a truncated project file behind.
     pub fn save(&self, path: &str) -> Result<(), String> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|e| format!("serialize error: {}", e))?;
-        std::fs::write(path, json)
+        if let Some(parent) = std::path::Path::new(path).parent() {
+            if !parent.as_os_str().is_empty() {
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("mkdir error: {}", e))?;
+            }
+        }
+        let tmp = format!("{}.tmp", path);
+        std::fs::write(&tmp, json)
             .map_err(|e| format!("write error: {}", e))?;
+        std::fs::rename(&tmp, path)
+            .map_err(|e| format!("rename error: {}", e))?;
         Ok(())
     }
 

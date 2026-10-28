@@ -134,11 +134,15 @@ No deviation found in the Rust backend.
 
 ### 6.1 Single write path is violated (audit P0-2)
 
+> **Update 2026-10-28 — FIXED.** Wave 1 migrated every mutating handler: slices 2–4 covered objects/properties/materials, sketches/components/catalog definitions, and series/lifecycle/administrative/breakdown/measurements; slice 5 covered catalog instantiation, IFC import and `load_series`. `scripts/check_write_paths.py` now reports **0** non-allowlisted `project.write()` and runs in CI. The remaining exceptions are documented in [WRITE_PATHS](../architecture/WRITE_PATHS.md): `section_handler` (cache-only write lock), `import_ifc` (single `Command::ReplaceProject` transaction), and `POST /api/catalog/import` (session-global `LIBRARY`, not `Project`). The numbers below are the pre-fix audit snapshot.
+
 **Documented** (ADR-0006, PLATFORM_ARCH §1, DATA_FLOW §0): every mutation goes through `Validator` + `Executor` and lands on the undo stack.
 
 **Code status:** of **55** handlers holding `project.write()`, only **13** mention the executor; roughly **42** mutate `Project` directly with no undo entry. Examples: `update_object`, `transform_object`, `set_parent`, `connect`, `create_material`/`assign_material`, `update_sketch`/`solve_sketch`/`update_sketch_entity`, `import_ifc`, `instantiate_from_catalog`, and all series edit handlers. Renaming, assigning material, connecting pipes, editing series, importing IFC, and placing catalog components cannot be undone.
 
 ### 6.2 Auto-save claim is false; default launch saves nothing (audit P0-3)
+
+> **Update 2026-10-28 — FIXED.** Defaults now persist: `main.rs` sets `save_path = Some(project_file)` unless `OMNIM_EPHEMERAL=1`; `Project::save` is atomic (tmp + rename); **every** migrated handler persists via `mutation::persist`, including objects, sketches, components, catalog definitions, series, lifecycle, measurements, administrative/breakdown, instantiation and IFC import. `POST /api/project/save` flushes on demand. The only non-project write left is `.omnimlib` import into the global `LIBRARY`. The text below is the pre-fix snapshot.
 
 **Documented**: mutations are persisted automatically.
 

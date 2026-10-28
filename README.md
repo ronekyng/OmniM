@@ -45,7 +45,7 @@ At the core of OmniM are three layers:
 
 &gt; **Current Stage: Phase 8 — Domain Extensions**
 &gt;
-&gt; OmniM is in active development. Phases 1–7 are delivered, with **Phase 1 partial** (the typed `OmniCommand` schema + executor exist; the nom-based Omcom text DSL does not). Phase 8 (domain extensions) is in progress; Phase 9 (AMIR) has been partially delivered ahead of schedule. See [status/ROADMAP.md](docs/status/ROADMAP.md) and [status/CHANGELOG.md](docs/status/CHANGELOG.md). The server currently exposes **78** deduplicated REST routes; **no WebSocket, no database, and no automatic save by default**.
+&gt; OmniM is in active development. Phases 1–7 are delivered, with **Phase 1 partial** (the typed `OmniCommand` schema + executor exist; the nom-based Omcom text DSL does not). Phase 8 (domain extensions) is in progress; Phase 9 (AMIR) has been partially delivered ahead of schedule. See [status/ROADMAP.md](docs/status/ROADMAP.md) and [status/CHANGELOG.md](docs/status/CHANGELOG.md). The server currently exposes **79** deduplicated REST routes; **no WebSocket and no database**. Mutations persist by default to `project.omnim` (or `$OMNIM_PROJECT`); set `OMNIM_EPHEMERAL=1` to run fully in memory. Undo/redo covers every mutating endpoint ([WRITE_PATHS.md](docs/architecture/WRITE_PATHS.md)).
 
 ---
 

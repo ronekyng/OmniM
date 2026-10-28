@@ -20,12 +20,12 @@ evidence: "commands and paths verified in the repo 2026-10-27"
 | npm | 随 Node 安装 | 仅 Web UI 需要。 |
 | 可选：`protoc` | 无需单独安装 | `crates/core/build.rs` 使用 `prost-build`，自带 protobuf 代码生成。 |
 
-无需数据库，无需外部服务。数据保存在内存中，也可以写入普通 JSON 文件——但**默认不开启保存**（见下方警告）。
+无需数据库，无需外部服务。数据保存在内存中，也可以写入普通 JSON 文件——**变更默认落盘**（覆盖范围见下方说明）。
 
-> ⚠️ **持久化警告——默认启动不会保存任何变更。**
-> 当项目路径恰好是 `project.omnim` 时（即未设置 `OMNIM_PROJECT`，或把它设为 `project.omnim`），`crates/server/src/main.rs` 会把 `save_path` 设为 `None`。此时没有任何 handler 会写项目文件。
-> 即使设置了非默认的 `OMNIM_PROJECT`，也只有 **5 个** handler 调用 `Project::save(...)`：`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`（2026-10-27 审计的静态扫描；见 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)）。创建对象、`/api/genrule`、`/api/omcom`、目录实例化、IFC 导入、系列编辑都**不会**落盘。
-> 要开启保存路径，请用非默认路径启动，例如 `OMNIM_PROJECT=./dev-project.omnim cargo run -p omnim-server --bin omnim`。`scripts/dev-server.sh` 会透传 `OMNIM_PROJECT`，但默认值仍是 `project.omnim`，因此直接用该脚本启动同样不会持久化。
+> ⚠️ **持久化说明——2026-10-28 已更新。**
+> 持久化现在**默认开启**：服务器在每次 executor 组变更后自动写 `$OMNIM_PROJECT`（未设置时为服务器工作目录下的 `project.omnim`）；也可随时用 `POST /api/project/save` 强制保存。
+> 逃生开关：`OMNIM_EPHEMERAL=1`（或 `true`/`yes`）完全内存运行。
+> 覆盖范围：所有变更端点都会落盘且可撤销（对象、属性、材质、草图、构件、目录定义、系列、生命周期、测量、管理区/分解、目录实例化、IFC 导入）。仅两处已记录例外：`.omnimlib` 导入到全局库、`section_handler` 的缓存刷新锁。见 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 
 ## 五分钟快速上手
 
@@ -40,7 +40,7 @@ cargo run -p omnim-server --bin omnim
 启动时会：
 
 - 如存在则从 `~/.omnim/library.omnimlib` 加载元件库（否则回退到内置种子目录）；
-- 从服务器工作目录下的 `project.omnim`（`cargo run` 时为 crate 目录）或 `$OMNIM_PROJECT` 加载项目，文件不存在时新建名为 "OmniM Project" 的项目（默认不保存——见上方警告）；
+- 从服务器工作目录下的 `project.omnim`（`cargo run` 时为 crate 目录）或 `$OMNIM_PROJECT` 加载项目，文件不存在时新建名为 "OmniM Project" 的项目（变更默认落盘——见上方警告）；
 - 在 `/api/*` 下提供 REST 接口。
 
 > 注意：有时习惯在二进制后输入的 `serve` 参数（即 `omnim serve`）目前会被忽略——直接运行 `omnim` 效果相同。

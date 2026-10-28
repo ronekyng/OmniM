@@ -26,7 +26,7 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Modeler Handbook](MODELER_HANDBOOK.md) — domain-by-domain task flows, real UI/API steps, and honest gaps ([中文](MODELER_HANDBOOK.zh-CN.md))
 - [Capability Matrix](CAPABILITY_MATRIX.md) — per-object capability rows: create, host, connect, measure, IFC, proto status ([中文](CAPABILITY_MATRIX.zh-CN.md))
 - [Getting Started](guides/GETTING_STARTED.md) — build, launch, and first interactions ([中文](guides/GETTING_STARTED.zh-CN.md))
-- ⚠️ **Persistence warning:** the default launch does **not** save. Set `OMNIM_PROJECT` to a non-default file and read the warning in [Getting Started](guides/GETTING_STARTED.md) before modeling.
+- ✅ **Persistence defaults on (2026-10-28):** mutations autosave to `project.omnim` / `$OMNIM_PROJECT`; `OMNIM_EPHEMERAL=1` disables it. Coverage details in [Getting Started](guides/GETTING_STARTED.md).
 
 ### 🚀 I want to try it
 - [Getting Started](guides/GETTING_STARTED.md) — build the server, run the web UI, first steps ([中文](guides/GETTING_STARTED.zh-CN.md))

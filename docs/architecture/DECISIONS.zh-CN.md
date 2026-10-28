@@ -41,7 +41,7 @@ evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 | [ADR-0003](#adr-0003-brep-建模采用-truck-内核) | BRep 建模采用 truck 内核 | Accepted |
 | [ADR-0004](#adr-0004-json-文件持久化单-project-rwlock) | JSON 文件持久化(单 Project,RwLock)及其已知局限 | Accepted |
 | [ADR-0005](#adr-0005-手写-ifc-解析器而非-ifc-crate) | 手写 IFC 解析器,而非 ifc crate | Accepted（含一条实现说明） |
-| [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator目标) | 所有变更路径统一走 Executor/Validator（目标） | Accepted (target) — Partially implemented |
+| [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator) | 所有变更路径统一走 Executor/Validator | Accepted — Implemented (2026-10-28) |
 
 ---
 
@@ -127,17 +127,16 @@ OmniM 不重写 CSG 或 NURBS 数学。
 
 **决策**
 把**整个 `Project`** 持久化为单个 `.omnim` JSON 文件。启动时从 `OMNIM_PROJECT`(默认仓库根目录的
-`project.omnim`)读取。仅当 `OMNIM_PROJECT` 不是恰好 `project.omnim` 时才启用保存(`save_path = Some`);
-使用默认路径时 `save_path` 为 `None`。**即使开启,也只有 5 个 handler 会保存**
-(`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`)。
-此前"每次被接受的变更都会自动落盘"的说法不成立 —— 见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+`project.omnim`)读取。保存**默认开启**（2026-10-28）：除非 `OMNIM_EPHEMERAL=1`，否则
+`save_path = Some(project_file)`。**每次接受的变更都会自动保存**，经 `mutation::persist`；
+`Project::save` 为原子写（`{path}.tmp` → rename），`POST /api/project/save` 可显式落盘。
 没有增量日志、没有 WAL、没有快照轮转。`Arc<RwLock<Project>>` 守护状态
-(见 `server/src/lib.rs`, `model/src/project.rs`)。
+(见 `server/src/lib.rs`, `model/src/project.rs`)。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 
 **后果**
 - (+) 极易检查、diff、拷贝,甚至手工编辑;零基础设施。
 - (+) 即使版本不匹配,状态也可读取(serde 默认值填补空缺)。
-- (−) 每次保存整体重写文件是 O(项目大小);写盘中途崩溃可能留下截断文件 ——
+- (−) 每次保存整体重写文件是 O(项目大小);原子 tmp+rename 防止截断,但大项目保存仍可能阻塞请求 ——
   目前尚未使用原子重命名的落盘模式。
 - (−) 没有多进程安全:两个服务器共享同一文件会互相破坏。
 - (−) 没有真正的历史。撤销/重做只存在于 `Executor` 的内存状态。
@@ -170,15 +169,17 @@ IFC 2x3/4 记录与几何子集,在 `lib.rs`/`geometry.rs` 中显式控制。不
 
 > **实现说明(2026-10-27)。** `POST /api/import/ifc` **不会**把文件转换成 `OmniCommand`。
 > `import_ifc`(`crates/server/src/lib.rs`)解析 IFC 文本后,把得到的对象、材料、生命周期记录
-> **直接插入 `Project`**(`mode=replace` 会覆盖整个项目)。因此导入内容不可撤销,也不会保存。
+> **更新（2026-10-28）：** 导入仍解析 IFC 文本并直接插入对象/材料/生命周期记录（`mode=replace` 整体覆盖），
+> 但现在会记录 `Command::ReplaceProject { before, after }`：导入是**单步可撤销事务**，且会落盘。
+> 它仍是批量例外，而不是逐实体命令流。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 > 该偏差记录于 [CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27),
 > 端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 
 ---
 
-### ADR-0006. 所有变更路径统一走 Executor/Validator（目标）
+### ADR-0006. 所有变更路径统一走 Executor/Validator
 
-**状态:** Accepted (target) — Partially implemented
+**状态:** Accepted — Implemented（2026-10-28）
 
 **背景**
 变更的来源有多个:REST 处理器、web UI 中的 Omcom 控制台、以及 AI 意图引擎(AMIR 生成的
@@ -214,3 +215,15 @@ IFC 2x3/4 记录与几何子集,在 `lib.rs`/`geometry.rs` 中显式控制。不
 `instantiate_from_catalog`,以及全部系列编辑 handler。完整矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md);
 偏差记录于 [CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27)。
 恢复该不变量是路线图事项,本条 ADR 目前不能把它当作既成事实。
+
+**实现（2026-10-28）——偏差已关闭。**
+
+Wave 1 已恢复该不变量。所有变更 REST handler 现在构造 `OmniCommand` 并调用
+`mutation::apply`（少数自持锁的 handler 直接委托 `Executor::execute` / `record_*`）。
+`mutation::persist` 在每次成功变更后原子落盘。`scripts/check_write_paths.py` 报告
+**0** 个白名单外的 `project.write()`，并已接入 CI。
+
+仍有两处已记录例外，但都不在管线之外写 `Project`：
+`import_ifc` 记录单条 `Command::ReplaceProject { before, after }`（整项目事务）；
+`POST /api/catalog/import` 修改的是会话级全局 `LIBRARY`（`.omnimlib` 批量导入），不是 `Project`。
+当前矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。

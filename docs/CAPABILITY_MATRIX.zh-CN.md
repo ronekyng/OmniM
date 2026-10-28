@@ -13,7 +13,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 > - **对象类型**是语义角色（及 IFC 映射），**不一定**是你最终拿到的实例的 `object_type`。目录放置（`/api/catalog/instantiate`）创建的是带 `catalog_ref` 的 `ObjectType::Component`；工具栏 GenRule 路径（`/api/genrule`）创建 `Wall`、`Slab`、`Road`、`Pipe` 等语义类型，但几何是硬编码网格。特征树/BRep 才是官方几何路径，GenRule 属于过渡方案。
 > - **创成分类**是每个实例的创建方式（面 / 线 / 点 / 体），来自 [DATA_MODEL §1](specification/DATA_MODEL.zh-CN.md#1-概述)，不是从名称推断的属性。`(objectType, class/form)` 授权矩阵是设计契约；服务端强制校验仍待实现（[ROADMAP](status/ROADMAP.zh-CN.md)）。
 > - **Proto 状态**沿用 [DOMAINS](specification/DOMAINS.zh-CN.md) 的状态列：✅ 已进 `proto/omnim.proto`，🔀 已进 proto 但流程简化，🗓 仅计划（155 个列出类型中有 104 个仅计划）。
-> - **测量**与**剖切**是视口工具。测量只存在内存中（不会被 5 个保存处理器落盘，也不可撤销）。剖切是视角裁剪；构件截面线只对 `Component` 对象提供 API。
+> - **测量**与**剖切**是视口工具。测量存入 `Project.measurements`，可撤销并随项目落盘。剖切是视角裁剪；构件截面线只对 `Component` 对象提供 API。
 > - **UI 可创建？** 为 ❌ 而 Proto 为 ✅ 时，表示只能走 API。🗓 表示 UI 与 API 都没有创建路径。
 
 | 标记 | 含义 |
@@ -108,8 +108,8 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 
 - **领域总数**（[DOMAINS](specification/DOMAINS.zh-CN.md)、[COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)）：**155 列出 / 51 进 proto / 104 仅计划**。建筑 37（22 进 proto）、土木 41（10）、工厂 39（11）、机械 38（8）。
 - **服务端规模**：**78 条去重 REST 路由**（[API](reference/API.zh-CN.md)）；**无 WebSocket、无数据库**。单个内存 `Project`，可选 JSON 文件。
-- **持久化**：当 `OMNIM_PROJECT` 未设置或等于 `project.omnim` 时，默认启动 `save_path = None`；只有 **5** 个处理器会保存。创建对象、GenRule、目录放置、IFC 导入与系列编辑都不会落盘（[CODE_DEVIATIONS §6](status/CODE_DEVIATIONS.zh-CN.md)）。
-- **撤销**：只有执行器路径上的变更可撤销（创建/删除对象、GenRule、Omcom、草图创建/图元编辑）。变换、属性、父子/连接、材质、目录实例化、IFC 导入与系列编辑不可撤销（[WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)）。
+- **持久化**：2026-10-28 起默认开启——`$OMNIM_PROJECT`/`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`。所有变更端点都会保存，包括变换/改父级/连接、材质、测量、系列/目录编辑、实例化与 IFC 导入。
+- **撤销**：所有变更端点均可撤销，包括变换、属性、父子/连接、材质、目录实例化、IFC 导入与系列编辑（[WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)）。
 - **IFC**：仅 IFC 2x3 / IFC 4 子集，手写解析器/写出器；无材质、工程量或分类映射。楼梯与屋顶能按类型导入，但导出为 `IfcBuildingElementProxy`；所有非建筑类型都导出为 proxy（[FORMAT_COMPAT](status/FORMAT_COMPAT.zh-CN.md)）。
 - **碰撞、工程量统计、出图在任何层都不存在** —— 无 UI、无 REST 路由、无 crate。它们属于路线图条目（[ROADMAP](status/ROADMAP.zh-CN.md)）。
 - **系列门禁**：只检查可达性。`min/max/fixed` 约束不强制，`SpecComponent.material` 不应用；`connect()` 只校验两个对象存在（[CODE_DEVIATIONS §6.4](status/CODE_DEVIATIONS.zh-CN.md)）。

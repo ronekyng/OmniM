@@ -7,7 +7,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **78 条路由（去重后，2026-10-27 审计）**。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **79 条路由**（去重后，2026-10-27 审计；2026-10-28 新增持久化端点 `/api/project/save`）。
 
 ## 目录
 
@@ -40,7 +40,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 - **无认证。** 服务器面向本地 / 单用户使用，没有 API Key、会话或令牌。
 - **无 WebSocket / 实时协作。** OmniM 仅提供 **REST** 接口，没有实时同步、事件流或在线状态。需要较新的状态时轮询 `GET /api/tree` 或 `GET /api/objects`；Web UI 在每次变更后简单重新拉取。
 - **内存中的单一项目。** 所有路由操作同一个共享 `Project`（`Arc<RwLock<Project>>`，即 `SharedProject`）。读共享读锁；写占用写锁，变更串行执行。
-- **撤销/重做后端（🔀 部分）。** 部分变更类端点（对象创建/删除、草图编辑、GenRule 创建）会把操作压入 Omcom 执行器的历史栈，通过 `GET /api/undo-status` 查询。许多直接写入端点（改名、属性、赋材质、连接、IFC 导入、目录实例化、系列编辑）**不会**，因此撤销并不完整。恢复单一写入路径是代码待办项。
+- **撤销/重做后端（✅ 完整）。** 所有变更端点都经 Omcom 执行器并入撤销/重做历史，可通过 `GET /api/undo-status` 查询。IFC 导入是单条整项目事务（`Command::ReplaceProject`）；`.omnimlib` 导入全局库与 `section_handler` 缓存锁是仅有的已记录例外（见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)）。变更默认落盘；`POST /api/project/save` 显式保存，`OMNIM_EPHEMERAL=1` 关闭写入。
 
 ## 基础 URL 约定
 
@@ -170,7 +170,7 @@ curl -sS -X POST "$BASE/api/objects/column-1/connect/beam-2"
 | `POST /api/materials` | 创建材质。 |
 | `PUT /api/objects/{id}/material` | 为对象指定材质。 |
 
-- `POST /api/materials` 请求体（`CreateMaterialRequest`）：`{ "id": "concrete-c30", "name": "C30 Concrete", "category": "concrete", "density": 2400.0 }`。`category` 按 `MaterialCategory` 变体大小写不敏感解析（未知 → `Unspecified`）。成功返回空响应。
+- `POST /api/materials` 请求体（`CreateMaterialRequest`）：`{ "id": "concrete-c30", "name": "C30 Concrete", "category": "concrete", "density": 2400.0 }`。`category` 按 `MaterialCategory` 变体大小写不敏感解析（未知 → `Unspecified`）。重复 id 返回 `400`。成功返回空响应。
 - `PUT /api/objects/{id}/material` 请求体：`{ "material_id": "concrete-c30" }` → 成功返回空响应；`400` 材质或对象不存在。
 - `GET /api/materials` → `Vec<Material>`（protobuf 派生：`id`、`name`、`category` 整数、`density` 等）。
 

@@ -37,11 +37,11 @@ OmniM 是一个 **AI 原生的工程生命周期平台**:它以**本地优先的
    原生 wgpu 查看器是另一个(独立的)消费方。
 3. **所有变更走同一条门 —— 这是目标,不是现状。** 目标设计是:不论是 REST 处理器还是 AI 生成的命令,最终都产生
    `OmniCommand`,由**同一个 `Validator` + `Executor`** 校验并执行,并支持撤销/重做。
-   **现状:** 只部分成立。静态扫描发现 55 个 handler 持有 `project.write()`,其中仅 13 个出现 executor;
-   约 **42 个直接修改 `Project`**,不产生撤销条目。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+   **现状(2026-10-28):** 已成立。所有变更 handler 都构造 `OmniCommand`(或委托 `Executor`);
+   直写端点 42 → 0,`scripts/check_write_paths.py` 已在 CI 强制执行。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 4. **不引入隐性基础设施。** 没有数据库、没有 WebSocket、没有消息队列。应用的全部状态
-   就是一个在内存中的 `Project` 值,并**有条件地**持久化为单个 JSON 文件 —— 保存**默认关闭**,
-   即使开启也只有 5 个 handler 会落盘(见 §7)。
+   就是一个在内存中的 `Project` 值,并持久化为单个 JSON 文件 —— 保存**默认开启**
+   (`OMNIM_EPHEMERAL=1` 可关闭),每次变更都原子落盘(见 §7)。
 
 ---
 
@@ -57,9 +57,9 @@ OmniM 是一个 **AI 原生的工程生命周期平台**:它以**本地优先的
                         HTTP/JSON   │  /api/*   (Vite 开发代理 → :3000)
 ┌───────────────────────────────────▼────────────────────────────────┐
 │                     omnim-server  (Axum)                            │
-│  78 个 REST 路由 · AppState = Arc<RwLock<Project>>                  │
+│  79 个 REST 路由 · AppState = Arc<RwLock<Project>>                  │
 │  目标：所有变更统一走 Validator/Executor                            │
-│  现状：约 42 个 handler 直接写 Project（见 WRITE_PATHS.zh-CN.md）   │
+│  全部变更统一走 Validator/Executor（2026-10-28）                    │
 │  保存：默认关闭；save_path 为 Some 时仅 5 个 handler 落盘           │
 │  为 web/ 构建产物提供静态文件服务                                     │
 └───────┬───────────────────┬────────────────────┬───────────────────┘
@@ -82,10 +82,10 @@ OmniM 是一个 **AI 原生的工程生命周期平台**:它以**本地优先的
         │
         ▼
 ┌────────────────────────────────────────────────────────────────────┐
-│  持久化: 单个 .omnim JSON 文件（目标形态与当前格式一致）            │
+│  持久化: 单个 .omnim JSON 文件                                      │
 │  默认 project.omnim；OMNIM_PROJECT 可覆盖                           │
-│  路径为 project.omnim 时 save_path=None → 变更完全不落盘            │
-│  即使开启保存，也只有 5 个 handler 调用 save（WRITE_PATHS）         │
+│  OMNIM_EPHEMERAL=1 关闭写入；tmp+rename 原子保存                    │
+│  默认落盘；每次变更原子保存（WRITE_PATHS.zh-CN.md）                  │
 │  无数据库、无版本历史存储                                            │
 └────────────────────────────────────────────────────────────────────┘
 
@@ -123,7 +123,7 @@ omnim-renderer: 2026-10-27 已删除(原本仅依赖 omnim-core + omnim-model,
 | `omnim-omcom` | ~3,650 | 命令层。`Validator::validate(&OmniCommand, &Project)` 返回错误列表;`Executor::execute(&OmniCommand, &mut Project)` 返回 `ExecutionResult`,内含**完整的撤销/重做栈与事务分组**。项目的一切合法变更都是一条 `OmniCommand`。 |
 | `omnim-ifc` | ~1,590 | **手写的** STEP/IFC 文件解析器(不依赖任何 IFC crate),支持导入与导出,**部分覆盖** IFC 2x3 与 IFC 4;含 IFC 几何映射。 |
 | `omnim-amir` | ~2,300 | AI 意图引擎("AMIR"):自然语言 → 意图 → `OmniCommand` 生成(`generator.rs`,约 1,018 行)、提示词解析、上下文构建、**反向描述**(把已有模型描述成自然语言,`reverse.rs`)、模板、反馈。通过 reqwest 的 HTTP 调用 LLM 供应商:**OpenAI / Anthropic / Mock**。 |
-| `omnim-server` | ~3,700 | Axum HTTP 服务器。`/api/*` 下 **78** 条去重 REST 路由,`AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + 保存路径。部分请求(创建/删除对象、genrule、omcom、草图结构性操作)会构造 `OmniCommand` 并走 Executor;许多其他请求直接修改 `Project`。只有 5 个 handler 会保存 JSON 项目文件,且仅当配置了非默认项目路径时——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。为 `web/` 构建产物提供静态文件服务。默认监听 `0.0.0.0:3000`(可用 `OMNIM_HOST`/`OMNIM_PORT` 覆盖)。**没有 WebSocket、没有数据库。** |
+| `omnim-server` | ~3,700 | Axum HTTP 服务器。`/api/*` 下 **79** 条去重 REST 路由,`AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + 保存路径。所有变更请求都构造 `OmniCommand` 并走 Executor（Wave 1，2026-10-28）；`mutation::persist` 负责原子落盘。持久化**默认开启**（`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`）；executor 组端点与 5 个遗留 handler 会保存，其余 handler 暂不保存——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。为 `web/` 构建产物提供静态文件服务。默认监听 `0.0.0.0:3000`(可用 `OMNIM_HOST`/`OMNIM_PORT` 覆盖)。**没有 WebSocket、没有数据库。** |
 *`omnim-renderer`(自包含的原生 wgpu/winit 查看器)已于 2026-10-27 作为无人依赖的死底料从 workspace 删除;如需原生查看器将以 RFC 形式重新立项。*
 
 > 说明:`omnim-core` 提供清单类型(共享枚举、`Version` 等);具体的 `Project` 与其持久化
@@ -138,9 +138,8 @@ omnim-renderer: 2026-10-27 已删除(原本仅依赖 omnim-core + omnim-model,
 
 ## 4. 关键数据流:HTTP 请求 → 变更(以及是否保存)
 
-**目标路径(ADR-0006)。** 所有变更都应构造 `OmniCommand`,经 `Validator` + `Executor`,记录撤销历史,然后保存。
-**当前代码只有少数 handler 符合**(55 个写 handler 中 13 个出现 executor;而这些都不保存)。
-以下是一条代表性的 *executor 路径* 变更,例如 `POST /api/objects`:
+**已实现路径(ADR-0006)。** 所有变更都构造 `OmniCommand`,经 `Validator` + `Executor`,记录撤销历史,然后原子落盘。
+以下是一条代表性变更,例如 `POST /api/objects`:
 
 ```
 浏览器(React) ──POST /api/objects──▶  Axum 路由处理器
@@ -155,7 +154,7 @@ omnim-renderer: 2026-10-27 已删除(原本仅依赖 omnim-core + omnim-model,
                                           ▼
                                 内存中的 Project 已更新
                                           ▼
-                          (不保存:create_object 不在五个保存 handler 中)
+                          mutation::persist() 原子落盘(save_path 为 Some 时)
                                           ▼
                           返回 200/4xx JSON 响应给浏览器
 ```
@@ -163,12 +162,12 @@ omnim-renderer: 2026-10-27 已删除(原本仅依赖 omnim-core + omnim-model,
 处理器代码中的实际情况:
 
 - 读路由获取 `state.project.read().await`。
-- Executor 路径的路由同时获取 `project.write()` 与 `executor.write()`,就地拼装 `OmniCommand`。
-- **直接写路由**只获取 `project.write()` 并直接修改 `Project`(`update_object`、`transform_object`、
-  `set_parent`、`connect`、赋材质、草图求解、IFC 导入、目录实例化、系列编辑……)。这些**不产生撤销条目**。
-- **保存:** 只有 `update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`
-  调用 `Project::save(path)`,且仅当 `state.save_path` 为 `Some`(即非默认 `OMNIM_PROJECT`)。
-  默认启动时 `save_path = None`,因此完全不落盘。保存失败只写 stderr,不会让请求失败。
+- 变更路由调用 `mutation::apply`:获取两把写锁、构造并执行 `OmniCommand`、记录撤销历史、原子落盘。
+- 少数自持锁的 handler(`create_object`、`delete_object`、`execute_omcom`、`genrule_create`、`undo`、
+  `redo`、`import_ifc`)直接委托 `Executor`。
+- `scripts/check_write_paths.py` 在 CI 中强制该不变量(0 直写)。
+- **保存:** 每次成功变更后 `mutation::persist` 在 `state.save_path` 为 `Some` 时落盘(默认 `project.omnim`)。
+  保存失败只写 stderr,不会让请求失败。
 
 完整的现状矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 
@@ -215,19 +214,19 @@ protobuf 二进制编码。
 
 **当前:单个 JSON 文件 + 单个内存中的工程。**
 
-- `ServerConfig { project, save_path, ... }` 决定是否启用保存路径。`main.rs` 在项目文件为默认
-  `project.omnim` 时把 `save_path` 设为 `None`;只有非默认 `OMNIM_PROJECT` 才会得到 `Some`。
-- 即使 `save_path` 为 `Some`,也**只有 5 个 handler** 调用 `Project::save(path)`:`update_object`、
-  `add_feature`、`update_feature`、`remove_feature`、`rebuild_component`。它们整体重写 `.omnim` 文件;
-  启动时读回同一文件。
-- **因此默认启动不持久化任何内容。** 逐端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+- `ServerConfig { project, save_path, ... }` 决定是否启用保存路径。`main.rs` 设
+  `save_path = Some(project_file)`(默认 `project.omnim`),除非 `OMNIM_EPHEMERAL=1|true|yes`。
+- `mutation::persist` 在每次成功变更后保存;`Project::save` 先写 `{path}.tmp` 再 rename 覆盖目标,
+  崩溃不会截断文件。启动时读回同一文件。
+- `POST /api/project/save` 可显式落盘。唯一不写项目的路径是 `.omnimlib` 导入全局库。
+  逐端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 - `.omnim` 文件(仓库根 `project.omnim`, `fixtures/my-project.omnim`)就是落盘示例。
 
 **这种模型的局限**(这些是现状,而非计划移除的东西):
 
 - **单进程、单工程。** 只有一个 `Project`,两个浏览器标签页共享同一份内存状态。
 - **无多写者安全性。** `Arc<RwLock<Project>>` 在**单进程内**正确地串行化写入,
-  但两个服务器实例无法共享一个文件;文件不是事务性的,中途崩溃可能损坏。
+  但两个服务器实例无法共享一个文件;原子 tmp+rename 可防截断,但并发写者仍会互相覆盖。
 - **无历史。** 撤销/重做栈只在内存;JSON 文件只存当前状态。
 - **无分支/合并。** 不存在面向模型的"版本管理 Git"。
 

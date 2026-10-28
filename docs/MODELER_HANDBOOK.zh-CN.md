@@ -18,7 +18,7 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 经验规则：输入到目录参数面板的数字想成**毫米**；在视口拾取或调用 `/api/genrule` 时想成**米**。
 
 ### 1.2 精度与几何注意事项
-- `PUT /api/objects/{id}/transform` 会把任何几何转换为 **Mesh** 后重写。凡有几何的对象都能动，但它会压平特征树：移动后，参数化特征与目录参数不再驱动形状。它同样**不可撤销**。
+- `PUT /api/objects/{id}/transform` 会把任何几何转换为 **Mesh** 后重写。凡有几何的对象都能动，但它会压平特征树：移动后，参数化特征与目录参数不再驱动形状。它**可撤销**（恢复变换前几何）。
 - 墙 `path` 可以带不同 z 值，但平面拉伸使用**首点 z**作为基底标高；没有逐点放坡。楼板/屋顶/楼面的边界也使用首个边界点的 z。
 - 转角在核心里做 miter，预览与之一致；这是平面拉伸，不是完整三维扫掠。
 - 楼板/楼面/屋顶边界由服务端校验：少于 3 点、共线或零长度边、退化面积、蝴蝶结自交都会被拒绝。结构有效性、重叠与洞口不校验。
@@ -26,13 +26,12 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 - `POST /api/objects` 接受字符串 `"floor"`，但会映射为 `BuildingStorey`（`crates/server/src/lib.rs` 的 `parse_type`）。要创建真正的楼面，请用 `/api/genrule` 的 `mode:"floor"`。
 
 ### 1.3 持久化：建模前必读
-> ⚠️ **默认启动不会保存。** 当 `OMNIM_PROJECT` 未设置或恰好等于 `project.omnim` 时，`crates/server/src/main.rs` 令 `save_path = None`。即使换成其他路径，也只有 **5** 个处理器调用 `Project::save(...)`：`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`。
+> ✅ **持久化默认开启**（2026-10-28）。服务器在 executor 组变更后自动写 `$OMNIM_PROJECT`（默认 `project.omnim`）；`POST /api/project/save` 可随时强制保存；`OMNIM_EPHEMERAL=1` 关闭持久化。
 
-- 创建对象、`/api/genrule`、`/api/omcom`、目录实例化、IFC 导入与所有系列编辑都**不会落盘**。
-- **没有保存按钮，也没有 `/api/save` 路由**。启动时若存在 `OMNIM_PROJECT`（默认 `project.omnim`）则加载。
-- 若确实需要持久化，请用非默认文件启动，例如 `OMNIM_PROJECT=./dev-project.omnim cargo run -p omnim-server --bin omnim`；建模后再触发一个五类保存动作（例如重命名对象）。
+- **会保存**：创建/删除对象、`/api/genrule`、`/api/omcom`、撤销/重做、sketch 变更、对象改名、特征增加/更新/删除/重建。
+- **会保存**：其余全部端点——变换/改父级/连接、材质、测量、管理区/分解、系列、目录定义、目录放置与 IFC 导入。
 - 更稳妥的单次会话办法：用 `GET /api/export/ifc`（或工具栏 **Export**）保留几何快照，但要接受 §6.2 的 IFC 限制。
-- 撤销同样不完整：创建/删除对象、GenRule、Omcom、草图图元编辑可撤销；变换、属性、改父级、连接、材质、目录放置、IFC 导入与系列编辑不可撤销。见 [WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md) 与 [CODE_DEVIATIONS §6](status/CODE_DEVIATIONS.zh-CN.md)。
+- 撤销覆盖全部变更端点（对象、属性、变换、父子/连接、材质、草图、构件、目录、系列、测量、管理区/分解、实例化、IFC 导入）。见 [WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)。
 
 ### 1.4 捕捉
 - 视口工具栏有 **Toggle snap** 按钮（`IcoSnap`，提示 "Toggle snap"）。每次拾取与悬停端点都会经过 `snapPoint()`。
@@ -156,9 +155,9 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 
 ## 6. 数据与交换
 ### 6.1 保存与加载 `.omnim`
-- 项目是启动时从 `OMNIM_PROJECT`（默认 `project.omnim`）加载的单个 JSON 文档。**没有保存/加载 REST 路由，也没有保存按钮**。
+- 项目是启动时从 `OMNIM_PROJECT`（默认 `project.omnim`）加载的单个 JSON 文档。executor 组端点的变更会自动落盘；也存在显式保存路由 `POST /api/project/save`（Web 界面暂无保存按钮）。
 - 只有 §1.3 列出的五个处理器会写文件，且 `save_path` 必须为 `Some`。目录放置、GenRule、IFC 导入与系列编辑都只在内存中。
-- 建议的会话习惯：设置 `OMNIM_PROJECT=./dev-project.omnim`，建模后执行一次会触发 `update_object` 的重命名/属性动作（五个保存器之一）。关闭前检查文件时间戳。
+- 会话习惯：假设 `OMNIM_PROJECT=./dev-project.omnim`，用对象创建等 executor 组动作即可自动落盘；遗留直写动作（变换、材质、系列编辑等）仍需用 `POST /api/project/save` 手动补存。关闭前检查文件时间戳。
 - 撤销不能跨重启保护你：只有执行器路径上的操作在撤销栈中。
 
 ### 6.2 IFC 导入与导出
@@ -171,10 +170,10 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 ### 6.3 库与系列文件
 - **Library Manager** 位于 `/library-manager`，编辑 `ComponentDef`；全局库是 `~/.omnim/library.omnimlib`。API：`POST /api/catalog/export` 写出 `/tmp` 下的时间戳路径；`POST /api/catalog/import` 读取你提供的路径。
 - **Series Manager** 位于 `/series-manager`，编辑决策树；API：`POST /api/series/save` / `POST /api/series/load` 处理 `.omnimseries` 文件。这些端点返回/接受文件系统路径，不会选择项目相对位置。
-- 库与系列编辑**不可撤销，也不会被五个项目保存处理器落盘**；编辑后请显式导出文件。
+- 库与系列**定义**可撤销并随项目落盘；仓库级 `.omnimlib` / `.omnimseries` 导出仍需显式文件操作。
 
 ### 6.4 测量与剖切
-- 距离/角度/面积测量按钮在视口工具栏；面积用右键结束。测量通过 `POST /api/measurements` 存入 `Project.measurements`，但没有保存处理器写它们，因此会随内存项目消失。
+- 距离/角度/面积测量按钮在视口工具栏；面积用右键结束。测量通过 `POST /api/measurements` 存入 `Project.measurements`，可撤销并随项目落盘。
 - **剖切**是只读视角裁剪平面（X/Y/Z 滑杆）。`GET /api/components/{id}/section?plane_z=` 可为 `Component` 返回截面线；没有图纸/图框输出。
 
 完整状态请先读 [ROADMAP](status/ROADMAP.zh-CN.md)、[FORMAT_COMPAT](status/FORMAT_COMPAT.zh-CN.md) 与 [CODE_DEVIATIONS](status/CODE_DEVIATIONS.zh-CN.md)，再对外承诺交付物。

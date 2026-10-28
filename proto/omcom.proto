@@ -97,6 +97,7 @@ enum Action {
 
   // Material operations
   SET_MATERIAL = 50;
+  CREATE_MATERIAL = 51;
 
   // Lifecycle operations
   CREATE_LIFECYCLE_RECORD = 70;
@@ -127,12 +128,18 @@ enum Action {
   // Feature operations (sketch → 3D body)
   EXTRUDE_SKETCH = 107;      // direct sketch extrusion (also available via ADD_FEATURE)
   REVOLVE_SKETCH = 108;      // direct sketch revolution (also available via ADD_FEATURE)
+  // 2026-10-28 Wave 1 Slice 3: sketch-detail ops
+  UPDATE_SKETCH = 109;
+  UPDATE_SKETCH_ENTITY = 118; // sketch group continued past the 3D-feature/component blocks (107–115)
 
   // Component operations
   CREATE_COMPONENT = 110;
   ADD_FEATURE = 111;
   REMOVE_FEATURE = 112;
   REBUILD_FEATURES = 113;
+  // 2026-10-28 Wave 1 Slice 3: component-detail ops
+  DELETE_COMPONENT = 114;    // instance delete (distinct from DELETE_COMPONENT_DEF 206)
+  UPDATE_FEATURE = 115;
 
   // Validation
   VALIDATE = 90;
@@ -145,6 +152,11 @@ enum Action {
   PUBLISH_COMPONENT = 204;
   LIST_CATALOG = 205;
   DELETE_COMPONENT_DEF = 206;
+  // 2026-10-28 Wave 1 Slice 3: catalog-detail ops
+  UPDATE_COMPONENT_DEF = 207;
+  UPDATE_COMPONENT_PARAM = 208;
+  DELETE_COMPONENT_PARAM = 209;
+  ASSIGN_FEATURE_TREE = 218; // catalog group continued past the series block (210–217)
 
   // Series operations
   CREATE_SERIES = 210;
@@ -155,6 +167,27 @@ enum Action {
   LIST_SERIES = 215;
   DELETE_SERIES = 216;
   LOAD_SERIES = 217;
+  // 2026-10-28 Wave 1 Slice 4: series detail ops
+  UPDATE_SERIES = 219;
+  UPDATE_PARAM_CONSTRAINT = 220;
+  DELETE_PARAM_CONSTRAINT = 221;
+
+  // 2026-10-28 Wave 1 Slice 4: measurement ops
+  CREATE_MEASUREMENT = 222;
+  DELETE_MEASUREMENT = 223;
+
+  // 2026-10-28 Wave 1 Slice 4: administrative division ops
+  CREATE_ADMINISTRATIVE_DIVISION = 224;
+  DELETE_ADMINISTRATIVE_DIVISION = 225;
+
+  // 2026-10-28 Wave 1 Slice 4: breakdown structure ops
+  CREATE_BREAKDOWN_NODE = 226;
+  DELETE_BREAKDOWN_NODE = 227;
+  LINK_BREAKDOWN_OBJECT = 228;
+  LINK_BREAKDOWN_ADMINISTRATIVE = 229;
+
+  // 2026-10-28 Wave 1 Slice 5: catalog instantiation
+  INSTANTIATE_CATALOG = 230;
 }
 
 // === Operations ===
@@ -212,7 +245,45 @@ message Operation {
     AddParamConstraintOperation add_param_constraint = 49;
     DeleteSeriesOperation delete_series = 50;
     LoadSeriesOperation load_series = 51;
+    // 2026-10-28 Wave 1 Slice 2: material & object-detail ops
+    CreateMaterialOperation create_material = 52;
+    SetObjectPropertyOperation set_object_property = 53;
+    // 2026-10-28 Wave 1 Slice 3: sketch / component / catalog detail ops
+    UpdateSketchOperation update_sketch = 54;
+    UpdateSketchEntityOperation update_sketch_entity = 55;
+    DeleteComponentOperation delete_component = 56;
+    UpdateFeatureOperation update_feature = 57;
+    UpdateComponentDefOperation update_component_def = 58;
+    UpdateComponentParamOperation update_component_param = 59;
+    DeleteComponentParamOperation delete_component_param = 60;
+    AssignFeatureTreeOperation assign_feature_tree = 61;
+    // 2026-10-28 Wave 1 Slice 4: series detail ops
+    UpdateSeriesOperation update_series = 62;
+    UpdateParamConstraintOperation update_param_constraint = 63;
+    DeleteParamConstraintOperation delete_param_constraint = 64;
+    // 2026-10-28 Wave 1 Slice 4: measurement ops
+    CreateMeasurementOperation create_measurement = 65;
+    DeleteMeasurementOperation delete_measurement = 66;
+    // 2026-10-28 Wave 1 Slice 4: administrative division ops
+    CreateAdministrativeDivisionOperation create_administrative_division = 67;
+    DeleteAdministrativeDivisionOperation delete_administrative_division = 68;
+    // 2026-10-28 Wave 1 Slice 4: breakdown structure ops
+    CreateBreakdownNodeOperation create_breakdown_node = 69;
+    DeleteBreakdownNodeOperation delete_breakdown_node = 70;
+    LinkBreakdownObjectOperation link_breakdown_object = 71;
+    LinkBreakdownAdministrativeOperation link_breakdown_administrative = 72;
+    // 2026-10-28 Wave 1 Slice 5: catalog instantiation as one undoable command
+    InstantiateCatalogOperation instantiate_catalog = 73;
   }
+}
+
+message SetObjectPropertyOperation {
+  string object_id = 1;
+  Property property = 2;
+}
+
+message CreateMaterialOperation {
+  Material material = 1;
 }
 
 message CreateObjectOperation {
@@ -229,6 +300,14 @@ message ModifyObjectOperation {
   optional string new_name = 2;
   optional string new_description = 3;
   optional ParametricGeometry new_geometry = 4;
+  // 2026-10-28 Wave 1 Slice 2: object detail edits
+  optional string new_ifc_class = 5;
+  optional TagList new_tags = 6;
+}
+
+// Wrapper so optional repeated tags are distinguishable from "untouched".
+message TagList {
+  repeated string values = 1;
 }
 
 message SetMaterialOperation {
@@ -312,6 +391,8 @@ message TransformGeometryOperation {
   optional Point3D translation = 2;
   optional Rotation rotation = 3;
   optional Vector3D scale = 4;
+  // Rotation/scale pivot; defaults to the mesh centroid (executor) when unset.
+  optional Point3D pivot = 5;
 }
 
 // === Lifecycle Operations ===
@@ -391,6 +472,8 @@ message SketchEntityData {
   repeated Point3D points = 3;    // control points (line=2, circle=1+center, arc=3)
   double radius = 4;              // for circle/arc
   int32 sides = 5;                // for polygon
+  // 2026-10-28 Wave 1 Slice 3: construction-geometry flag
+  bool construction = 6;
 }
 
 enum SketchEntityType {
@@ -441,6 +524,8 @@ message CreateSketchOperation {
   string name = 1;
   Point3D origin = 2;
   Vector3D normal = 3;
+  // 2026-10-28 Wave 1 Slice 3: optional owning component (empty = unowned)
+  string component_id = 4;
 }
 
 message AddSketchEntityOperation {
@@ -549,6 +634,9 @@ message AddFeatureOperation {
   // New fields
   repeated string input_sketch_ids = 10;  // Sweep path_sketch_id, Loft section sketch_ids
   string axis_sketch_id = 11;             // for revolve (replaces axis_origin/axis_direction)
+  // 2026-10-28 Wave 1 Slice 3: REST add_feature parity (optional overrides)
+  optional string name = 12;              // when set, overrides the auto-generated feature name
+  optional double lod = 13;               // when set, overrides the default tolerance
 }
 
 message RemoveFeatureOperation {
@@ -610,6 +698,91 @@ message DeleteComponentDefOperation {
   string component_id = 1;
 }
 
+// 2026-10-28 Wave 1 Slice 3: sketch / component / catalog detail operations
+
+message UpdateSketchOperation {
+  string sketch_id = 1;
+  optional Point3D origin = 2; // when set, replaces the workplane origin
+  optional string name = 3;    // when set, renames the sketch
+}
+
+message UpdateSketchEntityOperation {
+  string sketch_id = 1;
+  int32 entity_index = 2;      // 1-based index
+  PointList points = 3;        // when set, replaces the control points
+  optional double radius = 4;
+  optional int32 sides = 5;
+  optional bool construction = 6;
+}
+
+message DeleteComponentOperation {
+  string component_id = 1;     // component instance object id
+}
+
+message UpdateFeatureOperation {
+  string component_id = 1;
+  string feature_id = 2;
+  optional string sketch_id = 3;
+  optional string axis_sketch_id = 4;
+  optional double depth = 5;
+  optional double angle = 6;
+  optional bool is_cut = 7;
+  optional bool suppressed = 8;
+  TagList input_sketch_ids = 9;      // when set, replaces the list
+  TagList dependency_ids = 10;       // when set, replaces the list
+  optional Vector3D direction = 11;
+  optional Point3D axis_origin = 12;
+  optional Vector3D axis_direction = 13;
+  optional double lod = 14;
+  optional int32 boolean_op = 15;    // raw update_feature mapping (0=union, 2=intersect, else subtract)
+  optional int32 pattern_count_x = 16;
+  optional int32 pattern_count_y = 17;
+  optional int32 pattern_count_z = 18;
+}
+
+message UpdateComponentDefOperation {
+  string component_id = 1;
+  optional string name = 2;
+  optional string category = 3;
+  optional string description = 4;
+  optional string ifc_class = 5;
+  optional string standard_reference = 6;
+  TagList tags = 7;                    // when set, replaces the tag list
+  optional string domain = 8;
+  TagList allowed_materials = 9;       // when set, replaces the list
+  optional string default_material = 10;
+  map<string, string> properties = 11; // when set, replaces the map
+}
+
+message UpdateComponentParamOperation {
+  string component_id = 1;
+  int32 param_index = 2;               // 1-based index
+  optional string name = 3;
+  optional int32 param_type = 4;
+  optional double default_value = 5;
+  optional double min_value = 6;
+  optional double max_value = 7;
+  optional double step = 8;
+  optional string unit = 9;
+  optional string formula = 10;
+  TagList choices = 11;                // when set, replaces the choices
+  optional string description = 12;
+}
+
+message DeleteComponentParamOperation {
+  string component_id = 1;
+  int32 param_index = 2;               // 1-based index
+}
+
+message AssignFeatureTreeOperation {
+  string component_id = 1;
+  string feature_tree_id = 2;
+}
+
+message PointList {
+  repeated Point3D values = 1;
+}
+
 message CreateSeriesOperation {
   string name = 1;
   string description = 2;
@@ -662,6 +835,92 @@ message LoadSeriesOperation {
   string source = 2;  // "standalone" | "library"
 }
 
+// 2026-10-28 Wave 1 Slice 4: series detail operations
+
+message UpdateSeriesOperation {
+  string series_id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional string domain = 4;
+  optional string standard_reference = 5;
+  // Repeated fields cannot be `optional`, so a flag distinguishes "absent"
+  // from "clear the list".
+  bool replace_applicable_phases = 6;
+  repeated string applicable_phases = 7;
+  bool replace_metadata = 8;
+  map<string, string> metadata = 9;
+}
+
+message UpdateParamConstraintOperation {
+  string series_id = 1;
+  string component_def_id = 2;
+  uint32 param_index = 3;
+  optional string param_name = 4;
+  optional double default_value = 5;
+  optional double min_value = 6;
+  optional double max_value = 7;
+  optional double step = 8;
+  optional string fixed_value = 9;
+}
+
+message DeleteParamConstraintOperation {
+  string series_id = 1;
+  string component_def_id = 2;
+  uint32 param_index = 3;
+}
+
+// 2026-10-28 Wave 1 Slice 4: measurement operations
+
+message CreateMeasurementOperation {
+  string measurement_type = 1;
+  repeated Point3D points = 2;
+  double value = 3;
+  optional string label = 4;
+  optional string color = 5;
+}
+
+message DeleteMeasurementOperation {
+  string measurement_id = 1;
+}
+
+// 2026-10-28 Wave 1 Slice 4: administrative division operations
+
+message CreateAdministrativeDivisionOperation {
+  AdministrativeLevel level = 1;
+  string name = 2;
+  string code = 3;
+  optional string native_name = 4;
+  optional string parent_id = 5;
+}
+
+message DeleteAdministrativeDivisionOperation {
+  string division_id = 1;
+}
+
+// 2026-10-28 Wave 1 Slice 4: breakdown structure operations
+
+message CreateBreakdownNodeOperation {
+  BreakdownLevel level = 1;
+  string name = 2;
+  BreakdownConvention convention = 3;
+  optional string code = 4;
+  optional string parent_id = 5;
+}
+
+message DeleteBreakdownNodeOperation {
+  string node_id = 1;
+}
+
+message LinkBreakdownObjectOperation {
+  string node_id = 1;
+  string object_id = 2;
+}
+
+message LinkBreakdownAdministrativeOperation {
+  string node_id = 1;
+  string division_id = 2;
+}
+
 // === Validation ===
 
 message ValidationResult {
@@ -680,4 +939,15 @@ message ValidationWarning {
   string code = 1;
   string message = 2;
   string field = 3;
+}
+
+// 2026-10-28 Wave 1 Slice 5: catalog instantiation
+
+message InstantiateCatalogOperation {
+  string component_def_id = 1;
+  string instance_name = 2;
+  map<string, double> params = 3;
+  optional Point3D position = 4;
+  double rotation_z = 5;
+  bool skip_series_gate = 6;
 }

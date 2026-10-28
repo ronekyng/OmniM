@@ -18,7 +18,7 @@ A task-oriented guide for the current web app and REST API. Every workflow below
 Rule of thumb: if you type a number into a catalog parameter panel, think **mm**; if you pick in the viewport or call `/api/genrule`, think **m**.
 
 ### 1.2 Precision and geometry caveats
-- `PUT /api/objects/{id}/transform` converts any geometry to a **Mesh** and rewrites it. It works on everything with geometry, but it flattens feature trees: after a move, the parametric features and catalog parameters no longer drive the shape. It is also **not undoable**.
+- `PUT /api/objects/{id}/transform` converts any geometry to a **Mesh** and rewrites it. It works on everything with geometry, but it flattens feature trees: after a move, the parametric features and catalog parameters no longer drive the shape. It **is undoable** (restores the pre-transform geometry).
 - A wall `path` may carry different z values, but planar extrusion uses the **first point's z** as the base elevation; there is no per-point grading. Slab/roof/floor boundaries use the first boundary point's z.
 - Bend corners are mitered in the kernel and mirrored in preview; this is a planar extrusion, not a full 3D sweep.
 - Slab/floor/roof boundaries are validated server-side: fewer than 3 points, collinear or zero-length edges, degenerate area and bowtie self-intersection are rejected. Structural validity, overlaps and openings are not checked.
@@ -26,11 +26,10 @@ Rule of thumb: if you type a number into a catalog parameter panel, think **mm**
 - `POST /api/objects` accepts the string `"floor"` but maps it to `BuildingStorey` (`parse_type` in `crates/server/src/lib.rs`). To create a real Floor, use `/api/genrule` with `mode:"floor"`.
 
 ### 1.3 Persistence: read this before modeling
-> ⚠️ **The default launch does not save.** `crates/server/src/main.rs` sets `save_path = None` when `OMNIM_PROJECT` is unset or exactly `project.omnim`. Even with another path, only **five** handlers call `Project::save(...)`: `update_object`, `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`.
+> ✅ **Persistence defaults on** (2026-10-28). The server writes `$OMNIM_PROJECT` (default `project.omnim`) after every executor-path mutation; `POST /api/project/save` forces a save at any time; `OMNIM_EPHEMERAL=1` disables persistence.
 
-- Creating objects, `/api/genrule`, `/api/omcom`, catalog instantiate, IFC import and all series edits are **not persisted**.
-- There is **no Save button and no `/api/save` route**. Startup loads `OMNIM_PROJECT` (default `project.omnim`) if it exists.
-- To get any persistence at all, launch with a non-default file, e.g. `OMNIM_PROJECT=./dev-project.omnim cargo run -p omnim-server --bin omnim`. Then trigger one of the five saving actions (for example rename an object) after modeling.
+- **Saved**: create/delete object, `/api/genrule`, `/api/omcom`, undo/redo, sketch mutations, object rename, feature add/update/remove/rebuild.
+- **Persisted**: everything else — transform/parent/connect, materials, measurements, administrative/breakdown, series, catalog definitions, catalog placement and IFC import.
 - Safer workaround for a session: `GET /api/export/ifc` (or the toolbar **Export**) keeps a geometry snapshot, despite the IFC limits in §6.2.
 - Undo is equally uneven: create/delete object, GenRule, Omcom and sketch entity edits are undoable; transform, properties, reparent, connect, material, catalog placement, IFC import and series edits are not. See [WRITE_PATHS](architecture/WRITE_PATHS.md) and [CODE_DEVIATIONS §6](status/CODE_DEVIATIONS.md).
 
@@ -156,10 +155,10 @@ See [ROADMAP Phase 8](status/ROADMAP.md) and [CODE_DEVIATIONS](status/CODE_DEVIA
 
 ## 6. Data and Exchange
 ### 6.1 Save and load `.omnim`
-- The project is one JSON document loaded at startup from `OMNIM_PROJECT` (default `project.omnim`). There is **no save/load REST route and no Save button**.
-- Only the five handlers listed in §1.3 write the file, and only if `save_path` is `Some`. Catalog placement, GenRule, IFC import and series edits stay in memory.
-- Recommended session habit: set `OMNIM_PROJECT=./dev-project.omnim`, model, then perform a renaming/property action that triggers `update_object` (one of the five savers). Verify the file timestamp before closing.
-- Undo does not protect you across a restart: only executor-path operations are on the undo stack.
+- The project is one JSON document loaded at startup from `OMNIM_PROJECT` (default `project.omnim`). Executor-path mutations auto-save; there is also an explicit route `POST /api/project/save` (the Web UI has no Save button yet).
+- Everything else saves automatically; `POST /api/project/save` is available for an explicit flush.
+- Session habit: run with `OMNIM_PROJECT=./dev-project.omnim`; executor-path actions persist automatically. Verify the file timestamp before closing.
+- Undo does not protect you across a restart: it is in-memory only.
 
 ### 6.2 IFC import and export
 - Toolbar **Import** / **Export** map to `POST /api/import/ifc` and `GET /api/export/ifc`.
@@ -171,10 +170,10 @@ See [ROADMAP Phase 8](status/ROADMAP.md) and [CODE_DEVIATIONS](status/CODE_DEVIA
 ### 6.3 Library and series files
 - **Library Manager** at `/library-manager` edits `ComponentDef`s; the global library is `~/.omnim/library.omnimlib`. API: `POST /api/catalog/export` writes a timestamped path under `/tmp`; `POST /api/catalog/import` reads a path you supply.
 - **Series Manager** at `/series-manager` edits decision trees; API: `POST /api/series/save` / `POST /api/series/load` for `.omnimseries` files. These endpoints return/accept a filesystem path; they do not choose a project-relative location.
-- Library and series edits are **not undoable and not saved by the five project-saving handlers**; export the file explicitly after editing.
+- Library and series **definitions** are undoable and persist with the project; repository-level `.omnimlib` / `.omnimseries` export still needs an explicit file export.
 
 ### 6.4 Measurements and sections
-- Distance/angle/area measurement buttons live in the viewport toolbar; area finishes with right-click. Measurements are stored in `Project.measurements` via `POST /api/measurements`, but no saving handler writes them, so they vanish with the in-memory project.
+- Distance/angle/area measurement buttons live in the viewport toolbar; area finishes with right-click. Measurements are stored in `Project.measurements` via `POST /api/measurements`; they are undoable and persisted with the project.
 - **Section cut** is a view-only clip plane (X/Y/Z slider). `GET /api/components/{id}/section?plane_z=` returns section lines for a `Component`; there is no drawing/sheet output.
 
 For the complete status picture, read [ROADMAP](status/ROADMAP.md), [FORMAT_COMPAT](status/FORMAT_COMPAT.md) and [CODE_DEVIATIONS](status/CODE_DEVIATIONS.md) before promising a deliverable.

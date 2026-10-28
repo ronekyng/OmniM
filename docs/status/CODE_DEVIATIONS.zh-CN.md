@@ -135,11 +135,15 @@ Rust 后端未发现偏差。
 
 ### 6.1 单一写入路径被违反（审计 P0-2）
 
+> **2026-10-28 更新——已修复。** Wave 1 已迁移所有变更 handler：切片 2–4 覆盖对象/属性/材质、草图/构件/目录定义、系列/生命周期/管理区/分解/测量；切片 5 覆盖目录实例化、IFC 导入与 `load_series`。`scripts/check_write_paths.py` 现报告 **0** 个白名单外 `project.write()`，并接入 CI。剩余例外记录于 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)：`section_handler`（仅缓存刷新）、`import_ifc`（单条 `Command::ReplaceProject` 事务）、`POST /api/catalog/import`（会话级 `LIBRARY`，非 `Project`）。下方数字为修复前审计快照。
+
 **文档模型**（ADR-0006、PLATFORM_ARCH §1、DATA_FLOW §0）：所有变更都经 `Validator` + `Executor`，并进入撤销栈。
 
 **代码现状：** 持有 `project.write()` 的 **55** 个 handler 中，只有 **13** 个出现 executor；约 **42** 个直接修改 `Project`，不产生撤销条目。例如：`update_object`、`transform_object`、`set_parent`、`connect`、`create_material`/`assign_material`、`update_sketch`/`solve_sketch`/`update_sketch_entity`、`import_ifc`、`instantiate_from_catalog`，以及全部系列编辑 handler。改名、赋材质、连接管道、编辑系列、导入 IFC、放置目录构件都无法撤销。
 
 ### 6.2 “自动保存”不成立；默认启动完全不保存（审计 P0-3）
+
+> **2026-10-28 更新——已修复。** 默认落盘：`main.rs` 设 `save_path = Some(project_file)`，除非 `OMNIM_EPHEMERAL=1`；`Project::save` 原子写（tmp + rename）；**所有已迁移 handler** 都经 `mutation::persist` 落盘，包括对象、草图、构件、目录定义、系列、生命周期、测量、管理区/分解、实例化与 IFC 导入。`POST /api/project/save` 可按需落盘。唯一不写项目的变更路径是 `.omnimlib` 导入到全局 `LIBRARY`。下方内容为修复前快照。
 
 **文档模型**：变更会自动持久化。
 

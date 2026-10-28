@@ -25,10 +25,10 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;
             ──▶ Executor::execute(cmd, &mut Project) ─▶ ExecutionResult + 撤销/重做条目
 ```
 
-**当前代码并不符合。** 对 `crates/server/src/lib.rs` 的静态扫描发现:55 个 handler 持有 `project.write()`,
-其中 13 个出现 executor;约 **42 个直接修改 `Project`**,不在撤销栈内。只有 5 个 handler 保存。
-逐端点矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。下文的图在适用处展示目标形态,
-在不适用处明确标出直接写路径。
+**当前代码已符合（2026-10-28）。** 所有变更 handler 都构造 `OmniCommand`（或委托 `Executor`）；
+直写端点 42 → 0，每次变更原子落盘，`scripts/check_write_paths.py` 强制执行该不变量。
+逐端点矩阵与两处已记录例外（`import_ifc` 单条整项目命令、`.omnimlib` 导入全局库）见
+[WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 
 ---
 
@@ -50,7 +50,7 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;
 │   • 处理器获取 project.write() + executor.write()               │
 │   • 就地拼装 OmniCommand{ action, operations:[…] }              │
 │   • Executor::execute() → 校验 → 修改 Project                   │
-│   • 不保存：POST /api/objects 不属于会保存的 handler             │
+│   • 保存：mutation::persist 原子落盘（save_path 为 Some 时）      │
 │   • 返回对象/JSON(或错误状态码)                                 │
 └──────────────────────────────┬──────────────────────────────────┘
                                │ 200 OK
@@ -77,7 +77,8 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (收集错误;
 - **没有推送通道**:每次变更后 UI 重新拉取状态(调用 resolve 后使相关 query 失效)。
   代码库中不存在 WebSocket。
 - 本图只适用于 executor 路径的端点。改名、移动、改父级、连接、赋材质、草图更新/求解、IFC 导入、
-  目录实例化、系列编辑都**直接写 `Project`**(无撤销,通常也不保存)——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+  目录实例化、系列编辑现在都走命令(可撤销、会落盘)——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+  IFC 导入是唯一的整项目命令(`Command::ReplaceProject`)。
 
 ### Mermaid 版本
 
@@ -92,7 +93,7 @@ sequenceDiagram
     S->>O: OmniCommand → validate → execute
     O->>M: 修改 Project
     O-->>S: ExecutionResult
-    Note over S,M: 该 handler 不保存
+    Note over S,M: 快照 → 写入 → 记录 ReplaceProject → 落盘
     S-->>U: 200 JSON
     U->>M: GET /api/mesh /api/tree
     M-->>U: 网格 + 对象树 JSON
@@ -162,7 +163,7 @@ sequenceDiagram
     S->>I: 解析文本(手写,不依赖 IFC crate)
     I-->>S: 解析出的 IFC 记录 + 映射的几何 (geometry.rs)
     S->>M: 把解析出的对象/材料/生命周期直接插入 Project
-    M-->>S: Project 被修改(不经 Validator/Executor,无撤销,不保存)
+    M-->>S: Project 被替换(单步撤销,已落盘)
     S-->>U: 导入得到的对象
 ```
 
@@ -171,9 +172,9 @@ sequenceDiagram
 - `omnim-ifc` 包含**手写的解析器与序列化器**(没有使用任何 IFC 生态的 Rust crate —— ADR-0005)。
 - 覆盖范围**是局部的** —— 仅覆盖 **IFC 2x3 与 IFC 4** 的一个子集;不支持的实体被跳过,
   而不是整体报错。
-- **导入直接写 `Project`。** `import_ifc` 把解析出的对象/材料/生命周期记录插入聚合根
-  (`mode=replace` 时整体覆盖项目)。它**不会**把文件转换成 `OmniCommand`,因此导入内容
-  **不可撤销**,也**不会保存**(见 ADR-0005 的实现说明与 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md))。
+- **导入是单条整项目事务。** `import_ifc` 插入解析出的对象/材料/生命周期记录
+  (`mode=replace` 时整体覆盖),并记录 `Command::ReplaceProject { before, after }`;undo 恢复导入前项目,
+  redo 重放,结果会落盘。见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
 - 请求体是**原始 IFC 文本**,不是 multipart —— 用 `curl --data-binary @file.ifc`,不是 `curl -F`。
 - `fixtures/ifc/` 下的示例 IFC 文件(`simple.ifc`, `test_building.ifc`, `part.ifc` 等)
   就是用来跑通这条流的。
@@ -189,7 +190,7 @@ PARAGON 式**组件目录**与 SPECON 式**系列库**位于 `omnim-model`
 flowchart TD
     A[种子目录 / 库<br/>seed_catalog.rs] -->|提供给 UI| U[Web UI 目录与系列面板]
     U -->|POST /api/catalog/instantiate| S[omnim-server]
-    S -->|直接写 Project<br/>无 executor、无撤销| M[omnim-model::Project]
+    S -->|InstantiateCatalog 命令<br/>executor + 撤销 + 落盘| M[omnim-model::Project]
     M --> F[特性树 / feature_template.rs<br/>官方几何路径]
     F --> G[geometry.rs / brep.rs → mesh_gen.rs]
     G --> J[(网格 JSON 交给 three.js)]
@@ -200,8 +201,9 @@ flowchart TD
 1. **目录条目:** 每个目录组件声明一套参数 schema 与默认参数(PARAGON 式参数驱动的零件定义)。
 2. **系列:** 一个系列把一个目录组件绑定到一组带尺寸的变体(SPECON 式),用户选择的是
    **系列 + 规格**,而非裸尺寸。
-3. **实例化:** `POST /api/catalog/instantiate` 当前**直接写 `Project`** —— 不经 Executor,
-   不产生撤销条目,也不保存。它创建的是 `ObjectType::Component`(不是 `Wall`/`Beam`/…),
+3. **实例化:** `POST /api/catalog/instantiate` 作为 `InstantiateCatalog` 命令经 Executor 执行:
+   创建的对象与模板生成的草图被记录在同一条命令里,撤销/重做与落盘都是原子的。
+   它创建的仍是 `ObjectType::Component`(不是 `Wall`/`Beam`/…),
    参数取自所选系列记录。
 4. **生成:** 新对象的特性树(`GenRule` 生成器,`feature_template.rs`)驱动几何构建
    (`brep.rs`,走 truck 内核)与网格剖分(`mesh_gen.rs`),最终交给 three.js 查看器。

@@ -59,7 +59,8 @@ cargo run -p omnim-server --bin omnim
 
 | 变量 | 默认值 | 作用 |
 | --- | --- | --- |
-| `OMNIM_PROJECT` | `project.omnim` | 要加载的项目文件（不存在则创建）。仅当该值**不是**恰好 `project.omnim` 时才启用保存；即便如此也只有 5 个 handler 会落盘（见[持久化](#持久化)）。`cargo run` 时 CWD 是 **crate 目录**（`crates/server/`），指向仓库根目录的文件请用 `../project.omnim` 或绝对路径。 |
+| `OMNIM_PROJECT` | `project.omnim` | 项目文件的加载**与保存**路径（不存在则创建）。`cargo run` 时 CWD 是 **crate 目录**（`crates/server/`），指向仓库根目录的文件请用 `../project.omnim` 或绝对路径。 |
+| `OMNIM_EPHEMERAL` | 未设置 | `1`/`true`/`yes` 使服务器完全内存运行——不写任何文件。 |
 | `OMNIM_HOST` | `0.0.0.0` | 监听主机。 |
 | `OMNIM_PORT` | `3000` | 监听端口。 |
 | `AMIR_PROVIDER` | `mock` | LLM 供应商：`mock`（无需密钥）、`openai`、`anthropic`。 |
@@ -78,18 +79,16 @@ cargo run -p omnim-server --bin omnim
 
 ### 持久化
 
-持久化**默认关闭，即使开启也只覆盖部分端点**。`crates/server/src/main.rs` 与 `crates/server/src/lib.rs` 的实际行为是：
+持久化**默认开启**（2026-10-28 起）。`crates/server/src/main.rs` 的实际行为是：
 
 1. `project_file = OMNIM_PROJECT`，缺省为字面量 `project.omnim`。
-2. 若 `project_file == "project.omnim"`，则 `save_path = None`；否则 `save_path = Some(project_file)`。
-3. 只有 `state.save_path` 为 `Some` **且** handler 属于调用 `Project::save(...)` 的五个之一时才会落盘：`update_object`、`add_feature`、`update_feature`、`remove_feature`、`rebuild_component`。
+2. `save_path = Some(project_file)`，**除非 `OMNIM_EPHEMERAL` 为 `1`/`true`/`yes`**——此时完全不写文件。
+3. `Project::save` 是原子写：先序列化到 `{path}.tmp`，再 rename 覆盖目标文件。保存失败只记录日志（`Auto-save failed: ...`），不会让请求失败；请求失败时不会落盘（内存变更本来就已生效）。
 
-由此可得：
+覆盖仍不完全：
 
-- 直接 `cargo run -p omnim-server --bin omnim`（不带环境变量）永远不会持久化变更。
-- `OMNIM_PROJECT=project.omnim` 仍被视为默认值，**不会**开启保存。
-- `scripts/dev-server.sh` 会透传 `OMNIM_PROJECT`，但其默认值为 `project.omnim`——因此默认用该脚本启动同样不持久化。运行前导出其他路径（例如 `OMNIM_PROJECT=./dev-project.omnim scripts/dev-server.sh`）才能开启保存路径。
-- 创建对象、`/api/genrule`、`/api/omcom`、目录实例化、IFC 导入、系列编辑**都不会**被保存，即使设置了非默认路径。逐端点状态见 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
+- **已落盘**（executor 组）：创建/删除对象、`/api/omcom`、`/api/undo`、`/api/redo`、`/api/genrule`、sketch 变更（创建/删除/实体/约束），加上 `update_object` 与四个特征 handler；以及显式 `POST /api/project/save`。
+- **会保存**：其余全部端点，包括变换/改父级/连接、材质、测量、管理区/分解、系列、目录定义、目录实例化与 IFC 导入。唯一不在项目持久化范围内的是 `.omnimlib` 导入到会话级全局库。完整矩阵见 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 
 调试要点：二进制后面输入的字面 `serve` 参数会被忽略。部分日志是朴素的 `eprintln!`；冷启动会通过 `crates/core/build.rs`（`OUT_DIR`）重新生成 proto 类型。
 
@@ -125,7 +124,7 @@ cd web && npm run dev   # 将 web/vite.config.ts 中的代理目标改为 :3100
 
 - **3000 端口被占用。** 运行 `scripts/stop-server.sh`，或换端口：`OMNIM_PORT=3100 cargo run -p omnim-server --bin omnim`（再把 Vite 代理指向该端口）。最常见的原因是本项目自己的旧服务器实例——`dev-server.sh` 会替你杀掉它们。
 - **AI 聊天没有调用真实 LLM。** 未配置环境变量时，`AmirConfig::from_env()` 把 `AMIR_PROVIDER` 默认为 `mock`，只返回固定结果。使用真实供应商需导出 `AMIR_PROVIDER=openai|anthropic` 加 `AMIR_API_KEY`（或 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY`）。mock 回退是刻意设计，方便无密钥离线演示。
-- **项目数据没有持久化/没出现。** 这通常是预期行为，除非同时满足两个条件：(1) `OMNIM_PROJECT` 是非默认路径（绝对路径或不是 `project.omnim` 的值）；(2) 你执行的操作属于五个会保存的 handler（`update_object`、添加/更新/删除特征、重建构件）。创建对象、genrule、`/api/omcom`、目录实例化、IFC 导入、系列编辑都不会保存。见[持久化](#持久化)与 [WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
+- **项目数据没有持久化/没出现。** 默认已落盘到 `project.omnim` / `$OMNIM_PROJECT`；确认没有设置 `OMNIM_EPHEMERAL=1|true|yes`，并确认服务器工作目录指向你期望的文件。`.omnimlib` 导入属于库状态，不是项目状态。完整矩阵：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 - **`~/.omnim/library.omnimlib` 文件损坏。** 解析失败会记录警告并静默使用种子目录；删除或修复该文件即可消除警告。
 - **WSL2 网络。** `dev-server.sh` 会打印 WSL2 eth0 IP；若 localhost 转发不生效，Windows 侧请使用该 URL。
 - **过时的 `scripts/update_roadmap.py`。** 它是一次性遗留，不属于任何构建/测试流程。忽略即可。

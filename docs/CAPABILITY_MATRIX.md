@@ -13,7 +13,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 > - **Object type** is the semantic role (and IFC mapping), **not** necessarily the `object_type` of the instance you receive. Catalog placement (`/api/catalog/instantiate`) creates `ObjectType::Component` with a `catalog_ref`; the toolbar GenRule path (`/api/genrule`) creates `Wall`, `Slab`, `Road`, `Pipe`, etc. with hard-coded mesh. Feature-tree/BRep is the official geometry path; GenRule is transitional.
 > - **Genesis** is the per-instance creation class (Surface / Linear / Point / Body) from [DATA_MODEL §1](specification/DATA_MODEL.md#1-overview), not a property inferred from the name. The `(objectType, class/form)` authorization matrix is the design contract; server-side enforcement is still pending ([ROADMAP](status/ROADMAP.md)).
 > - **Proto status** follows the column in [DOMAINS](specification/DOMAINS.md): ✅ in `proto/omnim.proto`, 🔀 in proto but simplified, 🗓 planned-only (104 of 155 listed types are planned-only).
-> - **Measure** and **Section** are viewport tools. Measurements are stored in memory only (not saved by the five saving handlers, not undoable). Section is a view clip; component section lines exist only for `Component` objects.
+> - **Measure** and **Section** are viewport tools. Measurements are stored in `Project.measurements`, undoable and persisted. Section is a view clip; component section lines exist only for `Component` objects.
 > - **Create via UI?** ❌ with Proto ✅ means API-only. 🗓 means neither UI nor API creation exists.
 
 | Mark | Meaning |
@@ -108,8 +108,8 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 
 - **Domain totals** ([DOMAINS](specification/DOMAINS.md), [COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)): **155 listed / 51 in proto / 104 planned-only**. Building 37 (22 in proto), Civil 41 (10), Plant 39 (11), Mechanical 38 (8).
 - **Server surface**: **78 deduplicated REST routes** ([API](reference/API.md)); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
-- **Persistence**: default launch sets `save_path = None` when `OMNIM_PROJECT` is unset or `project.omnim`; only **5** handlers save. Creating objects, GenRule, catalog placement, IFC import and series edits are not persisted ([CODE_DEVIATIONS §6](status/CODE_DEVIATIONS.md)).
-- **Undo**: only executor-path mutations are undoable (create/delete object, GenRule, Omcom, sketch create/entity edits). Transform, properties, parent/connect, material, catalog instantiate, IFC import and series edits are not ([WRITE_PATHS](architecture/WRITE_PATHS.md)).
+- **Persistence**: on by default (2026-10-28) — `$OMNIM_PROJECT`/`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`. All mutating endpoints save, including transform/parent/connect, materials, measurements, series/catalog edits, instantiation and IFC import.
+- **Undo**: every mutating endpoint is undoable, including transform, properties, parent/connect, material, catalog instantiation, IFC import and series edits ([WRITE_PATHS](architecture/WRITE_PATHS.md)).
 - **IFC**: IFC 2x3 / IFC 4 subset only, hand-written parser/writer; no material, quantity or classification mapping. Stair and Roof import with their type but export as `IfcBuildingElementProxy`; all non-building types export as proxy ([FORMAT_COMPAT](status/FORMAT_COMPAT.md)).
 - **Clash, quantity take-off and drawing generation do not exist** at any layer — no UI, no REST route, no crate. They are roadmap items ([ROADMAP](status/ROADMAP.md)).
 - **Series gate**: reachability only. `min/max/fixed` constraints are not enforced and `SpecComponent.material` is not applied; `connect()` validates only that both objects exist ([CODE_DEVIATIONS §6.4](status/CODE_DEVIATIONS.md)).

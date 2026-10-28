@@ -43,6 +43,27 @@ impl RelationStore {
         idx
     }
 
+    /// Remove the first connection with the exact (from, to) pair and rebuild
+    /// the per-object index. Used by undo of `Command::AddConnection`.
+    pub fn remove_connection(&mut self, from_id: &str, to_id: &str) -> Option<c::Connection> {
+        let idx = self
+            .connections
+            .iter()
+            .position(|c| c.from_object_id == from_id && c.to_object_id == to_id)?;
+        let conn = self.connections.remove(idx);
+        self.rebuild_connection_index();
+        Some(conn)
+    }
+
+    fn rebuild_connection_index(&mut self) {
+        let mut idx: HashMap<String, Vec<usize>> = HashMap::new();
+        for (i, conn) in self.connections.iter().enumerate() {
+            idx.entry(conn.from_object_id.clone()).or_default().push(i);
+            idx.entry(conn.to_object_id.clone()).or_default().push(i);
+        }
+        self.conn_by_object = idx;
+    }
+
     pub fn add_containment(&mut self, cont: c::Containment) -> Result<usize, String> {
         if self.cont_by_child.contains_key(&cont.child_id) {
             return Err(format!("object '{}' already has a parent", cont.child_id));

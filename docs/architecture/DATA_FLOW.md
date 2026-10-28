@@ -25,10 +25,10 @@ OmniCommand ──▶ Validator::validate(cmd, &Project)──▶ (gather errors
             ──▶ Executor::execute(cmd, &mut Project) ─▶ ExecutionResult + undo/redo entry
 ```
 
-**Current state does not match this.** A static scan of `crates/server/src/lib.rs` found 55 handlers holding
-`project.write()`, of which 13 mention the executor; roughly **42 mutate `Project` directly**, outside the undo stack.
-Only five handlers save. See [WRITE_PATHS.md](WRITE_PATHS.md) for the per-endpoint matrix. The diagrams below show the
-target shape where it applies, and call out the direct-write paths where it does not.
+**Current state matches this (2026-10-28).** Every mutating handler builds an `OmniCommand` (or delegates to the
+`Executor`); direct writes went 42 → 0, every mutation persists atomically, and `scripts/check_write_paths.py`
+enforces the invariant. See [WRITE_PATHS.md](WRITE_PATHS.md) for the per-endpoint matrix and the two documented
+exceptions (`import_ifc` as one whole-project command, `.omnimlib` import into the global library).
 
 ---
 
@@ -76,9 +76,9 @@ Notes grounded in code:
   `omnim-model` (mesh_gen.rs), and the browser is a pure display client.
 - There is **no push channel**: after each mutation the UI re-pulls state (queries invalidated after the
   call resolves). No WebSocket exists in the codebase.
-- This diagram applies only to executor-path endpoints. Rename, transform, reparent, connect, material assignment,
-  sketch update/solve, IFC import, catalog instantiate, and series edits **write `Project` directly** (no undo,
-  usually no save) — see [WRITE_PATHS.md](WRITE_PATHS.md).
+- Every mutating endpoint now follows this path: rename, transform, reparent, connect, material assignment,
+  sketch update/solve, IFC import, catalog instantiate and series edits are all commands with undo and save —
+  see [WRITE_PATHS.md](WRITE_PATHS.md). IFC import is the one whole-project command (`Command::ReplaceProject`).
 
 ### Mermaid version
 
@@ -159,8 +159,9 @@ sequenceDiagram
     U->>S: POST /api/import/ifc (raw IFC text)
     S->>I: parse text (hand-written, no IFC crate)
     I-->>S: parsed IFC records + mapped geometry (geometry.rs)
-    S->>M: insert parsed objects/materials/lifecycle directly into Project
-    M-->>S: mutated Project (no Validator/Executor, no undo, no save)
+    S->>M: snapshot before, then insert parsed objects/materials/lifecycle
+    S->>M: record Command::ReplaceProject (before, after)
+    M-->>S: project replaced (single undo step, persisted)
     S-->>U: imported objects
 ```
 
@@ -169,10 +170,9 @@ Facts from the code:
 - `omnim-ifc` contains a **hand-written parser and serializer** (no `ifc`-ecosystem Rust crate is used — ADR-0005).
 - Coverage is **partial** — a subset of **IFC 2x3 and IFC 4** entities/attributes; unsupported entities are skipped
   rather than rejected wholesale.
-- **Import writes `Project` directly.** `import_ifc` inserts parsed objects/materials/lifecycle records into the
-  aggregate (and `mode=replace` overwrites the whole project). It does **not** translate the file into `OmniCommand`s,
-  so imported content is **not undoable** and is **not saved** (see the implementation note in ADR-0005 and
-  [WRITE_PATHS.md](WRITE_PATHS.md)).
+- **Import is one whole-project transaction.** `import_ifc` inserts parsed objects/materials/lifecycle records
+  (`mode=replace` overwrites the project) and records `Command::ReplaceProject { before, after }`; undo restores the
+  pre-import project, redo re-applies, and the result persists. See [WRITE_PATHS.md](WRITE_PATHS.md).
 - The request body is **raw IFC text**, not multipart — `curl --data-binary @file.ifc`, not `curl -F`.
 - Sample IFC files under `fixtures/ifc/` (`simple.ifc`, `test_building.ifc`, `part.ifc`, …) exercise this flow.
 
@@ -189,7 +189,7 @@ library/seed catalog; `Project` stores series (`Project.series`) and external se
 flowchart TD
     A[Seed catalog / library<br/>seed_catalog.rs] -->|served to UI| U[Web UI catalog & series panels]
     U -->|POST /api/catalog/instantiate| S[omnim-server]
-    S -->|direct Project write<br/>no executor, no undo| M[omnim-model::Project]
+    S -->|InstantiateCatalog command<br/>executor + undo + save| M[omnim-model::Project]
     M --> F[feature tree / feature_template.rs<br/>official geometry path]
     F --> G[geometry.rs / brep.rs → mesh_gen.rs]
     G --> J[(mesh JSON served to three.js)]
@@ -201,9 +201,10 @@ Narrative:
    parameter-driven part definition).
 2. **Series:** a series binds one catalog component to a family of dimensioned variants (SPECON-style), so a user picks
    a **series + size** rather than raw dimensions.
-3. **Instantiation:** `POST /api/catalog/instantiate` currently **writes `Project` directly** — it does not go through
-   the Executor, has no undo entry, and does not save. It creates an `ObjectType::Component` (not `Wall`/`Beam`/…),
-   with parameters filled from the chosen series record.
+3. **Instantiation:** `POST /api/catalog/instantiate` runs as an `InstantiateCatalog` command through the
+   Executor: the created object and the sketches generated by the template are recorded together, so undo/redo and
+   save are atomic. It still creates an `ObjectType::Component` (not `Wall`/`Beam`/…), with parameters filled from
+   the chosen series record — unifying that type is Wave 3 work.
 4. **Generation:** the new object's feature tree (`GenRule` generator, `feature_template.rs`) drives geometry building
    (`brep.rs` via the truck kernel) and tessellation (`mesh_gen.rs`), which is then served to the three.js viewer.
 

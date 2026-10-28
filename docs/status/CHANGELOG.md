@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap phase.
 
-**Last updated: 2026-10-27**
+**Last updated: 2026-10-28**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-10-28] — Single write path & persistence (Wave 1)
+
+### Changed
+- **Single write path restored** (audit P0-2): every mutating REST handler now builds an `OmniCommand` and runs it through `Validator` + `Executor`, or delegates to `Executor` while holding the lock. Direct `Project` writes went **42 → 0**; new ops cover materials, sketch/component/catalog detail, series, lifecycle, measurements, administrative/breakdown, catalog instantiation and `load_series`.
+- **Persistence defaults on** (audit P0-3): mutations save to `$OMNIM_PROJECT` (default `project.omnim`); `OMNIM_EPHEMERAL=1` disables writes. `Project::save` is atomic (`{path}.tmp` → rename, parent dir auto-created). New route `POST /api/project/save` (79 deduplicated routes).
+- **Undo/redo coverage is complete**: endpoint-level tests in `crates/server/tests/write_paths.rs` and `crates/server/tests/instantiate_import.rs` cover objects/properties/materials, sketches, components, catalog definitions, series, lifecycle, measurements, administrative/breakdown, instantiation and IFC import. Fixed pre-existing broken undo/redo for connection delete, lifecycle records and record links.
+- **IFC import is one transaction**: `Command::ReplaceProject { before, after }` — undo restores the pre-import project, redo re-applies. **Catalog preview is read-only** (built on a throwaway project), and catalog instantiation records the object plus generated sketches as one command.
+- **CI guards**: `scripts/check_write_paths.py` (0 direct writes required) and `scripts/check_docs.py` run in CI; `scripts/test-all.sh` now runs both plus `cargo test` and web unit tests.
+
+### Fixed
+- Documented exceptions: `section_handler` (cache-only write lock), `import_ifc` (single whole-project command), `POST /api/catalog/import` (session-global `LIBRARY`, not project state). See [WRITE_PATHS](../architecture/WRITE_PATHS.md).
 
 ## [2026-10-28] — Git branching & workflow policy
 

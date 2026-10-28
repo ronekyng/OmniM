@@ -1,108 +1,95 @@
 ---
-title: "OmniM 写入路径 — 静态扫描快照（2026-10-27）"
+title: "OmniM 写入路径 — 现状（2026-10-28）"
 status: current
-last_updated: 2026-10-27
-applies_to: "crates/, web/"
-evidence: "audited against crates/server/src/lib.rs 2026-10-27"
+last_updated: 2026-10-28
+applies_to: "crates/server, crates/omcom, web/"
+evidence: "由 scripts/check_write_paths.py 与 cargo test --workspace 于 2026-10-28 验证"
 ---
-# OmniM 写入路径 — 静态扫描快照（2026-10-27）
+# OmniM 写入路径 — 现状（2026-10-28）
 
-**快照日期：** 2026-10-27
-**依据：** 对 `crates/server/src/lib.rs` 中 `async fn` handler 函数体的静态扫描（检查 `.project.write()`、`executor`、`.save(`），并与路由表交叉核对。数字复现自 [2026-10-27 文档审计](../status/DOC_AUDIT_2026-10-27.zh-CN.md)附录 A。
+[English](WRITE_PATHS.md)
 
-> **决策背景。** [ADR-0006](DECISIONS.zh-CN.md) 仍然是**已接受的目标架构**：所有变更都应构造 `OmniCommand`，经 `Validator` + `Executor`，并进入撤销栈。当前代码**不满足**该目标。本页记录差距，不是新决策。
+**状态：单一写入路径已恢复（Wave 1，2026-10-28）。** 所有变更端点都构造
+`OmniCommand`，经 `Validator` + `Executor` 执行，进入撤销/重做栈，并原子落盘。
+下列数字可用 `python3 scripts/check_write_paths.py` 复现；端点级撤销覆盖位于
+`crates/server/tests/write_paths.rs` 与 `crates/server/tests/instantiate_import.rs`。
+
+> **决策背景。** [ADR-0006](DECISIONS.zh-CN.md) 已**实现**，不再只是目标：
+> handler 调用 `mutation::apply`（或持锁后委托 `Executor`），不再就地修改 `Project`。
 >
-> **几何路径。** 官方几何路径是**特征树 / BRep** 管线（`/api/catalog/instantiate`、`/api/components/*`）。`/api/genrule` 直接生成硬编码网格图元的直通路径属于**遗留/过渡**方案，尽管工具栏仍可触达。
+> **几何路径。** 正式路径仍是特征树 / BRep 管线（`/api/catalog/instantiate`、
+> `/api/components/*`）。`/api/genrule` 仍生成硬编码网格图元——它已是可撤销、
+> 可落盘的命令，但几何来源属过渡方案，待 Wave 3 收敛。
 
-| 指标 | 数量 |
+| 指标 | 数值 |
 |---|---|
-| `/api/*` 路由（去重后） | **78** |
-| 持有 `project.write()` 的 handler | **55** |
-| 其中函数体出现 `executor` 的 | **13** |
-| 其中调用 `.save(` 的 | **5** |
-| 直接写 Project、无 executor 的 handler（约） | **~42** |
+| `/api/*` 路由（按路径去重） | **79** |
+| `crates/server/src/lib.rs` 扫描到的 handler | **105** |
+| 调用 `mutation::apply` 的 handler | **55** |
+| 持锁但委托 `Executor` 的 handler | **7**（`create_object`、`delete_object`、`execute_omcom`、`genrule_create`、`undo`、`redo`、`import_ifc`） |
+| 白名单外的直写 `project.write()` | **0** |
+| `save_project` 之外的直连 `Project::save()` | **0** |
+| 默认持久化 | **开启** —— `$OMNIM_PROJECT`（缺省 `project.omnim`）；`OMNIM_EPHEMERAL=1` 关闭 |
 
-> **方法说明。** 这是**静态文本扫描**，不是运行时追踪。它可能把只读但获取写锁的 handler 计入（如 `section_handler`），也可能漏掉通过 helper 间接保存/记录撤销的路径。55/13/5 的量级才是证据；逐行条目仅作示例。代码变更后需重新扫描。
+## 一次变更的流转
 
----
+```
+handler → mutation::apply(action, ops)
+        → Validator::validate        （非法状态直接拒绝，不产生任何改动）
+        → Executor::execute          （修改 Project，记录撤销命令）
+        → mutation::persist          （save_path 为 Some 时原子落盘）
+```
 
-## (a) Executor + Validator + 撤销路径
+锁顺序固定：先 `project`，后 `executor`。`mutation.rs` 是唯一同时获取两把锁的地方；
+handler 不允许手写这对锁。
 
-这些 handler 构造 `OmniCommand`，经 `Validator` + `Executor` 执行，因此可撤销。**它们都不保存项目文件。**
+## 已收编的端点族
 
-| 端点 | Handler | 撤销 | 保存 |
+以下全部可撤销，且默认落盘。
+
+| 端点族 | 端点 | 撤销 | 保存 | 切片 |
+|---|---|---|---|---|
+| 对象 / 属性 / 材质 | 创建/删除/更新对象、设属性、批量属性、变换、改父级、连接、创建/赋材质 | ✅ | ✅ | 1–2 |
+| 草图 | 创建/删除草图、图元增改删、约束增删、求解、extrude/revolve | ✅ | ✅ | 1–3 |
+| 构件 | 创建/删除实例、特征增改删、重建 | ✅ | ✅ | 3 |
+| 目录定义 | 定义创建/更新/删除、参数增改删、连接器添加、特征树绑定、发布 | ✅ | ✅ | 3 |
+| 系列 | 系列创建/更新/删除、选择器、答案、规格构件、参数约束增改删、保存/加载 | ✅ | ✅ | 4 |
+| 生命周期 | 创建记录、记录关联对象 | ✅ | ✅ | 4 |
+| 测量 | 创建/删除 | ✅ | ✅ | 4 |
+| 管理区 / 分解 | 区划创建/删除、节点创建/删除、关联对象、关联区划 | ✅ | ✅ | 4 |
+| 目录实例化 | `/api/catalog/instantiate`（对象 + 模板生成的草图作为一条命令） | ✅ | ✅ | 5 |
+| IFC 导入 | `/api/import/ifc`（整项目事务，merge 或 replace） | ✅ | ✅ | 5 |
+| 显式保存 | `POST /api/project/save` | — | ✅ | 1 |
+
+## 有意保留的例外
+
+| 路径 | 为什么不是普通逐实体命令 | 撤销 | 保存 |
 |---|---|---|---|
-| `POST /api/objects` | `create_object` | ✅ | ❌ |
-| `DELETE /api/objects/{id}` | `delete_object` | ✅ | ❌ |
-| `POST /api/genrule` | `genrule_create` | ✅ | ❌ |
-| `POST /api/omcom` | `execute_omcom` | ✅ | ❌ |
-| `POST /api/undo` | `undo` | 历史操作 | ❌ |
-| `POST /api/redo` | `redo` | 历史操作 | ❌ |
-| `POST /api/sketches`、`DELETE /api/sketches/{id}` | `create_sketch`、`delete_sketch` | ✅ | ❌ |
-| `POST /api/sketches/{id}/entities`、`POST …/constraints`、`DELETE …/entities/{idx}`、`DELETE …/constraints/{idx}` | `add_sketch_entity`、`add_sketch_constraint`、`delete_sketch_entity`、`remove_sketch_constraint` | ✅ | ❌ |
+| `section_handler` | 取写锁只为在读取剖切线前刷新特征缓存，没有用户可见变更 | — | — |
+| `import_ifc` | 批量导入整体替换聚合，记录为 `Command::ReplaceProject { before, after }`——单步撤销，显式的内存取舍 | ✅（单步） | ✅ |
+| `POST /api/catalog/import`（`import_catalog_handler`） | 把 `.omnimlib` 导入**会话级全局 `LIBRARY`**，不进入 `Project`，因此没有项目级撤销条目 | ❌ | ❌（库文件，非项目） |
+| `preview_catalog_component` | 在一次性 `Project` 上构建实例；不取写锁、不污染实际模型 | — | — |
+| `/api/genrule` 几何 | 命令/撤销/落盘都正确，但几何仍是硬编码网格而非特征树驱动（Wave 3） | ✅ | ✅ |
 
-说明：
+## 持久化
 
-- `POST /api/omcom` 接收完整 `OmniCommand` 信封，**不**接受 `{"command":"UNDO"}`；撤销是 `POST /api/undo`。
-- `POST /api/genrule` 仍在生成硬编码网格图元（`build_wall` / `build_slab` / `build_road` / `build_pipe`，且 `param_values` 为空），没有驱动目录特征树。它是遗留/过渡路径。
+- **默认开启**：`main.rs` 设 `save_path = Some(project_file)`，除非
+  `OMNIM_EPHEMERAL=1|true|yes`（此时完全不写文件）。
+- **原子写**：`Project::save` 先写 `{path}.tmp` 再 rename 覆盖目标；崩溃不会留下半截文件。
+- **失败策略**：保存失败只记录日志（`Auto-save failed: ...`），不会让请求失败——
+  内存变更与撤销条目此时已经成立。
+- **显式保存**：`POST /api/project/save` 按需落盘并返回路径；持久化被禁用时返回 400。
 
-## (b) 直接写 `Project` —— 无撤销
+## 验证
 
-这些 handler 获取 `state.project.write()` 并直接修改聚合根，**不会**产生撤销条目。
+```bash
+python3 scripts/check_write_paths.py   # 0 直写，退出码 0
+cargo test --workspace                 # 含端点级撤销测试
+python3 scripts/check_docs.py          # 链接/围栏/编号检查
+```
 
-| 端点 | Handler | 撤销 | 保存 |
-|---|---|---|---|
-| `PUT /api/objects/{id}`（改名/描述/标签） | `update_object` | ❌ | ✅ |
-| `PUT /api/objects/{id}/prop` | `set_property` | ❌ | ❌ |
-| `PUT /api/objects/{id}/properties` | `update_properties` | ❌ | ❌ |
-| `PUT /api/objects/{id}/transform` | `transform_object` | ❌ | ❌ |
-| `PUT /api/objects/{id}/parent` | `set_parent` | ❌ | ❌ |
-| `POST /api/objects/{from}/connect/{to}` | `connect` | ❌ | ❌ |
-| `POST /api/materials` | `create_material` | ❌ | ❌ |
-| `PUT /api/objects/{id}/material` | `assign_material` | ❌ | ❌ |
-| `POST /api/measurements`、`DELETE /api/measurements/{id}` | `create_measurement`、`delete_measurement` | ❌ | ❌ |
-| `POST /api/lifecycle`、`POST /api/lifecycle/{id}/link/{obj_id}` | `create_lifecycle`、`link_record` | ❌ | ❌ |
-| `POST /api/administrative`、`DELETE /api/administrative/{id}` | `create_administrative`、`delete_administrative` | ❌ | ❌ |
-| `POST /api/breakdown`、`DELETE /api/breakdown/{id}`、`POST …/link-obj`、`POST …/link-admin` | `create_breakdown`、`delete_breakdown`、`link_breakdown_object`、`link_breakdown_admin` | ❌ | ❌ |
-| `PUT /api/sketches/{id}`、`POST /api/sketches/{id}/solve`、`PUT /api/sketches/{id}/entities/{idx}` | `update_sketch`、`solve_sketch`、`update_sketch_entity` | ❌ | ❌ |
-| `POST /api/sketches/{id}/extrude`、`POST /api/sketches/{id}/revolve` | `extrude_sketch_handler`、`revolve_sketch_handler` | ❌ | ❌ |
-| `POST /api/components`、`DELETE /api/components/{id}` | `create_component_handler`、`delete_component` | ❌ | ❌ |
-| `POST /api/components/{id}/features` | `add_feature_handler` | ❌ | ✅ |
-| `PUT /api/components/{id}/features/{fid}` | `update_feature_handler` | ❌ | ✅ |
-| `DELETE /api/components/{id}/features/{fid}` | `remove_feature_handler` | ❌ | ✅ |
-| `POST /api/components/{id}/rebuild` | `rebuild_component_handler` | ❌ | ✅ |
-| `POST /api/import/ifc` | `import_ifc` | ❌ | ❌ |
-| `POST /api/catalog/instantiate` | `instantiate_from_catalog` | ❌ | ❌ |
-| `POST /api/series`、`PUT /api/series/{id}`、`DELETE /api/series/{id}`、`POST …/selectors`、`POST …/answers`、`POST …/spec`、`POST …/constraints`、`PUT …/constraints/{idx}`、`DELETE …/constraints/{idx}` | `create_series_handler`、`update_series_handler`、`delete_series_handler`、`add_selector_handler`、`add_answer_handler`、`add_spec_component_handler`、`add_param_constraint_handler`、`update_param_constraint_handler`、`delete_param_constraint_handler` | ❌ | ❌ |
+## 历史
 
-`POST /api/import/ifc` 值得单独强调：它解析原始 IFC 文本，并把得到的对象/材料/生命周期记录直接插入 `Project`（`mode=replace` 时整体覆盖项目）。它**不**转换成 `OmniCommand`，因此导入无法撤销，也不会保存。见 [ADR-0005](DECISIONS.zh-CN.md#adr-0005-手写-ifc-解析器而非-ifc-crate) 的实现说明。
-
-## (c) 保存行为
-
-只有**同时**满足两个条件时 handler 才落盘：
-
-1. `state.save_path` 为 `Some` —— 仅当 `OMNIM_PROJECT` 被设为字面量 `project.omnim` 以外的值（`crates/server/src/main.rs`）。
-2. handler 属于调用 `Project::save(...)` 的五个之一：
-   - `update_object`
-   - `add_feature_handler`
-   - `update_feature_handler`
-   - `remove_feature_handler`
-   - `rebuild_component_handler`
-
-(a)(b) 两组中的其他所有端点都只留在内存。默认启动时完全没有任何持久化。`scripts/dev-server.sh` 会透传 `OMNIM_PROJECT`，但它的默认值（`project.omnim`）仍映射为 `save_path = None`；需导出非默认路径才能开启保存。
-
-| 用户动作 | 撤销 | 默认是否保存 |
-|---|---|---|
-| 创建对象 / genrule / `/api/omcom` | ✅ | ❌ |
-| 对象改名 | ❌ | ✅（仅非默认 `OMNIM_PROJECT`） |
-| 移动、改父级、连接、赋材质 | ❌ | ❌ |
-| 特征添加/更新/删除/重建 | ❌ | ✅（仅非默认 `OMNIM_PROJECT`） |
-| IFC 导入 | ❌ | ❌ |
-| 目录实例化 | ❌ | ❌ |
-| 系列编辑 | ❌ | ❌ |
-
----
-
-## 恢复单一写入路径
-
-目标仍是 ADR-0006：所有变更走同一条命令管线，具备撤销与明确的持久化策略。这是路线图中的跟踪项——请链接 [ROADMAP.zh-CN.md](../status/ROADMAP.zh-CN.md)，不要在本页重述计划。在其落地之前，这些偏差记录于 [CODE_DEVIATIONS.zh-CN.md §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known2026-10-27)。
+修复前的审计快照（55 个 handler 持写锁、13 个提及 executor、5 个保存、约 42 个直写）
+保留在 [2026-10-27 审计报告](../status/DOC_AUDIT_2026-10-27.zh-CN.md) 与
+[CODE_DEVIATIONS §6](../status/CODE_DEVIATIONS.zh-CN.md#6-写入路径持久化与几何路径偏差--known-2026-10-27)。

@@ -60,6 +60,8 @@ impl Validator {
             | c::Action::SolveSketch
             | c::Action::DeleteSketchEntity
             | c::Action::RemoveSketchConstraint
+            | c::Action::UpdateSketch
+            | c::Action::UpdateSketchEntity
             | c::Action::ExtrudeSketch
             | c::Action::RevolveSketch => {
                 for op in &instr.operations {
@@ -70,6 +72,8 @@ impl Validator {
                             c::operation::Op::SolveSketch(s) => Some(&s.sketch_id),
                             c::operation::Op::DeleteSketchEntity(d) => Some(&d.sketch_id),
                             c::operation::Op::RemoveSketchConstraint(r) => Some(&r.sketch_id),
+                            c::operation::Op::UpdateSketch(u) => Some(&u.sketch_id),
+                            c::operation::Op::UpdateSketchEntity(u) => Some(&u.sketch_id),
                             _ => None,
                         };
                         if let Some(sid) = sketch_id {
@@ -91,6 +95,31 @@ impl Validator {
                     }
                 }
             }
+            c::Action::CreateSketch => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        if let c::operation::Op::CreateSketch(cs) = op_type {
+                            // 2026-10-28 Wave 1 Slice 3: sketch may be owned by a
+                            // component; reject unknown/non-component owners.
+                            if !cs.component_id.is_empty() {
+                                match project.objects.get(&cs.component_id) {
+                                    None => errors.push(format!(
+                                        "sketch owner component '{}' not found",
+                                        cs.component_id
+                                    )),
+                                    Some(o) if o.object_type != c::ObjectType::Component as i32 => {
+                                        errors.push(format!(
+                                            "sketch owner '{}' is not a component",
+                                            cs.component_id
+                                        ))
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             // === Catalog validation ===
             c::Action::DefineComponent => {
                 for op in &instr.operations {
@@ -105,8 +134,7 @@ impl Validator {
             }
             c::Action::AddComponentParam
             | c::Action::AddConnector
-            | c::Action::PublishComponent => {
-                for op in &instr.operations {
+            | c::Action::PublishComponent => {                for op in &instr.operations {
                     if let Some(op_type) = &op.op {
                         let cid = match op_type {
                             c::operation::Op::AddComponentParam(p) => Some(&p.component_id),
@@ -133,12 +161,59 @@ impl Validator {
                     }
                 }
             }
+            // 2026-10-28 Wave 1 Slice 3: catalog/feature detail validation
+            c::Action::UpdateComponentDef => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        if let c::operation::Op::UpdateComponentDef(ucd) = op_type {
+                            if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&ucd.component_id).is_none() {
+                                errors.push(format!("catalog component '{}' not found", ucd.component_id));
+                            }
+                        }
+                    }
+                }
+            }
+            c::Action::UpdateComponentParam | c::Action::DeleteComponentParam => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        let (cid, idx) = match op_type {
+                            c::operation::Op::UpdateComponentParam(up) => (Some(&up.component_id), up.param_index),
+                            c::operation::Op::DeleteComponentParam(dp) => (Some(&dp.component_id), dp.param_index),
+                            _ => (None, 0),
+                        };
+                        if let Some(id) = cid {
+                            let library = LIBRARY.read().unwrap();
+                            let library = library.as_ref().unwrap();
+                            match library.catalog.get(id) {
+                                None => errors.push(format!("catalog component '{}' not found", id)),
+                                Some(comp) if (idx as usize).saturating_sub(1) >= comp.params.len() => {
+                                    errors.push(format!("param index {} out of range for component '{}'", idx, id));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+            c::Action::AssignFeatureTree => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        if let c::operation::Op::AssignFeatureTree(aft) = op_type {
+                            if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&aft.component_id).is_none() {
+                                errors.push(format!("catalog component '{}' not found", aft.component_id));
+                            }
+                        }
+                    }
+                }
+            }
             // === Series validation ===
             c::Action::AddSelector
             | c::Action::AddAnswer
             | c::Action::AddSpecComponent
             | c::Action::AddParamConstraint
-            | c::Action::DeleteSeries => {
+            | c::Action::DeleteSeries
+            // 2026-10-28 Wave 1 Slice 4: series detail validation
+            | c::Action::UpdateSeries => {
                 for op in &instr.operations {
                     if let Some(op_type) = &op.op {
                         let sid = match op_type {
@@ -147,6 +222,7 @@ impl Validator {
                             c::operation::Op::AddSpecComponent(sc) => Some(&sc.series_id),
                             c::operation::Op::AddParamConstraint(pc) => Some(&pc.series_id),
                             c::operation::Op::DeleteSeries(ds) => Some(&ds.series_id),
+                            c::operation::Op::UpdateSeries(us) => Some(&us.series_id),
                             _ => None,
                         };
                         if let Some(id) = sid {
@@ -157,11 +233,111 @@ impl Validator {
                     }
                 }
             }
+            // 2026-10-28 Wave 1 Slice 4: series constraint detail validation
+            c::Action::UpdateParamConstraint | c::Action::DeleteParamConstraint => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        let (sid, cid, idx) = match op_type {
+                            c::operation::Op::UpdateParamConstraint(up) => {
+                                (Some(&up.series_id), Some(&up.component_def_id), up.param_index as usize)
+                            }
+                            c::operation::Op::DeleteParamConstraint(dp) => {
+                                (Some(&dp.series_id), Some(&dp.component_def_id), dp.param_index as usize)
+                            }
+                            _ => (None, None, 0),
+                        };
+                        if let (Some(sid), Some(cid)) = (sid, cid) {
+                            match project.series.get(sid) {
+                                None => errors.push(format!("series '{}' not found", sid)),
+                                Some(series) if !series_has_param_constraint(series, cid, idx) => {
+                                    errors.push(format!(
+                                        "param constraint {} for component '{}' not found in series '{}'",
+                                        idx, cid, sid
+                                    ));
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
+            // 2026-10-28 Wave 1 Slice 4: measurement / administrative / breakdown validation
+            c::Action::DeleteMeasurement => {
+                for op in &instr.operations {
+                    if let Some(c::operation::Op::DeleteMeasurement(dm)) = &op.op {
+                        if !project.measurements.all().iter().any(|m| m.id == dm.measurement_id) {
+                            errors.push(format!("measurement '{}' not found", dm.measurement_id));
+                        }
+                    }
+                }
+            }
+            c::Action::DeleteAdministrativeDivision => {
+                for op in &instr.operations {
+                    if let Some(c::operation::Op::DeleteAdministrativeDivision(dad)) = &op.op {
+                        if project.administrative.get(&dad.division_id).is_none() {
+                            errors.push(format!("administrative division '{}' not found", dad.division_id));
+                        }
+                    }
+                }
+            }
+            c::Action::DeleteBreakdownNode => {
+                for op in &instr.operations {
+                    if let Some(c::operation::Op::DeleteBreakdownNode(dbn)) = &op.op {
+                        if project.breakdown.get(&dbn.node_id).is_none() {
+                            errors.push(format!("breakdown node '{}' not found", dbn.node_id));
+                        }
+                    }
+                }
+            }
+            c::Action::LinkBreakdownObject | c::Action::LinkBreakdownAdministrative => {
+                for op in &instr.operations {
+                    if let Some(op_type) = &op.op {
+                        let nid = match op_type {
+                            c::operation::Op::LinkBreakdownObject(lbo) => Some(&lbo.node_id),
+                            c::operation::Op::LinkBreakdownAdministrative(lba) => Some(&lba.node_id),
+                            _ => None,
+                        };
+                        if let Some(id) = nid {
+                            if project.breakdown.get(id).is_none() {
+                                errors.push(format!("breakdown node '{}' not found", id));
+                            }
+                        }
+                    }
+                }
+            }
             c::Action::LoadSeries => {
                 for op in &instr.operations {
                     if let Some(c::operation::Op::LoadSeries(ls)) = &op.op {
                         if ls.path.is_empty() {
                             errors.push("load_series: path is required".into());
+                        }
+                    }
+                }
+            }
+            c::Action::InstantiateCatalog => {
+                for op in &instr.operations {
+                    if let Some(c::operation::Op::InstantiateCatalog(ic)) = &op.op {
+                        if ic.component_def_id.is_empty() {
+                            errors.push("instantiate_catalog: component_def_id is required".into());
+                            continue;
+                        }
+                        let library = LIBRARY.read().unwrap();
+                        let Some(library) = library.as_ref() else {
+                            errors.push("instantiate_catalog: library not initialized".into());
+                            continue;
+                        };
+                        match library.catalog.get(&ic.component_def_id)
+                            .or_else(|| library.catalog.find_by_name(&ic.component_def_id))
+                        {
+                            None => errors.push(format!(
+                                "instantiate_catalog: component def '{}' not found",
+                                ic.component_def_id
+                            )),
+                            Some(def) if def.feature_tree_id.is_empty() => errors.push(format!(
+                                "instantiate_catalog: component def '{}' has no feature tree",
+                                def.name
+                            )),
+                            Some(_) => {}
                         }
                     }
                 }
@@ -251,6 +427,37 @@ impl Validator {
                     c::operation::Op::TransformGeometry(tg) => {
                         if !project.objects.contains(&tg.object_id) {
                             errors.push(format!("transform target '{}' not found", tg.object_id));
+                        } else {
+                            let has_mesh = project
+                                .objects
+                                .get(&tg.object_id)
+                                .and_then(|o| o.geometry.as_ref())
+                                .and_then(omnim_model::geometry::geometry_to_mesh)
+                                .map(|m| !m.faces.is_empty())
+                                .unwrap_or(false);
+                            if !has_mesh {
+                                errors.push(format!(
+                                    "transform target '{}' has no mesh geometry",
+                                    tg.object_id
+                                ));
+                            }
+                        }
+                    }
+                    c::operation::Op::CreateMaterial(cm) => {
+                        if let Some(m) = &cm.material {
+                            if m.id.is_empty() {
+                                errors.push("create material requires a non-empty id".into());
+                            }
+                            if m.id.is_empty() || project.materials.get(&m.id).is_some() {
+                                errors.push(format!("material '{}' already exists", m.id));
+                            }
+                        } else {
+                            errors.push("create_material requires a material".into());
+                        }
+                    }
+                    c::operation::Op::SetObjectProperty(sop) => {
+                        if !project.objects.contains(&sop.object_id) {
+                            errors.push(format!("property target '{}' not found", sop.object_id));
                         }
                     }
                     c::operation::Op::DeleteLifecycleRecord(dlr) => {
@@ -320,6 +527,32 @@ impl Validator {
                     c::operation::Op::RemoveFeature(rf) => {
                         if !project.objects.contains(&rf.component_id) {
                             errors.push(format!("component '{}' not found for remove_feature", rf.component_id));
+                        }
+                    }
+                    c::operation::Op::DeleteComponent(dc) => {
+                        if !project.objects.contains(&dc.component_id) {
+                            errors.push(format!("component instance '{}' not found", dc.component_id));
+                        } else if project.objects.get(&dc.component_id).map(|o| o.object_type != c::ObjectType::Component as i32).unwrap_or(true) {
+                            errors.push(format!("object '{}' is not a component", dc.component_id));
+                        }
+                    }
+                    c::operation::Op::UpdateFeature(uf) => {
+                        if !project.objects.contains(&uf.component_id) {
+                            errors.push(format!("component '{}' not found for update_feature", uf.component_id));
+                        } else if let Some(obj) = project.objects.get(&uf.component_id) {
+                            if !obj.features.iter().any(|f| f.id == uf.feature_id) {
+                                errors.push(format!("feature '{}' not found in component '{}'", uf.feature_id, uf.component_id));
+                            }
+                        }
+                    }
+                    c::operation::Op::ExtrudeSketch(es) => {
+                        if project.sketches.get(&es.sketch_id).is_none() {
+                            errors.push(format!("sketch '{}' not found for extrude", es.sketch_id));
+                        }
+                    }
+                    c::operation::Op::RevolveSketch(rs) => {
+                        if project.sketches.get(&rs.sketch_id).is_none() {
+                            errors.push(format!("sketch '{}' not found for revolve", rs.sketch_id));
                         }
                     }
                     _ => {}
@@ -410,12 +643,14 @@ pub enum Command {
     AddContainment { parent_id: String, child_id: String },
     /// 移除 containment — undo 时恢复
     RemoveContainment { containment: c::Containment },
-    /// 添加连接 — undo 时移除（简单标记）
-    AddConnection { from_id: String, to_id: String },
+    /// 添加连接 — undo 时删除（2026-10-28 起为完整撤销）
+    AddConnection { connection: c::Connection },
     /// 设置材料 — undo 时恢复
     SetMaterial { object_id: String, old_material_id: Option<String> },
-    /// 创建生命周期记录 — undo 时删除
-    CreateLifecycleRecord { record_id: String },
+    /// 创建材料（2026-10-28 Wave 1）— undo 时删除
+    CreateMaterial { material: c::Material },
+    /// 创建生命周期记录 — undo 时删除, redo 时恢复
+    CreateLifecycleRecord { record: c::ProjectLifecycleRecord },
     /// 修改生命周期记录 — undo 时恢复
     ModifyLifecycleRecord { record_id: String, old_name: String, old_description: String, old_status: i32 },
     /// 删除生命周期记录 — undo 时恢复
@@ -433,7 +668,7 @@ pub enum Command {
     /// 几何变换 — undo 时恢复原几何
     TransformGeometry { object_id: String, old_geometry: Option<c::Geometry>, translation: Option<c::Point3D>, rotation: Option<c::Rotation>, scale: Option<c::Vector3D> },
     /// 链接记录到对象 — undo 时取消链接
-    LinkRecordToObject { record_id: String, object_id: String },
+    LinkRecordToObject { record_id: String, object_id: String, was_linked: bool },
     /// 更新排期 — undo 时恢复
     UpdateSchedule { record_id: String, old_planned_start: Option<c::Timestamp>, old_planned_finish: Option<c::Timestamp>, old_actual_start: Option<c::Timestamp>, old_actual_finish: Option<c::Timestamp> },
     /// 更新成本 — undo 时恢复
@@ -444,8 +679,8 @@ pub enum Command {
     CreateWorkOrder { record_id: String },
     /// 更新工作单 — undo 时恢复
     UpdateWorkOrder { record_id: String, old_status: String, old_description: String, new_status: String, new_description: String },
-    /// 创建草图 — undo 时删除
-    CreateSketch { sketch_id: String },
+    /// 创建草图 — undo 时删除, redo 时恢复
+    CreateSketch { sketch: omnim_sketch::Sketch },
     /// 添加草图实体 — undo 时移除
     AddSketchEntity { sketch_id: String, entity_index: usize, entity: omnim_sketch::SketchEntity },
     /// 添加草图约束 — undo 时移除
@@ -458,24 +693,33 @@ pub enum Command {
     RemoveSketchConstraint { sketch_id: String, constraint: omnim_sketch::SketchConstraint },
     /// 删除草图 — undo 时恢复
     DeleteSketch { sketch: omnim_sketch::Sketch },
-    /// 拉伸草图 — undo 时移除生成的3D物体
-    ExtrudeSketch { sketch_id: String, depth: f64, direction: omnim_core::Vector3D, profile: Option<Vec<omnim_core::Point2D>> },
-    /// 旋转草图 — undo 时移除生成的3D物体
-    RevolveSketch { sketch_id: String, angle: f64, axis_origin: omnim_core::Point3D, axis_direction: omnim_core::Vector3D, profile: Option<Vec<omnim_core::Point2D>> },
-    /// 创建组件 — undo 时删除
-    CreateComponent { component_id: String },
+    // 2026-10-28 Wave 1 Slice 3: sketch detail commands
+    /// 更新草图 — undo 时恢复名称/基准
+    UpdateSketch { sketch_id: String, old_name: String, old_origin: omnim_core::Point3D },
+    /// 更新草图实体 — undo 时恢复实体
+    UpdateSketchEntity { sketch_id: String, entity_index: usize, old_entity: omnim_sketch::SketchEntity, new_entity: omnim_sketch::SketchEntity, old_solved: bool },
+    /// 拉伸/旋转草图生成的 3D 物体由 CreateObject 命令记录（见 Executor）
+    /// 创建组件 — undo 时删除, redo 时恢复
+    CreateComponent { snapshot: ObjectSnapshot },
     /// 添加特征 — undo 时移除
     AddFeature { component_id: String, feature_id: String },
     /// 移除特征 — undo 时恢复
     RemoveFeature { component_id: String, feature: omnim_model::Feature },
-    /// 重建特征 — undo 时无操作（rebuild 是幂等的）
-    RebuildFeatures { component_id: String },
+    /// 更新特征 — undo/redo 按 id 整体替换
+    UpdateFeature { component_id: String, feature_id: String, old_feature: omnim_model::Feature, new_feature: omnim_model::Feature },
+    /// 重建特征 — undo 时恢复重建前的缓存几何, redo 时重新重建
+    RebuildFeatures { component_id: String, old_geometries: Vec<Option<omnim_core::MeshGeometry>> },
     // === Catalog commands ===
     DefineComponent { component_def: omnim_model::catalog::ComponentDef },
     AddComponentParam { component_id: String, param_index: usize },
     AddConnector { component_id: String, connector_id: String },
     PublishComponent { component_id: String },
     DeleteComponentDef { component_def: omnim_model::catalog::ComponentDef },
+    // 2026-10-28 Wave 1 Slice 3: catalog detail commands
+    UpdateComponentDef { component_def_id: String, old_def: omnim_model::catalog::ComponentDef, new_def: omnim_model::catalog::ComponentDef },
+    UpdateComponentParam { component_id: String, param_index: usize, old_param: omnim_model::catalog::ParamDef, new_param: omnim_model::catalog::ParamDef },
+    DeleteComponentParam { component_id: String, param_index: usize, removed: omnim_model::catalog::ParamDef },
+    AssignFeatureTree { component_id: String, old_tree_id: String, new_tree_id: String },
     // === Series commands ===
     CreateSeries { series: omnim_model::series_store::Series },
     AddSelector { series_id: String, selector_id: String },
@@ -484,6 +728,25 @@ pub enum Command {
     AddParamConstraint { series_id: String, component_def_id: String, param_index: usize },
     DeleteSeries { series: omnim_model::series_store::Series },
     LoadSeries { path: String, source: String, loaded_ids: Vec<String> },
+    // 2026-10-28 Wave 1 Slice 4: series detail commands
+    UpdateSeries { series_id: String, old_series: omnim_model::series_store::Series, new_series: omnim_model::series_store::Series },
+    UpdateParamConstraint { series_id: String, component_def_id: String, param_index: usize, old_constraint: omnim_model::series_store::ParamConstraint, new_constraint: omnim_model::series_store::ParamConstraint },
+    DeleteParamConstraint { series_id: String, component_def_id: String, param_index: usize, removed: omnim_model::series_store::ParamConstraint },
+    // 2026-10-28 Wave 1 Slice 4: measurement commands
+    CreateMeasurement { measurement: omnim_model::Measurement },
+    DeleteMeasurement { measurement: omnim_model::Measurement },
+    // 2026-10-28 Wave 1 Slice 4: administrative division commands
+    CreateAdministrativeDivision { division: omnim_model::AdministrativeDivision },
+    DeleteAdministrativeDivision { division: omnim_model::AdministrativeDivision },
+    // 2026-10-28 Wave 1 Slice 4: breakdown structure commands
+    CreateBreakdownNode { node: omnim_model::BreakdownNode },
+    DeleteBreakdownNode { node: omnim_model::BreakdownNode },
+    LinkBreakdownObject { node_id: String, object_id: String, was_linked: bool },
+    LinkBreakdownAdministrative { node_id: String, division_id: String, was_linked: bool },
+    // 2026-10-28 Wave 1 Slice 5: catalog instantiation (object + generated sketches)
+    InstantiateCatalog { object: OmniObject, sketches: Vec<omnim_sketch::Sketch> },
+    // 2026-10-28 Wave 1 Slice 5: whole-project transaction (bulk IFC import)
+    ReplaceProject { before: Box<Project>, after: Box<Project> },
 }
 
 // ============================================================
@@ -593,6 +856,12 @@ impl Executor {
                                 obj.geometry =
                                     Some(omnim_model::geometry::create_geometry(ng.clone()));
                             }
+                            if let Some(nic) = &mo.new_ifc_class {
+                                obj.ifc_class = nic.clone();
+                            }
+                            if let Some(tags) = &mo.new_tags {
+                                obj.tags = tags.values.clone();
+                            }
                             commands.push(Command::ModifyObject {
                                 object_id: mo.object_id.clone(),
                                 snapshot,
@@ -644,8 +913,7 @@ impl Executor {
                     c::operation::Op::AddConnection(conn) => {
                         project.relations.add_connection(conn.clone());
                         commands.push(Command::AddConnection {
-                            from_id: conn.from_object_id.clone(),
-                            to_id: conn.to_object_id.clone(),
+                            connection: conn.clone(),
                         });
                     }
 
@@ -682,9 +950,10 @@ impl Executor {
                             version_id: String::new(),
                         };
                         let record_id = record.id.clone();
-                        created_ids.push(record_id.clone());
+                        created_ids.push(record_id);
+                        let snapshot = record.clone();
                         project.lifecycle.insert(record);
-                        commands.push(Command::CreateLifecycleRecord { record_id });
+                        commands.push(Command::CreateLifecycleRecord { record: snapshot });
                     }
 
                     c::operation::Op::ModifyLifecycleRecord(mlr) => {
@@ -901,7 +1170,8 @@ impl Executor {
                             let old_geom = obj.geometry.clone();
                             if let Some(geom) = &mut obj.geometry {
                                 if let Some(mesh) = omnim_model::geometry::geometry_to_mesh(geom) {
-                                    let origin = mesh_center(&mesh);
+                                    let origin = tg.pivot.clone()
+                                        .unwrap_or_else(|| mesh_center(&mesh));
                                     let pre = c::Transform {
                                         matrix: vec![],
                                         translation: Some(c::Point3D {
@@ -945,14 +1215,17 @@ impl Executor {
                     }
 
                     c::operation::Op::LinkRecordToObject(lro) => {
+                        let mut was_linked = false;
                         if let Some(record) = project.lifecycle.get_mut(&lro.record_id) {
-                            if !record.related_object_ids.contains(&lro.object_id) {
+                            was_linked = record.related_object_ids.contains(&lro.object_id);
+                            if !was_linked {
                                 record.related_object_ids.push(lro.object_id.clone());
                             }
                         }
                         commands.push(Command::LinkRecordToObject {
                             record_id: lro.record_id.clone(),
                             object_id: lro.object_id.clone(),
+                            was_linked,
                         });
                     }
 
@@ -1088,11 +1361,14 @@ impl Executor {
                             .unwrap_or(omnim_core::Point3D { x: 0.0, y: 0.0, z: 0.0 });
                         let normal = cs.normal.as_ref().map(|v| omnim_core::Vector3D { x: v.x, y: v.y, z: v.z })
                             .unwrap_or(omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
-                        let sketch = omnim_sketch::Sketch::new(&cs.name, origin, normal);
+                        let mut sketch = omnim_sketch::Sketch::new(&cs.name, origin, normal);
+                        if !cs.component_id.is_empty() {
+                            sketch.component_id = Some(cs.component_id.clone());
+                        }
                         let sketch_id = sketch.id.clone();
                         created_ids.push(sketch_id.clone());
-                        project.sketches.insert(sketch);
-                        commands.push(Command::CreateSketch { sketch_id });
+                        project.sketches.insert(sketch.clone());
+                        commands.push(Command::CreateSketch { sketch });
                     }
 
                     c::operation::Op::AddSketchEntity(ase) => {
@@ -1119,7 +1395,7 @@ impl Executor {
                                     points,
                                     radius: entity_data.radius,
                                     sides: entity_data.sides,
-                                    construction: false,
+                                    construction: entity_data.construction,
                                 };
                                 let idx = sketch.add_entity(entity.clone());
                                 commands.push(Command::AddSketchEntity {
@@ -1225,50 +1501,175 @@ impl Executor {
                     }
 
                     c::operation::Op::ExtrudeSketch(es) => {
-                        if let Some(sketch) = project.sketches.get(&es.sketch_id) {
+                        // 2026-10-28 Wave 1 Slice 3: extrude now creates the 3D body
+                        // through the Executor (undo via the CreateObject command).
+                        if let Some(sketch) = project.sketches.get(&es.sketch_id).cloned() {
                             let dir = es.direction.as_ref()
                                 .map(|d| omnim_core::Vector3D { x: d.x, y: d.y, z: d.z })
                                 .unwrap_or(omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
-                            let profile = omnim_sketch::profile::sketch_to_profile_2d(sketch);
-                            let depth = es.depth;
-                            let direction = dir;
-                            let sketch_id = es.sketch_id.clone();
-                            // Use BRep for validation, but Command stores profile for undo
-                            if let Some(ref prof) = profile {
-                                if prof.len() >= 3 {
-                                    let profile3d: Vec<omnim_core::Point3D> = prof.iter()
+                            let brep_result = omnim_sketch::profile::sketch_to_profile_2d(&sketch)
+                                .filter(|prof| prof.len() >= 3)
+                                .and_then(|profile2d| {
+                                    let profile3d: Vec<omnim_core::Point3D> = profile2d.iter()
                                         .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: 0.0 })
                                         .collect();
-                                    if omnim_model::brep::extrude_brep(&profile3d, depth, dir, omnim_model::brep::DEFAULT_TOLERANCE).is_some() {
-                                        commands.push(Command::ExtrudeSketch { sketch_id, depth, direction, profile });
-                                    }
+                                    omnim_model::brep::extrude_brep(&profile3d, es.depth, dir, omnim_model::brep::DEFAULT_TOLERANCE)
+                                });
+                            match brep_result {
+                                Some(mg) => {
+                                    let object_id = uuid::Uuid::new_v4().to_string();
+                                    let obj = OmniObject {
+                                        id: object_id.clone(),
+                                        name: format!("extrude-{}", sketch.name),
+                                        description: format!("Extruded from sketch '{}' depth={}", sketch.name, es.depth),
+                                        object_type: omnim_core::ObjectType::Part as i32,
+                                        status: 0,
+                                        properties: vec![],
+                                        property_sets: vec![],
+                                        geometry: Some(omnim_model::geometry::mesh_to_geometry(&mg)),
+                                        material_id: None,
+                                        parent_id: None,
+                                        tags: vec![],
+                                        ifc_class: "IfcBuildingElementProxy".into(),
+                                        features: vec![],
+                                        sketch_ids: vec![],
+                                        dirty: false,
+                                        catalog_ref: None,
+                                    };
+                                    created_ids.push(object_id.clone());
+                                    project.objects.insert(obj.clone());
+                                    commands.push(Command::CreateObject {
+                                        snapshot: ObjectSnapshot {
+                                            object: obj,
+                                            removed_properties: Vec::new(),
+                                            old_material_id: None,
+                                            old_geometry: None,
+                                        },
+                                    });
+                                }
+                                None => {
+                                    return self.fail_and_rollback(
+                                        &commands,
+                                        project,
+                                        "Failed to extrude sketch — check profile".to_string(),
+                                        created_ids,
+                                    );
                                 }
                             }
                         }
                     }
 
                     c::operation::Op::RevolveSketch(rs) => {
-                        if let Some(sketch) = project.sketches.get(&rs.sketch_id) {
+                        // 2026-10-28 Wave 1 Slice 3: revolve now creates the 3D body
+                        // through the Executor (undo via the CreateObject command).
+                        if let Some(sketch) = project.sketches.get(&rs.sketch_id).cloned() {
                             let origin = rs.axis_origin.as_ref()
                                 .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: p.z })
                                 .unwrap_or(omnim_core::Point3D { x: 0.0, y: 0.0, z: 0.0 });
                             let axis_dir = rs.axis_direction.as_ref()
                                 .map(|d| omnim_core::Vector3D { x: d.x, y: d.y, z: d.z })
                                 .unwrap_or(omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
-                            let profile = omnim_sketch::profile::sketch_to_profile_2d(sketch);
-                            let angle = rs.angle;
-                            let axis_origin = origin;
-                            let axis_direction = axis_dir;
-                            let sketch_id = rs.sketch_id.clone();
-                            if let Some(ref prof) = profile {
-                                if prof.len() >= 3 {
-                                    let profile3d: Vec<omnim_core::Point3D> = prof.iter()
+                            let brep_result = omnim_sketch::profile::sketch_to_profile_2d(&sketch)
+                                .filter(|prof| prof.len() >= 3)
+                                .and_then(|profile2d| {
+                                    let profile3d: Vec<omnim_core::Point3D> = profile2d.iter()
                                         .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: 0.0 })
                                         .collect();
-                                    if omnim_model::brep::revolve_brep(&profile3d, angle, origin, axis_dir, omnim_model::brep::DEFAULT_TOLERANCE).is_some() {
-                                        commands.push(Command::RevolveSketch { sketch_id, angle, axis_origin, axis_direction, profile });
-                                    }
+                                    omnim_model::brep::revolve_brep(&profile3d, rs.angle, origin.clone(), axis_dir.clone(), omnim_model::brep::DEFAULT_TOLERANCE)
+                                });
+                            match brep_result {
+                                Some(mg) => {
+                                    let object_id = uuid::Uuid::new_v4().to_string();
+                                    let obj = OmniObject {
+                                        id: object_id.clone(),
+                                        name: format!("revolve-{}", sketch.name),
+                                        description: format!("Revolved from sketch '{}' angle={}", sketch.name, rs.angle),
+                                        object_type: omnim_core::ObjectType::Part as i32,
+                                        status: 0,
+                                        properties: vec![],
+                                        property_sets: vec![],
+                                        geometry: Some(omnim_model::geometry::mesh_to_geometry(&mg)),
+                                        material_id: None,
+                                        parent_id: None,
+                                        tags: vec![],
+                                        ifc_class: "IfcBuildingElementProxy".into(),
+                                        features: vec![],
+                                        sketch_ids: vec![],
+                                        dirty: false,
+                                        catalog_ref: None,
+                                    };
+                                    created_ids.push(object_id.clone());
+                                    project.objects.insert(obj.clone());
+                                    commands.push(Command::CreateObject {
+                                        snapshot: ObjectSnapshot {
+                                            object: obj,
+                                            removed_properties: Vec::new(),
+                                            old_material_id: None,
+                                            old_geometry: None,
+                                        },
+                                    });
                                 }
+                                None => {
+                                    return self.fail_and_rollback(
+                                        &commands,
+                                        project,
+                                        "Failed to revolve sketch — check profile".to_string(),
+                                        created_ids,
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    c::operation::Op::UpdateSketch(us) => {
+                        // 2026-10-28 Wave 1 Slice 3: sketch rename / workplane move
+                        if let Some(sketch) = project.sketches.get_mut(&us.sketch_id) {
+                            let old_name = sketch.name.clone();
+                            let old_origin = sketch.origin.clone();
+                            if let Some(ref origin) = us.origin {
+                                sketch.origin = omnim_core::Point3D { x: origin.x, y: origin.y, z: origin.z };
+                            }
+                            if let Some(ref name) = us.name {
+                                sketch.name = name.clone();
+                            }
+                            commands.push(Command::UpdateSketch {
+                                sketch_id: us.sketch_id.clone(),
+                                old_name,
+                                old_origin,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::UpdateSketchEntity(ue) => {
+                        // 2026-10-28 Wave 1 Slice 3: entity restyle / geometry edit
+                        if let Some(sketch) = project.sketches.get_mut(&ue.sketch_id) {
+                            let idx = (ue.entity_index as usize).saturating_sub(1);
+                            if idx < sketch.entities.len() {
+                                let old_solved = sketch.solved;
+                                let old_entity = sketch.entities[idx].clone();
+                                if let Some(ref pl) = ue.points {
+                                    sketch.entities[idx].points = pl.values.iter()
+                                        .map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: p.z })
+                                        .collect();
+                                }
+                                if let Some(radius) = ue.radius {
+                                    sketch.entities[idx].radius = radius;
+                                }
+                                if let Some(sides) = ue.sides {
+                                    sketch.entities[idx].sides = sides;
+                                }
+                                if let Some(construction) = ue.construction {
+                                    sketch.entities[idx].construction = construction;
+                                }
+                                sketch.solved = false;
+                                let new_entity = sketch.entities[idx].clone();
+                                commands.push(Command::UpdateSketchEntity {
+                                    sketch_id: ue.sketch_id.clone(),
+                                    entity_index: idx,
+                                    old_entity,
+                                    new_entity,
+                                    old_solved,
+                                });
                             }
                         }
                     }
@@ -1276,7 +1677,20 @@ impl Executor {
                     c::operation::Op::CreateComponent(cc) => {
                         let component_id = project.create_component(&cc.name, if cc.parent_id.is_empty() { None } else { Some(&cc.parent_id) });
                         created_ids.push(component_id.clone());
-                        commands.push(Command::CreateComponent { component_id });
+                        let snapshot = project.objects.get(&component_id)
+                            .map(|obj| ObjectSnapshot {
+                                object: obj.clone(),
+                                removed_properties: Vec::new(),
+                                old_material_id: None,
+                                old_geometry: None,
+                            })
+                            .unwrap_or(ObjectSnapshot {
+                                object: OmniObject::new(omnim_core::ObjectType::Component, &cc.name),
+                                removed_properties: Vec::new(),
+                                old_material_id: None,
+                                old_geometry: None,
+                            });
+                        commands.push(Command::CreateComponent { snapshot });
                     }
 
                     c::operation::Op::AddFeature(af) => {
@@ -1305,7 +1719,7 @@ impl Executor {
                             .unwrap_or(omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
                         let feature = omnim_model::Feature {
                             id: String::new(),
-                            name: format!("{}-{:.0}", feature_type_name(&feature_type), af.depth),
+                            name: af.name.clone().unwrap_or_else(|| format!("{}-{:.0}", feature_type_name(&feature_type), af.depth)),
                             feature_type: feature_type.clone(),
                             sketch_id: af.sketch_id.clone(),
                             axis_sketch_id: af.axis_sketch_id.clone(),
@@ -1321,7 +1735,7 @@ impl Executor {
                             suppressed: false,
                             cached_geometry: None,
                             dirty: true,
-                            lod: omnim_model::brep::DEFAULT_TOLERANCE,
+                            lod: af.lod.unwrap_or(omnim_model::brep::DEFAULT_TOLERANCE),
                             boolean_op: None,
                             pattern_count_x: None,
                             pattern_count_y: None,
@@ -1350,10 +1764,71 @@ impl Executor {
                     }
 
                     c::operation::Op::RebuildFeatures(rf) => {
+                        // 2026-10-28 Wave 1 Slice 3: capture pre-rebuild cache for real undo
+                        let old_geometries = project.objects.get(&rf.component_id)
+                            .map(|o| o.features.iter().map(|f| f.cached_geometry.clone()).collect())
+                            .unwrap_or_default();
                         if let Err(e) = project.rebuild_component(&rf.component_id) {
                             return self.fail_and_rollback(&commands, project, e, created_ids);
                         }
-                        commands.push(Command::RebuildFeatures { component_id: rf.component_id.clone() });
+                        commands.push(Command::RebuildFeatures { component_id: rf.component_id.clone(), old_geometries });
+                    }
+
+                    c::operation::Op::DeleteComponent(dc) => {
+                        // 2026-10-28 Wave 1 Slice 3: instance delete (undo via DeleteObject)
+                        if let Some(obj) = project.objects.remove(&dc.component_id) {
+                            project.objects.rebuild_children();
+                            commands.push(Command::DeleteObject {
+                                snapshot: ObjectSnapshot {
+                                    object: obj,
+                                    removed_properties: Vec::new(),
+                                    old_material_id: None,
+                                    old_geometry: None,
+                                },
+                            });
+                        }
+                    }
+
+                    c::operation::Op::UpdateFeature(uf) => {
+                        // 2026-10-28 Wave 1 Slice 3: feature field edit (single undoable command)
+                        let old_feature = project.objects.get(&uf.component_id)
+                            .and_then(|o| o.features.iter().find(|f| f.id == uf.feature_id))
+                            .cloned();
+                        let Some(old_feature) = old_feature else {
+                            continue;
+                        };
+                        let result = project.update_feature(
+                            &uf.component_id, &uf.feature_id,
+                            uf.sketch_id.clone(), uf.axis_sketch_id.clone(),
+                            uf.depth, uf.angle, uf.is_cut, uf.suppressed,
+                            uf.input_sketch_ids.as_ref().map(|l| l.values.clone()),
+                            uf.dependency_ids.as_ref().map(|l| l.values.clone()),
+                            uf.direction.as_ref().map(|d| omnim_core::Vector3D { x: d.x, y: d.y, z: d.z }),
+                            uf.axis_origin.as_ref().map(|p| omnim_core::Point3D { x: p.x, y: p.y, z: p.z }),
+                            uf.axis_direction.as_ref().map(|d| omnim_core::Vector3D { x: d.x, y: d.y, z: d.z }),
+                            uf.lod,
+                            uf.boolean_op.map(|b| match b {
+                                0 => omnim_model::BooleanOp::Union,
+                                2 => omnim_model::BooleanOp::Intersect,
+                                _ => omnim_model::BooleanOp::Subtract,
+                            }),
+                            uf.pattern_count_x.map(|c| c.max(0) as usize),
+                            uf.pattern_count_y.map(|c| c.max(0) as usize),
+                            uf.pattern_count_z.map(|c| c.max(0) as usize),
+                        );
+                        if let Err(e) = result {
+                            return self.fail_and_rollback(&commands, project, e, created_ids);
+                        }
+                        let new_feature = project.objects.get(&uf.component_id)
+                            .and_then(|o| o.features.iter().find(|f| f.id == uf.feature_id))
+                            .cloned()
+                            .unwrap_or(old_feature.clone());
+                        commands.push(Command::UpdateFeature {
+                            component_id: uf.component_id.clone(),
+                            feature_id: uf.feature_id.clone(),
+                            old_feature,
+                            new_feature,
+                        });
                     }
 
                     // === Catalog Operations ===
@@ -1424,6 +1899,106 @@ impl Executor {
                         }
                     }
 
+                    c::operation::Op::UpdateComponentDef(ucd) => {
+                        // 2026-10-28 Wave 1 Slice 3: def field edit (single undoable command)
+                        let mut library_writer = LIBRARY.write().unwrap();
+                        if let Some(comp) = library_writer.as_mut().unwrap().catalog.get_mut(&ucd.component_id) {
+                            let old_def = comp.clone();
+                            if let Some(n) = &ucd.name { comp.name = n.clone(); }
+                            if let Some(cat) = &ucd.category { comp.category = cat.clone(); }
+                            if let Some(desc) = &ucd.description { comp.description = desc.clone(); }
+                            if let Some(cls) = &ucd.ifc_class { comp.ifc_class = cls.clone(); }
+                            if let Some(std) = &ucd.standard_reference { comp.standard_reference = std.clone(); }
+                            if let Some(tags) = &ucd.tags { comp.tags = tags.values.clone(); }
+                            if let Some(domain) = &ucd.domain { comp.domain = domain.clone(); }
+                            if let Some(mats) = &ucd.allowed_materials { comp.allowed_materials = mats.values.clone(); }
+                            if let Some(def_mat) = &ucd.default_material { comp.default_material = def_mat.clone(); }
+                            if !ucd.properties.is_empty() { comp.properties = ucd.properties.clone(); }
+                            let new_def = comp.clone();
+                            commands.push(Command::UpdateComponentDef {
+                                component_def_id: ucd.component_id.clone(),
+                                old_def,
+                                new_def,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::UpdateComponentParam(ucp) => {
+                        // 2026-10-28 Wave 1 Slice 3: param field edit (single undoable command)
+                        let mut library_writer = LIBRARY.write().unwrap();
+                        if let Some(comp) = library_writer.as_mut().unwrap().catalog.get_mut(&ucp.component_id) {
+                            let idx = (ucp.param_index as usize).saturating_sub(1);
+                            if idx >= comp.params.len() {
+                                drop(library_writer);
+                                return self.fail_and_rollback(
+                                    &commands,
+                                    project,
+                                    format!("param index {} out of range for component '{}'", ucp.param_index, ucp.component_id),
+                                    created_ids,
+                                );
+                            }
+                            let old_param = comp.params[idx].clone();
+                            if let Some(n) = &ucp.name { comp.params[idx].name = n.clone(); }
+                            if let Some(t) = ucp.param_type { comp.params[idx].param_type = t; }
+                            if let Some(dv) = ucp.default_value { comp.params[idx].default_value = dv; }
+                            if let Some(mn) = ucp.min_value { comp.params[idx].min_value = mn; }
+                            if let Some(mx) = ucp.max_value { comp.params[idx].max_value = mx; }
+                            if let Some(st) = ucp.step { comp.params[idx].step = st; }
+                            if let Some(u) = &ucp.unit { comp.params[idx].unit = u.clone(); }
+                            if let Some(f) = &ucp.formula { comp.params[idx].formula = f.clone(); }
+                            if let Some(c) = &ucp.choices { comp.params[idx].choices = c.values.clone(); }
+                            if let Some(d) = &ucp.description { comp.params[idx].description = d.clone(); }
+                            let new_param = comp.params[idx].clone();
+                            let component_id = ucp.component_id.clone();
+                            drop(library_writer);
+                            commands.push(Command::UpdateComponentParam {
+                                component_id,
+                                param_index: idx,
+                                old_param,
+                                new_param,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::DeleteComponentParam(dcp) => {
+                        // 2026-10-28 Wave 1 Slice 3: param removal (undo re-inserts at index)
+                        let mut library_writer = LIBRARY.write().unwrap();
+                        if let Some(comp) = library_writer.as_mut().unwrap().catalog.get_mut(&dcp.component_id) {
+                            let idx = (dcp.param_index as usize).saturating_sub(1);
+                            if idx >= comp.params.len() {
+                                drop(library_writer);
+                                return self.fail_and_rollback(
+                                    &commands,
+                                    project,
+                                    format!("param index {} out of range for component '{}'", dcp.param_index, dcp.component_id),
+                                    created_ids,
+                                );
+                            }
+                            let removed = comp.params.remove(idx);
+                            let component_id = dcp.component_id.clone();
+                            drop(library_writer);
+                            commands.push(Command::DeleteComponentParam {
+                                component_id,
+                                param_index: idx,
+                                removed,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::AssignFeatureTree(aft) => {
+                        // 2026-10-28 Wave 1 Slice 3: feature-tree binding
+                        let mut library_writer = LIBRARY.write().unwrap();
+                        if let Some(comp) = library_writer.as_mut().unwrap().catalog.get_mut(&aft.component_id) {
+                            let old_tree_id = comp.feature_tree_id.clone();
+                            comp.feature_tree_id = aft.feature_tree_id.clone();
+                            commands.push(Command::AssignFeatureTree {
+                                component_id: aft.component_id.clone(),
+                                old_tree_id,
+                                new_tree_id: aft.feature_tree_id.clone(),
+                            });
+                        }
+                    }
+
                     // === Series Operations ===
 
                     c::operation::Op::CreateSeries(cs) => {
@@ -1440,15 +2015,15 @@ impl Executor {
 
                     c::operation::Op::AddSelector(asel) => {
                         if let Some(series) = project.series.get_mut(&asel.series_id) {
-                            let selector = omnim_model::series_store::Selector::new(&asel.selector_id, &asel.question);
                             if series.root_selector.is_none() {
+                                let selector = omnim_model::series_store::Selector::new(&asel.selector_id, &asel.question);
                                 series.root_selector = Some(selector);
+                                commands.push(Command::AddSelector {
+                                    series_id: asel.series_id.clone(),
+                                    selector_id: asel.selector_id.clone(),
+                                });
                             }
                             // If root already exists, the selector is added via AddAnswer operations
-                            commands.push(Command::AddSelector {
-                                series_id: asel.series_id.clone(),
-                                selector_id: asel.selector_id.clone(),
-                            });
                         }
                     }
 
@@ -1470,10 +2045,12 @@ impl Executor {
                                 stack.push(root);
                             }
                             let mut answer_index = 0;
+                            let mut added = false;
                             while let Some(sel) = stack.pop() {
                                 if sel.id == aans.selector_id {
                                     answer_index = sel.answers.len();
                                     sel.answers.push(answer);
+                                    added = true;
                                     break;
                                 }
                                 for ans in &mut sel.answers {
@@ -1482,11 +2059,13 @@ impl Executor {
                                     }
                                 }
                             }
-                            commands.push(Command::AddAnswer {
-                                series_id: aans.series_id.clone(),
-                                selector_id: aans.selector_id.clone(),
-                                answer_index,
-                            });
+                            if added {
+                                commands.push(Command::AddAnswer {
+                                    series_id: aans.series_id.clone(),
+                                    selector_id: aans.selector_id.clone(),
+                                    answer_index,
+                                });
+                            }
                         }
                     }
 
@@ -1501,6 +2080,7 @@ impl Executor {
                                 stack.push(root);
                             }
                             let mut answer_index = 0;
+                            let mut updated = false;
                             while let Some(sel) = stack.pop() {
                                 if sel.id == asc.selector_id {
                                     // Find the answer by id or last empty one
@@ -1508,6 +2088,7 @@ impl Executor {
                                         if ans.id == asc.answer_id || matches!(ans.outcome, omnim_model::series_store::AnswerOutcome::Component(ref sc) if sc.component_def_id.is_empty()) {
                                             answer_index = i;
                                             ans.outcome = omnim_model::series_store::AnswerOutcome::Component(spec.clone());
+                                            updated = true;
                                             break;
                                         }
                                     }
@@ -1519,11 +2100,13 @@ impl Executor {
                                     }
                                 }
                             }
-                            commands.push(Command::AddSpecComponent {
-                                series_id: asc.series_id.clone(),
-                                selector_id: asc.selector_id.clone(),
-                                answer_index,
-                            });
+                            if updated {
+                                commands.push(Command::AddSpecComponent {
+                                    series_id: asc.series_id.clone(),
+                                    selector_id: asc.selector_id.clone(),
+                                    answer_index,
+                                });
+                            }
                         }
                     }
 
@@ -1540,6 +2123,7 @@ impl Executor {
                                 stack.push(root);
                             }
                             let mut param_index = 0;
+                            let mut added = false;
                             while let Some(sel) = stack.pop() {
                                 for ans in &mut sel.answers {
                                     match &mut ans.outcome {
@@ -1547,6 +2131,8 @@ impl Executor {
                                             if sc.component_def_id == apc.component_def_id {
                                                 param_index = sc.param_constraints.len();
                                                 sc.param_constraints.push(constraint.clone());
+                                                added = true;
+                                                break;
                                             }
                                         }
                                         omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
@@ -1554,12 +2140,17 @@ impl Executor {
                                         }
                                     }
                                 }
+                                if added {
+                                    break;
+                                }
                             }
-                            commands.push(Command::AddParamConstraint {
-                                series_id: apc.series_id.clone(),
-                                component_def_id: apc.component_def_id.clone(),
-                                param_index,
-                            });
+                            if added {
+                                commands.push(Command::AddParamConstraint {
+                                    series_id: apc.series_id.clone(),
+                                    component_def_id: apc.component_def_id.clone(),
+                                    param_index,
+                                });
+                            }
                         }
                     }
 
@@ -1619,6 +2210,313 @@ impl Executor {
                             }
                         }
                     }
+
+                    // 2026-10-28 Wave 1 Slice 4: series detail operations
+
+                    c::operation::Op::UpdateSeries(us) => {
+                        if let Some(series) = project.series.get_mut(&us.series_id) {
+                            let old_series = series.clone();
+                            if let Some(name) = &us.name {
+                                series.name = name.clone();
+                            }
+                            if let Some(description) = &us.description {
+                                series.description = description.clone();
+                            }
+                            if let Some(domain) = &us.domain {
+                                series.domain = domain.clone();
+                            }
+                            if let Some(std) = &us.standard_reference {
+                                series.standard_reference = std.clone();
+                            }
+                            if us.replace_applicable_phases {
+                                series.applicable_phases = us.applicable_phases.clone();
+                            }
+                            if us.replace_metadata {
+                                series.metadata = us.metadata.clone();
+                            }
+                            let new_series = series.clone();
+                            commands.push(Command::UpdateSeries {
+                                series_id: us.series_id.clone(),
+                                old_series,
+                                new_series,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::UpdateParamConstraint(upc) => {
+                        let index = upc.param_index as usize;
+                        if let Some(series) = project.series.get_mut(&upc.series_id) {
+                            let Some(constraint) = Self::param_constraint_mut(
+                                series,
+                                &upc.component_def_id,
+                                index,
+                            ) else {
+                                continue;
+                            };
+                            let old_constraint = constraint.clone();
+                            if let Some(name) = &upc.param_name {
+                                constraint.param_name = name.clone();
+                            }
+                            if let Some(v) = upc.default_value {
+                                constraint.default_value = v;
+                            }
+                            if let Some(v) = upc.min_value {
+                                constraint.min_value = v;
+                            }
+                            if let Some(v) = upc.max_value {
+                                constraint.max_value = v;
+                            }
+                            if let Some(v) = upc.step {
+                                constraint.step = v;
+                            }
+                            if let Some(v) = &upc.fixed_value {
+                                constraint.fixed_value = v.clone();
+                            }
+                            let new_constraint = constraint.clone();
+                            commands.push(Command::UpdateParamConstraint {
+                                series_id: upc.series_id.clone(),
+                                component_def_id: upc.component_def_id.clone(),
+                                param_index: index,
+                                old_constraint,
+                                new_constraint,
+                            });
+                        }
+                    }
+
+                    c::operation::Op::DeleteParamConstraint(dpc) => {
+                        let index = dpc.param_index as usize;
+                        if let Some(series) = project.series.get_mut(&dpc.series_id) {
+                            let Some(removed) = Self::param_constraint_mut(
+                                series,
+                                &dpc.component_def_id,
+                                index,
+                            )
+                            .cloned() else {
+                                continue;
+                            };
+                            Self::remove_param_constraint(series, &dpc.component_def_id, index);
+                            commands.push(Command::DeleteParamConstraint {
+                                series_id: dpc.series_id.clone(),
+                                component_def_id: dpc.component_def_id.clone(),
+                                param_index: index,
+                                removed,
+                            });
+                        }
+                    }
+
+                    // 2026-10-28 Wave 1 Slice 4: measurement operations
+
+                    c::operation::Op::CreateMeasurement(cm) => {
+                        let color = cm.color.clone().unwrap_or_else(|| "#44ff88".to_string());
+                        let points = cm
+                            .points
+                            .iter()
+                            .map(|p| omnim_model::Point3D { x: p.x, y: p.y, z: p.z })
+                            .collect();
+                        let mut measurement = omnim_model::Measurement::new(
+                            &cm.measurement_type,
+                            points,
+                            cm.value,
+                            &color,
+                        );
+                        if let Some(label) = &cm.label {
+                            measurement.label = label.clone();
+                        }
+                        let id = measurement.id.clone();
+                        project.measurements.add(measurement.clone());
+                        created_ids.push(id);
+                        commands.push(Command::CreateMeasurement { measurement });
+                    }
+
+                    c::operation::Op::DeleteMeasurement(dm) => {
+                        if let Some(measurement) = project.measurements.remove(&dm.measurement_id) {
+                            commands.push(Command::DeleteMeasurement { measurement });
+                        }
+                    }
+
+                    // 2026-10-28 Wave 1 Slice 4: administrative division operations
+
+                    c::operation::Op::CreateAdministrativeDivision(cad) => {
+                        let level = c::AdministrativeLevel::try_from(cad.level)
+                            .unwrap_or(c::AdministrativeLevel::Unspecified);
+                        let mut division =
+                            omnim_model::AdministrativeDivision::new(level, &cad.name, &cad.code);
+                        if let Some(native_name) = &cad.native_name {
+                            division.native_name = native_name.clone();
+                        }
+                        if let Some(parent_id) = &cad.parent_id {
+                            division.parent_id = Some(parent_id.clone());
+                        }
+                        let id = project.administrative.insert(division.clone());
+                        created_ids.push(id);
+                        commands.push(Command::CreateAdministrativeDivision { division });
+                    }
+
+                    c::operation::Op::DeleteAdministrativeDivision(dad) => {
+                        if let Some(division) = project.administrative.remove(&dad.division_id) {
+                            commands.push(Command::DeleteAdministrativeDivision { division });
+                        }
+                    }
+
+                    // 2026-10-28 Wave 1 Slice 4: breakdown structure operations
+
+                    c::operation::Op::CreateBreakdownNode(cbn) => {
+                        let level = c::BreakdownLevel::try_from(cbn.level)
+                            .unwrap_or(c::BreakdownLevel::Unspecified);
+                        let convention = c::BreakdownConvention::try_from(cbn.convention)
+                            .unwrap_or(c::BreakdownConvention::Unspecified);
+                        let mut node =
+                            omnim_model::BreakdownNode::new(level, &cbn.name, convention);
+                        if let Some(code) = &cbn.code {
+                            node.code = code.clone();
+                        }
+                        if let Some(parent_id) = &cbn.parent_id {
+                            node.parent_id = Some(parent_id.clone());
+                        }
+                        let id = project.breakdown.insert(node.clone());
+                        created_ids.push(id);
+                        commands.push(Command::CreateBreakdownNode { node });
+                    }
+
+                    c::operation::Op::DeleteBreakdownNode(dbn) => {
+                        if let Some(node) = project.breakdown.remove(&dbn.node_id) {
+                            commands.push(Command::DeleteBreakdownNode { node });
+                        }
+                    }
+
+                    c::operation::Op::LinkBreakdownObject(lbo) => {
+                        let mut was_linked = false;
+                        if let Some(node) = project.breakdown.get_mut(&lbo.node_id) {
+                            was_linked = node.related_object_ids.contains(&lbo.object_id);
+                            if !was_linked {
+                                node.link_object(&lbo.object_id);
+                            }
+                        }
+                        commands.push(Command::LinkBreakdownObject {
+                            node_id: lbo.node_id.clone(),
+                            object_id: lbo.object_id.clone(),
+                            was_linked,
+                        });
+                    }
+
+                    c::operation::Op::LinkBreakdownAdministrative(lba) => {
+                        let mut was_linked = false;
+                        if let Some(node) = project.breakdown.get_mut(&lba.node_id) {
+                            was_linked = node
+                                .administrative_division_ids
+                                .contains(&lba.division_id);
+                            if !was_linked {
+                                node.link_administrative_division(&lba.division_id);
+                            }
+                        }
+                        commands.push(Command::LinkBreakdownAdministrative {
+                            node_id: lba.node_id.clone(),
+                            division_id: lba.division_id.clone(),
+                            was_linked,
+                        });
+                    }
+
+                    c::operation::Op::CreateMaterial(cm) => {
+                        let Some(m) = cm.material.clone() else {
+                            continue;
+                        };
+                        let id = m.id.clone();
+                        project.materials.insert(m.clone());
+                        created_ids.push(id.clone());
+                        commands.push(Command::CreateMaterial { material: m });
+                    }
+
+                    c::operation::Op::InstantiateCatalog(ic) => {
+                        let objects_before: std::collections::HashSet<String> =
+                            project.objects.list().iter().map(|o| o.id.clone()).collect();
+                        let sketches_before: std::collections::HashSet<String> =
+                            project.sketches.list().iter().map(|s| s.id.clone()).collect();
+
+                        let params: std::collections::HashMap<String, f64> = ic.params.clone();
+                        let result = if ic.skip_series_gate {
+                            project.instantiate_catalog_component_skip_gate(
+                                &ic.component_def_id,
+                                &ic.instance_name,
+                                &params,
+                                ic.position.clone(),
+                                ic.rotation_z,
+                            )
+                        } else {
+                            project.instantiate_catalog_component(
+                                &ic.component_def_id,
+                                &ic.instance_name,
+                                &params,
+                                ic.position.clone(),
+                                ic.rotation_z,
+                            )
+                        };
+
+                        match result {
+                            Ok(cid) => {
+                                let object = project.objects.get(&cid).cloned();
+                                let new_sketches: Vec<omnim_sketch::Sketch> = project
+                                    .sketches
+                                    .list()
+                                    .iter()
+                                    .filter(|s| !sketches_before.contains(&s.id))
+                                    .map(|s| (*s).clone())
+                                    .collect();
+                                if let Some(object) = object {
+                                    created_ids.push(cid);
+                                    commands.push(Command::InstantiateCatalog {
+                                        object,
+                                        sketches: new_sketches,
+                                    });
+                                }
+                            }
+                            Err(e) => {
+                                // Roll back partial object/sketch creation so a failed
+                                // instantiation leaves no residue.
+                                let new_objects: Vec<String> = project
+                                    .objects
+                                    .list()
+                                    .iter()
+                                    .filter(|o| !objects_before.contains(&o.id))
+                                    .map(|o| o.id.clone())
+                                    .collect();
+                                for id in new_objects {
+                                    project.objects.remove(&id);
+                                }
+                                let new_sketches: Vec<String> = project
+                                    .sketches
+                                    .list()
+                                    .iter()
+                                    .filter(|s| !sketches_before.contains(&s.id))
+                                    .map(|s| s.id.clone())
+                                    .collect();
+                                for id in new_sketches {
+                                    project.sketches.remove(&id);
+                                }
+                                project.objects.rebuild_children();
+                                return ExecutionResult {
+                                    success: false,
+                                    message: format!("instantiate_catalog failed: {}", e),
+                                    created_ids: Vec::new(),
+                                };
+                            }
+                        }
+                    }
+
+                    c::operation::Op::SetObjectProperty(sop) => {
+                        let Some(prop) = sop.property.clone() else {
+                            continue;
+                        };
+                        if let Some(obj) = project.objects.get_mut(&sop.object_id) {
+                            let old_value = obj.get_property(&prop.name).and_then(|p| p.value.clone());
+                            // snapshot the old property, then write through the object helper
+                            obj.set_property(&prop.name, prop.value.clone().unwrap_or_default());
+                            commands.push(Command::SetProperty {
+                                object_id: sop.object_id.clone(),
+                                property_name: prop.name.clone(),
+                                old_value,
+                            });
+                        }
+                    }
                 }
             }
         }
@@ -1653,10 +2551,13 @@ impl Executor {
             c::Action::RebuildFeatures => {
                 for op in &instr.operations {
                     if let Some(c::operation::Op::RebuildFeatures(rf)) = &op.op {
+                        let old_geometries = project.objects.get(&rf.component_id)
+                            .map(|o| o.features.iter().map(|f| f.cached_geometry.clone()).collect())
+                            .unwrap_or_default();
                         if let Err(e) = project.rebuild_component(&rf.component_id) {
                             return self.fail_and_rollback(&commands, project, e, created_ids);
                         }
-                        commands.push(Command::RebuildFeatures { component_id: rf.component_id.clone() });
+                        commands.push(Command::RebuildFeatures { component_id: rf.component_id.clone(), old_geometries });
                     }
                 }
             }
@@ -1758,6 +2659,18 @@ impl Executor {
     }
 
     /// 手动记录一条创建对象的 undo 命令（用于不经过 execute 的直接创建）
+    /// Record a whole-project transaction (bulk IFC import).
+    ///
+    /// The caller has already applied the import; undo restores `before`, redo
+    /// re-installs `after`. This is the one deliberate exception to per-entity
+    /// commands: imports replace whole aggregates in a single step.
+    pub fn record_project_replace(&mut self, before: Project, after: &Project) {
+        self.push_undo_commands(vec![Command::ReplaceProject {
+            before: Box::new(before),
+            after: Box::new(after.clone()),
+        }]);
+    }
+
     pub fn record_create(&mut self, obj: &OmniObject) {
         self.redo_stack.clear();
         let command = Command::CreateObject {
@@ -1800,9 +2713,9 @@ impl Executor {
     }
 
     /// 手动记录一条创建草图的 undo 命令
-    pub fn record_sketch_create(&mut self, sketch_id: &str) {
+    pub fn record_sketch_create(&mut self, sketch: &omnim_sketch::Sketch) {
         self.redo_stack.clear();
-        let command = Command::CreateSketch { sketch_id: sketch_id.to_string() };
+        let command = Command::CreateSketch { sketch: sketch.clone() };
         if let Some(tx) = &mut self.transaction_stack {
             tx.push(command);
         } else {
@@ -1946,9 +2859,12 @@ impl Executor {
                 let _ = project.relations.add_containment(containment.clone());
                 format!("undo: restored containment")
             }
-            Command::AddConnection { from_id, to_id } => {
-                // 连接没有简单的一对一删除 — 标记为不完全撤销
-                format!("undo: noted connection {} <-> {}", &from_id[..8], &to_id[..8])
+            Command::AddConnection { connection } => {
+                let from = connection.from_object_id.clone();
+                let to = connection.to_object_id.clone();
+                project.relations.remove_connection(&from, &to);
+                format!("undo: removed connection {} <-> {}",
+                    &from[..from.len().min(8)], &to[..to.len().min(8)])
             }
             Command::SetMaterial { object_id, old_material_id } => {
                 if let Some(obj) = project.objects.get_mut(object_id) {
@@ -1956,9 +2872,13 @@ impl Executor {
                 }
                 format!("undo: restored material on {}", &object_id[..8])
             }
-            Command::CreateLifecycleRecord { record_id } => {
-                project.lifecycle.remove(record_id);
-                format!("undo: removed lifecycle record {}", &record_id[..8])
+            Command::CreateMaterial { material } => {
+                project.materials.remove(&material.id);
+                format!("undo: removed material {}", &material.id[..material.id.len().min(8)])
+            }
+            Command::CreateLifecycleRecord { record } => {
+                project.lifecycle.remove(&record.id);
+                format!("undo: removed lifecycle record {}", &record.id[..record.id.len().min(8)])
             }
             Command::ModifyLifecycleRecord { record_id, old_name, old_description, old_status } => {
                 if let Some(record) = project.lifecycle.get_mut(record_id) {
@@ -2013,11 +2933,13 @@ impl Executor {
                 }
                 format!("undo: restored geometry on object {}", &object_id[..8])
             }
-            Command::LinkRecordToObject { record_id, object_id } => {
-                if let Some(record) = project.lifecycle.get_mut(record_id) {
-                    record.related_object_ids.retain(|id| id != object_id);
+            Command::LinkRecordToObject { record_id, object_id, was_linked } => {
+                if !*was_linked {
+                    if let Some(record) = project.lifecycle.get_mut(record_id) {
+                        record.related_object_ids.retain(|id| id != object_id);
+                    }
                 }
-                format!("undo: unlinked object {} from record {}", &object_id[..8], &record_id[..8])
+                format!("undo: unlinked object {} from record {}", &object_id[..object_id.len().min(8)], &record_id[..record_id.len().min(8)])
             }
             Command::UpdateSchedule { record_id, old_planned_start, old_planned_finish, old_actual_start, old_actual_finish } => {
                 if let Some(record) = project.lifecycle.get_mut(record_id) {
@@ -2067,9 +2989,9 @@ impl Executor {
                 }
                 format!("undo: restored work order {}", &record_id[..8])
             }
-            Command::CreateSketch { sketch_id } => {
-                project.sketches.remove(sketch_id);
-                format!("undo: removed sketch {}", &sketch_id[..8])
+            Command::CreateSketch { sketch } => {
+                project.sketches.remove(&sketch.id);
+                format!("undo: removed sketch {}", &sketch.id[..8])
             }
             Command::AddSketchEntity { sketch_id, entity_index, .. } => {
                 if let Some(sketch) = project.sketches.get_mut(sketch_id) {
@@ -2109,16 +3031,25 @@ impl Executor {
                 project.sketches.insert(sketch.clone());
                 format!("undo: restored sketch {}", &sketch.id[..8])
             }
-            Command::ExtrudeSketch { sketch_id, .. } => {
-                // Feature operations are currently additive (no 3D body storage yet)
-                // Undo is a no-op until we add feature body tracking
-                format!("undo: noted extrude on sketch {}", &sketch_id[..8])
+            Command::UpdateSketch { sketch_id, old_name, old_origin } => {
+                if let Some(sketch) = project.sketches.get_mut(sketch_id) {
+                    sketch.name = old_name.clone();
+                    sketch.origin = old_origin.clone();
+                }
+                format!("undo: restored sketch {} name/origin", &sketch_id[..8])
             }
-            Command::RevolveSketch { sketch_id, .. } => {
-                format!("undo: noted revolve on sketch {}", &sketch_id[..8])
+            Command::UpdateSketchEntity { sketch_id, entity_index, old_entity, old_solved, .. } => {
+                if let Some(sketch) = project.sketches.get_mut(sketch_id) {
+                    if *entity_index < sketch.entities.len() {
+                        sketch.entities[*entity_index] = old_entity.clone();
+                    }
+                    sketch.solved = *old_solved;
+                }
+                format!("undo: restored entity {} in sketch {}", entity_index, &sketch_id[..8])
             }
-            Command::CreateComponent { component_id } => {
-                project.objects.remove(component_id);
+            Command::CreateComponent { snapshot } => {
+                let component_id = snapshot.object.id.clone();
+                project.objects.remove(&component_id);
                 project.objects.rebuild_children();
                 format!("undo: removed component {}", &component_id[..8])
             }
@@ -2131,8 +3062,25 @@ impl Executor {
                 let _ = project.add_feature(component_id, f);
                 format!("undo: restored feature in component {}", &component_id[..8])
             }
-            Command::RebuildFeatures { component_id } => {
-                format!("undo: rebuild is idempotent for component {}", &component_id[..8])
+            Command::UpdateFeature { component_id, feature_id, old_feature, .. } => {
+                // Replace the edited feature wholesale with its pre-edit value.
+                if let Some(obj) = project.objects.get_mut(component_id) {
+                    if let Some(f) = obj.features.iter_mut().find(|f| f.id == *feature_id) {
+                        *f = old_feature.clone();
+                    }
+                }
+                format!("undo: restored feature {} in component {}", &feature_id[..8], &component_id[..8])
+            }
+            Command::RebuildFeatures { component_id, old_geometries } => {
+                // Restore the pre-rebuild cached geometries positionally.
+                if let Some(obj) = project.objects.get_mut(component_id) {
+                    for (i, f) in obj.features.iter_mut().enumerate() {
+                        if let Some(geometry) = old_geometries.get(i) {
+                            f.cached_geometry = geometry.clone();
+                        }
+                    }
+                }
+                format!("undo: restored pre-rebuild geometry for component {}", &component_id[..8])
             }
             // === Catalog undo ===
             Command::DefineComponent { component_def } => {
@@ -2162,6 +3110,34 @@ impl Executor {
             Command::DeleteComponentDef { component_def } => {
                 LIBRARY.write().unwrap().as_mut().unwrap().catalog.insert(component_def.clone());
                 format!("undo: restored component def {}", &component_def.id[..8])
+            }
+            Command::UpdateComponentDef { component_def_id, old_def, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_def_id) {
+                    *comp = old_def.clone();
+                }
+                format!("undo: restored component def {}", &component_def_id[..8])
+            }
+            Command::UpdateComponentParam { component_id, param_index, old_param, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    if *param_index < comp.params.len() {
+                        comp.params[*param_index] = old_param.clone();
+                    }
+                }
+                format!("undo: restored param {} of component {}", param_index, &component_id[..8])
+            }
+            Command::DeleteComponentParam { component_id, param_index, removed } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    if *param_index <= comp.params.len() {
+                        comp.params.insert(*param_index, removed.clone());
+                    }
+                }
+                format!("undo: restored param {} of component {}", param_index, &component_id[..8])
+            }
+            Command::AssignFeatureTree { component_id, old_tree_id, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    comp.feature_tree_id = old_tree_id.clone();
+                }
+                format!("undo: restored feature tree of component {}", &component_id[..8])
             }
             // === Series undo ===
             Command::CreateSeries { series } => {
@@ -2208,6 +3184,84 @@ impl Executor {
                     .retain(|r| r.path.as_deref() != Some(path) || r.source != *source);
                 format!("undo: unloaded {} series from {}", loaded_ids.len(), path)
             }
+            // === Series detail undo (2026-10-28 Wave 1 Slice 4) ===
+            Command::UpdateSeries { old_series, .. } => {
+                replace_series(project, old_series);
+                format!("undo: restored series {}", &old_series.id[..old_series.id.len().min(8)])
+            }
+            Command::UpdateParamConstraint { series_id, component_def_id, param_index, old_constraint, .. } => {
+                if let Some(series) = project.series.get_mut(series_id) {
+                    if let Some(constraint) = Self::param_constraint_mut(series, component_def_id, *param_index) {
+                        *constraint = old_constraint.clone();
+                    }
+                }
+                format!("undo: restored param constraint {} in series {}", param_index, &series_id[..series_id.len().min(8)])
+            }
+            Command::DeleteParamConstraint { series_id, component_def_id, param_index, removed } => {
+                if let Some(series) = project.series.get_mut(series_id) {
+                    Self::insert_param_constraint(series, component_def_id, *param_index, removed.clone());
+                }
+                format!("undo: restored param constraint {} in series {}", param_index, &series_id[..series_id.len().min(8)])
+            }
+            // === Measurement undo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateMeasurement { measurement } => {
+                project.measurements.remove(&measurement.id);
+                format!("undo: removed measurement {}", &measurement.id[..measurement.id.len().min(8)])
+            }
+            Command::DeleteMeasurement { measurement } => {
+                project.measurements.add(measurement.clone());
+                format!("undo: restored measurement {}", &measurement.id[..measurement.id.len().min(8)])
+            }
+            // === Administrative division undo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateAdministrativeDivision { division } => {
+                project.administrative.remove(&division.id);
+                format!("undo: removed administrative division {}", &division.id[..division.id.len().min(8)])
+            }
+            Command::DeleteAdministrativeDivision { division } => {
+                project.administrative.insert(division.clone());
+                format!("undo: restored administrative division {}", &division.id[..division.id.len().min(8)])
+            }
+            // === Breakdown structure undo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateBreakdownNode { node } => {
+                project.breakdown.remove(&node.id);
+                format!("undo: removed breakdown node {}", &node.id[..node.id.len().min(8)])
+            }
+            Command::DeleteBreakdownNode { node } => {
+                project.breakdown.insert(node.clone());
+                format!("undo: restored breakdown node {}", &node.id[..node.id.len().min(8)])
+            }
+            Command::LinkBreakdownObject { node_id, object_id, was_linked } => {
+                if !*was_linked {
+                    if let Some(node) = project.breakdown.get_mut(node_id) {
+                        node.related_object_ids.retain(|id| id != object_id);
+                    }
+                }
+                format!("undo: unlinked object {} from breakdown node {}", &object_id[..object_id.len().min(8)], &node_id[..node_id.len().min(8)])
+            }
+            Command::LinkBreakdownAdministrative { node_id, division_id, was_linked } => {
+                if !*was_linked {
+                    if let Some(node) = project.breakdown.get_mut(node_id) {
+                        node.administrative_division_ids.retain(|id| id != division_id);
+                    }
+                }
+                format!("undo: unlinked division {} from breakdown node {}", &division_id[..division_id.len().min(8)], &node_id[..node_id.len().min(8)])
+            }
+            Command::InstantiateCatalog { object, sketches } => {
+                project.objects.remove(&object.id);
+                for sketch in sketches {
+                    project.sketches.remove(&sketch.id);
+                }
+                project.objects.rebuild_children();
+                format!(
+                    "undo: removed catalog instance {} (+{} sketches)",
+                    &object.id[..object.id.len().min(8)],
+                    sketches.len()
+                )
+            }
+            Command::ReplaceProject { before, .. } => {
+                *project = (**before).clone();
+                format!("undo: restored project snapshot '{}'", project.name)
+            }
         }
     }
 
@@ -2245,23 +3299,20 @@ impl Executor {
                 project.relations.remove_containment(&containment.parent_id, &containment.child_id);
                 format!("redo: removed containment")
             }
-            Command::AddConnection { from_id, to_id } => {
-                project.relations.add_connection(c::Connection {
-                    from_object_id: from_id.clone(),
-                    to_object_id: to_id.clone(),
-                    r#type: c::ConnectionType::Structural as i32,
-                    from_point: None,
-                    to_point: None,
-                    connection_detail: String::new(),
-                });
+            Command::AddConnection { connection } => {
+                project.relations.add_connection(connection.clone());
                 format!("redo: added connection")
             }
             Command::SetMaterial { object_id, old_material_id: _ } => {
                 format!("redo: set material on {}", &object_id[..8])
             }
-            Command::CreateLifecycleRecord { record_id } => {
-                project.lifecycle.remove(record_id);
-                format!("redo: removed lifecycle record")
+            Command::CreateMaterial { material } => {
+                project.materials.insert(material.clone());
+                format!("redo: created material {}", &material.id[..material.id.len().min(8)])
+            }
+            Command::CreateLifecycleRecord { record } => {
+                project.lifecycle.insert(record.clone());
+                format!("redo: restored lifecycle record {}", &record.id[..record.id.len().min(8)])
             }
             Command::ModifyLifecycleRecord { record_id, .. } => {
                 format!("redo: modify lifecycle record {}", &record_id[..8])
@@ -2334,13 +3385,13 @@ impl Executor {
                 }
                 format!("redo: transform geometry on {}", &object_id[..8])
             }
-            Command::LinkRecordToObject { record_id, object_id } => {
+            Command::LinkRecordToObject { record_id, object_id, was_linked: _ } => {
                 if let Some(record) = project.lifecycle.get_mut(record_id) {
                     if !record.related_object_ids.contains(object_id) {
                         record.related_object_ids.push(object_id.clone());
                     }
                 }
-                format!("redo: linked object {} to record {}", &object_id[..8], &record_id[..8])
+                format!("redo: linked object {} to record {}", &object_id[..object_id.len().min(8)], &record_id[..record_id.len().min(8)])
             }
             Command::UpdateSchedule { record_id, .. } => {
                 format!("redo: update schedule on record {}", &record_id[..8])
@@ -2383,8 +3434,9 @@ impl Executor {
                 }
                 format!("redo: update work order {}", &record_id[..8])
             }
-            Command::CreateSketch { sketch_id } => {
-                format!("redo: created sketch {}", &sketch_id[..8])
+            Command::CreateSketch { sketch } => {
+                project.sketches.insert(sketch.clone());
+                format!("redo: created sketch {}", &sketch.id[..8])
             }
             Command::AddSketchEntity { sketch_id, entity, .. } => {
                 if let Some(sketch) = project.sketches.get_mut(sketch_id) {
@@ -2410,14 +3462,22 @@ impl Executor {
             Command::DeleteSketch { sketch } => {
                 format!("redo: deleted sketch {}", &sketch.id[..8])
             }
-            Command::ExtrudeSketch { sketch_id, .. } => {
-                format!("redo: extruded sketch {}", &sketch_id[..8])
+            Command::UpdateSketch { sketch_id, old_name: _, old_origin: _ } => {
+                format!("redo: updated sketch {}", &sketch_id[..8])
             }
-            Command::RevolveSketch { sketch_id, .. } => {
-                format!("redo: revolved sketch {}", &sketch_id[..8])
+            Command::UpdateSketchEntity { sketch_id, entity_index, new_entity, .. } => {
+                if let Some(sketch) = project.sketches.get_mut(sketch_id) {
+                    if *entity_index < sketch.entities.len() {
+                        sketch.entities[*entity_index] = new_entity.clone();
+                    }
+                    sketch.solved = false;
+                }
+                format!("redo: updated entity {} in sketch {}", entity_index, &sketch_id[..8])
             }
-            Command::CreateComponent { component_id } => {
-                format!("redo: created component {}", &component_id[..8])
+            Command::CreateComponent { snapshot } => {
+                project.objects.insert(snapshot.object.clone());
+                project.objects.rebuild_children();
+                format!("redo: created component {}", &snapshot.object.id[..8])
             }
             Command::AddFeature { component_id, feature_id } => {
                 format!("redo: added feature {} to component {}", &feature_id[..8], &component_id[..8])
@@ -2425,7 +3485,15 @@ impl Executor {
             Command::RemoveFeature { component_id, .. } => {
                 format!("redo: removed feature from component {}", &component_id[..8])
             }
-            Command::RebuildFeatures { component_id } => {
+            Command::UpdateFeature { component_id, feature_id, new_feature, .. } => {
+                if let Some(obj) = project.objects.get_mut(component_id) {
+                    if let Some(f) = obj.features.iter_mut().find(|f| f.id == *feature_id) {
+                        *f = new_feature.clone();
+                    }
+                }
+                format!("redo: updated feature {} in component {}", &feature_id[..8], &component_id[..8])
+            }
+            Command::RebuildFeatures { component_id, .. } => {
                 let _ = project.rebuild_component(component_id);
                 format!("redo: rebuilt features for component {}", &component_id[..8])
             }
@@ -2449,6 +3517,34 @@ impl Executor {
             Command::DeleteComponentDef { component_def } => {
                 LIBRARY.write().unwrap().as_mut().unwrap().catalog.remove(&component_def.id);
                 format!("redo: deleted component def {}", &component_def.id[..8])
+            }
+            Command::UpdateComponentDef { component_def_id, new_def, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_def_id) {
+                    *comp = new_def.clone();
+                }
+                format!("redo: updated component def {}", &component_def_id[..8])
+            }
+            Command::UpdateComponentParam { component_id, param_index, new_param, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    if *param_index < comp.params.len() {
+                        comp.params[*param_index] = new_param.clone();
+                    }
+                }
+                format!("redo: updated param {} of component {}", param_index, &component_id[..8])
+            }
+            Command::DeleteComponentParam { component_id, param_index, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    if *param_index < comp.params.len() {
+                        comp.params.remove(*param_index);
+                    }
+                }
+                format!("redo: deleted param {} of component {}", param_index, &component_id[..8])
+            }
+            Command::AssignFeatureTree { component_id, new_tree_id, .. } => {
+                if let Some(comp) = LIBRARY.write().unwrap().as_mut().unwrap().catalog.get_mut(component_id) {
+                    comp.feature_tree_id = new_tree_id.clone();
+                }
+                format!("redo: assigned feature tree to component {}", &component_id[..8])
             }
             // === Series redo ===
             Command::CreateSeries { series } => {
@@ -2494,6 +3590,76 @@ impl Executor {
                     }
                 }
                 format!("redo: loaded {} series from {}", loaded_ids.len(), path)
+            }
+            // === Series detail redo (2026-10-28 Wave 1 Slice 4) ===
+            Command::UpdateSeries { new_series, .. } => {
+                replace_series(project, new_series);
+                format!("redo: updated series {}", &new_series.id[..new_series.id.len().min(8)])
+            }
+            Command::UpdateParamConstraint { series_id, component_def_id, param_index, new_constraint, .. } => {
+                if let Some(series) = project.series.get_mut(series_id) {
+                    if let Some(constraint) = Self::param_constraint_mut(series, component_def_id, *param_index) {
+                        *constraint = new_constraint.clone();
+                    }
+                }
+                format!("redo: updated param constraint {} in series {}", param_index, &series_id[..series_id.len().min(8)])
+            }
+            Command::DeleteParamConstraint { series_id, component_def_id, param_index, .. } => {
+                if let Some(series) = project.series.get_mut(series_id) {
+                    Self::remove_param_constraint(series, component_def_id, *param_index);
+                }
+                format!("redo: deleted param constraint {} in series {}", param_index, &series_id[..series_id.len().min(8)])
+            }
+            // === Measurement redo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateMeasurement { measurement } => {
+                project.measurements.add(measurement.clone());
+                format!("redo: created measurement {}", &measurement.id[..measurement.id.len().min(8)])
+            }
+            Command::DeleteMeasurement { measurement } => {
+                project.measurements.remove(&measurement.id);
+                format!("redo: deleted measurement {}", &measurement.id[..measurement.id.len().min(8)])
+            }
+            // === Administrative division redo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateAdministrativeDivision { division } => {
+                project.administrative.insert(division.clone());
+                format!("redo: created administrative division {}", &division.id[..division.id.len().min(8)])
+            }
+            Command::DeleteAdministrativeDivision { division } => {
+                project.administrative.remove(&division.id);
+                format!("redo: deleted administrative division {}", &division.id[..division.id.len().min(8)])
+            }
+            // === Breakdown structure redo (2026-10-28 Wave 1 Slice 4) ===
+            Command::CreateBreakdownNode { node } => {
+                project.breakdown.insert(node.clone());
+                format!("redo: created breakdown node {}", &node.id[..node.id.len().min(8)])
+            }
+            Command::DeleteBreakdownNode { node } => {
+                project.breakdown.remove(&node.id);
+                format!("redo: deleted breakdown node {}", &node.id[..node.id.len().min(8)])
+            }
+            Command::LinkBreakdownObject { node_id, object_id, was_linked: _ } => {
+                if let Some(node) = project.breakdown.get_mut(node_id) {
+                    node.link_object(object_id);
+                }
+                format!("redo: linked object {} to breakdown node {}", &object_id[..object_id.len().min(8)], &node_id[..node_id.len().min(8)])
+            }
+            Command::LinkBreakdownAdministrative { node_id, division_id, was_linked: _ } => {
+                if let Some(node) = project.breakdown.get_mut(node_id) {
+                    node.link_administrative_division(division_id);
+                }
+                format!("redo: linked division {} to breakdown node {}", &division_id[..division_id.len().min(8)], &node_id[..node_id.len().min(8)])
+            }
+            Command::InstantiateCatalog { object, sketches } => {
+                project.objects.insert(object.clone());
+                for sketch in sketches {
+                    project.sketches.insert(sketch.clone());
+                }
+                project.objects.rebuild_children();
+                format!("redo: restored catalog instance {}", &object.id[..object.id.len().min(8)])
+            }
+            Command::ReplaceProject { after, .. } => {
+                *project = (**after).clone();
+                format!("redo: re-applied project snapshot '{}'", project.name)
             }
         }
     }
@@ -2596,6 +3762,123 @@ impl Executor {
                 }
             }
         }
+    }
+
+    /// Mutable reference to a param constraint identified by component def id
+    /// and index (2026-10-28 Wave 1 Slice 4).
+    fn param_constraint_mut<'a>(
+        series: &'a mut omnim_model::series_store::Series,
+        component_def_id: &str,
+        param_index: usize,
+    ) -> Option<&'a mut omnim_model::series_store::ParamConstraint> {
+        let root = series.root_selector.as_mut()?;
+        Self::param_constraint_in_selector(root, component_def_id, param_index)
+    }
+
+    fn param_constraint_in_selector<'a>(
+        selector: &'a mut omnim_model::series_store::Selector,
+        component_def_id: &str,
+        param_index: usize,
+    ) -> Option<&'a mut omnim_model::series_store::ParamConstraint> {
+        for ans in &mut selector.answers {
+            match &mut ans.outcome {
+                omnim_model::series_store::AnswerOutcome::Component(ref mut sc) => {
+                    if sc.component_def_id == component_def_id {
+                        return sc.param_constraints.get_mut(param_index);
+                    }
+                }
+                omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
+                    if let Some(found) =
+                        Self::param_constraint_in_selector(next, component_def_id, param_index)
+                    {
+                        return Some(found);
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Re-insert a removed param constraint at its original position
+    /// (2026-10-28 Wave 1 Slice 4 undo/redo).
+    fn insert_param_constraint(
+        series: &mut omnim_model::series_store::Series,
+        component_def_id: &str,
+        param_index: usize,
+        constraint: omnim_model::series_store::ParamConstraint,
+    ) {
+        if let Some(ref mut root) = series.root_selector {
+            Self::insert_param_constraint_in_selector(root, component_def_id, param_index, &constraint);
+        }
+    }
+
+    fn insert_param_constraint_in_selector(
+        selector: &mut omnim_model::series_store::Selector,
+        component_def_id: &str,
+        param_index: usize,
+        constraint: &omnim_model::series_store::ParamConstraint,
+    ) -> bool {
+        for ans in &mut selector.answers {
+            match &mut ans.outcome {
+                omnim_model::series_store::AnswerOutcome::Component(ref mut sc) => {
+                    if sc.component_def_id == component_def_id {
+                        let idx = param_index.min(sc.param_constraints.len());
+                        sc.param_constraints.insert(idx, constraint.clone());
+                        return true;
+                    }
+                }
+                omnim_model::series_store::AnswerOutcome::NextSelector(ref mut next) => {
+                    if Self::insert_param_constraint_in_selector(
+                        next,
+                        component_def_id,
+                        param_index,
+                        constraint,
+                    ) {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+
+/// Read-only check used by the validator: does the first reachable spec for
+/// `component_def_id` carry a constraint at `param_index`?
+fn series_has_param_constraint(
+    series: &omnim_model::series_store::Series,
+    component_def_id: &str,
+    param_index: usize,
+) -> bool {
+    fn walk(
+        selector: &omnim_model::series_store::Selector,
+        component_def_id: &str,
+        param_index: usize,
+    ) -> bool {
+        selector.answers.iter().any(|ans| match &ans.outcome {
+            omnim_model::series_store::AnswerOutcome::Component(sc) => {
+                sc.component_def_id == component_def_id
+                    && param_index < sc.param_constraints.len()
+            }
+            omnim_model::series_store::AnswerOutcome::NextSelector(next) => {
+                walk(next, component_def_id, param_index)
+            }
+        })
+    }
+    series
+        .root_selector
+        .as_ref()
+        .map(|root| walk(root, component_def_id, param_index))
+        .unwrap_or(false)
+}
+
+/// Replace an existing series in place, or insert it when absent
+/// (2026-10-28 Wave 1 Slice 4 undo/redo).
+fn replace_series(project: &mut Project, series: &omnim_model::series_store::Series) {
+    if let Some(existing) = project.series.get_mut(&series.id) {
+        *existing = series.clone();
+    } else {
+        project.series.insert(series.clone());
     }
 }
 
@@ -3147,6 +4430,8 @@ mod tests {
         });
         mod_instr.operations.push(c::Operation {
             op: Some(c::operation::Op::ModifyObject(c::ModifyObjectOperation {
+                new_ifc_class: None,
+                new_tags: None,
                 object_id: wall_id.clone(),
                 new_name: None,
                 new_description: None,

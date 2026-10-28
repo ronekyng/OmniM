@@ -32,6 +32,14 @@ fn load_or_new(path: &str) -> Project {
     }
 }
 
+/// OMNIM_EPHEMERAL=1|true|yes → run fully in memory (no file writes).
+fn is_ephemeral() -> bool {
+    matches!(
+        env::var("OMNIM_EPHEMERAL").unwrap_or_default().to_lowercase().as_str(),
+        "1" | "true" | "yes"
+    )
+}
+
 fn main() {
     init_library();
 
@@ -44,7 +52,10 @@ fn main() {
         .and_then(|p| p.parse().ok())
         .unwrap_or(3000);
 
-    let save_path = if project_file == DEFAULT_PROJECT_FILE {
+    // Persistence: ON by default. The project file always persists; setting
+    // OMNIM_EPHEMERAL=1/true/yes runs the server fully in memory (useful for
+    // demos and for tests that must not touch the working directory).
+    let save_path = if is_ephemeral() {
         None
     } else {
         Some(project_file.clone())

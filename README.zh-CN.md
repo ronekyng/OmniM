@@ -45,7 +45,7 @@ OmniM 的核心由三层构成：
 
 &gt; **当前阶段：第八阶段 — 领域扩展**
 &gt;
-&gt; OmniM 正在活跃开发中。第 1–7 阶段已交付，其中**第一阶段为部分完成**（类型化 `OmniCommand` schema 与执行器已存在；基于 nom 的 Omcom 文本 DSL 不存在）。第 8 阶段（领域扩展）进行中；第 9 阶段（AMIR）已提前部分交付。参见[路线图](docs/status/ROADMAP.zh-CN.md)与[变更日志](docs/status/CHANGELOG.zh-CN.md)。服务器当前提供 **78** 条去重 REST 路由；**无 WebSocket、无数据库，默认不自动保存**。
+&gt; OmniM 正在活跃开发中。第 1–7 阶段已交付，其中**第一阶段为部分完成**（类型化 `OmniCommand` schema 与执行器已存在；基于 nom 的 Omcom 文本 DSL 不存在）。第 8 阶段（领域扩展）进行中；第 9 阶段（AMIR）已提前部分交付。参见[路线图](docs/status/ROADMAP.zh-CN.md)与[变更日志](docs/status/CHANGELOG.zh-CN.md)。服务器当前提供 **79** 条去重 REST 路由；**无 WebSocket、无数据库**。变更默认落盘到 `project.omnim`（或 `$OMNIM_PROJECT`）；设置 `OMNIM_EPHEMERAL=1` 可完全内存运行。撤销/重做覆盖全部变更端点（[WRITE_PATHS.zh-CN.md](docs/architecture/WRITE_PATHS.zh-CN.md)）。
 
 ---
 

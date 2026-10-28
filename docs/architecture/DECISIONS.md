@@ -42,7 +42,7 @@ Rules:
 | [ADR-0003](#adr-0003-truck-kernel-for-brep-modeling) | truck kernel for BRep modeling | Accepted |
 | [ADR-0004](#adr-0004-json-file-persistence-single-project-rwlock) | JSON-file persistence (single Project, RwLock) | Accepted |
 | [ADR-0005](#adr-0005-hand-written-ifc-parser) | Hand-written IFC parser rather than an ifc crate | Accepted (one implementation note) |
-| [ADR-0006](#adr-0006-unified-executorvalidator-for-all-mutation-paths-target) | Unified Executor/Validator for all mutation paths (target) | Accepted (target) — Partially implemented |
+| [ADR-0006](#adr-0006-unified-executorvalidator-for-all-mutation-paths-target) | Unified Executor/Validator for all mutation paths | Accepted — Implemented (2026-10-28) |
 
 ---
 
@@ -130,12 +130,12 @@ branching, are explicitly **planned** but not implemented (see [PLATFORM_ARCH.md
 
 **Decision**
 Persist the **entire `Project`** as a single `.omnim` JSON file. At startup, the file is loaded from `OMNIM_PROJECT` (default `project.omnim`, resolved against the server's CWD).
-Saving is enabled only when `OMNIM_PROJECT` is not exactly `project.omnim` (`save_path = Some`); with the default path `save_path` is `None`. **Even when enabled, only five handlers save** (`update_object`, `add_feature`, `update_feature`, `remove_feature`, `rebuild_component`). The earlier claim that "every accepted mutation auto-saves" is not true today — see [WRITE_PATHS.md](WRITE_PATHS.md). There is no incremental journal, no WAL, no snapshot rotation. Public API surface: `Arc<RwLock<Project>>` guards state (see `server/src/lib.rs`, `model/src/project.rs`).
+Saving is **on by default** (2026-10-28): `save_path = Some(project_file)` unless `OMNIM_EPHEMERAL=1`. **Every accepted mutation auto-saves** through `mutation::persist`, and `Project::save` is atomic (`{path}.tmp` → rename). `POST /api/project/save` flushes on demand. There is no incremental journal, no WAL, no snapshot rotation. Public API surface: `Arc<RwLock<Project>>` guards state (see `server/src/lib.rs`, `model/src/project.rs`). See [WRITE_PATHS.md](WRITE_PATHS.md).
 
 **Consequences**
 - (+) Trivial to inspect, diff, copy, and hand-edit files; zero infra.
 - (+) State is always readable, even across version mismatches (serde defaults fill in gaps).
-- (−) Whole-file rewrite per save is O(project size); a crash mid-write can truncate the file — no
+- (−) Whole-file rewrite per save is O(project size); tmp+rename prevents truncation, but large projects can still block a request — no
   atomic-rename pattern is currently used.
 - (−) No multi-process safety: two servers sharing the file corrupt it.
 - (−) No real history. Undo/redo lives only in-memory in `Executor` state.
@@ -167,18 +167,17 @@ implementation note below).
   `fixtures/ifc/`, e.g. `simple.ifc`, `test_building.ifc`, `part.ifc`).
 - Revisit if/when schema coverage requirements outgrow the hand-rolled subset.
 
-> **Implementation note (2026-10-27).** `POST /api/import/ifc` does **not** translate the file into `OmniCommand`s.
-> `import_ifc` (`crates/server/src/lib.rs`) parses IFC text and inserts the resulting objects, materials, and
-> lifecycle records **directly into `Project`** (`mode=replace` overwrites the project). Imported content is
-> therefore not undoable and is not saved. This is recorded in
-> [CODE_DEVIATIONS.md §6](../status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27)
-> and in the endpoint matrix at [WRITE_PATHS.md](WRITE_PATHS.md).
+> **Implementation note (updated 2026-10-28).** `POST /api/import/ifc` still parses IFC text and inserts the
+> resulting objects, materials, and lifecycle records directly (`mode=replace` overwrites the project), but it now
+> records `Command::ReplaceProject { before, after }` on the Executor: the import is **one undoable transaction**
+> and persists. It remains a bulk exception rather than a per-entity command stream. See
+> [WRITE_PATHS.md](WRITE_PATHS.md).
 
 ---
 
-### ADR-0006. Unified Executor/Validator for all mutation paths (target)
+### ADR-0006. Unified Executor/Validator for all mutation paths
 
-**Status:** Accepted (target) — Partially implemented
+**Status:** Accepted — Implemented (2026-10-28)
 
 **Context**
 Mutations originate from *several* sources: REST handlers, console (Omcom console in web UI), and the AI intent
@@ -216,3 +215,15 @@ Representative direct writes: `update_object`, `transform_object`, `set_parent`,
 `instantiate_from_catalog`, and all series edit handlers. The full matrix is in [WRITE_PATHS.md](WRITE_PATHS.md);
 the deviations are tracked in [CODE_DEVIATIONS.md §6](../status/CODE_DEVIATIONS.md#6-write-path-persistence--geometry-path-deviations--known-2026-10-27).
 Restoring this invariant is a roadmap item, not something this ADR can assert today.
+
+**Implementation (2026-10-28) — deviation closed.**
+
+Wave 1 restored the invariant. Every mutating REST handler now builds an `OmniCommand` and calls
+`mutation::apply` (or, for a handful of lock-owning handlers, delegates to `Executor::execute` / `record_*`).
+`mutation::persist` saves atomically after each successful mutation. `scripts/check_write_paths.py` reports
+**0** non-allowlisted `project.write()` calls and runs in CI.
+
+Two documented exceptions remain, neither of which writes `Project` outside the pipeline:
+`import_ifc` records a single `Command::ReplaceProject { before, after }` (whole-project transaction), and
+`POST /api/catalog/import` mutates the session-global `LIBRARY` (`.omnimlib` bulk import) rather than `Project`.
+See [WRITE_PATHS.md](WRITE_PATHS.md) for the current matrix.

@@ -23,9 +23,10 @@ This guide gets you from a fresh clone to an interactive session with OmniM in r
 No database, no external services. State lives in memory and can be written to a plain JSON file — but **saving is off by default** (see the warning below).
 
 > ⚠️ **Persistence warning — the default launch does NOT save mutations.**
-> `crates/server/src/main.rs` sets `save_path = None` whenever the project path is exactly `project.omnim` (i.e. `OMNIM_PROJECT` is unset, or set to `project.omnim`). With `save_path = None`, no handler writes the project file at all.
-> Even with a non-default `OMNIM_PROJECT`, only **five** handlers call `Project::save(...)`: `update_object`, `add_feature`, `update_feature`, `remove_feature`, and `rebuild_component` (static scan in the 2026-10-27 audit; see [WRITE_PATHS.md](../architecture/WRITE_PATHS.md)). Creating objects, `/api/genrule`, `/api/omcom`, catalog instantiation, IFC import, and series edits do **not** persist.
-> To enable the save path, launch with a non-default path, e.g. `OMNIM_PROJECT=./dev-project.omnim cargo run -p omnim-server --bin omnim`. `scripts/dev-server.sh` forwards `OMNIM_PROJECT` but defaults it to `project.omnim`, so the default script launch does not persist either.
+> ⚠️ **Persistence warning — updated 2026-10-28.**
+> Persistence now defaults **on**: the server writes `$OMNIM_PROJECT` (or `project.omnim` in the server's working directory) after every executor-path mutation, and anywhere in between you can force a save with `POST /api/project/save`.
+> Escape hatch: `OMNIM_EPHEMERAL=1` (or `true`/`yes`) runs the server fully in memory.
+> Coverage: every mutating endpoint now saves and is undoable (objects, properties, materials, sketches, components, catalog definitions, series, lifecycle, measurements, administrative/breakdown, catalog instantiation, IFC import). The two documented exceptions are `.omnimlib` import into the global library and the `section_handler` cache lock. See [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
 
 ## 5-Minute Quickstart
 
@@ -40,7 +41,7 @@ cargo run -p omnim-server --bin omnim
 On startup it:
 
 - loads the library from `~/.omnim/library.omnimlib` if present (falls back to the built-in seeded catalog),
-- loads the project from `project.omnim` in the server's working directory (the crate dir under `cargo run`), or from `$OMNIM_PROJECT`, creating a new one named "OmniM Project" if the file doesn't exist (nothing is saved by default — see the warning above),
+- loads the project from `project.omnim` in the server's working directory (the crate dir under `cargo run`), or from `$OMNIM_PROJECT`, creating a new one named "OmniM Project" if the file doesn't exist (mutations now persist by default — see the warning above),
 - serves REST APIs under `/api/*`.
 
 > Note: the literal `serve` argument sometimes typed after the binary name (`omnim serve`) is currently ignored — running plain `omnim` does the same thing.

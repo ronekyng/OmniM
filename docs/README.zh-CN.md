@@ -25,7 +25,7 @@ evidence: "verified against the docs tree 2026-10-27"
 - [建模者手册](MODELER_HANDBOOK.zh-CN.md) — 按领域组织的任务流程、真实 UI/API 步骤与如实缺口（[English](MODELER_HANDBOOK.md)）
 - [能力矩阵](CAPABILITY_MATRIX.zh-CN.md) — 逐对象能力行：创建、宿主、连接、测量、IFC、proto 状态（[English](CAPABILITY_MATRIX.md)）
 - [快速开始](guides/GETTING_STARTED.zh-CN.md) — 编译、启动与首次交互（[English](guides/GETTING_STARTED.md)）
-- ⚠️ **持久化警告：** 默认启动**不会保存**。建模前请把 `OMNIM_PROJECT` 设为非默认文件，并阅读[快速开始](guides/GETTING_STARTED.zh-CN.md)中的警告。
+- ✅ **持久化已默认开启（2026-10-28）**：变更自动写入 `project.omnim` / `$OMNIM_PROJECT`；`OMNIM_EPHEMERAL=1` 可关闭。覆盖范围见[快速开始](guides/GETTING_STARTED.zh-CN.md)的说明。
 
 ### 🚀 我想上手试用
 - [快速开始](guides/GETTING_STARTED.zh-CN.md) — 编译服务端、启动 Web 界面、迈出第一步

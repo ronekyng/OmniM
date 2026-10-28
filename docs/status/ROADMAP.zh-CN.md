@@ -165,7 +165,7 @@ evidence: "audited against code 2026-10-27"
 
 ## Phase 10：云服务器 & 协作 (2029) — 📅 计划中
 
-**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（去重后 78 条路由），**JSON 文件（`.omnim`）持久化**（经 `OMNIM_PROJECT` 选择开启），撤销/重做状态历史**端点覆盖不全**（见技术债待办），目录/系列文件端点。
+**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（去重后 79 条路由），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
 
 **未实现** 📅：PostgreSQL + PostGIS 存储、版本历史/审计追踪（目前仅 JSON 文件保存）、WebSocket 实时通知、几何流式传输、客户端缓存层、多用户协作/冲突解决、在线状态、协作 UI。服务器中**没有任何 WebSocket**。
 
@@ -206,8 +206,8 @@ evidence: "audited against code 2026-10-27"
 
 在开发过程中记录的零散事项；按时机捡起，不排阶段：
 
-- **恢复单一写入路径（最高优先）** — ADR-0006 是已接受的目标架构，但约 42 个端点直接写 `Project`，不经 `Validator`/`Executor`、不进撤销栈（见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)）；仅 5 个 handler 落盘。后果：撤销不完整、编辑可能丢失。子项：直写端点收编为 `OmniCommand`（或经记录的验证适配器）、扩展撤销覆盖、加 CI lint 禁止执行器模块之外的 `project.write()`。证据：[CODE_DEVIATIONS §6](CODE_DEVIATIONS.zh-CN.md)、2026-10-27 审计。
-- **持久化策略** — 默认 `save_path=None` 导致默认启动完全不落盘，多数端点不保存。需定：每变更保存 vs 显式保存端点；随后把默认行为改安全（修复前保留文档警告）。证据：同上审计 P0-3。
+- **恢复单一写入路径** — ✅ **2026-10-28 完成（Wave 1）**。55 个已迁移 handler 全部走 `mutation::apply` / `Executor`；直写端点 42 → 0，撤销/重做有端点级测试（`crates/server/tests/write_paths.rs`、`instantiate_import.rs`），`scripts/check_write_paths.py` 已接入 CI 强制执行。例外：`section_handler`（仅缓存刷新）、`import_ifc`（单条整项目命令）、`.omnimlib` 导入（全局 `LIBRARY`）。见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)。
+- **持久化策略** — ✅ **2026-10-28 完成（Wave 1）**。默认落盘（`project.omnim` / `$OMNIM_PROJECT`），`OMNIM_EPHEMERAL=1` 可关闭，保存为原子写，`POST /api/project/save` 可显式落盘。所有已迁移 handler 都会持久化；唯一不写项目的路径是 `.omnimlib` 导入到全局 `LIBRARY`。证据：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 - **收敛几何生成路径** — 正式路径为目录特征树 → BRep（2026-10-27 决策）；`/api/genrule` 仍生成硬编码网格，目录实例化创建 `ObjectType::Component`，同一堵墙因入口不同而不同。子项：genrule 改为经特征树实例化、统一创建类型、回填 `param_values`/材质。证据：CODE_DEVIATIONS §6、P0-4。
 - **系列与连接强制性** — 系列门仅查可达性；`SpecComponent.material` 从不落地；`ParamConstraint` 的 min/max/fixed 不校验；`connect()` 不校验任何东西；`ConnectorDef` 缺 up/axis（无 P0/法兰朝向）。子项：ParamConstraint 校验、材质落地、连接兼容性校验、连接器轴向字段。证据：CODE_DEVIATIONS §6、P0-5。
 - **测试隔离重构** — model 测试共享 session 级全局 `static LIBRARY`（见[测试指南 → 已知不稳定测试](../guides/TESTING.zh-CN.md)）。已观察到一次并行测试偶发失败（`test_find_and_rebuild_catalog_instances`）；压力测试未能复现，但随着测试规模扩大，共享全局状态的依赖是真实风险。候选修复方案见测试指南。

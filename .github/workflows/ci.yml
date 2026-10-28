@@ -41,7 +41,7 @@ jobs:
       - run: npm run build
 
   docs:
-    name: Docs (check_docs.py)
+    name: Docs + write-path guards
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -49,6 +49,7 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/check_docs.py
+      - run: python scripts/check_write_paths.py
 
   branch-guard:
     name: Branch rules (guard)
