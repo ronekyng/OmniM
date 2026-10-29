@@ -22,6 +22,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-28] — Geometry-path convergence (Wave 3, layered family)
+
+### Added
+- **`FeatureType::PathSweep`** feature + `gen_rule::path_sweep` façade over the LayerExtrusion kernel (the class-agnostic constant-section primitive, DATA_MODEL §1 governance 3). Exact-mesh parity tests against the legacy builders (straight, bent, closed).
+- **Path-driven templates** (`Wall-Path` / `Slab-Path` / `Floor-Path` / `Roof-Path`): one `layered_path_sweep` step; the picked path and the LayerEditor layer stack arrive via `TemplateContext` (per-instance inputs a static profile template cannot express).
+- **`Project::instantiate_domain_object`**: feature-tree instantiation that produces the **domain object type** (`Wall`/`Slab`/`Floor`/`Roof`) with `catalog_ref` + `param_values` — previously only `ObjectType::Component` was reachable from the tree.
+- The genrule **layered** family now instantiates through those templates: same kernel, same type, same traceability from every entry point. Path validation errors (zero-length, degenerate area, self-intersection) fail the instantiation with the kernel reason.
+
+### Still transitional (documented)
+- GenRule rect quick-forms (`wall`/`slab` variants without a path), roof 2-point profiles, and the catalog's extrude-based pipe/road templates (LinearComponent convergence is a later slice).
+
 ## [2026-10-28] — Path contract & genesis-form authorization (Wave 2)
 
 ### Added

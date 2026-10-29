@@ -20,7 +20,7 @@ use omnim_core as c;
 use c::{Box, MeshGeometry, Point2D, Point3D, Vector3D};
 
 /// 层定义
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LayerDef {
     /// 层名称（如 "Core", "Finish", "Insulation"）
     pub name: String,

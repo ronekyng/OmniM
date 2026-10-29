@@ -30,6 +30,11 @@ pub struct Feature {
     pub lod: f64,
     #[serde(default)]
     pub boolean_op: Option<BooleanOp>,
+    /// Payload for `FeatureType::PathSweep` features (Wave 3 geometry
+    /// convergence): picked path + layer stack, generated through
+    /// `gen_rule::path_sweep` (the shared constant-section kernel).
+    #[serde(default)]
+    pub path_sweep: Option<PathSweepParams>,
     #[serde(default)]
     pub pattern_count_x: Option<usize>,
     #[serde(default)]
@@ -73,6 +78,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -105,6 +111,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -136,9 +143,39 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
+        }
+    }
+
+    /// Create a `PathSweep` feature from picked path + layer stack.
+    pub fn new_path_sweep(name: impl Into<String>, params: PathSweepParams) -> Self {
+        Self {
+            id: uuid::Uuid::new_v4().to_string(),
+            name: name.into(),
+            feature_type: FeatureType::PathSweep,
+            sketch_id: String::new(),
+            input_sketch_ids: Vec::new(),
+            dependency_ids: Vec::new(),
+            axis_sketch_id: String::new(),
+            depth: 0.0,
+            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            angle: 0.0,
+            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            is_cut: false,
+            order: 0,
+            suppressed: false,
+            cached_geometry: None,
+            dirty: true,
+            lod: default_lod(),
+            boolean_op: None,
+            pattern_count_x: None,
+            pattern_count_y: None,
+            pattern_count_z: None,
+            path_sweep: Some(params),
         }
     }
 
@@ -167,6 +204,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -185,6 +223,7 @@ impl Feature {
             sketch_id: String::new(),
             axis_sketch_id: String::new(),
             input_sketch_ids: Vec::new(),
+            path_sweep: None,
             dependency_ids: Vec::new(),
             depth: 0.0,
             direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
@@ -229,6 +268,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -260,6 +300,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -291,6 +332,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -322,6 +364,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -358,6 +401,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: Some(count_x),
             pattern_count_y: Some(count_y),
             pattern_count_z: Some(count_z),
@@ -389,6 +433,7 @@ impl Feature {
             dirty: true,
             lod: default_lod(),
             boolean_op: None,
+            path_sweep: None,
             pattern_count_x: None,
             pattern_count_y: None,
             pattern_count_z: None,
@@ -426,6 +471,21 @@ pub enum FeatureType {
     Fillet,
     Pattern,
     Shell,
+    /// Layered constant-section stack swept along a picked path — the
+    /// feature-tree form of the LayerExtrusion family (Wave 3).
+    PathSweep,
+}
+
+/// Parameters of a `FeatureType::PathSweep` feature. Points are world metres
+/// (z is kept); layer thickness is millimetres (LayerEditor contract).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct PathSweepParams {
+    pub points: Vec<[f64; 3]>,
+    pub closed: bool,
+    pub orientation: crate::gen_rule::path_sweep::SectionOrientation,
+    pub layers: Vec<crate::gen_rule::layer_extrusion::LayerDef>,
+    /// Extrusion height in metres (Vertical orientation only).
+    pub height: f64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

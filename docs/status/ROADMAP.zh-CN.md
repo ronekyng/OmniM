@@ -208,7 +208,7 @@ evidence: "audited against code 2026-10-27"
 
 - **恢复单一写入路径** — ✅ **2026-10-28 完成（Wave 1）**。55 个已迁移 handler 全部走 `mutation::apply` / `Executor`；直写端点 42 → 0，撤销/重做有端点级测试（`crates/server/tests/write_paths.rs`、`instantiate_import.rs`），`scripts/check_write_paths.py` 已接入 CI 强制执行。例外：`section_handler`（仅缓存刷新）、`import_ifc`（单条整项目命令）、`.omnimlib` 导入（全局 `LIBRARY`）。见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)。
 - **持久化策略** — ✅ **2026-10-28 完成（Wave 1）**。默认落盘（`project.omnim` / `$OMNIM_PROJECT`），`OMNIM_EPHEMERAL=1` 可关闭，保存为原子写，`POST /api/project/save` 可显式落盘。所有已迁移 handler 都会持久化；唯一不写项目的路径是 `.omnimlib` 导入到全局 `LIBRARY`。证据：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
-- **收敛几何生成路径** — 正式路径为目录特征树 → BRep（2026-10-27 决策）；`/api/genrule` 仍生成硬编码网格，目录实例化创建 `ObjectType::Component`，同一堵墙因入口不同而不同。子项：genrule 改为经特征树实例化、统一创建类型、回填 `param_values`/材质。证据：CODE_DEVIATIONS §6、P0-4。
+- **收敛几何生成路径** — *2026-10-28 基本落地（Wave 3）*：genrule 的 layered 族实例化路径驱动特征树（`Wall-Path`/`Slab-Path`/`Floor-Path`/`Roof-Path` 模板，`FeatureType::PathSweep` → `gen_rule::path_sweep`），产出**领域对象类型**并携带 `catalog_ref`/`param_values`，与遗留内核共享实现（逐位 parity 测试）。剩余：矩形参数快速创建（`wall`/`slab` 变体）、屋顶两点坡向、目录 extrude 型 pipe/road 模板与 `LinearComponent` 引擎。证据：CODE_DEVIATIONS §6.3。
 - **系列与连接强制性** — 系列门仅查可达性；`SpecComponent.material` 从不落地；`ParamConstraint` 的 min/max/fixed 不校验；`connect()` 不校验任何东西；`ConnectorDef` 缺 up/axis（无 P0/法兰朝向）。子项：ParamConstraint 校验、材质落地、连接兼容性校验、连接器轴向字段。证据：CODE_DEVIATIONS §6、P0-5。
 - **测试隔离重构** — model 测试共享 session 级全局 `static LIBRARY`（见[测试指南 → 已知不稳定测试](../guides/TESTING.zh-CN.md)）。已观察到一次并行测试偶发失败（`test_find_and_rebuild_catalog_instances`）；压力测试未能复现，但随着测试规模扩大，共享全局状态的依赖是真实风险。候选修复方案见测试指南。
 - **日志规范化** — 用结构化日志 crate（`tracing` 或 `log`）替换生产路径中零散的 `eprintln!`。当前残留输出仅为错误路径/启动探针。

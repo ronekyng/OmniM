@@ -597,6 +597,7 @@ fn feature_type_name(ft: &omnim_model::FeatureType) -> &'static str {
         omnim_model::FeatureType::Fillet => "fillet",
         omnim_model::FeatureType::Pattern => "pattern",
         omnim_model::FeatureType::Shell => "shell",
+        omnim_model::FeatureType::PathSweep => "path_sweep",
     }
 }
 
@@ -1718,6 +1719,7 @@ impl Executor {
                             .map(|d| omnim_core::Vector3D { x: d.x, y: d.y, z: d.z })
                             .unwrap_or(omnim_core::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
                         let feature = omnim_model::Feature {
+                            path_sweep: None,
                             id: String::new(),
                             name: af.name.clone().unwrap_or_else(|| format!("{}-{:.0}", feature_type_name(&feature_type), af.depth)),
                             feature_type: feature_type.clone(),

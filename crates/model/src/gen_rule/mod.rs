@@ -14,6 +14,7 @@ pub mod linear_component;
 pub mod assembly;
 pub mod boolean_subtract;
 pub mod path_geom;
+pub mod path_sweep;
 pub mod matrix;
 
 use omnim_core as c;

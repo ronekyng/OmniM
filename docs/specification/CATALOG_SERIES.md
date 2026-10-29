@@ -149,9 +149,13 @@ pub struct CatalogRef {
 > `ParamConstraint.default_value`; it does **not** enforce `min/max/fixed` and does **not**
 > apply `SpecComponent.material` to the created instance. `instantiate_from_catalog()`
 > creates an `ObjectType::Component` feature-tree instance, while the transitional
-> `/api/genrule` path still builds hard-coded meshes (`genrule_create_catalog`,
-> `param_values: HashMap::new()`). Feature-tree/BRep is the official geometry path; the
-> genrule mesh path is transitional. See `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md` §3 P0-4/P0-5.
+> `/api/genrule` rect quick-forms still build hard-coded meshes. **Wave 3 (2026-10-28):
+> the genrule layered family is converged** — path-driven wall/slab/floor/roof creation
+> instantiates path-driven templates (`Wall-Path`, `Slab-Path`, `Floor-Path`, `Roof-Path`)
+> and produces the **domain object type** with `catalog_ref`/`param_values`, sharing the
+> `gen_rule::path_sweep` kernel with the legacy builders (exact-mesh parity tests).
+> `ObjectType::Component` remains reserved for assembly instances (catalog placements of
+> non-path defs). See `docs/status/CODE_DEVIATIONS.md` §6.3 for the remaining splits.
 
 ### 2.5 Built-in library (seeds)
 

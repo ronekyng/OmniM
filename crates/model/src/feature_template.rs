@@ -78,6 +78,9 @@ pub struct FeatureTemplateStep {
     pub feature_type: crate::FeatureType,
     /// The type of profile to generate (if profile-based).
     pub profile_type: Option<ProfileType>,
+    /// Section orientation for `FeatureType::PathSweep` steps (Wave 3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path_sweep_orientation: Option<crate::gen_rule::path_sweep::SectionOrientation>,
     /// A second profile (for Loft's profile1 / sweep's path).
     pub aux_profile_type: Option<ProfileType>,
     /// Expression for depth (extrude distance).
@@ -105,6 +108,7 @@ impl FeatureTemplateStep {
             name: name.to_string(),
             feature_type: crate::FeatureType::Extrude,
             profile_type: Some(profile_type),
+            path_sweep_orientation: None,
             aux_profile_type: None,
             depth_expr: Some(depth_expr.to_string()),
             angle_expr: None,
@@ -124,6 +128,7 @@ impl FeatureTemplateStep {
             name: name.to_string(),
             feature_type: crate::FeatureType::Revolve,
             profile_type: Some(profile_type),
+            path_sweep_orientation: None,
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: Some(angle_expr.to_string()),
@@ -143,6 +148,7 @@ impl FeatureTemplateStep {
             name: name.to_string(),
             feature_type: crate::FeatureType::Sweep,
             profile_type: Some(section),
+            path_sweep_orientation: None,
             aux_profile_type: Some(path),
             depth_expr: None,
             angle_expr: None,
@@ -162,6 +168,7 @@ impl FeatureTemplateStep {
             name: name.to_string(),
             feature_type: crate::FeatureType::Loft,
             profile_type: Some(profile0),
+            path_sweep_orientation: None,
             aux_profile_type: Some(profile1),
             depth_expr: None,
             angle_expr: None,
@@ -172,11 +179,34 @@ impl FeatureTemplateStep {
         }
     }
 
+    /// Layered constant-section sweep along a picked path (Wave 3). The path
+    /// and the layer stack come from the `TemplateContext`, not from static
+    /// profile parameters — the LayerEditor layer stack is per-instance.
+    pub fn layered_path_sweep(
+        name: &str,
+        orientation: crate::gen_rule::path_sweep::SectionOrientation,
+    ) -> Self {
+        Self {
+            name: name.to_string(),
+            feature_type: crate::FeatureType::PathSweep,
+            profile_type: None,
+            aux_profile_type: None,
+            depth_expr: None,
+            angle_expr: None,
+            direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            is_cut: false,
+            boolean_op: None,
+            pattern_counts: None,
+            path_sweep_orientation: Some(orientation),
+        }
+    }
+
     pub fn boolean(name: &str, op: crate::BooleanOp) -> Self {
         Self {
             name: name.to_string(),
             feature_type: crate::FeatureType::Boolean,
             profile_type: None,
+            path_sweep_orientation: None,
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: None,
@@ -202,16 +232,74 @@ impl FeatureTemplateStep {
 /// adding them to the given project.
 ///
 /// Returns: (created_sketch_ids, created_feature_ids)
+/// Per-instance inputs a template cannot express as static profile parameters:
+/// the picked path and the LayerEditor layer stack (Wave 3 convergence).
+#[derive(Debug, Clone, Default)]
+pub struct TemplateContext {
+    /// Picked path/boundary in world metres (z kept). Empty = no path input.
+    pub path: Vec<[f64; 3]>,
+    pub path_closed: bool,
+    /// Layer stack (thickness in mm).
+    pub layers: Vec<crate::gen_rule::layer_extrusion::LayerDef>,
+    /// Extrusion height in metres (walls).
+    pub height: f64,
+}
+
 pub fn instantiate_template(
     project: &mut crate::project::Project,
     component_id: &str,
     template: &FeatureTreeTemplate,
     params: &HashMap<String, f64>,
+    ctx: &TemplateContext,
 ) -> Result<(Vec<String>, Vec<String>), String> {
     let mut sketch_ids = Vec::new();
     let mut feature_ids = Vec::new();
 
     for step in &template.features {
+        // 1b. PathSweep steps consume the TemplateContext directly (no
+        // profile sketch — the section is derived from the layer stack).
+        if step.feature_type == crate::FeatureType::PathSweep {
+            if ctx.path.len() < 2 {
+                return Err(format!(
+                    "template step '{}' is a layered_path_sweep and requires picked path points",
+                    step.name
+                ));
+            }
+            let orientation = step.path_sweep_orientation
+                .unwrap_or(crate::gen_rule::path_sweep::SectionOrientation::Vertical);
+            // Fail fast on invalid paths (too few points, zero-length
+            // segments, degenerate/self-intersecting boundaries) — the same
+            // checks the legacy kernel applies, via the shared path_geom layer.
+            {
+                let pts: Vec<omnim_core::Point2D> = ctx
+                    .path
+                    .iter()
+                    .map(|c| omnim_core::Point2D { x: c[0], y: c[1] })
+                    .collect();
+                crate::gen_rule::path_geom::validate_path(
+                    &pts,
+                    ctx.path_closed,
+                    if ctx.path_closed { 3 } else { 2 },
+                )?;
+            }
+            let feature = crate::Feature::new_path_sweep(
+                step.name.clone(),
+                crate::feature::PathSweepParams {
+                    points: ctx.path.clone(),
+                    closed: ctx.path_closed,
+                    orientation,
+                    layers: ctx.layers.clone(),
+                    height: ctx.height,
+                },
+            );
+            let fid = feature.id.clone();
+            let obj = project.objects.get_mut(component_id)
+                .ok_or_else(|| format!("component '{}' not found", component_id))?;
+            obj.features.push(feature);
+            feature_ids.push(fid);
+            continue;
+        }
+
         // 1. Generate profile sketch if needed
         let sketch_id = if let Some(ref pt) = step.profile_type {
             let profile = match pt {
@@ -491,7 +579,7 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("length".into(), 6000.0);
 
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params);
+        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 1);
@@ -519,7 +607,7 @@ mod tests {
             ));
 
         let params = HashMap::new();
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params);
+        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, _feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 2);
@@ -540,7 +628,7 @@ mod tests {
             ));
 
         let params = HashMap::new();
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params);
+        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 2);

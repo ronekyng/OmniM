@@ -293,7 +293,10 @@ impl Project {
         self.objects.insert(obj);
 
         // Instantiate the feature tree
-        crate::feature_template::instantiate_template(self, &component_id, &template, &params)?;
+        crate::feature_template::instantiate_template(
+            self, &component_id, &template, &params,
+            &crate::feature_template::TemplateContext::default(),
+        )?;
 
         // Rebuild the component to generate geometry
         self.rebuild_component(&component_id)?;
@@ -383,6 +386,85 @@ impl Project {
             }
         }
 
+        Ok(component_id)
+    }
+
+    /// Wave 3 geometry convergence: instantiate a **domain-typed** object from
+    /// a path-driven (PathSweep) ComponentDef template.
+    ///
+    /// Unlike [`Self::instantiate_catalog_component`] (which creates
+    /// `ObjectType::Component` assembly instances), this creates the semantic
+    /// object type itself (`Wall`/`Slab`/`Floor`/`Roof`), carries the picked
+    /// path + LayerEditor layer stack through `TemplateContext`, and records
+    /// `catalog_ref`/`param_values` for traceability.
+    #[allow(clippy::too_many_arguments)]
+    pub fn instantiate_domain_object(
+        &mut self,
+        object_type: c::ObjectType,
+        component_def_id: &str,
+        instance_name: &str,
+        param_values: &std::collections::HashMap<String, f64>,
+        path: Vec<[f64; 3]>,
+        path_closed: bool,
+        layers: Vec<crate::gen_rule::layer_extrusion::LayerDef>,
+        height: f64,
+        series_id: Option<&str>,
+    ) -> Result<String, String> {
+        let (comp_def, template) = {
+            let library = LIBRARY.read().unwrap();
+            let library = library.as_ref().ok_or("LIBRARY not initialized")?;
+            let comp_def = library
+                .catalog
+                .get(component_def_id)
+                .or_else(|| library.catalog.find_by_name(component_def_id))
+                .ok_or_else(|| format!("component def '{}' not found in catalog", component_def_id))?
+                .clone();
+            let tree_id = comp_def.feature_tree_id.clone();
+            if tree_id.is_empty() {
+                return Err(format!("component def '{}' has no feature tree template", comp_def.name));
+            }
+            let template = library
+                .feature_trees
+                .get(&tree_id)
+                .ok_or_else(|| format!("feature tree template '{}' not found", tree_id))?
+                .clone();
+            (comp_def, template)
+        };
+
+        let mut obj = crate::OmniObject::new(object_type, instance_name);
+        let component_id = obj.id.clone();
+        obj.properties.push(c::Property {
+            name: "catalog_component_id".to_string(),
+            value: Some(c::PropertyValue {
+                value_type: Some(c::property_value::ValueType::StringValue(comp_def.id.clone())),
+            }),
+            unit: String::new(),
+            description: String::new(),
+        });
+        obj.properties.push(c::Property {
+            name: "catalog_component_name".to_string(),
+            value: Some(c::PropertyValue {
+                value_type: Some(c::property_value::ValueType::StringValue(comp_def.name.clone())),
+            }),
+            unit: String::new(),
+            description: String::new(),
+        });
+        obj.catalog_ref = Some(crate::catalog::CatalogRef {
+            component_def_id: comp_def.id.clone(),
+            series_id: series_id.unwrap_or_default().to_string(),
+            selector_path: Vec::new(),
+            param_values: param_values.clone(),
+        });
+        self.objects.insert(obj);
+
+        let ctx = crate::feature_template::TemplateContext {
+            path,
+            path_closed,
+            layers,
+            height,
+        };
+        crate::feature_template::instantiate_template(self, &component_id, &template, param_values, &ctx)?;
+        self.rebuild_component(&component_id)?;
         Ok(component_id)
     }
 
@@ -892,6 +974,25 @@ impl Project {
                     }
                 } else {
                     None
+                }
+            }
+            crate::FeatureType::PathSweep => {
+                // Wave 3 geometry convergence: the layered constant-section
+                // kernel (gen_rule::path_sweep) generates the whole layer
+                // stack from the feature's params — no sketches involved.
+                let params = obj.features[feature_idx].path_sweep.clone();
+                match params {
+                    Some(params) => crate::gen_rule::path_sweep::generate(
+                        &crate::gen_rule::path_sweep::PathSweepInput {
+                            points: params.points,
+                            closed: params.closed,
+                            layers: params.layers,
+                            height: params.height,
+                            orientation: params.orientation,
+                        },
+                    )
+                    .ok(),
+                    None => None,
                 }
             }
             crate::FeatureType::LoftedFusion => {

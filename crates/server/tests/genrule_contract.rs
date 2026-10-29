@@ -44,6 +44,12 @@ async fn genrule(port: u16, body: serde_json::Value) -> (u16, String) {
     (resp.status().as_u16(), resp.text().await.unwrap())
 }
 
+async fn undo(port: u16) {
+    let client = reqwest::Client::new();
+    let resp = client.post(api_url(port, "/api/undo")).send().await.unwrap();
+    assert!(resp.status().is_success());
+}
+
 fn json_of(body: &str) -> serde_json::Value {
     serde_json::from_str(body).unwrap_or(serde_json::Value::Null)
 }
@@ -254,4 +260,82 @@ async fn closed_wall_boundary_with_bowtie_is_rejected() {
     // The validation stack may fire on degenerate area or self-intersection;
     // both are polygon rejections.
     assert!(obj.contains("self-intersecting") || obj.contains("degenerate"), "unexpected error: {}", obj);
+}
+
+// ── Wave 3: geometry-path convergence (path-driven ⇒ domain type + features) ──
+
+#[tokio::test]
+async fn path_driven_wall_is_domain_typed_with_feature_tree() {
+    let (port, project) = test_server().await;
+    let (status, body) = genrule(port, serde_json::json!({
+        "genrule": "layered",
+        "mode": "wall",
+        "name": "W-conv",
+        "height": 3.0,
+        "path": { "points": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]], "closed": false },
+        "layers": layers()
+    })).await;
+    assert_eq!(status, 200, "converged wall failed: {}", body);
+    let obj = json_of(&body);
+
+    // Domain object type, NOT ObjectType::Component.
+    assert_eq!(obj["object_type"], 100, "wall must be ObjectType::Wall");
+
+    // Feature tree attached: one PathSweep feature with cached geometry.
+    let features = obj["features"].as_array().expect("features array");
+    assert_eq!(features.len(), 1);
+    assert_eq!(features[0]["feature_type"], "PathSweep");
+    assert!(features[0]["cached_geometry"].is_object(), "feature must carry cached geometry");
+
+    // Catalog traceability.
+    let props = obj["properties"].as_array().unwrap();
+    // catalog_component_id is the def's UUID; the name is the stable handle.
+    assert!(props.iter().any(|p| p["name"] == "catalog_component_id"));
+    assert!(props.iter().any(|p| p["name"] == "catalog_component_name"
+        && p["value"]["value_type"]["StringValue"] == "Wall-Path"));
+
+    // Genesis recorded.
+    assert!(props.iter().any(|p| p["name"] == "genesis_form"
+        && p["value"]["value_type"]["StringValue"] == "panel"));
+
+    // Non-empty geometry on the object itself (rebuild merged the feature).
+    assert!(obj["geometry"]["representation"].is_object(), "wall must have geometry");
+
+    // Undo removes it (it went through record_create on the executor).
+    undo(port).await;
+    let p = project.read().await;
+    assert!(p.objects.get(obj["id"].as_str().unwrap()).is_none(), "converged wall must be undoable");
+}
+
+#[tokio::test]
+async fn slab_via_closed_contract_is_domain_typed() {
+    let (port, _) = test_server().await;
+    let (status, body) = genrule(port, serde_json::json!({
+        "genrule": "layered",
+        "mode": "slab",
+        "name": "S-conv",
+        "boundary": { "points": [
+            [0.0, 0.0, 1.0], [5.0, 0.0, 1.0], [5.0, 4.0, 1.0], [0.0, 4.0, 1.0]
+        ], "closed": true },
+        "layers": layers()
+    })).await;
+    assert_eq!(status, 200, "converged slab failed: {}", body);
+    let obj = json_of(&body);
+    assert_eq!(obj["object_type"], 103, "slab must be ObjectType::Slab");
+    assert_eq!(obj["features"].as_array().unwrap().len(), 1);
+}
+
+#[tokio::test]
+async fn invalid_path_fails_the_instantiation_with_kernel_reason() {
+    let (port, _) = test_server().await;
+    let (status, body) = genrule(port, serde_json::json!({
+        "genrule": "layered",
+        "mode": "wall",
+        "name": "W-bad",
+        "height": 3.0,
+        "path": { "points": [[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]], "closed": false },
+        "layers": layers()
+    })).await;
+    assert_eq!(status, 400);
+    assert!(body.contains("zero-length"), "unexpected error: {}", body);
 }

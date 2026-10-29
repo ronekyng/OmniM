@@ -133,9 +133,12 @@ pub struct CatalogRef {
 > **当前限制（🔀）**：`instantiate_from_series()` 只填 `ParamConstraint.default_value`；
 > **不**强制 `min/max/fixed`，也**不**把 `SpecComponent.material` 应用到创建的实例。
 > `instantiate_from_catalog()` 创建的是 `ObjectType::Component` 特征树实例，而过渡期的
-> `/api/genrule` 路径仍生成硬编码网格（`genrule_create_catalog`，`param_values:
-> HashMap::new()`）。特征树/BRep 是正式几何路径，genrule 网格路径属过渡实现。详见
-> `docs/status/DOC_AUDIT_2026-10-27.zh-CN.md` §3 P0-4/P0-5。
+> `/api/genrule` 矩形快速创建仍生成硬编码网格。**Wave 3（2026-10-28）：genrule 的
+> layered 族已收敛**——路径驱动的 wall/slab/floor/roof 创建实例化路径驱动模板
+> （`Wall-Path`、`Slab-Path`、`Floor-Path`、`Roof-Path`），产出**领域对象类型**并携带
+> `catalog_ref`/`param_values`，与遗留构建器共享 `gen_rule::path_sweep` 内核（逐位
+> parity 测试）。`ObjectType::Component` 保留给装配实例（非路径定义的目录放置）。
+> 剩余分裂见 `docs/status/CODE_DEVIATIONS.zh-CN.md` §6.3。
 
 ### 2.5 内置库（种子数据）
 

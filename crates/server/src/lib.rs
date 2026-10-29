@@ -1524,9 +1524,7 @@ async fn genrule_create(
             obj.clone()
         }
         GenRuleRequest::Layered { name, mode, length, width, height, layers, path, boundary, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
-            use omnim_core::Point2D;
-            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_path_elevated, build_layered_slab_path_elevated, build_layered_roof_profile, LayerDef as MLayerDef};
-            use omnim_model::gen_rule::path_geom;
+            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_roof_profile, LayerDef as MLayerDef};
             if layers.is_empty() {
                 return Err((StatusCode::BAD_REQUEST, "layered genrule requires at least one layer".into()));
             }
@@ -1575,63 +1573,92 @@ async fn genrule_create(
                     .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
             }
 
-            let to_p2 = |p: &[f64; 3]| Point2D { x: p[0], y: p[1] };
-            let mut skip_end_transform = false;
-            let mut mesh = if let Some(spec) = &open {
-                validate_spec(spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                // B1：不再丢弃拾取点的 z。约定（见 docs/reference/API.md GenRule）：
-                // 所有拾取点 z 相等 → 该公共 z 作为基准高程；z 各不相同 → 取首点 z
-                // （当前生成器为纯平面拉伸，不支持逐点放坡）。拾取坐标为绝对坐标，
-                // 因此跳过 start/end 长条变换。
-                let base_z = spec.points[0][2];
-                skip_end_transform = true;
-                if kind == "roof" && is_roof_profile {
-                    let w = if *width <= 0.0 { 1.0 } else { *width };
-                    build_layered_roof_profile(
-                        [spec.points[0][0], spec.points[0][1]],
-                        [spec.points[1][0], spec.points[1][1]], w, &layer_defs, base_z,
-                    )
-                } else {
-                    let merged = path_geom::merge_collinear(&spec.points.iter().map(to_p2).collect::<Vec<_>>());
-                    if merged.len() < 2 {
-                        return Err((StatusCode::BAD_REQUEST, "wall path requires at least 2 distinct points".into()));
-                    }
-                    build_layered_path_elevated(&merged, false, *height, base_z, &layer_defs)
-                }
-            } else if let Some(spec) = &closed {
-                // Closed footprint: polygon checks (≥3 pts, degenerate area,
-                // self-intersection) live in the shared path_geom layer.
-                validate_spec(spec, 3).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                let merged = path_geom::merge_collinear(&path_geom::normalize_closed(&spec.points.iter().map(to_p2).collect::<Vec<_>>()));
-                let base_z = spec.points[0][2];
-                skip_end_transform = true;
-                build_layered_slab_path_elevated(&merged, &layer_defs, base_z)
-            } else if kind == "wall" {
-                build_layered_wall(*length, *height, &layer_defs)
-            } else {
-                build_layered_slab(*length, *width, &layer_defs)
+            // ── Wave 3 geometry convergence ──
+            // Path-driven layered objects instantiate through the catalog
+            // feature tree (`PathSweep` step → gen_rule::path_sweep kernel),
+            // producing the **domain object type** (Wall/Slab/Roof/Floor) with
+            // `catalog_ref`/`param_values` — the same object a catalog
+            // placement produces, so all three entry points converge.
+            let def_id = match kind {
+                "wall" => "Wall-Path",
+                "slab" => "Slab-Path",
+                "floor" => "Floor-Path",
+                _ => "Roof-Path",
             };
-            if !skip_end_transform && (*end_x != *start_x || *end_y != *start_y || *end_z != *start_z) {
-                let dx = *end_x - *start_x;
-                let dy = *end_y - *start_y;
-                let angle = dy.atan2(dx);
-                let (half_cos, half_sin) = ((angle * 0.5).cos(), (angle * 0.5).sin());
-                let t = omnim_core::Transform {
-                    matrix: Vec::new(),
-                    translation: Some(omnim_core::Point3D {
-                        x: (*start_x + *end_x) / 2.0,
-                        y: (*start_y + *end_y) / 2.0,
-                        z: (*start_z + *end_z) / 2.0,
-                    }),
-                    rotation: Some(omnim_core::Rotation { x: 0.0, y: 0.0, z: half_sin, w: half_cos }),
-                    scale: None,
+            // Rect parameter quick-forms (no picked path) keep the legacy
+            // in-handler builders — documented transitional (CODE_DEVIATIONS §6.3).
+            let has_path_input = open.is_some() || closed.is_some();
+            if !has_path_input {
+                let mut mesh = if kind == "wall" {
+                    build_layered_wall(*length, *height, &layer_defs)
+                } else {
+                    build_layered_slab(*length, *width, &layer_defs)
                 };
-                mesh = omnim_model::geometry::transform_mesh(&mesh, &t);
+                if *end_x != *start_x || *end_y != *start_y || *end_z != *start_z {
+                    let dx = *end_x - *start_x;
+                    let dy = *end_y - *start_y;
+                    let angle = dy.atan2(dx);
+                    let (half_cos, half_sin) = ((angle * 0.5).cos(), (angle * 0.5).sin());
+                    let t = omnim_core::Transform {
+                        matrix: Vec::new(),
+                        translation: Some(omnim_core::Point3D {
+                            x: (*start_x + *end_x) / 2.0,
+                            y: (*start_y + *end_y) / 2.0,
+                            z: (*start_z + *end_z) / 2.0,
+                        }),
+                        rotation: Some(omnim_core::Rotation { x: 0.0, y: 0.0, z: half_sin, w: half_cos }),
+                        scale: None,
+                    };
+                    mesh = omnim_model::geometry::transform_mesh(&mesh, &t);
+                }
+                let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
+                let id = p.create_object(object_type, name).id.clone();
+                let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+                obj.geometry = Some(geom);
+                if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+                return Ok(Json(obj.clone()));
             }
-            let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(object_type, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
-            obj.geometry = Some(geom);
+
+            // Roof profile (2-point) has no PathSweep template yet — keep the
+            // legacy profile builder (transitional, CODE_DEVIATIONS §6.3).
+            if kind == "roof" && is_roof_profile {
+                let spec = open.as_ref().expect("roof profile implies open path");
+                let w = if *width <= 0.0 { 1.0 } else { *width };
+                let mesh = build_layered_roof_profile(
+                    [spec.points[0][0], spec.points[0][1]],
+                    [spec.points[1][0], spec.points[1][1]], w, &layer_defs, spec.points[0][2],
+                );
+                let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
+                let id = p.create_object(object_type, name).id.clone();
+                let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+                obj.geometry = Some(geom);
+                if let Some(f) = form {
+                    let cf = omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
+                    obj.set_property("genesis_class", str_prop(cf.class.as_str()));
+                    obj.set_property("genesis_form", str_prop(cf.form));
+                }
+                if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+                return Ok(Json(obj.clone()));
+            }
+
+            // Path points (world metres, z preserved — B1 convention).
+            let spec = open.clone().or_else(|| closed.clone())
+                .expect("has_path_input guarantees one of path/boundary");
+            let param_values: std::collections::HashMap<String, f64> = [
+                ("length".to_string(), *length * 1000.0),
+                ("width".to_string(), *width * 1000.0),
+                ("height".to_string(), *height * 1000.0),
+            ]
+            .into_iter()
+            .filter(|(_, v)| *v > 0.0)
+            .collect();
+            let height_m = if kind == "wall" { *height } else { 0.0 };
+            let component_id = p.instantiate_domain_object(
+                object_type, def_id, name, &param_values,
+                spec.points.clone(), spec.closed, layer_defs.clone(), height_m, None,
+            ).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            let obj = p.objects.get_mut(&component_id)
+                .expect("domain object was just created");
             if let Some(f) = form {
                 let cf = omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
                 obj.set_property("genesis_class", str_prop(cf.class.as_str()));

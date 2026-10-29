@@ -80,6 +80,23 @@ pub fn seed_feature_trees(registry: &mut FeatureTreeRegistry) -> Vec<(String, St
     let angle_id = register_angle_template(registry);
     links.push(("Steel-Angle".into(), angle_id));
 
+    // ── Wave 3 geometry convergence: path-driven (PathSweep) templates ──
+    // These ComponentDefs are instantiated by the genrule layered family and
+    // produce domain-typed objects (Wall/Slab/Floor/Roof), not Component.
+    let wall_path_id = register_path_sweep_template(
+        registry, "wall-path-sweep",
+        crate::gen_rule::path_sweep::SectionOrientation::Vertical,
+    );
+    links.push(("Wall-Path".into(), wall_path_id));
+
+    let slab_path_id = register_path_sweep_template(
+        registry, "slab-path-sweep",
+        crate::gen_rule::path_sweep::SectionOrientation::Horizontal,
+    );
+    links.push(("Slab-Path".into(), slab_path_id.clone()));
+    links.push(("Floor-Path".into(), slab_path_id.clone()));
+    links.push(("Roof-Path".into(), slab_path_id));
+
     let wall_id = register_concrete_wall_template(registry);
     links.push(("Concrete-Wall".into(), wall_id));
 
@@ -399,6 +416,18 @@ fn register_t_section_template(registry: &mut FeatureTreeRegistry) -> String {
             "length",
             c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
         ));
+    registry.register(template)
+}
+
+/// One-step PathSweep template: the picked path + per-instance layer stack
+/// arrive via `TemplateContext`; nothing is statically parameterized here.
+fn register_path_sweep_template(
+    registry: &mut FeatureTreeRegistry,
+    name: &str,
+    orientation: crate::gen_rule::path_sweep::SectionOrientation,
+) -> String {
+    let template = FeatureTreeTemplate::new(name)
+        .step(FeatureTemplateStep::layered_path_sweep("layer-stack", orientation));
     registry.register(template)
 }
 
@@ -1023,6 +1052,44 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     column.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(150.0, 600.0).with_step(50.0).with_unit("mm"));
     column.params.push(ParamDef::new("depth", 2).with_default(300.0).with_range(150.0, 600.0).with_step(50.0).with_unit("mm"));
     column.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+
+    // ── Wave 3: path-driven building shells (domain-typed instances) ──
+    let mut wall_path = ComponentDef::new("Wall-Path", "Building/Shell/Wall");
+    wall_path.description = "Path-driven layered wall (LayerEditor; created as Wall, not Component)".into();
+    wall_path.ifc_class = "IfcWall".into();
+    wall_path.domain = "building".into();
+    wall_path.tags = vec!["concrete".into(), "wall".into(), "path-sweep".into()];
+    wall_path.default_material = "C30/37".into();
+    wall_path.params.push(ParamDef::new("height", 2).with_default(3000.0).with_range(500.0, 10000.0).with_step(100.0).with_unit("mm"));
+    wall_path.published = true;
+    catalog.insert(wall_path);
+
+    let mut slab_path = ComponentDef::new("Slab-Path", "Building/Shell/Slab");
+    slab_path.description = "Path-driven layered slab (created as Slab, not Component)".into();
+    slab_path.ifc_class = "IfcSlab".into();
+    slab_path.domain = "building".into();
+    slab_path.tags = vec!["concrete".into(), "slab".into(), "path-sweep".into()];
+    slab_path.default_material = "C30/37".into();
+    slab_path.published = true;
+    catalog.insert(slab_path);
+
+    let mut floor_path = ComponentDef::new("Floor-Path", "Building/Shell/Floor");
+    floor_path.description = "Path-driven layered floor (created as Floor, not Component)".into();
+    floor_path.ifc_class = "IfcFloor".into();
+    floor_path.domain = "building".into();
+    floor_path.tags = vec!["concrete".into(), "floor".into(), "path-sweep".into()];
+    floor_path.default_material = "C30/37".into();
+    floor_path.published = true;
+    catalog.insert(floor_path);
+
+    let mut roof_path = ComponentDef::new("Roof-Path", "Building/Shell/Roof");
+    roof_path.description = "Path-driven layered roof (created as Roof, not Component)".into();
+    roof_path.ifc_class = "IfcRoof".into();
+    roof_path.domain = "building".into();
+    roof_path.tags = vec!["concrete".into(), "roof".into(), "path-sweep".into()];
+    roof_path.default_material = "C30/37".into();
+    roof_path.published = true;
+    catalog.insert(roof_path);
 
     column.connectors.push(ConnectorDef::new("base", "Base")
         .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
@@ -2120,6 +2187,13 @@ mod tests {
 
         for comp in catalog.list() {
             if comp.feature_tree_id.is_empty() {
+                skipped.push(comp.name.clone());
+                continue;
+            }
+            // PathSweep templates are path-driven: they cannot instantiate
+            // without picked points. The genrule contract tests cover their
+            // geometry (see crates/server/tests/genrule_contract.rs).
+            if comp.tags.iter().any(|t| t == "path-sweep") {
                 skipped.push(comp.name.clone());
                 continue;
             }

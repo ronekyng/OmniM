@@ -152,7 +152,7 @@ No deviation found in the Rust backend.
 
 **Documented**: catalog/series drive geometry generation.
 
-**Code status:** three parallel paths produce different object types and geometry sources:
+**Code status (updated 2026-10-28 — partially fixed):** the **layered** family is converged — path-driven wall/slab/floor/roof creation goes through the feature tree (`PathSweep` step → `gen_rule::path_sweep`, the same kernel the legacy builders use, with exact-mesh parity tests) and produces the **domain object type** with `catalog_ref`/`param_values`. Remaining splits: rect parameter quick-forms (`wall`/`slab` variants without a path), roof 2-point profiles, and the catalog's extrude-based pipe/road templates versus the `LinearComponent` engine. Three parallel paths as of the audit:
 
 - `/api/genrule` (toolbar): hardcoded `build_wall`/`build_slab`/`build_road`/`build_pipe` mesh, `param_values` empty, object types `Wall`/`Slab`/`Road`/`Pipe`.
 - `/api/catalog/instantiate` (catalog panel): feature tree → BRep/mesh (official path), but creates `ObjectType::Component` (not `Wall`/`Beam`/…), with no undo and no save.

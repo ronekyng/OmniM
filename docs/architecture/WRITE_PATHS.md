@@ -19,10 +19,12 @@ with `python3 scripts/check_write_paths.py`; endpoint-level undo coverage lives 
 > target: handlers call `mutation::apply` (or hold the lock and delegate to the
 > `Executor`) instead of mutating `Project` in place.
 >
-> **Geometry path.** The official path remains the feature tree / BRep pipeline
-> (`/api/catalog/instantiate`, `/api/components/*`). `/api/genrule` still emits
-> hard-coded mesh primitives — it is a command with undo and save, but its geometry
-> source is transitional until Wave 3 converges the paths.
+> **Geometry path.** The official path is the feature tree pipeline. As of Wave 3
+> (2026-10-28) the genrule **layered** family is converged: path-driven wall/slab/
+> floor/roof creation instantiates a `PathSweep` feature tree and produces the
+> **domain object type** (`Wall`, not `Component`) with `catalog_ref`. Still
+> transitional: the rect parameter quick-forms (`wall`/`slab` variants without a
+> path), roof 2-point profiles, and the catalog's extrude-based pipe/road templates.
 
 | Measure | Value |
 |---|---|

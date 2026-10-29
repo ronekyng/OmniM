@@ -10,7 +10,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 一份面向建模者、逐对象行扫描的“当前真实能力”快照。它刻意保守：大多数行都是部分实现或计划中。请用它选择工作流，再按链接文档核对具体限制。
 
 > **如何阅读本矩阵**
-> - **对象类型**是语义角色（及 IFC 映射），**不一定**是你最终拿到的实例的 `object_type`。目录放置（`/api/catalog/instantiate`）创建的是带 `catalog_ref` 的 `ObjectType::Component`；工具栏 GenRule 路径（`/api/genrule`）创建 `Wall`、`Slab`、`Road`、`Pipe` 等语义类型，但几何是硬编码网格。特征树/BRep 才是官方几何路径，GenRule 属于过渡方案。
+> - **对象类型**是语义角色（及 IFC 映射），**不一定**是你最终拿到的实例的 `object_type`。目录放置（`/api/catalog/instantiate`）创建的是带 `catalog_ref` 的 `ObjectType::Component`；GenRule 的 **layered** 族现在创建**领域类型**（`Wall`、`Slab`…），带 `PathSweep` 特征树与 `catalog_ref`（Wave 3，2026-10-28）。仍为硬编码网格：GenRule 矩形快速创建与屋顶两点坡向。特征树几何是正式路径。
 > - **创成分类**是每个实例的创建方式（面 / 线 / 点 / 体），来自 [DATA_MODEL §1](specification/DATA_MODEL.zh-CN.md#1-概述)，不是从名称推断的属性。`(objectType, class/form)` 授权矩阵是设计契约；服务端强制校验仍待实现（[ROADMAP](status/ROADMAP.zh-CN.md)）。
 > - **Proto 状态**沿用 [DOMAINS](specification/DOMAINS.zh-CN.md) 的状态列：✅ 已进 `proto/omnim.proto`，🔀 已进 proto 但流程简化，🗓 仅计划（155 个列出类型中有 104 个仅计划）。
 > - **测量**与**剖切**是视口工具。测量存入 `Project.measurements`，可撤销并随项目落盘。剖切是视角裁剪；构件截面线只对 `Component` 对象提供 API。

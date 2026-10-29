@@ -153,7 +153,11 @@ Rust 后端未发现偏差。
 
 **文档模型**：目录/系列驱动几何生成。
 
-**代码现状：** 三条并行路径产生不同的对象类型与几何来源：
+**代码现状（2026-10-28 更新——部分修复）：** **layered** 族已收敛——路径驱动的
+wall/slab/floor/roof 创建走特征树（`PathSweep` 步骤 → `gen_rule::path_sweep`，与遗留
+构建器同一内核，带逐位 parity 测试），产出**领域对象类型**并携带 `catalog_ref`/`param_values`。
+剩余分裂：矩形参数快速创建（`wall`/`slab` 无路径变体）、屋顶两点坡向、目录中基于
+extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并行路径：
 
 - `/api/genrule`（工具栏）：硬编码 `build_wall`/`build_slab`/`build_road`/`build_pipe` 网格，`param_values` 为空，对象类型为 `Wall`/`Slab`/`Road`/`Pipe`。
 - `/api/catalog/instantiate`（构件面板）：特征树 → BRep/网格（官方路径），但创建 `ObjectType::Component`（不是 `Wall`/`Beam`/…），无撤销、不保存。

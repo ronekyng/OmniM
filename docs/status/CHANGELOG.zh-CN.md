@@ -22,6 +22,17 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-28] — 几何路径收敛（Wave 3，layered 族）
+
+### 新增（Added）
+- **`FeatureType::PathSweep`** 特征 + `gen_rule::path_sweep` 门面（封装 LayerExtrusion 内核——分类之下的常截面原语，DATA_MODEL §1 治理规则 3）。与遗留构建器做逐位 parity 测试（直段/折段/封闭）。
+- **路径驱动模板**（`Wall-Path` / `Slab-Path` / `Floor-Path` / `Roof-Path`）：单步 `layered_path_sweep`；拾取路径与 LayerEditor 层栈经 `TemplateContext` 传入（静态轮廓模板无法表达的实例级输入）。
+- **`Project::instantiate_domain_object`**：产出**领域对象类型**（`Wall`/`Slab`/`Floor`/`Roof`）的特征树实例化，携带 `catalog_ref` + `param_values` —— 此前特征树只能产出 `ObjectType::Component`。
+- genrule 的 **layered** 族改经上述模板实例化：同一内核、同一类型、同一溯源，所有入口一致。路径校验错误（零长度、退化面积、自相交）以内核原因使实例化失败。
+
+### 仍属过渡（已记录）
+- GenRule 矩形快速创建（`wall`/`slab` 无路径变体）、屋顶两点坡向、目录 extrude 型 pipe/road 模板（LinearComponent 收敛留给后续切片）。
+
 ## [2026-10-28] — 路径契约与创成形式授权（Wave 2）
 
 ### 新增（Added）

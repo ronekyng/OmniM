@@ -17,9 +17,11 @@ evidence: "由 scripts/check_write_paths.py 与 cargo test --workspace 于 2026-
 > **决策背景。** [ADR-0006](DECISIONS.zh-CN.md) 已**实现**，不再只是目标：
 > handler 调用 `mutation::apply`（或持锁后委托 `Executor`），不再就地修改 `Project`。
 >
-> **几何路径。** 正式路径仍是特征树 / BRep 管线（`/api/catalog/instantiate`、
-> `/api/components/*`）。`/api/genrule` 仍生成硬编码网格图元——它已是可撤销、
-> 可落盘的命令，但几何来源属过渡方案，待 Wave 3 收敛。
+> **几何路径。** 正式路径是特征树管线。Wave 3（2026-10-28）起 genrule 的
+> **layered** 族已收敛：路径驱动的 wall/slab/floor/roof 创建会实例化
+> `PathSweep` 特征树，并产出**领域对象类型**（`Wall`，而非 `Component`）与
+> `catalog_ref`。仍属过渡：矩形参数快速创建（`wall`/`slab` 无路径变体）、
+> 屋顶两点坡向、以及目录中基于 extrude 的 pipe/road 模板。
 
 | 指标 | 数值 |
 |---|---|
