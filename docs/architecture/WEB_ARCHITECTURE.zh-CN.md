@@ -3,7 +3,7 @@ title: "OmniM Web 架构 — 现状"
 status: current
 last_updated: 2026-10-29
 applies_to: "web/, crates/server"
-evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 20,086 行；79 个单元测试通过）"
+evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 21,130 行；91 个单元测试通过）"
 ---
 # OmniM Web 架构 — 现状
 
@@ -130,7 +130,7 @@ web/src/
 |---|---|---|---|
 | D1 | 属性面板默认是居中浮动层 | `appStore.ts:89` `panelMode: 'floating'`；`AppLayout` 的 `.floating-panel-overlay` 为 `inset:0` + 居中 | UI-SHL-03 |
 | D2 | 没有项目首页、新建/打开/另存为；客户端从不调用 `POST /api/project/save` | 路由表；`saveProject` 引用为零 | UI-DAT-01, UI-DAT-02 |
-| D3 | 3,985 行全局样式表中有 712 处硬编码颜色（全部 CSS 731 处） | `web/src/styles.css` | UI-DS-04 |
+| D3 | 4,110 行全局样式表中有 712 处硬编码颜色（全部 CSS 731 处） | `web/src/styles.css` | UI-DS-04 |
 | D4 | 令牌定义两份且被绕过 | `globals.css` 与 `styles.css` 各有一份完全相同的 `:root` | UI-DS-01 |
 | D5 | 63 处 emoji，其中 25 处作为面板图标 | `DomainPanels.tsx` 的 `icon: '▦'` 等 | UI-DS-09 |
 | D6 | 52 处 `Date.now()` 调用，多数用于构造对象名 | `wall-${Date.now()}` 模式 | UI-INT-09 |

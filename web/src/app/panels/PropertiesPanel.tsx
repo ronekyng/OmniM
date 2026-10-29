@@ -21,11 +21,13 @@ export function PropertiesPanel() {
   const setCreatingExtra = useAppStore((s) => s.setCreatingExtra);
   const refresh = useAppStore((s) => s.refresh);
   const reloadScene = useAppStore((s) => s.reloadScene);
+  const markDirty = useAppStore((s) => s.markDirty);
 
   const handleSaved = useCallback(() => {
+    markDirty();
     refresh();
     reloadScene();
-  }, [refresh, reloadScene]);
+  }, [markDirty, refresh, reloadScene]);
 
   const handleClose = useCallback(() => {
     setSelectedIds([]);

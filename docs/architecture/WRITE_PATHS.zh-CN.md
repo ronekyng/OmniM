@@ -30,7 +30,7 @@ evidence: "由 scripts/check_write_paths.py 与 cargo test --workspace 于 2026-
 | 调用 `mutation::apply` 的 handler | **55** |
 | 持锁但委托 `Executor` 的 handler | **7**（`create_object`、`delete_object`、`execute_omcom`、`genrule_create`、`undo`、`redo`、`import_ifc`） |
 | 白名单外的直写 `project.write()` | **0** |
-| `save_project` 之外的直连 `Project::save()` | **0** |
+| 显式持久化处理器（`save_project`、`save_project_as`）之外的直连 `Project::save()` | **0** |
 | 默认持久化 | **开启** —— `$OMNIM_PROJECT`（缺省 `project.omnim`）；`OMNIM_EPHEMERAL=1` 关闭 |
 
 ## 一次变更的流转

@@ -49,14 +49,14 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-SHL-01 | 三层应用结构（项目、工作区、编辑器） | IA_SHELL §2 | e2e 路由矩阵 | G1 | 📅 |
 | UI-SHL-02 | 工作区七个固定区域 | IA_SHELL §3 | 截图集 `shell` | G1 | 🔀 |
-| UI-SHL-03 | 属性面板右停靠，260–600 px | IA_SHELL §4 | 截图 + 调宽 e2e | G1 | 📅 |
+| UI-SHL-03 | 属性面板右停靠，260–600 px | IA_SHELL §4 | 截图 + 调宽 e2e | G1 | 🔀 |
 | UI-SHL-04 | 左停靠标签页，240–400 px | IA_SHELL §4 | 标签切换 e2e | G1 | 🔀 |
 | UI-SHL-05 | 底停靠默认折叠、带标签、≤40% 高 | IA_SHELL §4 | 截图 `bottom-collapsed` | G1 | 🔀 |
-| UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | 刷新 e2e | G1 | 📅 |
+| UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | 刷新 e2e | G1 | 🔀 |
 | UI-SHL-07 | 按专业切换的上下文功能区 | IA_SHELL §3.3 | 命令集快照测试 | G1 | 🔀 |
-| UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | 截图 + 轮询 e2e | G1 | 📅 |
+| UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | 截图 + 轮询 e2e | G1 | 🔀 |
 | UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e | G2 | 🔀 |
-| UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | 路由矩阵断言 | G1 | 📅 |
+| UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | 路由矩阵断言 | G1 | 🔀 |
 | UI-SHL-11 | 低于 1280 px 折叠为图标条 | IA_SHELL §7 | 1024×768 截图 | G2 | 📅 |
 | UI-SHL-12 | 命令面板 | IA_SHELL §8 | 命令覆盖 e2e | G2 | 📅 |
 
@@ -89,7 +89,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | 焦点陷阱测试 | G2 | 📅 |
 | UI-INT-07 | 破坏性确认并说明影响 | INTERACTION §7.3 | 删除父对象 e2e | G2 | 📅 |
 | UI-INT-08 | 全变更撤销/重做，深度 ≥50 | INTERACTION §8 | 端点覆盖测试 | G2 | 🔀 |
-| UI-INT-09 | 自动命名与重名检测 | INTERACTION §9 | 命名单测 | G1 | 📅 |
+| UI-INT-09 | 自动命名与重名检测 | INTERACTION §9 | 命名单测 | G1 | ✅ |
 | UI-INT-10 | 单位一致且带后缀 | INTERACTION §9.2 | 表单审计 | G2 | 🔀 |
 | UI-INT-11 | 每个上下文双击含义唯一 | INTERACTION §7.4 | 上下文表评审 | G2 | 📅 |
 | UI-INT-12 | 可配置视口导航 | INTERACTION §10 | 设置 e2e | G2 | 🔀 |
@@ -102,8 +102,8 @@ evidence: "n/a (product requirement)"
 | UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | 时序测试 | G1 | 📅 |
 | UI-FBK-03 | 超过 1 秒显示进度并可取消 | FEEDBACK_ERRORS §4 | 导入 e2e | G2 | 📅 |
 | UI-FBK-04 | 带码错误、原因与恢复动作 | FEEDBACK_ERRORS §5 | 错误目录比对 | G3 | 📅 |
-| UI-FBK-05 | 无原生 alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` 扫描 | G1 | 📅 |
-| UI-FBK-06 | 路由与面板级错误边界 | FEEDBACK_ERRORS §7 | 抛错面板测试 | G1 | 📅 |
+| UI-FBK-05 | 无原生 alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` 扫描 | G1 | ✅ |
+| UI-FBK-06 | 路由与面板级错误边界 | FEEDBACK_ERRORS §7 | 抛错面板测试 | G1 | 🔀 |
 | UI-FBK-07 | 分级提示；错误常驻 | FEEDBACK_ERRORS §8 | 提示 e2e | G1 | 🔀 |
 | UI-FBK-08 | 可关闭且不遮挡的成功反馈 | FEEDBACK_ERRORS §8.2 | 截图评审 | G1 | 🔀 |
 | UI-FBK-09 | 空状态带下一步动作 | FEEDBACK_ERRORS §3.3 | 面板清单 | G1 | 🔀 |
@@ -114,11 +114,11 @@ evidence: "n/a (product requirement)"
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | 首启 e2e | G1 | 📅 |
-| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | 保存往返 e2e | G1 | 📅 |
-| UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | 状态 e2e | G1 | 📅 |
+| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | 保存往返 e2e | G1 | 🔀 |
+| UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | 状态 e2e | G1 | 🔀 |
 | UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 | G2 | 📅 |
 | UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 | G2 | 📅 |
-| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | 三分支 e2e | G1 | 📅 |
+| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | 三分支 e2e | G1 | 🔀 |
 | UI-DAT-07 | 项目元信息可编辑并持久化 | DATA_INTEGRITY §2.3 | 重开断言 | G2 | 📅 |
 | UI-DAT-08 | 外部修改检测与只读 | DATA_INTEGRITY §6 | mtime 冲突测试 | G3 | 📅 |
 | UI-DAT-09 | 打开时缺失依赖报告 | DATA_INTEGRITY §2.4 | 夹具项目测试 | G3 | 📅 |

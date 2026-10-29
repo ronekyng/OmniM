@@ -4,6 +4,11 @@ import { api } from '../shared/api';
 import { MainToolbar } from './components/MainToolbar';
 import { SectionPanel } from './components/SectionPanel';
 import { StoreyViewSelect } from './components/StoreyViewSelect';
+import { TitleBar } from './components/TitleBar';
+import { StatusBar } from './components/StatusBar';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { useConfirm } from './components/ConfirmDialog';
+import { shouldWarnBeforeUnload } from '../shared/saveState';
 import { ThreeViewer, type ThreeViewerHandle } from './components/ThreeViewer';
 import { ViewCube3D } from './components/ViewCube3D';
 import { ToastContainer } from './components/ToastContainer';
@@ -38,15 +43,23 @@ export function App() {
     setGridVisible, setIsOrtho, setTransformSpace,
     snapSettings, setSnapSettings,
     creationDispatch,
-    refresh, reloadScene,
+    refresh, reloadScene, markDirty, saveProject, saveState,
+    setCursorWorld, setFps,
   } = useAppStore();
+  const confirm = useConfirm();
 
   async function deleteSelected() {
     if (selectedIds.length === 0) return;
     const msg = selectedIds.length === 1
-      ? 'Delete selected object?'
-      : `Delete ${selectedIds.length} selected objects?`;
-    if (!window.confirm(msg)) return;
+      ? 'This removes the object from the project.'
+      : `This removes ${selectedIds.length} objects from the project.`;
+    const ok = await confirm({
+      title: selectedIds.length === 1 ? 'Delete object?' : `Delete ${selectedIds.length} objects?`,
+      message: msg,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
     for (const id of selectedIds) {
       const response = await api.deleteObject(id);
       if (!response.ok) {
@@ -55,10 +68,21 @@ export function App() {
       }
     }
     setSelectedIds([]);
+    markDirty();
     toast.success(selectedIds.length === 1 ? 'Object deleted' : `${selectedIds.length} objects deleted`);
     refresh();
     reloadScene();
   }
+
+  useEffect(() => {
+    if (!shouldWarnBeforeUnload(saveState)) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [saveState.status]);
 
   useEffect(() => { registerDefaultPanels(); }, []);
   useEffect(() => { refresh(); reloadScene(); }, []);
@@ -67,6 +91,11 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        void saveProject();
+        return;
+      }
       switch (event.key.toLowerCase()) {
         case 'w': setTransformMode((prev) => prev === 'translate' ? null : 'translate'); break;
         case 'e': setTransformMode((prev) => prev === 'rotate' ? null : 'rotate'); break;
@@ -141,6 +170,7 @@ export function App() {
   }, [visualOpen]);
 
   return (
+    <ErrorBoundary scope="Workspace" resetKey={location.pathname}>
     <Routes>
       <Route path="/component-editor" element={<ComponentEditorPage />} />
       <Route path="/series-manager" element={<SeriesManagerPage />} />
@@ -148,6 +178,8 @@ export function App() {
       <Route path="*" element={
         <ThreeViewerContext.Provider value={viewerRef}>
           <AppLayout
+            titleBar={<TitleBar />}
+            statusBar={<StatusBar />}
             toolbar={<div className="modeling-bar">
               <MainToolbar
                 selectedIds={selectedIds}
@@ -155,8 +187,8 @@ export function App() {
                 canRedo={canRedo}
                 onRefresh={refresh}
                 onDelete={() => void deleteSelected().catch((err) => toast.error(err instanceof Error ? err.message : String(err)))}
-                onCreated={() => { refresh(); reloadScene(); }}
-                onImported={() => { refresh(); reloadScene(); }}
+                onCreated={() => { markDirty(); refresh(); reloadScene(); }}
+                onImported={() => { markDirty(); refresh(); reloadScene(); }}
                 onEditComponent={(componentId) => navigate(componentId ? `/component-editor?component=${componentId}` : '/component-editor')}
                 selectedParentId={selectedIds.length === 1 ? selectedIds[0] : undefined}
                 tree={tree}
@@ -180,7 +212,9 @@ export function App() {
                 onSelectionChanged={(ids) => {
                   setSelectedIds(ids);
                 }}
-                onChanged={() => { refresh(); reloadScene(); }}
+                onChanged={() => { markDirty(); refresh(); reloadScene(); }}
+                onPointerWorld={setCursorWorld}
+                onStats={setFps}
               />
               {section.enabled && <SectionPanel section={section} onChange={setSection} />}
               <ViewCube3D viewer={viewerRef} />
@@ -233,5 +267,6 @@ export function App() {
         </ThreeViewerContext.Provider>
       } />
     </Routes>
+    </ErrorBoundary>
   );
 }

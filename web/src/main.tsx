@@ -4,6 +4,8 @@ import { BrowserRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { App } from './app/App';
 import { ToastProvider } from './shared/toast';
+import { ConfirmProvider } from './app/components/ConfirmDialog';
+import { ErrorBoundary } from './app/components/ErrorBoundary';
 import './globals.css';
 import './styles.css';
 
@@ -18,7 +20,11 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <ConfirmProvider>
+            <ErrorBoundary scope="Application">
+              <App />
+            </ErrorBoundary>
+          </ConfirmProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>

@@ -1,4 +1,12 @@
 use omnim_core as c;
+
+/// Serializes tests that may replace the global `LIBRARY`. The seed-catalog
+/// suite re-seeds it; without this lock a parallel test can fetch a component
+/// id from one library instance and create objects from another — the
+/// long-standing `test_find_and_rebuild_catalog_instances` flake.
+#[cfg(test)]
+pub(crate) static LIBRARY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
 
@@ -2384,6 +2392,9 @@ mod tests {
 
     #[test]
     fn test_find_and_rebuild_catalog_instances() {
+        let _library_guard = super::LIBRARY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         setup_library();
         let mut proj = Project::new("TestProject");
 

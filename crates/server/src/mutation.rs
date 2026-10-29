@@ -100,15 +100,13 @@ pub async fn apply(
     action: c::Action,
     ops: Vec<c::Operation>,
 ) -> Result<ExecutionResult, ApiError> {
+    // Lock order: project → save_path (matches `save_project_as` and every
+    // handler that persists while holding the project write guard). Reading
+    // save_path first would deadlock against a concurrent Save-As.
     let mut p = state.project.write().await;
+    let save_path = state.save_path.read().await.clone();
     let mut exe = state.executor.write().await;
-    Ok(apply_locked(
-        &state.save_path,
-        &mut exe,
-        action,
-        ops,
-        &mut p,
-    ))
+    Ok(apply_locked(&save_path, &mut exe, action, ops, &mut p))
 }
 
 /// Same as [`apply`] for handlers that already hold both write locks

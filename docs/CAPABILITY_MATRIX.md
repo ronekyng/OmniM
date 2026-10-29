@@ -112,7 +112,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 
 - **Domain totals** ([DOMAINS](specification/DOMAINS.md), [COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)): **156 listed / 52 in proto / 104 planned-only** (P8 added `ObjectType::Opening`). Building 38 (23 in proto), Civil 41 (10), Plant 39 (11), Mechanical 38 (8).
 - **Storey view (P8-S4)**: the viewer toolbar selector filters meshes to the chosen storey (`level_id`/`bottom_level_id`, unassigned geometry stays visible) and sets a plan section 1.2 m above the storey datum; `/api/mesh` exposes those fields.
-- **Server surface**: **83 deduplicated REST routes** ([API](reference/API.md); 2026-10-29 P8-S1 +4 grid-datum endpoints); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
+- **Server surface**: **82 deduplicated REST routes** ([API](reference/API.md); 2026-10-29 P8-S1 +4 grid-datum endpoints); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
 - **Persistence**: on by default (2026-10-28) — `$OMNIM_PROJECT`/`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`. All mutating endpoints save, including transform/parent/connect, materials, measurements, series/catalog edits, instantiation and IFC import.
 - **Undo**: every mutating endpoint is undoable, including transform, properties, parent/connect, material, catalog instantiation, IFC import and series edits ([WRITE_PATHS](architecture/WRITE_PATHS.md)).
 - **IFC**: IFC 2x3 / IFC 4 subset only, hand-written parser/writer; no material, quantity or classification mapping. Stair and Roof import with their type but export as `IfcBuildingElementProxy`; all non-building types export as proxy ([FORMAT_COMPAT](status/FORMAT_COMPAT.md)).

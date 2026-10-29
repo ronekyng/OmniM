@@ -3487,6 +3487,9 @@ mod tests {
     /// vertices, normals, and faces).
     #[test]
     fn test_all_components_brep_valid() {
+        let _library_guard = crate::project::LIBRARY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         brep_setup();
         let mut proj = crate::project::Project::new("BRepValidation");
 
@@ -3581,6 +3584,9 @@ mod tests {
     /// present in the catalog (all series answers are reachable).
     #[test]
     fn test_all_series_paths_resolvable() {
+        let _library_guard = crate::project::LIBRARY_TEST_LOCK
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         brep_setup();
         let mut catalog = crate::catalog::CatalogStore::new();
         seed_catalog(&mut catalog);

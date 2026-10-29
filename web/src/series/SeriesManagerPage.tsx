@@ -1,10 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
+import { notify } from '../shared/toast';
+import { useConfirm } from '../app/components/ConfirmDialog';
 import type { Series, Selector, Answer, SpecComponent, ComponentDef, ParamConstraint } from '../shared/types';
 
 export function SeriesManagerPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,29 +87,29 @@ export function SeriesManagerPage() {
       loadSeries();
       await handleSelect({ ...selectedSeries, name: editName, description: editDesc, domain: editDomain, standard_reference: editStd });
     } catch (e) {
-      alert('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('保存失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   const handleCreate = async () => {
-    if (!createName) { alert('名称不能为空'); return; }
+    if (!createName) { notify.error('名称不能为空'); return; }
     try {
       await api.createSeries({ name: createName, domain: createDomain });
       setCreateName(''); setCreateDomain(''); setShowCreateForm(false);
       loadSeries();
     } catch (e) {
-      alert('创建失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('创建失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   const handleDeleteSeries = async (id: string) => {
-    if (!window.confirm('确定删除此系列？')) return;
+    if (!(await confirm({ title: 'Delete this series?', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await api.deleteSeries(id);
       if (selectedSeries?.id === id) setSelectedSeries(null);
       loadSeries();
     } catch (e) {
-      alert('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -118,7 +121,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      alert('添加选择器失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加选择器失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -133,7 +136,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      alert('添加答案失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加答案失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -144,7 +147,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      alert('映射构件失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('映射构件失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -158,14 +161,14 @@ export function SeriesManagerPage() {
   };
 
   const handleLoad = async () => {
-    if (!loadPath) { alert('请输入文件路径'); return; }
+    if (!loadPath) { notify.error('请输入文件路径'); return; }
     try {
       const res = await api.loadSeries(loadPath, 'standalone');
       setLoadPath('');
       loadSeries();
-      alert(`加载成功: ${res.loaded_count} 个系列 (${res.series_names.join(', ')})`);
+      notify.success(`加载成功: ${res.loaded_count} 个系列 (${res.series_names.join(', ')})`);
     } catch (e) {
-      alert('加载失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('加载失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -190,7 +193,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      alert('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -201,7 +204,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      alert('删除约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('删除约束失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -618,7 +621,7 @@ function ConstraintEditor({ constraint, seriesId, compDefId, constraintIdx, onRe
       setEditing(false);
       onRefresh();
     } catch (e) {
-      alert('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 

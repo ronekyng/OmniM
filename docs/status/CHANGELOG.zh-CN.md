@@ -22,6 +22,26 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — G1 Alpha 外壳与可靠性（P9-S1）
+
+### 新增（Added）
+- **停靠式工作区外壳**：属性面板默认右停靠（260–600 px），宽度与停靠模式持久化到 `localStorage` 的 `omnim.layout.v1`；**重置布局**恢复契约默认值。低于 1024 px 显示阻塞提示。
+- **标题栏与状态栏**：项目名 + 脏标记、面包屑（`项目 / 工作区 / 工具`）、显式 **保存** / **另存为**；只读状态栏显示光标坐标、选择、单位与保存状态（FPS 仅开发者模式）。
+- **错误隔离**：应用级、工作区级与面板级 `ErrorBoundary`；单个面板崩溃时外壳仍可用并提供重试。
+- **共享弹窗与通知层**：`ConfirmDialog`（Esc 取消、Enter 确认）替换全部原生弹窗；`notify` 供非 Hook 模块发类型化提示。错误提示改为常驻直到手动关闭。
+- **显式保存状态机**：`saveState.ts`（clean/dirty/saving/failed、最近保存时间）、`Ctrl/Cmd+S`、脏状态下 `beforeunload` 拦截，以及 `POST /api/project/save-as`（校验 `.omnim` 并切换会话保存目标）。
+- **自动命名**：`naming.ts` 实现 `Type-nnn`、最低空号复用与重名后缀，接入创建、快速创建、子对象、复制与拖入实例化。
+
+### 变更（Changed）
+- 路由：82 条唯一路径 / 83 次注册（新增 `/api/project/save-as`）。
+- 前端测试：8 个文件 / 91 例；Rust 450。UI 契约扫描：原生弹窗 0。
+
+### 修复（Fixed）
+- 消除 `test_find_and_rebuild_catalog_instances` 偶发失败的并行竞态：可能重播全局 `LIBRARY` 的测试统一经 `LIBRARY_TEST_LOCK` 串行。
+
+### 未实现（已知缺口）
+- 项目首页（`/projects`）与 open/new 端点（`UI-DAT-01`）；未保存更改的应用内导航拦截（`UI-DAT-06` 目前仅 `beforeunload`）；深浅主题（`UI-DS-02`）；面板加载/空状态与编辑器面包屑。
+
 ## [2026-10-29] — 前端文档基线（G0）
 
 ### 新增

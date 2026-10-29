@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **双轨维护义务**：`FEEDBACK_ERRORS.zh-CN.md` 是持续维护的译文。在同一次变更中保持章节编号、错误码规则与需求 ID 一致。
 >
-> **状态。** 设计契约。当前界面有五处使用浏览器原生弹窗，且没有错误边界；见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
+> **状态。** 设计契约。原生弹窗已移除（`ConfirmDialog` + `notify`），错误边界覆盖应用、工作区与每个面板槽位；加载/空/错误三态完整性与抛错面板测试仍待补。见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
 
 ## 1. 目的
 

@@ -33,7 +33,7 @@ with `python3 scripts/check_write_paths.py`; endpoint-level undo coverage lives 
 | Handlers calling `mutation::apply` | **55** |
 | Handlers delegating to the `Executor` while holding the lock | **7** (`create_object`, `delete_object`, `execute_omcom`, `genrule_create`, `undo`, `redo`, `import_ifc`) |
 | Non-allowlisted direct `project.write()` | **0** |
-| Direct `Project::save()` outside `save_project` | **0** |
+| Direct `Project::save()` outside the explicit persistence handlers (`save_project`, `save_project_as`) | **0** |
 | Default persistence | **on** — `$OMNIM_PROJECT` (or `project.omnim`); `OMNIM_EPHEMERAL=1` disables |
 
 ## How a mutation flows

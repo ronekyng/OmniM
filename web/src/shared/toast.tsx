@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useRef, type ReactNode, type Context } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode, type Context } from 'react';
 
 type ToastType = 'success' | 'error' | 'info' | 'warning';
 
@@ -18,6 +18,22 @@ const ToastContext: Context<ToastContextValue | null> = createContext<ToastConte
 
 let nextId = 1;
 
+type ToastListener = (type: ToastType, message: string) => void;
+const listeners = new Set<ToastListener>();
+
+/** Imperative toast bridge for modules that cannot use hooks. */
+export const notify = {
+  success: (message: string) => listeners.forEach((fn) => fn('success', message)),
+  error: (message: string) => listeners.forEach((fn) => fn('error', message)),
+  info: (message: string) => listeners.forEach((fn) => fn('info', message)),
+  warning: (message: string) => listeners.forEach((fn) => fn('warning', message)),
+};
+
+export function subscribeToasts(listener: ToastListener): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const timersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
@@ -34,12 +50,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const addToast = useCallback((type: ToastType, message: string) => {
     const id = nextId++;
     setToasts((prev) => [...prev, { id, type, message }]);
-    const timer = setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
-      timersRef.current.delete(id);
-    }, 4000);
-    timersRef.current.set(id, timer);
+    // Errors persist until dismissed (UI-FBK-07); success/info auto-dismiss.
+    if (type !== 'error') {
+      const timer = setTimeout(() => {
+        setToasts((prev) => prev.filter((t) => t.id !== id));
+        timersRef.current.delete(id);
+      }, 4000);
+      timersRef.current.set(id, timer);
+    }
   }, []);
+
+  useEffect(() => subscribeToasts((type, message) => addToast(type, message)), [addToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>

@@ -25,6 +25,7 @@ const EMPTY: Draft = {
  *  `reloadScene()` because ThreeViewer refetches `/api/grids` with the mesh. */
 export function GridPanel() {
   const reloadScene = useAppStore((s) => s.reloadScene);
+  const markDirty = useAppStore((s) => s.markDirty);
   const [lines, setLines] = useState<GridLine[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [busy, setBusy] = useState(false);
@@ -54,6 +55,7 @@ export function GridPanel() {
     try {
       if (draft.id) await api.updateGrid(draft.id, body());
       else await api.createGrid(body());
+      markDirty();
       setDraft(EMPTY);
       await refresh();
       reloadScene();
@@ -69,6 +71,7 @@ export function GridPanel() {
     setError(null);
     try {
       await api.deleteGrid(id);
+      markDirty();
       if (draft.id === id) setDraft(EMPTY);
       await refresh();
       reloadScene();

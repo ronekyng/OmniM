@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { api } from '../shared/api';
+import { notify } from '../shared/toast';
 import type { Sketch, SketchConstraintType, SketchResponse, FeatureItem } from '../shared/types';
 import { SketchCanvas2D } from './SketchCanvas2D';
 import { SketchCanvas3D } from './SketchCanvas3D';
@@ -138,7 +139,7 @@ export function ComponentEditorPage() {
       refreshUndoStatus();
       if (currentSketch) loadSketch(currentSketch.id);
     } catch (e) {
-      alert('撤销失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('撤销失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   }, [currentSketch]);
 
@@ -148,7 +149,7 @@ export function ComponentEditorPage() {
       refreshUndoStatus();
       if (currentSketch) loadSketch(currentSketch.id);
     } catch (e) {
-      alert('重做失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('重做失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   }, [currentSketch]);
 
@@ -187,7 +188,7 @@ export function ComponentEditorPage() {
         await solveAndLoad(currentSketch.id);
       }
     } catch (e) {
-      alert('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
       setEditingConstraint(null);
     }
   };
@@ -289,7 +290,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart({ x, y });
       } catch (e) {
-        alert('添加线段失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加线段失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
       }
       return;
@@ -311,7 +312,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        alert('添加圆形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加圆形失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
       }
       return;
@@ -341,7 +342,7 @@ export function ComponentEditorPage() {
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       } catch (e) {
-        alert('添加弧线失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加弧线失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       }
@@ -367,7 +368,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        alert('添加矩形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加矩形失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
       }
       return;
@@ -394,7 +395,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        alert('添加正多边形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加正多边形失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
       }
       return;
@@ -432,7 +433,7 @@ export function ComponentEditorPage() {
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       } catch (e) {
-        alert('添加椭圆失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error('添加椭圆失败: ' + (e instanceof Error ? e.message : String(e)));
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       }
@@ -456,7 +457,7 @@ export function ComponentEditorPage() {
       await loadSketch(currentSketch.id);
       setSelectedEntityIdx((res as any).index);
     } catch (e) {
-      alert('添加实体失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加实体失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -473,7 +474,7 @@ export function ComponentEditorPage() {
       setPendingPolyPoints([]);
       setPendingLineStart(null);
     } catch (e) {
-      alert('添加' + type + '失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加' + type + '失败: ' + (e instanceof Error ? e.message : String(e)));
       setPendingPolyPoints([]);
       setPendingLineStart(null);
     }
@@ -485,7 +486,7 @@ export function ComponentEditorPage() {
     try {
       await solveAndLoad(currentSketch.id);
     } catch (e) {
-      alert('求解失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('求解失败: ' + (e instanceof Error ? e.message : String(e)));
     }
     setSolving(false);
   };
@@ -502,7 +503,7 @@ export function ComponentEditorPage() {
       });
       await loadSketch(currentSketch.id);
     } catch (e) {
-      alert('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -596,7 +597,7 @@ export function ComponentEditorPage() {
       await api.updateSketchEntity(currentSketch.id, bestIdx, { points: newPoints });
       await loadSketch(currentSketch.id);
     } catch (e) {
-      alert('延伸失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('延伸失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -612,7 +613,7 @@ export function ComponentEditorPage() {
         axisIdx = i; break;
       }
     }
-    if (axisIdx < 0) { alert('请先绘制一条镜像轴（参考线）'); return; }
+    if (axisIdx < 0) { notify.error('请先绘制一条镜像轴（参考线）'); return; }
 
     const { mirrorPoint } = await import('../shared/geometry');
     const axis = entities[axisIdx];
@@ -695,7 +696,7 @@ export function ComponentEditorPage() {
       setPendingLineStart(null);
       setCreatingFeature({ featureType: type, sketchIds, currentSketchIdx: 0 });
     } catch (e) {
-      alert('创建 Sketch 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('创建 Sketch 失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -751,7 +752,7 @@ export function ComponentEditorPage() {
       setEditingFeature(null);
       await loadFeatures(currentComponentId);
     } catch (e) {
-      alert((editingFeature.id ? '编辑' : '添加') + ' Feature 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error((editingFeature.id ? '编辑' : '添加') + ' Feature 失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 

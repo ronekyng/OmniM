@@ -21,7 +21,9 @@ pub struct AppState {
     pub project: SharedProject,
     pub executor: RwLock<omnim_omcom::Executor>,
     pub amir: Option<AmirEngine>,
-    pub save_path: Option<String>,
+    /// Current project file. Mutable so Save-As can retarget the session;
+    /// `None` means ephemeral (no writes).
+    pub save_path: RwLock<Option<String>>,
 }
 
 pub type SharedProject = Arc<RwLock<Project>>;
@@ -46,7 +48,7 @@ pub fn create_router(project: SharedProject, save_path: Option<String>) -> Route
         project,
         executor: RwLock::new(omnim_omcom::Executor::new()),
         amir,
-        save_path,
+        save_path: RwLock::new(save_path),
     });
     build_router(state)
 }
@@ -56,6 +58,7 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/health", get(health))
         .route("/api/project", get(get_project))
         .route("/api/project/save", post(save_project))
+        .route("/api/project/save-as", post(save_project_as))
         .route("/api/tree", get(get_tree))
         .route("/api/stats", get(get_stats))
         .route("/api/objects", get(list_objects))
@@ -232,7 +235,7 @@ async fn get_project(State(state): State<SharedState>) -> Json<Project> {
 async fn save_project(
     State(state): State<SharedState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let Some(path) = state.save_path.clone() else {
+    let Some(path) = state.save_path.read().await.clone() else {
         return Err((
             StatusCode::BAD_REQUEST,
             "persistence is disabled (OMNIM_EPHEMERAL=1)".into(),
@@ -245,6 +248,36 @@ async fn save_project(
             format!("save failed: {}", e),
         )
     })?;
+    Ok(Json(serde_json::json!({ "success": true, "saved": path })))
+}
+
+#[derive(Deserialize)]
+struct SaveAsRequest {
+    path: String,
+}
+
+/// POST /api/project/save-as — write the current project to a new file and
+/// retarget subsequent explicit saves at it. The path is used verbatim; the
+/// project root allow-list is a G3 security item (UI-SEC-02).
+async fn save_project_as(
+    State(state): State<SharedState>,
+    Json(req): Json<SaveAsRequest>,
+) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    let path = req.path.trim();
+    if path.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "path is required".into()));
+    }
+    if !path.ends_with(".omnim") {
+        return Err((StatusCode::BAD_REQUEST, "path must end with .omnim".into()));
+    }
+    let p = state.project.read().await;
+    p.save(path).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("save failed: {}", e),
+        )
+    })?;
+    *state.save_path.write().await = Some(path.to_string());
     Ok(Json(serde_json::json!({ "success": true, "saved": path })))
 }
 
@@ -430,7 +463,8 @@ async fn create_object(
         }
     }
 
-    mutation::persist(&state.save_path, &p);
+    let save_path = state.save_path.read().await.clone();
+    mutation::persist(&save_path, &p);
     Ok(Json(obj))
 }
 
@@ -549,7 +583,8 @@ async fn delete_object(
     }
     let obj = p.objects.remove(&id).expect("presence checked above");
     exe.record_delete(&obj);
-    mutation::persist(&state.save_path, &p);
+    let save_path = state.save_path.read().await.clone();
+    mutation::persist(&save_path, &p);
     Ok(())
 }
 
@@ -1523,7 +1558,8 @@ async fn execute_omcom(
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
     let result = exe.execute(&instr, &mut p);
-    mutation::persist(&state.save_path, &p);
+    let save_path = state.save_path.read().await.clone();
+    mutation::persist(&save_path, &p);
     Ok(Json(result))
 }
 
@@ -3610,7 +3646,8 @@ async fn undo(
     let mut exe = state.executor.write().await;
     match exe.undo(&mut p) {
         Ok(msg) => {
-            mutation::persist(&state.save_path, &p);
+            let save_path = state.save_path.read().await.clone();
+            mutation::persist(&save_path, &p);
             Ok(Json(UndoRedoResponse {
                 success: true,
                 message: msg,
@@ -3630,7 +3667,8 @@ async fn redo(
     let mut exe = state.executor.write().await;
     match exe.redo(&mut p) {
         Ok(msg) => {
-            mutation::persist(&state.save_path, &p);
+            let save_path = state.save_path.read().await.clone();
+            mutation::persist(&save_path, &p);
             Ok(Json(UndoRedoResponse {
                 success: true,
                 message: msg,
@@ -3976,7 +4014,8 @@ async fn import_ifc(
                 let mut exe = state.executor.write().await;
                 exe.record_project_replace(before, &p);
             }
-            mutation::persist(&state.save_path, &p);
+            let save_path = state.save_path.read().await.clone();
+            mutation::persist(&save_path, &p);
 
             Ok(Json(ImportIfcResponse {
                 success: true,

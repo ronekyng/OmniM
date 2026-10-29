@@ -5,6 +5,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { ViewCubeGizmo, ObjectPosition } from '@mlightcad/three-viewcube';
 import { api } from '../../shared/api';
+import { notify } from '../../shared/toast';
 import type { MeshObject, Measurement } from '../../shared/types';
 import type { TransformMode } from './MainToolbar';
 import { useAppStore } from '../store/appStore';
@@ -82,6 +83,10 @@ type ThreeViewerProps = {
   measureMode: MeasureMode;
   onSelectionChanged?: (ids: string[]) => void;
   onChanged?: () => void;
+  /** Throttled cursor position on the ground plane, for the status bar. */
+  onPointerWorld?: (point: [number, number, number] | null) => void;
+  /** Rolling frame-rate sample (once per second), for the status bar. */
+  onStats?: (fps: number) => void;
 };
 
 type ViewerState = {
@@ -103,13 +108,17 @@ type ViewerState = {
   snapIndicator: SnapIndicator;
 };
 
-export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged }, ref) {
+export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged, onPointerWorld, onStats }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<ViewerState | null>(null);
   const selectedIdsRef = useRef<readonly string[]>([]);
   const draggingTransformRef = useRef(false);
   const onSelectionChangedRef = useRef(onSelectionChanged);
   const onChangedRef = useRef(onChanged);
+  const onPointerWorldRef = useRef(onPointerWorld);
+  const onStatsRef = useRef(onStats);
+  onPointerWorldRef.current = onPointerWorld;
+  onStatsRef.current = onStats;
   const cameraDirRef = useRef(new THREE.Vector3(0, 0, 1));
   const measurePointsRef = useRef<THREE.Vector3[]>([]);
   const measureModeRef = useRef<MeasureMode>('none');
@@ -850,8 +859,17 @@ focusObject: (id) => {
     }
 
     let frame: number;
+    let fpsFrames = 0;
+    let fpsLast = performance.now();
     function animate() {
       frame = requestAnimationFrame(animate);
+      fpsFrames += 1;
+      const now = performance.now();
+      if (now - fpsLast >= 1000) {
+        onStatsRef.current?.(Math.round((fpsFrames * 1000) / (now - fpsLast)));
+        fpsFrames = 0;
+        fpsLast = now;
+      }
       controls.update();
       transformControls.update(0.016);
       if (viewer.isOrtho) {
@@ -875,11 +893,22 @@ focusObject: (id) => {
     let hoveredMesh: THREE.Mesh | null = null;
     let hoveredOriginalEmissive: THREE.Color | null = null;
 
+    let lastCursorEmit = 0;
     function onPointerMove(event: MouseEvent) {
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, viewer.camera);
+
+      // Status-bar coordinates: ground plane, throttled to 50 ms (IA_SHELL §6).
+      if (onPointerWorldRef.current && performance.now() - lastCursorEmit > 50) {
+        lastCursorEmit = performance.now();
+        const plane = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const pt = new THREE.Vector3();
+        onPointerWorldRef.current(
+          raycaster.ray.intersectPlane(plane, pt) ? [pt.x, pt.y, pt.z] : null,
+        );
+      }
 
       // ── Live snap indicator while picking or measuring ──
       if (creationPhaseRef.current === 'picking' || measureModeRef.current !== 'none') {
@@ -1527,7 +1556,7 @@ async function persistSelectedTransform(viewer: ViewerState, selectedId?: string
     scale: { x: scale.x, y: scale.y, z: scale.z },
   });
   if (!response.ok) {
-    alert(`Save transform failed: ${response.status} ${response.statusText}`);
+    notify.error(`Save transform failed: ${response.status} ${response.statusText}`);
     return;
   }
   mesh.userData.basePosition = mesh.position.clone();

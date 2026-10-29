@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { api } from '../shared/api';
+import { notify } from '../shared/toast';
+import { useConfirm } from '../app/components/ConfirmDialog';
 import type { ComponentDef, ParamDef, CatalogPreviewMesh } from '../shared/types';
 
 export function LibraryManagerPage() {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [catalog, setCatalog] = useState<ComponentDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -131,12 +134,12 @@ export function LibraryManagerPage() {
       setPreviewMesh(null);
       loadCatalog();
     } catch (e) {
-      alert('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('保存失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   const handleCreate = async () => {
-    if (!createName || !createCategory) { alert('名称和类别不能为空'); return; }
+    if (!createName || !createCategory) { notify.error('名称和类别不能为空'); return; }
     try {
       await api.createComponentDef({ name: createName, category: createCategory });
       setCreateName('');
@@ -144,18 +147,18 @@ export function LibraryManagerPage() {
       setShowCreateForm(false);
       loadCatalog();
     } catch (e) {
-      alert('创建失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('创建失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('确定删除此构件定义？')) return;
+    if (!(await confirm({ title: 'Delete this component definition?', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await api.deleteComponentDef(id);
       if (selectedId === id) setSelectedId(null);
       loadCatalog();
     } catch (e) {
-      alert('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -178,7 +181,7 @@ export function LibraryManagerPage() {
       setNewParamUnit('');
       loadCatalog();
     } catch (e) {
-      alert('添加参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('添加参数失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -196,17 +199,17 @@ export function LibraryManagerPage() {
       setEditingParamIdx(null);
       loadCatalog();
     } catch (e) {
-      alert('更新参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('更新参数失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
   const handleDeleteParam = async (idx: number) => {
-    if (!selectedId || !window.confirm('确定删除此参数？')) return;
+    if (!selectedId || !(await confirm({ title: 'Delete this parameter?', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await api.deleteComponentParam(selectedId, idx);
       loadCatalog();
     } catch (e) {
-      alert('删除参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('删除参数失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -220,7 +223,7 @@ export function LibraryManagerPage() {
   };
 
   const handleImport = async () => {
-    if (!importPath) { alert('请输入文件路径'); return; }
+    if (!importPath) { notify.error('请输入文件路径'); return; }
     try {
       const res = await api.importCatalog(importPath);
       setImportMsg(`导入成功: ${res.component_count} 个构件 (${res.names.join(', ')})`);

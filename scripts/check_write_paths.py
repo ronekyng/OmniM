@@ -3,12 +3,13 @@
 
 Every mutating endpoint must go through `mutation::apply` / `Executor`; only
 explicitly allow-listed read-only handlers may take `project.write()`, and only
-`save_project` may call `Project::save` directly.
+explicit persistence handlers (`save_project`, `save_project_as`) may call
+`Project::save` directly.
 
 Scans `crates/server/src/lib.rs` (top-level `async fn` bodies) and reports:
 
   1. handlers holding `project.write()` that are not in `READ_ONLY_ALLOWED`
-  2. handlers calling `.save(` other than `save_project`
+  2. handlers calling `.save(` other than `save_project` / `save_project_as`
   3. handlers writing the global `LIBRARY` other than `LIBRARY_ALLOWED`
 
 Exit code 1 when any violation is found, 0 otherwise. Intended for CI and for
@@ -52,7 +53,7 @@ LIBRARY_ALLOWED = {
     "import_catalog_handler": "bulk .omnimlib import into the session-global library",
 }
 
-SAVE_ALLOWED = {"save_project"}
+SAVE_ALLOWED = {"save_project", "save_project_as"}
 
 CALL_RE = re.compile(r"^async fn (\w+)\s*\(", re.MULTILINE)
 

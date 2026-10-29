@@ -187,6 +187,9 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 
 ## 7. Frontend UI Deviations — **Known** (2026-10-29)
 
+> **P9 update (2026-10-29).** 7.1, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; 7.2 (project home), 7.4 (panel states), 7.8–7.11 remain open.
+
+
 Audited against `web/src` on 2026-10-29. These are the gaps between the UI contracts in
 [`specification/ui/`](../specification/ui/IA_SHELL.md) and the code that exists today.
 Requirement IDs trace to [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md).

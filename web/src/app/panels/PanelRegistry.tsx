@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import type { PanelRegistration, PanelPosition } from './PanelTypes';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 let registrations: PanelRegistration[] = [];
 const listeners = new Set<() => void>();
@@ -67,7 +68,11 @@ export function PanelSlot({ position }: { position: PanelPosition }) {
     <>
       {panels.map((panel) => {
         const Component = panel.component;
-        return <Component key={panel.id} />;
+        return (
+          <ErrorBoundary key={panel.id} scope={panel.title ?? panel.id}>
+            <Component />
+          </ErrorBoundary>
+        );
       })}
     </>
   );

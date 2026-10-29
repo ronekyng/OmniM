@@ -49,14 +49,14 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | e2e route matrix | G1 | 📅 |
 | UI-SHL-02 | Seven fixed workspace regions | IA_SHELL §3 | screenshot set `shell` | G1 | 🔀 |
-| UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | screenshot + resize e2e | G1 | 📅 |
+| UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | screenshot + resize e2e | G1 | 🔀 |
 | UI-SHL-04 | Left dock tabs, 240–400 px | IA_SHELL §4 | e2e tab switch | G1 | 🔀 |
 | UI-SHL-05 | Bottom dock collapsed, tabbed, ≤40% height | IA_SHELL §4 | screenshot `bottom-collapsed` | G1 | 🔀 |
-| UI-SHL-06 | Layout persistence and reset | IA_SHELL §5 | reload e2e | G1 | 📅 |
+| UI-SHL-06 | Layout persistence and reset | IA_SHELL §5 | reload e2e | G1 | 🔀 |
 | UI-SHL-07 | Contextual ribbon per discipline | IA_SHELL §3.3 | command-set snapshot test | G1 | 🔀 |
-| UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | screenshot + polling e2e | G1 | 📅 |
+| UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | screenshot + polling e2e | G1 | 🔀 |
 | UI-SHL-09 | Floating panels with persisted geometry | IA_SHELL §4.4 | e2e drag/resize/reload | G2 | 🔀 |
-| UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | route matrix assertions | G1 | 📅 |
+| UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | route matrix assertions | G1 | 🔀 |
 | UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot | G2 | 📅 |
 | UI-SHL-12 | Command palette | IA_SHELL §8 | e2e command coverage | G2 | 📅 |
 
@@ -89,7 +89,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-06 | One dialog family with focus management | INTERACTION §7 | focus-trap test | G2 | 📅 |
 | UI-INT-07 | Destructive confirmation with impact | INTERACTION §7.3 | delete-parent e2e | G2 | 📅 |
 | UI-INT-08 | Undo/redo across all mutations, depth ≥50 | INTERACTION §8 | endpoint coverage test | G2 | 🔀 |
-| UI-INT-09 | Auto-naming with duplicate detection | INTERACTION §9 | naming unit tests | G1 | 📅 |
+| UI-INT-09 | Auto-naming with duplicate detection | INTERACTION §9 | naming unit tests | G1 | ✅ |
 | UI-INT-10 | Consistent units with suffixes | INTERACTION §9.2 | form audit | G2 | 🔀 |
 | UI-INT-11 | One meaning per double-click context | INTERACTION §7.4 | context table review | G2 | 📅 |
 | UI-INT-12 | Configurable viewport navigation | INTERACTION §10 | settings e2e | G2 | 🔀 |
@@ -102,8 +102,8 @@ evidence: "n/a (product requirement)"
 | UI-FBK-02 | Skeletons, no flash under 400 ms | FEEDBACK_ERRORS §3.2 | timing test | G1 | 📅 |
 | UI-FBK-03 | Progress and cancel over 1 s | FEEDBACK_ERRORS §4 | import e2e | G2 | 📅 |
 | UI-FBK-04 | Coded errors with cause and recovery | FEEDBACK_ERRORS §5 | error catalogue diff | G3 | 📅 |
-| UI-FBK-05 | No native alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` scan | G1 | 📅 |
-| UI-FBK-06 | Route- and panel-scoped error boundaries | FEEDBACK_ERRORS §7 | throwing-panel test | G1 | 📅 |
+| UI-FBK-05 | No native alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` scan | G1 | ✅ |
+| UI-FBK-06 | Route- and panel-scoped error boundaries | FEEDBACK_ERRORS §7 | throwing-panel test | G1 | 🔀 |
 | UI-FBK-07 | Typed toasts; errors persist | FEEDBACK_ERRORS §8 | toast e2e | G1 | 🔀 |
 | UI-FBK-08 | Dismissible, non-blocking success feedback | FEEDBACK_ERRORS §8.2 | screenshot review | G1 | 🔀 |
 | UI-FBK-09 | Empty states with a next action | FEEDBACK_ERRORS §3.3 | panel checklist | G1 | 🔀 |
@@ -114,11 +114,11 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | first-run e2e | G1 | 📅 |
-| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | save round-trip e2e | G1 | 📅 |
-| UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | state e2e | G1 | 📅 |
+| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | save round-trip e2e | G1 | 🔀 |
+| UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | state e2e | G1 | 🔀 |
 | UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace | G2 | 📅 |
 | UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill | G2 | 📅 |
-| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | three-branch e2e | G1 | 📅 |
+| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | three-branch e2e | G1 | 🔀 |
 | UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion | G2 | 📅 |
 | UI-DAT-08 | External change detection and read-only | DATA_INTEGRITY §6 | mtime conflict test | G3 | 📅 |
 | UI-DAT-09 | Missing dependency report on open | DATA_INTEGRITY §2.4 | fixture project test | G3 | 📅 |

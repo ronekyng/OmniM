@@ -7,6 +7,9 @@ import type { CreationForm, CreationPhase, ObjectType, Point3D } from '../../sha
 import type { SnapSettings } from '../components/viewer/three/Snapping';
 import { DEFAULT_SNAP_SETTINGS } from '../components/viewer/three/Snapping';
 import { creationReducer, initialCreationState, type CreationAction, type CreationState } from '../../shared/creation/stateMachine';
+import { DEFAULT_LAYOUT, loadLayout, resetLayout as resetPersistedLayout, saveLayout } from '../../shared/layout';
+import { beginSave, initialSaveState, markDirty as markDirtyState, saveFailed, saveSucceeded, type SaveState } from '../../shared/saveState';
+import { notify } from '../../shared/toast';
 
 export type AppState = {
   selectedIds: string[];
@@ -24,6 +27,11 @@ export type AppState = {
   transformSpace: 'world' | 'local';
   snapSettings: SnapSettings;
   panelMode: 'floating' | 'docked';
+  /** Incremented by `resetLayout`; the shell re-reads defaults. */
+  layoutResetToken: number;
+  cursorWorld: [number, number, number] | null;
+  fps: number | null;
+  saveState: SaveState;
   transformOpen: boolean;
   visualOpen: boolean;
   tree: TreeNode[];
@@ -54,6 +62,12 @@ type AppActions = {
   setTransformSpace: (space: 'world' | 'local') => void;
   setSnapSettings: (settings: SnapSettings | ((prev: SnapSettings) => SnapSettings)) => void;
   setPanelMode: (mode: 'floating' | 'docked') => void;
+  resetLayout: () => void;
+  setCursorWorld: (point: [number, number, number] | null) => void;
+  setFps: (fps: number) => void;
+  markDirty: () => void;
+  saveProject: () => Promise<boolean>;
+  saveProjectAs: (path: string) => Promise<boolean>;
   setTransformOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
   setVisualOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
   setCatalogPanelOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
@@ -86,7 +100,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
     gridVisible: true,
     isOrtho: false,
     transformSpace: 'world',
-    panelMode: 'floating',
+    panelMode: loadLayout().docks.right.mode,
+    layoutResetToken: 0,
+    cursorWorld: null,
+    fps: null,
+    saveState: initialSaveState,
     transformOpen: false,
     visualOpen: false,
     snapSettings: DEFAULT_SNAP_SETTINGS,
@@ -140,7 +158,49 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
       if (typeof settings === 'function') set((s) => ({ snapSettings: (settings as (prev: SnapSettings) => SnapSettings)(s.snapSettings) }));
       else set({ snapSettings: settings });
     },
-    setPanelMode: (mode) => set({ panelMode: mode }),
+    setPanelMode: (mode) => {
+      set({ panelMode: mode });
+      const layout = loadLayout();
+      saveLayout({ ...layout, docks: { ...layout.docks, right: { ...layout.docks.right, mode } } });
+    },
+    resetLayout: () => {
+      resetPersistedLayout();
+      saveLayout(DEFAULT_LAYOUT);
+      set((s) => ({ panelMode: 'docked', layoutResetToken: s.layoutResetToken + 1 }));
+    },
+    setCursorWorld: (point) => set({ cursorWorld: point }),
+    setFps: (fps) => set({ fps }),
+    markDirty: () => set((s) => ({ saveState: markDirtyState(s.saveState) })),
+    saveProject: async () => {
+      if (get().saveState.status === 'saving') return false;
+      set((s) => ({ saveState: beginSave(s.saveState) }));
+      try {
+        await api.saveProject();
+        set({ saveState: saveSucceeded(get().saveState) });
+        notify.success('Project saved');
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        set((s) => ({ saveState: saveFailed(s.saveState, message) }));
+        notify.error(`Save failed: ${message}`);
+        return false;
+      }
+    },
+    saveProjectAs: async (path) => {
+      if (get().saveState.status === 'saving') return false;
+      set((s) => ({ saveState: beginSave(s.saveState) }));
+      try {
+        await api.saveProjectAs(path);
+        set({ saveState: saveSucceeded(get().saveState) });
+        notify.success(`Project saved to ${path}`);
+        return true;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        set((s) => ({ saveState: saveFailed(s.saveState, message) }));
+        notify.error(`Save as failed: ${message}`);
+        return false;
+      }
+    },
     setTransformOpen: (v) => {
       if (typeof v === 'function') set((s) => ({ transformOpen: (v as (prev: boolean) => boolean)(s.transformOpen) }));
       else set({ transformOpen: v });

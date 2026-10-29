@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **双轨维护义务**：`DATA_INTEGRITY.zh-CN.md` 是持续维护的译文。在同一次变更中保持章节编号、端点名与需求 ID 一致。
 >
-> **状态。** 设计契约。当前客户端从不调用 `POST /api/project/save`，服务端也没有 new/open 端点；见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
+> **状态。** 设计契约。客户端已调用 `POST /api/project/save`（显式保存、Ctrl/Cmd+S）与 `POST /api/project/save-as`；项目首页路由与 open/new 端点仍未实现。见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
 
 ## 1. 目的
 

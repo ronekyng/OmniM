@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **Dual-track maintenance obligation**: `DATA_INTEGRITY.zh-CN.md` is a maintained translation. Keep section numbering, endpoint names, and requirement IDs aligned in the same change.
 >
-> **Status.** Design contract. The current client never calls `POST /api/project/save` and the server has no open/new endpoints; see [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
+> **Status.** Design contract. The client now calls `POST /api/project/save` (explicit save, Ctrl/Cmd+S) and `POST /api/project/save-as`; the project home route plus open/new endpoints remain unimplemented. See [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
 
 ## 1. Purpose
 

@@ -54,31 +54,31 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 |---|---|---|
 | UI-SHL-01 Three application levels | 📅 | No `/projects` route; only workspace + editors |
 | UI-SHL-02 Seven fixed regions | 🔀 | Regions exist but not as a stable seven-zone shell |
-| UI-SHL-03 Properties docked right | 📅 | Centered floating overlay |
+| UI-SHL-03 Properties docked right | 🔀 | Docked by default; width persisted (`layout.ts`); no resize e2e |
 | UI-SHL-04 Left dock tabs | 🔀 | Left sidebar exists; no tab groups |
 | UI-SHL-05 Bottom dock collapsed and tabbed | 🔀 | Console is always mounted, no tabs |
-| UI-SHL-06 Layout persistence and reset | 📅 | Local component state only |
+| UI-SHL-06 Layout persistence and reset | 🔀 | `omnim.layout.v1` (right width/mode) + Reset layout; reload e2e pending |
 | UI-SHL-07 Contextual ribbon | 🔀 | Flat toolbar, not discipline-scoped |
-| UI-SHL-08 Status bar readouts | 📅 | No status bar |
-| UI-SHL-10 Title and breadcrumb | 📅 | Not implemented |
+| UI-SHL-08 Status bar readouts | 🔀 | Coordinates, selection, units, save state; FPS behind developer mode |
+| UI-SHL-10 Title and breadcrumb | 🔀 | Workspace title/breadcrumb + document title; editor breadcrumbs pending |
 | UI-DS-02 Dark/light switch | 📅 | No theme provider or `data-theme` |
 | UI-INT-01 Five selection gestures | 🔀 | Click / Ctrl-click / box select exist; Esc clears tool first |
 | UI-INT-02 Picking state machine | ✅ | `stateMachine.test.ts` |
 | UI-INT-04 No shortcuts while typing | 🔀 | `App.tsx` guards input/textarea; not yet registry-wide |
-| UI-INT-09 Auto-naming | 📅 | Timestamp names |
+| UI-INT-09 Auto-naming | ✅ | `naming.ts` + 4 unit tests; wired to create/quick-create/child/duplicate |
 | UI-FBK-01 Panel three states | 🔀 | Loading mostly; empty/error partial |
 | UI-FBK-02 Skeleton timing | 📅 | No skeletons |
-| UI-FBK-05 No native dialogs | 📅 | Five call sites |
-| UI-FBK-06 Error boundaries | 📅 | None |
+| UI-FBK-05 No native dialogs | ✅ | `ConfirmDialog` + `notify`; `check_ui_contracts` dialogs = 0 |
+| UI-FBK-06 Error boundaries | 🔀 | Application, workspace and every panel slot; throwing-panel test pending |
 | UI-FBK-07 Typed toasts, errors persist | 🔀 | Typed toasts exist; errors auto-dismiss |
 | UI-FBK-08 Dismissible, non-blocking feedback | 🔀 | Toasts are dismissible; placement overlaps chrome |
 | UI-FBK-09 Empty states with action | 🔀 | Some panels only |
 | UI-DAT-01 Project home | 📅 | No route, no server endpoints |
-| UI-DAT-02 Explicit save | 📅 | Client never calls the save endpoint |
-| UI-DAT-03 Dirty state | 📅 | No session state |
-| UI-DAT-06 Unsaved interception | 📅 | Not implemented |
+| UI-DAT-02 Explicit save | 🔀 | Save button + Ctrl/Cmd+S + Save as… (`/api/project/save-as`); round-trip e2e pending |
+| UI-DAT-03 Dirty state | 🔀 | `saveState.ts` + title/status indicators; state e2e pending |
+| UI-DAT-06 Unsaved interception | 🔀 | `beforeunload` while dirty/failed; in-app navigation guard pending |
 
-**G1 verdict:** 📅 **not ready.** 1 of 25 complete (`UI-INT-02`), 10 partial, 14 absent.
+**G1 verdict:** 📅 **not ready.** 3 of 25 complete (`UI-INT-02`, `UI-INT-09`, `UI-FBK-05`), 18 partial, 4 absent. Project home (`UI-DAT-01`) is the remaining structural blocker.
 
 ## 5. G2 Beta Readiness
 
@@ -115,11 +115,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 
 | # | Issue | Gate | Owner | Requirement |
 |---|---|---|---|---|
-| B1 | Properties panel is a centered floating overlay | G1 | Frontend | UI-SHL-03 |
-| B2 | No project home; no open/new/save-as endpoints | G1 | Backend + Frontend | UI-DAT-01/02 |
-| B3 | No error boundary; any panel exception blanks the app | G1 | Frontend | UI-FBK-06 |
-| B4 | Native browser dialogs used for destructive actions | G1 | Frontend | UI-FBK-05 |
-| B5 | Object names are timestamps | G1 | Frontend | UI-INT-09 |
+| B2 | No project home; no open/new endpoints (save/save-as exist) | G1 | Backend + Frontend | UI-DAT-01 |
 | B6 | Tokens bypassed in 731 places | G2 | Frontend | UI-DS-04 |
 | B7 | No i18n layer | G2 | Frontend | UI-I18N-01 |
 | B8 | No accessibility semantics | G2 | Frontend | UI-A11Y-04 |
@@ -132,6 +128,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 |---|---|---|---|
 | 2026-10-29 | G0 | Contracts drafted (product + ui) | This document set |
 | 2026-10-29 | — | Baseline measured | [FRONTEND_BASELINE](FRONTEND_BASELINE.md) |
+| 2026-10-29 | G1 (partial) | Shell/reliability slice: docked properties, layout persistence, title/status bars, error boundaries, shared dialogs, explicit save/save-as, auto-naming | `web/src/__tests__/{layout,saveState,naming}.test.ts`; Rust `persistence::save_as_retargets_the_session_and_rejects_bad_paths` |
 
 ## 9. Non-Goals
 

@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **Dual-track maintenance obligation**: `FEEDBACK_ERRORS.zh-CN.md` is a maintained translation. Keep section numbering, error-code rules, and requirement IDs aligned in the same change.
 >
-> **Status.** Design contract. Current UI uses browser dialogs in five places and has no error boundary; see [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
+> **Status.** Design contract. Native dialogs are gone (`ConfirmDialog` + `notify`), and error boundaries wrap the app, the workspace and every panel slot; loading/empty/error completeness and a throwing-panel test remain open. See [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
 
 ## 1. Purpose
 

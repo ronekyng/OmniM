@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import type { FeatureItem, SketchResponse } from '../shared/types';
 import { api } from '../shared/api';
+import { notify } from '../shared/toast';
+import { useConfirm } from '../app/components/ConfirmDialog';
 
 type Props = {
   componentId: string;
@@ -18,16 +20,18 @@ const FEATURE_ICONS: Record<string, string> = {
 };
 
 export function FeaturePanel({ componentId, features, sketches, onRefresh, onEditFeature, onSelectSketch, onRebuilt }: Props) {
+  const confirm = useConfirm();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   const handleDeleteFeature = async (featureId: string) => {
-    if (!window.confirm('确定删除这个 Feature？')) return;
+    const ok = await confirm({ title: 'Delete this feature?', confirmLabel: 'Delete', danger: true });
+    if (!ok) return;
     try {
       await api.removeFeature(componentId, featureId);
       onRefresh();
     } catch (e) {
-      alert('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -96,7 +100,7 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
       await api.rebuildComponent(componentId);
       onRefresh();
     } catch (e) {
-      alert('Rebuild 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('Rebuild 失败: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 

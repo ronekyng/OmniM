@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../shared/api';
+import { notify } from '../../shared/toast';
 import type { ComponentDef, ParamDef, Series } from '../../shared/types';
 import { IcoClose } from './Icons';
 import { useAppStore } from '../store/appStore';
@@ -12,6 +13,9 @@ type ParamValues = Record<string, number>;
 export function AvailableComponentsPanel() {
   const setCatalogPanelOpen = useAppStore((s) => s.setCatalogPanelOpen);
   const panelMode = useAppStore((s) => s.panelMode);
+  const markDirty = useAppStore((s) => s.markDirty);
+  const refresh = useAppStore((s) => s.refresh);
+  const reloadScene = useAppStore((s) => s.reloadScene);
 
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const { status, catalog, error: catalogError } = useCatalog();
@@ -105,9 +109,12 @@ export function AvailableComponentsPanel() {
         params: paramValues,
         skip_series_gate: !selectedSeries,
       });
+      markDirty();
+      refresh();
+      reloadScene();
       setCatalogPanelOpen(false);
     } catch (e) {
-      alert('实例化失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error('实例化失败: ' + (e instanceof Error ? e.message : String(e)));
     }
     setInstantiating(false);
   };

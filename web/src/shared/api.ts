@@ -15,6 +15,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   stats: () => request<StatsResponse>('/api/stats'),
+  saveProject: () => request<{ success: boolean; saved: string }>('/api/project/save', { method: 'POST' }),
+  saveProjectAs: (path: string) => request<{ success: boolean; saved: string }>('/api/project/save-as', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  }),
   tree: () => request<TreeNode[]>('/api/tree'),
   object: (id: string) => request<OmniObject>(`/api/objects/${id}`),
   objectTypeProperties: (typeName: string) => request<ObjectPropertyDef[]>(`/api/object-types/${encodeURIComponent(typeName)}/properties`),

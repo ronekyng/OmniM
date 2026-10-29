@@ -191,6 +191,9 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 
 ## 7. 前端界面偏差 — **已知**（2026-10-29）
 
+> **P9 更新（2026-10-29）。** 7.1、7.3、7.5、7.6、7.7 已解决：属性面板默认右停靠、显式保存/另存为已接通、原生弹窗移除、错误边界落地、自动命名有单测。下表保留为审计快照；7.2（项目首页）、7.4（面板三态）、7.8–7.11 仍开放。
+
+
 2026-10-29 对照 `web/src` 审计。以下是 [`specification/ui/`](../specification/ui/IA_SHELL.zh-CN.md)
 中的界面契约与当前代码之间的差距。需求 ID 追溯到
 [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md)。

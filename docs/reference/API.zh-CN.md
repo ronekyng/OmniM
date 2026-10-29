@@ -7,7 +7,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **81 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；82 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **82 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；83 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
 
 ## 目录
 

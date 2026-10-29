@@ -4,12 +4,26 @@ import type { OmniObject, TreeNode } from '../../shared/types';
 import { useNavigate } from 'react-router-dom';
 import { IcoRefresh, IcoAdd, IcoAssy, IcoDelete, IcoUndo, IcoRedo, IcoImport, IcoExport, IcoSketch, IcoCatalog, IcoSeries, IcoGrid } from './Icons';
 import { useToastApi } from '../../shared/toast';
+import { useConfirm } from './ConfirmDialog';
+import { nextAutoName } from '../../shared/naming';
 import { useAppStore } from '../store/appStore';
 import { CreatePanel } from './create/CreatePanel';
 import { AssemblyPanel } from './create/AssemblyPanel';
 import type { ObjectType, GeometryType, CreationForm } from '../../shared/types/creation';
 import { createInitialForm, validateForm, totalPolylineLength, type ValidationResult } from '../../shared/types/creation';
 import { CATALOG_TYPES, GENRULE_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, LINEAR_TYPES, SURFACE_TYPES, PICKING_TYPES, DOMAIN_GROUPS, defaultParamsForDef, ensureCatalogLoaded, getCatalogSnapshot, resolveDef } from '../../shared/catalog';
+
+function flattenTreeNames(nodes: TreeNode[]): string[] {
+  const names: string[] = [];
+  const walk = (list: TreeNode[]) => {
+    for (const node of list) {
+      names.push(node.name);
+      walk(node.children);
+    }
+  };
+  walk(nodes);
+  return names;
+}
 
 export type TransformMode = 'translate' | 'rotate' | 'scale' | null;
 export type CreateFormState = CreationForm;
@@ -35,6 +49,7 @@ export function MainToolbar({
 }: MainToolbarProps) {
   const navigate = useNavigate();
   const toast = useToastApi();
+  const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
@@ -86,7 +101,7 @@ export function MainToolbar({
 
   async function createObjectWith(form: CreationForm) {
     const objectType = form.objectType;
-    const name = form.name || `${objectType}-${Date.now()}`;
+    const name = form.name || nextAutoName(objectType, flattenTreeNames(tree ?? []));
 
     let sx = 0, sy = 0, sz = 0, ex = 0, ey = 0, ez = 0;
     let length = 5;
@@ -351,8 +366,19 @@ export function MainToolbar({
   }
 
   async function importIfc(file: File) {
-    const normalize = confirm('Import IFC and move model to origin?\n\nOK = move to origin\nCancel = keep original coordinates');
-    const replace = confirm('Replace current project with imported IFC?\n\nOK = replace\nCancel = merge into current project');
+    const normalize = await confirm({
+      title: 'Move imported model to origin?',
+      message: 'Cancel keeps the original IFC coordinates.',
+      confirmLabel: 'Move to origin',
+      cancelLabel: 'Keep coordinates',
+    });
+    const replace = await confirm({
+      title: 'Replace the current project?',
+      message: 'Cancel merges the imported objects into the open project.',
+      confirmLabel: 'Replace',
+      cancelLabel: 'Merge',
+      danger: true,
+    });
     const result = await api.importIfc(await file.text(), { normalize, mode: replace ? 'replace' : 'merge' });
     if (!result.success) {
       toast.error(`Import failed: ${result.message}`);

@@ -15,7 +15,7 @@ evidence: "audited against web/src structure on 2026-10-29; recipes reference ta
 
 ## 1. Purpose
 
-The frontend has 20,000 lines, three editor surfaces, and one 1,794-line renderer. This guide shortens the path from "I need to change X" to "here is the file and the check".
+The frontend has 20,000 lines, three editor surfaces, and one 1,823-line renderer. This guide shortens the path from "I need to change X" to "here is the file and the check".
 
 ## 2. Where Things Live
 

@@ -4,6 +4,7 @@ import { ObjectTree } from '../components/ObjectTree';
 import { useAppStore } from '../store/appStore';
 import { useThreeViewer } from '../context/ThreeViewerContext';
 import { api } from '../../shared/api';
+import { nextAutoName, uniqueName } from '../../shared/naming';
 import type { TreeNode } from '../../shared/types';
 
 function findTreeNode(nodes: TreeNode[], id: string): TreeNode | undefined {
@@ -13,6 +14,18 @@ function findTreeNode(nodes: TreeNode[], id: string): TreeNode | undefined {
     if (child) return child;
   }
   return undefined;
+}
+
+function flattenNames(nodes: TreeNode[]): string[] {
+  const names: string[] = [];
+  const walk = (list: TreeNode[]) => {
+    for (const node of list) {
+      names.push(node.name);
+      walk(node.children);
+    }
+  };
+  walk(nodes);
+  return names;
 }
 
 export function ObjectTreePanel() {
@@ -26,6 +39,7 @@ export function ObjectTreePanel() {
   const setPrimaryMeshInfo = useAppStore((s) => s.setPrimaryMeshInfo);
   const refresh = useAppStore((s) => s.refresh);
   const reloadScene = useAppStore((s) => s.reloadScene);
+  const markDirty = useAppStore((s) => s.markDirty);
 
   const handleSelectionChanged = useCallback((ids: string[]) => {
     setSelectedIds(ids);
@@ -42,22 +56,24 @@ export function ObjectTreePanel() {
     const type = parent?.object_type?.toLowerCase() || 'part';
     await api.createObject({
       object_type: type,
-      name: `${type}-child-${Date.now()}`,
+      name: nextAutoName(`${type}-child`, flattenNames(tree)),
       description: '',
       geometry: { operations: [{ operation: { Box: { length: 1, width: 1, height: 1 } } }] },
       parent_id: parentId,
     });
+    markDirty();
     refresh();
     reloadScene();
-  }, [tree, refresh, reloadScene]);
+  }, [tree, markDirty, refresh, reloadScene]);
 
   const handleDuplicate = useCallback(async (id: string) => {
     const node = findTreeNode(tree, id);
-    const name = node ? `${node.name || 'Unnamed'}-copy` : 'copy';
+    const name = node ? uniqueName(`${node.name || 'Unnamed'}-copy`, flattenNames(tree)) : 'copy';
     await api.duplicateObject(id, name, '');
+    markDirty();
     refresh();
     reloadScene();
-  }, [tree, refresh, reloadScene]);
+  }, [tree, markDirty, refresh, reloadScene]);
 
   const handleDelete = useCallback(async (id: string) => {
     const response = await api.deleteObject(id);
@@ -65,15 +81,17 @@ export function ObjectTreePanel() {
     if (selectedIds.includes(id)) {
       setSelectedIds((prev) => prev.filter((prevId) => prevId !== id));
     }
+    markDirty();
     refresh();
     reloadScene();
-  }, [selectedIds, setSelectedIds, refresh, reloadScene]);
+  }, [selectedIds, setSelectedIds, markDirty, refresh, reloadScene]);
 
   const handleReparent = useCallback(async (childId: string, newParentId: string | null) => {
     await api.setParent(childId, newParentId);
+    markDirty();
     refresh();
     reloadScene();
-  }, [refresh, reloadScene]);
+  }, [markDirty, refresh, reloadScene]);
 
   const handleEditComponent = useCallback((id: string) => {
     navigate(`/component-editor?component=${id}`);

@@ -22,6 +22,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — G1 alpha shell and reliability (P9-S1)
+
+### Added
+- **Docked workspace shell**: properties dock on the right by default (260–600 px), width and dock mode persist in `localStorage` under `omnim.layout.v1`, and **Reset layout** restores the documented defaults. A blocking notice appears below 1024 px.
+- **Title bar and status bar**: project name with dirty mark, breadcrumb (`Project / Workspace / tool`), explicit **Save** / **Save as…**, and a read-only status bar with cursor coordinates, selection, units and save state (FPS only in developer mode).
+- **Error isolation**: application-, workspace- and panel-scoped `ErrorBoundary`; a crashing panel keeps the shell usable and offers Retry.
+- **Shared dialog + notification layer**: `ConfirmDialog` (Escape cancels, Enter confirms) replaces every native dialog; `notify` lets non-hook modules raise typed toasts. Error toasts now persist until dismissed.
+- **Explicit save state machine**: `saveState.ts` (clean/dirty/saving/failed, last-saved clock), `Ctrl/Cmd+S`, `beforeunload` interception while dirty, and `POST /api/project/save-as` (validates `.omnim`, retargets the session).
+- **Auto-naming**: `naming.ts` implements `Type-nnn` with lowest-free reuse and duplicate suffixes, wired to creation, quick-create, child objects, duplication and drag-instantiation.
+
+### Changed
+- Routes: 82 unique paths / 83 registrations (added `/api/project/save-as`).
+- Frontend tests: 8 files / 91 tests; Rust 450. UI contract scan: native dialogs 0.
+
+### Fixed
+- Removed the parallel-test race behind the intermittent `test_find_and_rebuild_catalog_instances` failure: tests that may re-seed the global `LIBRARY` now serialize through `LIBRARY_TEST_LOCK`.
+
+### Not implemented (known gaps)
+- Project home (`/projects`) and open/new endpoints (`UI-DAT-01`); in-app navigation guard for unsaved changes (`UI-DAT-06` is `beforeunload` only); dark/light theme (`UI-DS-02`); loading/empty states and editor breadcrumbs.
+
 ## [2026-10-29] — Frontend documentation baseline (G0)
 
 ### Added

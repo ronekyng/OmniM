@@ -134,3 +134,51 @@ fn tempfile_dir(tag: &str) -> std::path::PathBuf {
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
+
+#[tokio::test]
+async fn save_as_retargets_the_session_and_rejects_bad_paths() {
+    let dir = tempfile_dir("persist_save_as");
+    let (port, _project, original) = test_server_with(&dir).await;
+    let client = reqwest::Client::new();
+    let target = dir.join("retargeted.omnim");
+
+    let resp = client
+        .post(api_url(port, "/api/project/save-as"))
+        .json(&serde_json::json!({ "path": target.to_string_lossy() }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "{}", resp.text().await.unwrap());
+    assert!(target.exists(), "save-as must write the new file");
+
+    // The session now persists mutations to the new target.
+    let resp = client
+        .post(api_url(port, "/api/objects"))
+        .json(&serde_json::json!({ "object_type": "wall", "name": "W-as" }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let reloaded = Project::load(target.to_str().unwrap()).expect("retargeted file loads");
+    assert!(reloaded.objects.list().iter().any(|o| o.name == "W-as"));
+    let original_reloaded =
+        Project::load(original.to_str().unwrap()).unwrap_or_else(|_| Project::new("empty"));
+    assert!(
+        !original_reloaded
+            .objects
+            .list()
+            .iter()
+            .any(|o| o.name == "W-as"),
+        "the old target must not receive later mutations"
+    );
+
+    let resp = client
+        .post(api_url(port, "/api/project/save-as"))
+        .json(&serde_json::json!({ "path": dir.join("wrong.txt").to_string_lossy() }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+
+    std::fs::remove_dir_all(&dir).ok();
+}
