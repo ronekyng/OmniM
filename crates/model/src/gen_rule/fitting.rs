@@ -66,6 +66,10 @@ mod tests {
         assert!((center[2] - 3.0).abs() < 1e-6);
         // Tessellated sphere: never wider than 2r, and close to it.
         let width = mx[0] - mn[0];
-        assert!(width <= 0.4 + 1e-6 && width > 0.35, "diameter ~2r: {}", width);
+        assert!(
+            width <= 0.4 + 1e-6 && width > 0.35,
+            "diameter ~2r: {}",
+            width
+        );
     }
 }

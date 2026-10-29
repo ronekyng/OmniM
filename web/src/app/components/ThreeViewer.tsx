@@ -14,6 +14,7 @@ import { LAYERED_TYPES } from '../../shared/catalog';
 import { previewFormFor } from '../../shared/types/creation';
 import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayeredWallPreview, addPolygonFill, addPlaceCursor, addPathPreview } from './viewer/three/Markers';
 import { renderDatumGrids, clearDatumGridGroup } from './viewer/three/DatumGrids';
+import { meshVisibleOnStorey } from '../../shared/storeyView';
 import { polygonPreviewError } from '../../shared/creation/polyline';
 import { pickGroundPoint, pickingHint, requiredClicks } from './viewer/three/Picking';
 import { SnapIndicator } from './viewer/three/SnapIndicator';
@@ -144,6 +145,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   const creationObjectType = useAppStore((s) => s.creationObjectType);
   const creationPoints = useAppStore((s) => s.creationPoints);
   const creationForm = useAppStore((s) => s.creationForm);
+  const activeStoreyId = useAppStore((s) => s.activeStoreyId);
   creationPhaseRef.current = creationPhase;
   creationObjectTypeRef.current = creationObjectType;
   creationPointsRef.current = creationPoints;
@@ -1044,7 +1046,7 @@ focusObject: (id) => {
     host.addEventListener('drop', onDrop);
     animate();
 
-    void loadMeshes(viewer).then(() => {
+    void loadMeshes(viewer, activeStoreyId).then(() => {
       applyVisualMode(viewer, visualMode);
       applySection(viewer, section);
       selectMeshes(viewer, selectedIds);
@@ -1119,7 +1121,7 @@ focusObject: (id) => {
       void loadMeasurements(viewer);
       void loadDatumGrids(viewer);
     });
-  }, [reloadToken]);
+  }, [reloadToken, activeStoreyId]);
 
   return (
     <div ref={hostRef} className={`three-viewer ${viewerStyles.threeViewer}`}>
@@ -1135,12 +1137,14 @@ focusObject: (id) => {
 let measurePreviewObjects: THREE.Object3D[] = [];
 
 let loadGen = 0;
-async function loadMeshes(viewer: ViewerState) {
+async function loadMeshes(viewer: ViewerState, storeyId: string | null = null) {
   const gen = ++loadGen;
   disposeMeshes(viewer);
   const mesh = await api.mesh();
   if (gen !== loadGen) return;
   for (const object of mesh.objects) {
+    // P8-S4 storey view: hide objects assigned to other storeys.
+    if (!meshVisibleOnStorey(object, storeyId)) continue;
     const viewMesh = createMesh(object);
     viewer.group.add(viewMesh);
     viewer.meshes.set(object.id, viewMesh);

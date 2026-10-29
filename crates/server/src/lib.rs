@@ -3675,6 +3675,10 @@ struct MeshObject {
     normals: Vec<f32>,
     bbox_min: [f32; 3],
     bbox_max: [f32; 3],
+    /// P8-S4: storey association, so the viewport can filter by level.
+    level_id: Option<String>,
+    bottom_level_id: Option<String>,
+    elevation: Option<f64>,
 }
 
 async fn get_mesh(State(state): State<SharedState>) -> Json<MeshResponse> {
@@ -3737,6 +3741,9 @@ async fn get_mesh(State(state): State<SharedState>) -> Json<MeshResponse> {
                     id: obj.id.clone(),
                     name: obj.name.clone(),
                     object_type: obj.object_type_name().to_string(),
+                    level_id: obj.level_id.clone(),
+                    bottom_level_id: obj.bottom_level_id.clone(),
+                    elevation: obj.elevation,
                     vertex_count: positions.len() as u32 / 3,
                     triangle_count,
                     positions,

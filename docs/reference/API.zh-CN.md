@@ -318,10 +318,11 @@ curl -sS -X PUT "$BASE/api/objects/obj-1/material" -H 'Content-Type: application
     "vertex_count": 8, "triangle_count": 12,
     "positions": [/* f32 x,y,z 顺序展开的一维数组 */],
     "normals":   [/* f32 平铺的三元组 */],
-    "bbox_min": [0,0,0], "bbox_max": [5,3,0.3] }
+    "bbox_min": [0,0,0], "bbox_max": [5,3,0.3],
+    "level_id": null, "bottom_level_id": "storey-uuid", "elevation": 0.0 }
   ```
 
-  只包含有几何的对象；这是 Web 查看器（`web/src/shared/api.ts`）加载时消费的批量端点。
+  只包含有几何的对象；这是 Web 查看器（`web/src/shared/api.ts`）加载时消费的批量端点。`level_id`/`bottom_level_id`/`elevation`（P8-S4）供楼层视图选择器在客户端过滤视口。
 
 ## IFC 导入与导出
 

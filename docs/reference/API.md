@@ -318,10 +318,11 @@ Grid lines (轴网) are **datum annotations, not objects** — they carry no mes
     "vertex_count": 8, "triangle_count": 12,
     "positions": [/* flat f32 x,y,z triplets */],
     "normals":   [/* flat f32 triplets */],
-    "bbox_min": [0,0,0], "bbox_max": [5,3,0.3] }
+    "bbox_min": [0,0,0], "bbox_max": [5,3,0.3],
+    "level_id": null, "bottom_level_id": "storey-uuid", "elevation": 0.0 }
   ```
 
-  Only objects with geometry are included; this is the bulk endpoint the web viewer (`web/src/shared/api.ts`) consumes on load.
+  Only objects with geometry are included; this is the bulk endpoint the web viewer (`web/src/shared/api.ts`) consumes on load. `level_id`/`bottom_level_id`/`elevation` (P8-S4) let the storey-view selector filter the viewport client-side.
 
 ## IFC Import and Export
 

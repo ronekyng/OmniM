@@ -330,3 +330,27 @@ async fn deleting_a_referenced_storey_is_rejected() {
         .unwrap();
     assert_eq!(resp.status().as_u16(), 200);
 }
+
+#[tokio::test]
+async fn mesh_objects_carry_storey_association_for_the_viewer() {
+    let port = test_server().await;
+    let f1 = make_storey(port, "F1", 0.0).await;
+    let f2 = make_storey(port, "F2", 3.9).await;
+    let (status, body) = make_wall(port, "W-view", &f1, &f2).await;
+    assert_eq!(status, 200, "{}", body);
+    let wall_id = json_of(&body)["id"].as_str().unwrap().to_string();
+
+    let mesh = get_json(port, "/api/mesh").await;
+    let entry = mesh["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["id"] == wall_id.as_str())
+        .expect("wall mesh entry");
+    assert_eq!(
+        entry["bottom_level_id"], f1,
+        "storey view needs the association"
+    );
+    assert_eq!(entry["level_id"], serde_json::Value::Null);
+    assert_eq!(entry["elevation"], 0.0);
+}

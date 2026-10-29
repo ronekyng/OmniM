@@ -91,6 +91,10 @@ export type MeshObject = {
   normals: number[];
   bbox_min: [number, number, number];
   bbox_max: [number, number, number];
+  /** Storey association (P8-S4 storey view). */
+  level_id?: string | null;
+  bottom_level_id?: string | null;
+  elevation?: number | null;
 };
 
 export type MeshResponse = {

@@ -22,6 +22,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Storey view + section link (P8-S4c)
+
+### Added
+- **Storey view selector** in the viewer toolbar: "全部楼层" plus one entry per `BuildingStorey` (labelled with its elevation). Selecting a storey filters the viewport to objects associated with it (`level_id`, falling back to `bottom_level_id`; unassigned geometry stays visible) and enables a plan section cut 1.2 m above the storey datum. Clearing the selection restores everything and disables the storey-driven section.
+- **`/api/mesh` carries storey association** (`level_id`, `bottom_level_id`, `elevation`) so the filter is client-side; the mesh endpoint shape is otherwise unchanged.
+
 ## [2026-10-29] — Pipe instance connectors + elbow fittings (P8-S4b)
 
 ### Added

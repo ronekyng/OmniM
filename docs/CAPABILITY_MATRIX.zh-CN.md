@@ -109,6 +109,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 ## 6. 覆盖说明与核对来源
 
 - **领域总数**（[DOMAINS](specification/DOMAINS.zh-CN.md)、[COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)）：**156 列出 / 52 进 proto / 104 仅计划**（P8 追加 `ObjectType::Opening`）。建筑 38（23 进 proto）、土木 41（10）、工厂 39（11）、机械 38（8）。
+- **楼层视图（P8-S4）**：视口工具栏选择器按楼层过滤网格（`level_id`/`bottom_level_id`，未挂接几何保持可见），并把剖切面置于该楼层标高 +1.2 m；`/api/mesh` 暴露这些字段。
 - **服务端规模**：**83 条去重 REST 路由**（[API](reference/API.zh-CN.md)；2026-10-29 P8-S1 新增 4 条轴网基准端点）；**无 WebSocket、无数据库**。单个内存 `Project`，可选 JSON 文件。
 - **持久化**：2026-10-28 起默认开启——`$OMNIM_PROJECT`/`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`。所有变更端点都会保存，包括变换/改父级/连接、材质、测量、系列/目录编辑、实例化与 IFC 导入。
 - **撤销**：所有变更端点均可撤销，包括变换、属性、父子/连接、材质、目录实例化、IFC 导入与系列编辑（[WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)）。

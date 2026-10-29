@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../shared/api';
 import { MainToolbar } from './components/MainToolbar';
 import { SectionPanel } from './components/SectionPanel';
+import { StoreyViewSelect } from './components/StoreyViewSelect';
 import { ThreeViewer, type ThreeViewerHandle } from './components/ThreeViewer';
 import { ViewCube3D } from './components/ViewCube3D';
 import { ToastContainer } from './components/ToastContainer';
@@ -215,6 +216,7 @@ export function App() {
                 <button className={measureMode === 'angle' ? 'active' : ''} onClick={() => { setMeasureMode((prev) => prev === 'angle' ? 'none' : 'angle'); viewerRef.current?.clearMeasurements(); }} title="Measure angle"><IcoMeasureAngle /></button>
                 <button className={measureMode === 'area' ? 'active' : ''} onClick={() => { setMeasureMode((prev) => prev === 'area' ? 'none' : 'area'); viewerRef.current?.clearMeasurements(); }} title="Measure area (right-click to finish)"><IcoMeasureArea /></button>
                 <span className="separator" />
+                <StoreyViewSelect />
                 <button className={section.enabled ? 'active' : ''} onClick={() => setSection((v) => ({ ...v, enabled: !v.enabled }))} title="Section cut"><IcoSection /></button>
                 <button onClick={() => viewerRef.current?.fit()} title="Fit view (F)"><IcoFit /></button>
                 <button onClick={() => { viewerRef.current?.home(); }} title="Home view (H)"><IcoHome /></button>

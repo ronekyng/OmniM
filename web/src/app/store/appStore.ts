@@ -16,6 +16,9 @@ export type AppState = {
   section: SectionState;
   measureMode: MeasureMode;
   reloadToken: number;
+  /** Active storey view filter (P8-S4); null = show every storey. */
+  activeStoreyId: string | null;
+  setActiveStorey: (id: string | null) => void;
   gridVisible: boolean;
   isOrtho: boolean;
   transformSpace: 'world' | 'local';
@@ -79,6 +82,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
     section: { enabled: false, axis: 'x', value: 0 },
     measureMode: 'none' as MeasureMode,
     reloadToken: 0,
+    activeStoreyId: null,
     gridVisible: true,
     isOrtho: false,
     transformSpace: 'world',
@@ -122,6 +126,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
       else set({ measureMode: mode });
     },
     reloadScene: () => set((s) => ({ reloadToken: s.reloadToken + 1 })),
+    setActiveStorey: (id) => set({ activeStoreyId: id }),
     setGridVisible: (v) => {
       if (typeof v === 'function') set((s) => ({ gridVisible: (v as (prev: boolean) => boolean)(s.gridVisible) }));
       else set({ gridVisible: v });
