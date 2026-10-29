@@ -22,6 +22,19 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 建筑基准：楼层标高与轴网（P8-S1）
+
+### 新增（Added）
+- **楼层标高**：`OmniObject.elevation`（可选，米，对应 IfcBuildingStorey.Elevation），创建/更新均可携带；web 创建面板为 `storey` 提供标高输入（允许负值表示地下室）。
+- **标高挂接**：`OmniObject.level_id` —— 对象可挂接到既有 `BuildingStorey`；omcom 校验器拒绝未知 id 与非楼层目标（400 附理由）。`top_level_id`/`bottom_level_id` 高度自动调整仍为计划项（DATA_MODEL §5.8 注）。
+- **轴网基准**（`Project.grids`，新模块 `crates/model/src/grid.rs`）：轴线是基准注记而非对象——`POST/GET /api/grids`、`PUT/DELETE /api/grids/{id}`，同轴族标签唯一（`along_x` 数字族 / `along_y` 字母族），列表排序输出，经三个新 op（omcom oneof 74–76、Action 231–233）撤销/重做，随项目落盘（serde default 保证旧 `.omnim` 文件可加载）。
+- **Web**：storey 标高字段与校验；`createInitialForm('storey')` 现默认 `IfcBuildingStorey`（此前误为 `IfcWall`）且标高 `0`。
+
+### 修复（Fixed）
+- **`ModifyObject` 撤销现覆盖全部可修改字段** —— Wave 1 缺口：`ifc_class`/`tags` 编辑此前不可还原、redo 为空操作；命令现携带 after 镜像，撤销/重做对称（P8 字段顺带覆盖）。
+- **`POST /api/objects` 校验失败返回 400 与校验理由**（此前是无提示的 500）。
+- 文档：能力矩阵"78 条路由"为 Wave 1 前的陈旧值——路由数现已统一为 **83**（API.md 与矩阵，中英同步）。
+
 ## [2026-10-28] — 系列与连接强制性（Wave 4）
 
 ### 新增（Added）

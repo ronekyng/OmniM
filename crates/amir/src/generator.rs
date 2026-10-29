@@ -176,6 +176,8 @@ impl OmcomGenerator {
                 geometry: geom,
                 properties: vec![],
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         };
 
@@ -309,6 +311,8 @@ impl OmcomGenerator {
                 new_name,
                 new_description: new_desc,
                 new_geometry: None,
+                new_elevation: None,
+                new_level_id: None,
             })),
         };
         cmd.operations.push(op);

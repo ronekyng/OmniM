@@ -236,6 +236,14 @@ export function CreatePanel({
           <DoorWindowFields form={form} errors={errors} onChange={handleChange} />
         )}
 
+        {form.objectType === 'storey' && (
+          <div className="create-row create-row--labeled">
+            <span className="field-label">标高</span>
+            <input placeholder="m（可为负）" value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
+            {errors.elevation && <span className="field-error">{errors.elevation}</span>}
+          </div>
+        )}
+
         {isPrimitive && (
           <div className="create-row create-row--labeled">
             <select value={form.geometryType} onChange={(e) => handleGeometryTypeChange(e.target.value as GeometryType)}>

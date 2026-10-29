@@ -61,6 +61,7 @@ All of these are undoable and persist by default.
 | Series | create/update/delete series, selectors, answers, spec components, param constraints add/update/delete, save/load | ✅ | ✅ | 4 |
 | Lifecycle | create record, link record to object | ✅ | ✅ | 4 |
 | Measurements | create/delete | ✅ | ✅ | 4 |
+| Grid datum (P8-S1) | `POST/GET /api/grids`, `PUT/DELETE /api/grids/{id}` | ✅ | ✅ | P8-S1 |
 | Administrative / breakdown | create/delete division, create/delete node, link object, link division | ✅ | ✅ | 4 |
 | Catalog instantiation | `/api/catalog/instantiate` (object + generated sketches as one command) | ✅ | ✅ | 5 |
 | IFC import | `/api/import/ifc` (whole-project transaction, merge or replace) | ✅ | ✅ | 5 |
@@ -86,6 +87,11 @@ All of these are undoable and persist by default.
   not fail the request — the in-memory mutation and its undo entry already exist.
 - **Explicit save**: `POST /api/project/save` flushes on demand and returns the
   path; it responds 400 when persistence is disabled.
+- **Object datum fields (P8-S1)**: `elevation`/`level_id` ride the normal
+  create/update object commands; the `ModifyObject` undo snapshot now covers
+  **every** modifiable field (this closed a Wave 1 gap where `ifc_class`/`tags`
+  edits were not restored) and redo replays the after-image. `POST /api/objects`
+  returns **400 with the validator's reason** (previously a bare 500).
 
 ## Verification
 

@@ -100,14 +100,15 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **Site** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSite) | ✅ |
 | **Building** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuilding) | ✅ |
-| **BuildingStorey** | — (container) | ✅ Create panel ("storey") | 🔀 name only; no elevation/level system | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuildingStorey) | ✅ |
+| **BuildingStorey** | — (container) | ✅ Create panel ("storey"); elevation input (P8-S1) | ✅ datum `elevation` (m, IfcBuildingStorey.Elevation); 🔀 `level_id` attachment is API-only (`POST/PUT /api/objects`); height auto-adjust (`top/bottom_level_id`) 🗓 planned | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuildingStorey, elevation value not yet exported) | ✅ |
+| **轴网 Grid (datum)** | — (datum annotation, not an object) | ❌ API only (`/api/grids`) | ✅ label/axis/coordinate CRUD, per-family unique labels, undoable | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓 (IfcGrid planned) | ✅ |
 | **Space** | — (container; primitive box) | ✅ Create panel | 🔀 primitive dimensions | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSpace) | ✅ |
 | **Zone** | — (planned) | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |
 
 ## 6. Coverage Notes and Verification
 
 - **Domain totals** ([DOMAINS](specification/DOMAINS.md), [COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)): **155 listed / 51 in proto / 104 planned-only**. Building 37 (22 in proto), Civil 41 (10), Plant 39 (11), Mechanical 38 (8).
-- **Server surface**: **78 deduplicated REST routes** ([API](reference/API.md)); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
+- **Server surface**: **83 deduplicated REST routes** ([API](reference/API.md); 2026-10-29 P8-S1 +4 grid-datum endpoints); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
 - **Persistence**: on by default (2026-10-28) — `$OMNIM_PROJECT`/`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`. All mutating endpoints save, including transform/parent/connect, materials, measurements, series/catalog edits, instantiation and IFC import.
 - **Undo**: every mutating endpoint is undoable, including transform, properties, parent/connect, material, catalog instantiation, IFC import and series edits ([WRITE_PATHS](architecture/WRITE_PATHS.md)).
 - **IFC**: IFC 2x3 / IFC 4 subset only, hand-written parser/writer; no material, quantity or classification mapping. Stair and Roof import with their type but export as `IfcBuildingElementProxy`; all non-building types export as proxy ([FORMAT_COMPAT](status/FORMAT_COMPAT.md)).

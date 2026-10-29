@@ -68,6 +68,8 @@ export type CreationForm = {
   columnMode: ColumnMode;
   /** Column height in metres (single-point mode). */
   columnHeight: string;
+  /** Datum elevation in metres (storey creation, P8-S1). */
+  elevation: string;
   geometryType: GeometryType;
   p1: string; p2: string; p3: string;
   length: string; height: string; width: string;
@@ -142,6 +144,7 @@ export const DEFAULT_FORM: CreationForm = {
   roofMode: 'footprint',
   columnMode: 'place',
   columnHeight: '4',
+  elevation: '0',
 };
 
 export type ValidationResult = {
@@ -158,6 +161,10 @@ export function validateForm(form: CreationForm): ValidationResult {
     if (isNaN(w) || w <= 0) errors.openingWidth = '开口宽度必须大于 0';
     const h = parseFloat(form.openingHeight);
     if (isNaN(h) || h <= 0) errors.openingHeight = '开口高度必须大于 0';
+  }
+  if (form.objectType === 'storey') {
+    // Elevation may be negative (basement levels), but must be a number.
+    if (isNaN(parseFloat(form.elevation))) errors.elevation = '标高必须是数字';
   }
   return { valid: Object.keys(errors).length === 0, errors };
 }
@@ -317,6 +324,7 @@ export function createInitialForm(type: ObjectType, points: Point3D[] = []): Cre
   const form: CreationForm = { ...DEFAULT_FORM, objectType: type };
   if (type === 'door') form.ifcClass = 'IfcDoor';
   else if (type === 'window') form.ifcClass = 'IfcWindow';
+  else if (type === 'storey') { form.ifcClass = 'IfcBuildingStorey'; form.elevation = '0'; }
   else if (type === 'wall') form.ifcClass = 'IfcWall';
   else if (type === 'slab') form.ifcClass = 'IfcSlab';
   else if (type === 'beam') form.ifcClass = 'IfcBeam';

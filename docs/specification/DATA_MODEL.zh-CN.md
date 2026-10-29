@@ -262,7 +262,7 @@ enum ObjectStatus {
 }
 ```
 
-> **当前已实现**（Rust 结构体，`crates/model/src/object.rs`）：`id`、`name`、`description`、`object_type`、`status`、`properties`、`property_sets`、`geometry`、`material_id`（可选；上文以 `material` 表示）、`parent_id`（结构树父节点）、`tags`、`ifc_class`，以及建模字段 `features`、`sketch_ids`、`dirty`、`catalog_ref`。上方 `ObjectStatus` 取值与 `proto/omnim.proto` 完全一致。
+> **当前已实现**（Rust 结构体，`crates/model/src/object.rs`）：`id`、`name`、`description`、`object_type`、`status`、`properties`、`property_sets`、`geometry`、`material_id`（可选；上文以 `material` 表示）、`parent_id`（结构树父节点）、`tags`、`ifc_class`、建模字段 `features`、`sketch_ids`、`dirty`、`catalog_ref`，以及建筑基准字段 **`elevation`**（可选 f64，米——对 `BuildingStorey` 有意义，对应 IfcBuildingStorey.Elevation，P8-S1）与 **`level_id`**（可选——挂接到某个 `BuildingStorey` 对象；服务端校验目标类型）。上方 `ObjectStatus` 取值与 `proto/omnim.proto` 完全一致。
 >
 > **🗓 计划中的字段**（结构体与 proto 均未有）：`transform`（每对象世界变换；当前通过 API `PUT /api/objects/{id}/transform` 在接口层应用）、`created_at`/`created_by`、`modified_at`/`modified_by`、`version_id`、`previous_version_id`（版本/审计记录见 §10，本身也是设计规范）、`ad_id`（§18）、`pbs_ids`（§19）、`crs_id`（§21）。
 
@@ -1098,7 +1098,7 @@ message ExternalTarget {
 
 **钢筋作为 LinearComponent**（源自 Tekla Structures，`docs/research/tekla_components.md §6.1`）：配筋（Rebar）是带圆形截面沿路径（直线或弯折）扫掠的 LinearComponent。除基础 LinearComponent 参数外，关键参数包括：Size（直径）、Grade（等级，如 B500B）、RadiusValues（弯曲半径）、OnPlaneOffsets / FromPlaneOffset（定位）、StartHook / EndHook（弯钩角度）、SpliceType / SpliceOffsets（搭接）、StirrupType（箍筋 vs 非箍筋）、ExcludeType（分布模式）。钢筋修改器（RebarPropertyModifier、RebarSplitter、RebarEndDetailModifier）作为特征引擎中的后生成特征操作来建模。
 
-**标高约束的竖向范围**（源自 Revit，`docs/research/revit_components.md §5.1`）：建筑竖向构件（墙/板/屋顶）约束到标高（顶部/底部）而非绝对高度。LinearComponentGen 支持 `top_level_id` / `bottom_level_id` 约束概念，以实现建筑领域对等：竖向范围相对于命名的标高高度解析，使得标高变化时高度可自动调整。
+**标高约束的竖向范围**（源自 Revit，`docs/research/revit_components.md §5.1`）：建筑竖向构件（墙/板/屋顶）约束到标高（顶部/底部）而非绝对高度。LinearComponentGen 支持 `top_level_id` / `bottom_level_id` 约束概念，以实现建筑领域对等：竖向范围相对于命名的标高高度解析，使得标高变化时高度可自动调整。**现状（2026-10-29，P8-S1）**：基准底座已落地——楼层对象的 `OmniObject.elevation`、单一 `level_id` 挂接（服务端校验，未知/非楼层目标 400）与轴网基准存储（`Project.grids`，`/api/grids` CRUD）。**顶部/底部标高约束与高度自动调整仍为 🗓 计划中**——当前 `level_id` 只是记录性关联，不驱动几何。
 
 **连接点到连接点的创建模式**（源自 Revit，`docs/research/revit_components.md §7`）：Revit 中的 MEP 构件（管道/风管/电缆桥架）通过选择起点和终点连接器创建，而非仅指定路径。这是线构件的一种额外创建模式：用户不是在现有构件上拾取两个连接器，而是指定几何路径，系统在两者之间自动敷设路径（尊重坡度、净距和连接类型规则）。`main_path` 随后自动生成，而非用户指定。
 

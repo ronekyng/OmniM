@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { creationReducer, initialCreationState, type CreationState, type CreationAction } from '../shared/creation/stateMachine';
-import { DEFAULT_LAYERS_WALL, type ObjectType, type Point3D, type CreationForm } from '../shared/types/creation';
+import { DEFAULT_LAYERS_WALL, createInitialForm, validateForm, type ObjectType, type Point3D, type CreationForm } from '../shared/types/creation';
 
 const mockForm: CreationForm = {
   objectType: 'wall',
@@ -31,6 +31,7 @@ const mockForm: CreationForm = {
   roofMode: 'footprint',
   columnMode: 'place',
   columnHeight: '4',
+  elevation: '0',
 };
 
 function expectState(
@@ -59,6 +60,22 @@ function expectIllegal(
 ) {
   expect(() => creationReducer(from, action)).toThrow(/Illegal transition/);
 }
+
+describe('storey datum (P8-S1)', () => {
+  it('initial storey form carries elevation 0 and IfcBuildingStorey class', () => {
+    const form = createInitialForm('storey');
+    expect(form.elevation).toBe('0');
+    expect(form.ifcClass).toBe('IfcBuildingStorey');
+  });
+
+  it('storey elevation accepts negative basements but rejects non-numbers', () => {
+    const base = createInitialForm('storey');
+    expect(validateForm({ ...base, elevation: '-3.5' }).valid).toBe(true);
+    const result = validateForm({ ...base, elevation: 'abc' });
+    expect(result.valid).toBe(false);
+    expect(result.errors.elevation).toBeTruthy();
+  });
+});
 
 describe('creationReducer', () => {
   describe('idle phase', () => {

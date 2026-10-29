@@ -363,6 +363,26 @@ impl Validator {
                         if !co.parent_id.is_empty() && !project.objects.contains(&co.parent_id) {
                             errors.push(format!("parent object '{}' not found", co.parent_id));
                         }
+                        // P8-S1: level_id must reference a BuildingStorey datum
+                        if let Some(lid) = &co.level_id {
+                            if !lid.is_empty() {
+                                match project.objects.get(lid) {
+                                    None => {
+                                        errors.push(format!("level object '{}' not found", lid))
+                                    }
+                                    Some(lvl)
+                                        if lvl.object_type
+                                            != omnim_core::ObjectType::BuildingStorey as i32 =>
+                                    {
+                                        errors.push(format!(
+                                            "level_id '{}' is not a BuildingStorey (type {})",
+                                            lid, lvl.object_type
+                                        ));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
                         // Spatial conflict detection: log as warning, not blocking error
                         // (overlaps are common in multi-discipline engineering: pipes through walls, columns in walls, etc.)
                         if let Some(pg) = &co.geometry {
@@ -382,6 +402,62 @@ impl Validator {
                     c::operation::Op::ModifyObject(mo) => {
                         if !project.objects.contains(&mo.object_id) {
                             errors.push(format!("modify target '{}' not found", mo.object_id));
+                        }
+                        // P8-S1: new_level_id must reference a BuildingStorey
+                        if let Some(lid) = &mo.new_level_id {
+                            if !lid.is_empty() {
+                                match project.objects.get(lid) {
+                                    None => {
+                                        errors.push(format!("level object '{}' not found", lid))
+                                    }
+                                    Some(lvl)
+                                        if lvl.object_type
+                                            != omnim_core::ObjectType::BuildingStorey as i32 =>
+                                    {
+                                        errors.push(format!(
+                                            "level_id '{}' is not a BuildingStorey (type {})",
+                                            lid, lvl.object_type
+                                        ));
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                    }
+                    // 2026-10-29 P8-S1: grid datum validation
+                    c::operation::Op::CreateGridLine(cg) => {
+                        if cg.label.trim().is_empty() {
+                            errors.push("grid label is empty".into());
+                        }
+                        let axis = omnim_core::GridAxis::try_from(cg.axis);
+                        if axis.is_err() || axis.unwrap() == omnim_core::GridAxis::Unspecified {
+                            errors.push("grid axis is unspecified".into());
+                        }
+                        if project.grids.label_taken(cg.label.trim(), {
+                            match axis {
+                                Ok(omnim_core::GridAxis::AlongY) => {
+                                    omnim_model::grid::GridAxis::AlongY
+                                }
+                                _ => omnim_model::grid::GridAxis::AlongX,
+                            }
+                        }) {
+                            errors.push(format!(
+                                "grid label '{}' already used on this axis",
+                                cg.label.trim()
+                            ));
+                        }
+                    }
+                    c::operation::Op::UpdateGridLine(ug) => {
+                        if project.grids.get(&ug.grid_line_id).is_none() {
+                            errors.push(format!("grid line '{}' not found", ug.grid_line_id));
+                        }
+                        if ug.label.trim().is_empty() {
+                            errors.push("grid label is empty".into());
+                        }
+                    }
+                    c::operation::Op::DeleteGridLine(dg) => {
+                        if project.grids.get(&dg.grid_line_id).is_none() {
+                            errors.push(format!("grid line '{}' not found", dg.grid_line_id));
                         }
                     }
                     c::operation::Op::CopyObject(co) => {
@@ -692,10 +768,13 @@ pub enum Command {
     DeleteObject {
         snapshot: ObjectSnapshot,
     },
-    /// 修改对象 — undo 时恢复原始值
+    /// 修改对象 — undo 恢复 before 快照，redo 重放 after 镜像。
+    /// 快照覆盖 ModifyObject 可及的全部字段（P8-S1 起 incl. elevation/level_id；
+    /// 并修复 Wave 1 Slice 2 的 ifc_class/tags 不可 undo 缺口）。
     ModifyObject {
         object_id: String,
         snapshot: ObjectSnapshot,
+        after: OmniObject,
     },
     /// 设置属性 — undo 时恢复或删除
     SetProperty {
@@ -987,6 +1066,17 @@ pub enum Command {
     DeleteMeasurement {
         measurement: omnim_model::Measurement,
     },
+    // 2026-10-29 P8-S1: grid datum commands
+    CreateGridLine {
+        grid_line: omnim_model::grid::GridLine,
+    },
+    UpdateGridLine {
+        before: omnim_model::grid::GridLine,
+        after: omnim_model::grid::GridLine,
+    },
+    DeleteGridLine {
+        grid_line: omnim_model::grid::GridLine,
+    },
     // 2026-10-28 Wave 1 Slice 4: administrative division commands
     CreateAdministrativeDivision {
         division: omnim_model::AdministrativeDivision,
@@ -1093,6 +1183,12 @@ impl Executor {
                         if !co.parent_id.is_empty() {
                             obj.parent_id = Some(co.parent_id.clone());
                         }
+                        // P8-S1: building datum fields
+                        obj.elevation = co.elevation;
+                        obj.level_id = match &co.level_id {
+                            Some(lid) if !lid.is_empty() => Some(lid.clone()),
+                            _ => None,
+                        };
                         for prop in &co.properties {
                             obj.properties.push(prop.clone());
                         }
@@ -1136,9 +1232,22 @@ impl Executor {
                             if let Some(tags) = &mo.new_tags {
                                 obj.tags = tags.values.clone();
                             }
+                            // P8-S1: datum edits (Some("") clears level_id)
+                            if let Some(ne) = mo.new_elevation {
+                                obj.elevation = Some(ne);
+                            }
+                            if let Some(nl) = &mo.new_level_id {
+                                obj.level_id = if nl.is_empty() {
+                                    None
+                                } else {
+                                    Some(nl.clone())
+                                };
+                            }
+                            let after = obj.clone();
                             commands.push(Command::ModifyObject {
                                 object_id: mo.object_id.clone(),
                                 snapshot,
+                                after,
                             });
                         }
                     }
@@ -1914,6 +2023,8 @@ impl Executor {
                                         sketch_ids: vec![],
                                         dirty: false,
                                         catalog_ref: None,
+                                        elevation: None,
+                                        level_id: None,
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -2012,6 +2123,8 @@ impl Executor {
                                         sketch_ids: vec![],
                                         dirty: false,
                                         catalog_ref: None,
+                                        elevation: None,
+                                        level_id: None,
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -2992,6 +3105,41 @@ impl Executor {
                         }
                     }
 
+                    // 2026-10-29 P8-S1: grid datum execution
+                    c::operation::Op::CreateGridLine(cg) => {
+                        let axis = omnim_model::grid::GridAxis::from_proto(cg.axis)
+                            .unwrap_or(omnim_model::grid::GridAxis::AlongX);
+                        let mut line =
+                            omnim_model::grid::GridLine::new(cg.label.trim(), axis, cg.coordinate);
+                        line.extent_min = cg.extent_min;
+                        line.extent_max = cg.extent_max;
+                        let id = line.id.clone();
+                        project.grids.insert(line.clone());
+                        created_ids.push(id);
+                        commands.push(Command::CreateGridLine { grid_line: line });
+                    }
+
+                    c::operation::Op::UpdateGridLine(ug) => {
+                        if let Some(entry) = project.grids.get_mut(&ug.grid_line_id) {
+                            let before = entry.clone();
+                            entry.label = ug.label.trim().to_string();
+                            if let Some(axis) = omnim_model::grid::GridAxis::from_proto(ug.axis) {
+                                entry.axis = axis;
+                            }
+                            entry.coordinate = ug.coordinate;
+                            entry.extent_min = ug.extent_min;
+                            entry.extent_max = ug.extent_max;
+                            let after = entry.clone();
+                            commands.push(Command::UpdateGridLine { before, after });
+                        }
+                    }
+
+                    c::operation::Op::DeleteGridLine(dg) => {
+                        if let Some(line) = project.grids.remove(&dg.grid_line_id) {
+                            commands.push(Command::DeleteGridLine { grid_line: line });
+                        }
+                    }
+
                     // 2026-10-28 Wave 1 Slice 4: administrative division operations
                     c::operation::Op::CreateAdministrativeDivision(cad) => {
                         let level = c::AdministrativeLevel::try_from(cad.level)
@@ -3544,12 +3692,17 @@ impl Executor {
             Command::ModifyObject {
                 object_id,
                 snapshot,
+                ..
             } => {
                 if let Some(obj) = project.objects.get_mut(object_id) {
                     obj.name = snapshot.object.name.clone();
                     obj.description = snapshot.object.description.clone();
                     obj.geometry = snapshot.old_geometry.clone();
                     obj.material_id = snapshot.old_material_id.clone();
+                    obj.ifc_class = snapshot.object.ifc_class.clone();
+                    obj.tags = snapshot.object.tags.clone();
+                    obj.elevation = snapshot.object.elevation;
+                    obj.level_id = snapshot.object.level_id.clone();
                 }
                 format!("undo: restored object {}", &object_id[..8])
             }
@@ -4220,6 +4373,29 @@ impl Executor {
                     &measurement.id[..measurement.id.len().min(8)]
                 )
             }
+            // === Grid datum undo (2026-10-29 P8-S1) ===
+            Command::CreateGridLine { grid_line } => {
+                project.grids.remove(&grid_line.id);
+                format!(
+                    "undo: removed grid line {}",
+                    &grid_line.id[..grid_line.id.len().min(8)]
+                )
+            }
+            Command::UpdateGridLine { before, .. } => {
+                project.grids.remove(&before.id);
+                project.grids.insert(before.clone());
+                format!(
+                    "undo: restored grid line {}",
+                    &before.id[..before.id.len().min(8)]
+                )
+            }
+            Command::DeleteGridLine { grid_line } => {
+                project.grids.insert(grid_line.clone());
+                format!(
+                    "undo: restored grid line {}",
+                    &grid_line.id[..grid_line.id.len().min(8)]
+                )
+            }
             // === Administrative division undo (2026-10-28 Wave 1 Slice 4) ===
             Command::CreateAdministrativeDivision { division } => {
                 project.administrative.remove(&division.id);
@@ -4314,9 +4490,18 @@ impl Executor {
                 format!("redo: deleted object {}", &snapshot.object.id[..8])
             }
             Command::ModifyObject {
-                object_id,
-                snapshot: _,
+                object_id, after, ..
             } => {
+                if let Some(obj) = project.objects.get_mut(object_id) {
+                    obj.name = after.name.clone();
+                    obj.description = after.description.clone();
+                    obj.geometry = after.geometry.clone();
+                    obj.material_id = after.material_id.clone();
+                    obj.ifc_class = after.ifc_class.clone();
+                    obj.tags = after.tags.clone();
+                    obj.elevation = after.elevation;
+                    obj.level_id = after.level_id.clone();
+                }
                 format!("redo: modify object {}", &object_id[..8])
             }
             Command::SetProperty {
@@ -4909,6 +5094,29 @@ impl Executor {
                     &measurement.id[..measurement.id.len().min(8)]
                 )
             }
+            // === Grid datum redo (2026-10-29 P8-S1) ===
+            Command::CreateGridLine { grid_line } => {
+                project.grids.insert(grid_line.clone());
+                format!(
+                    "redo: created grid line {}",
+                    &grid_line.id[..grid_line.id.len().min(8)]
+                )
+            }
+            Command::UpdateGridLine { after, .. } => {
+                project.grids.remove(&after.id);
+                project.grids.insert(after.clone());
+                format!(
+                    "redo: updated grid line {}",
+                    &after.id[..after.id.len().min(8)]
+                )
+            }
+            Command::DeleteGridLine { grid_line } => {
+                project.grids.remove(&grid_line.id);
+                format!(
+                    "redo: deleted grid line {}",
+                    &grid_line.id[..grid_line.id.len().min(8)]
+                )
+            }
             // === Administrative division redo (2026-10-28 Wave 1 Slice 4) ===
             Command::CreateAdministrativeDivision { division } => {
                 project.administrative.insert(division.clone());
@@ -5411,6 +5619,8 @@ mod tests {
                 }),
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         };
 
@@ -5526,6 +5736,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
 
@@ -5696,6 +5908,8 @@ mod tests {
                     geometry: None,
                     properties: Vec::new(),
                     parent_id: String::new(),
+                    elevation: None,
+                    level_id: None,
                 })),
             });
             exe.execute(&instr, &mut proj);
@@ -5733,6 +5947,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
         exe.execute(&instr, &mut proj);
@@ -5770,6 +5986,8 @@ mod tests {
                     geometry: None,
                     properties: Vec::new(),
                     parent_id: String::new(),
+                    elevation: None,
+                    level_id: None,
                 })),
             });
             exe.execute(&instr, &mut proj);
@@ -5798,6 +6016,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         };
         // Attach geometry directly after creation via ModifyObject
@@ -5821,6 +6041,8 @@ mod tests {
                 object_id: wall_id.clone(),
                 new_name: None,
                 new_description: None,
+                new_elevation: None,
+                new_level_id: None,
                 new_geometry: Some(c::ParametricGeometry {
                     operations: vec![
                         c::ParametricOperation {
@@ -5866,6 +6088,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
 
@@ -5894,6 +6118,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
         let r = exe.execute(&instr, &mut proj);
@@ -5909,6 +6135,8 @@ mod tests {
                 geometry: None,
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
         let r = exe.execute(&instr, &mut proj);
@@ -5932,6 +6160,8 @@ mod tests {
                 }),
                 properties: Vec::new(),
                 parent_id: String::new(),
+                elevation: None,
+                level_id: None,
             })),
         });
         exe.execute(&instr, &mut proj);

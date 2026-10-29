@@ -7,6 +7,7 @@ pub mod feature;
 pub mod feature_template;
 pub mod gen_rule;
 pub mod geometry;
+pub mod grid;
 pub mod library;
 pub mod lifecycle;
 pub mod material;

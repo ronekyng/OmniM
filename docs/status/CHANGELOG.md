@@ -22,6 +22,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Building datum: storey elevation & grid (P8-S1)
+
+### Added
+- **Storey datum elevation**: `OmniObject.elevation` (optional, metres, IfcBuildingStorey.Elevation) on create/update; the web CreatePanel takes an elevation input for `storey` (negatives allowed for basements).
+- **Level attachment**: `OmniObject.level_id` — objects can attach to an existing `BuildingStorey`; the omcom validator rejects unknown ids and non-storey targets (400 with the reason). `top_level_id`/`bottom_level_id` auto-adjust remains planned (DATA_MODEL §5.8 note).
+- **Grid datum** (`Project.grids`, new `crates/model/src/grid.rs`): grid lines are datum annotations, not objects — `POST/GET /api/grids`, `PUT/DELETE /api/grids/{id}`, labels unique per axis family (`along_x` numbered / `along_y` lettered), sorted listing, undo/redo via three new ops (omcom oneof 74–76, actions 231–233) and persistence with the project (serde default keeps old `.omnim` files loading).
+- **Web**: storey elevation field + validation; `createInitialForm('storey')` now defaults `IfcBuildingStorey` (was `IfcWall`) and elevation `0`.
+
+### Fixed
+- **`ModifyObject` undo now covers every modifiable field** — a Wave 1 gap left `ifc_class`/`tags` edits unrestorable, and redo was a no-op; the command now carries an after-image and undo/redo are symmetric (P8 fields ride along).
+- **`POST /api/objects` returns 400 with the validator's reason** on validation failure (previously a bare 500).
+- Docs: capability matrix "78 routes" line was stale pre-Wave-1 — route counts now consistent at **83** (API.md, matrix, both languages).
+
 ## [2026-10-28] — Series & connection enforcement (Wave 4)
 
 ### Added

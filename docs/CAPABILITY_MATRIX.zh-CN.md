@@ -100,14 +100,15 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **场地 Site** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSite） | ✅ |
 | **建筑 Building** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuilding） | ✅ |
-| **楼层 BuildingStorey** | —（容器） | ✅ 创建面板（"storey"） | 🔀 仅名称；无标高/楼层系统 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuildingStorey） | ✅ |
+| **楼层 BuildingStorey** | —（容器） | ✅ 创建面板（"storey"）；标高输入（P8-S1） | ✅ 基准标高 `elevation`（米，IfcBuildingStorey.Elevation）；🔀 `level_id` 挂接仅 API（`POST/PUT /api/objects`）；高度自动调整（`top/bottom_level_id`）🗓 计划中 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuildingStorey，标高值尚未导出） | ✅ |
+| **轴网 Grid（基准）** | —（基准注记，非对象） | ❌ 仅 API（`/api/grids`） | ✅ 标签/轴向/坐标 CRUD，同轴族标签唯一，可撤销 | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓（IfcGrid 计划中） | ✅ |
 | **空间 Space** | —（容器；基本体盒） | ✅ 创建面板 | 🔀 基本体尺寸 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSpace） | ✅ |
 | **分区 Zone** | —（计划中） | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |
 
 ## 6. 覆盖说明与核对来源
 
 - **领域总数**（[DOMAINS](specification/DOMAINS.zh-CN.md)、[COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)）：**155 列出 / 51 进 proto / 104 仅计划**。建筑 37（22 进 proto）、土木 41（10）、工厂 39（11）、机械 38（8）。
-- **服务端规模**：**78 条去重 REST 路由**（[API](reference/API.zh-CN.md)）；**无 WebSocket、无数据库**。单个内存 `Project`，可选 JSON 文件。
+- **服务端规模**：**83 条去重 REST 路由**（[API](reference/API.zh-CN.md)；2026-10-29 P8-S1 新增 4 条轴网基准端点）；**无 WebSocket、无数据库**。单个内存 `Project`，可选 JSON 文件。
 - **持久化**：2026-10-28 起默认开启——`$OMNIM_PROJECT`/`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`。所有变更端点都会保存，包括变换/改父级/连接、材质、测量、系列/目录编辑、实例化与 IFC 导入。
 - **撤销**：所有变更端点均可撤销，包括变换、属性、父子/连接、材质、目录实例化、IFC 导入与系列编辑（[WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)）。
 - **IFC**：仅 IFC 2x3 / IFC 4 子集，手写解析器/写出器；无材质、工程量或分类映射。楼梯与屋顶能按类型导入，但导出为 `IfcBuildingElementProxy`；所有非建筑类型都导出为 proxy（[FORMAT_COMPAT](status/FORMAT_COMPAT.zh-CN.md)）。

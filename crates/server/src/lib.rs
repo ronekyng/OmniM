@@ -80,6 +80,9 @@ fn build_router(state: SharedState) -> Router {
             get(list_measurements).post(create_measurement),
         )
         .route("/api/measurements/{id}", delete(delete_measurement))
+        // 2026-10-29 P8-S1: grid datum
+        .route("/api/grids", get(list_grids).post(create_grid))
+        .route("/api/grids/{id}", put(update_grid).delete(delete_grid))
         .route("/api/lifecycle", get(list_lifecycle).post(create_lifecycle))
         .route("/api/lifecycle/{id}/link/{obj_id}", post(link_record))
         .route(
@@ -330,12 +333,18 @@ struct CreateObjectRequest {
     tags: Option<Vec<String>>,
     geometry: Option<omnim_core::ParametricGeometry>,
     parent_id: Option<String>,
+    /// Datum elevation in meters (P8-S1); meaningful on `storey`.
+    #[serde(default)]
+    elevation: Option<f64>,
+    /// Attach to a `BuildingStorey` datum (P8-S1).
+    #[serde(default)]
+    level_id: Option<String>,
 }
 
 async fn create_object(
     State(state): State<SharedState>,
     Json(req): Json<CreateObjectRequest>,
-) -> Result<Json<omnim_model::OmniObject>, StatusCode> {
+) -> Result<Json<omnim_model::OmniObject>, ApiError> {
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
 
@@ -360,6 +369,8 @@ async fn create_object(
                 geometry: req.geometry.clone(),
                 properties: vec![],
                 parent_id,
+                elevation: req.elevation,
+                level_id: req.level_id,
             })),
         }],
         validation: None,
@@ -369,13 +380,15 @@ async fn create_object(
 
     let result = exe.execute(&instr, &mut p);
     if !result.success {
-        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        // Validation failures (unknown level_id, bad type, …) are client
+        // errors — return the validator's reason, not a bare 500.
+        return Err(ApiError::bad_request(result.message));
     }
 
     let obj_id = result
         .created_ids
         .first()
-        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or_else(|| ApiError::internal("create returned no id"))?
         .clone();
 
     // If parent_id was specified, set up the containment relationship through
@@ -395,7 +408,7 @@ async fn create_object(
     let obj = p
         .objects
         .get(&obj_id)
-        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or_else(|| ApiError::internal("created object vanished"))?
         .clone();
 
     // Apply extra fields not supported by Omcom CreateObject protocol
@@ -420,6 +433,12 @@ struct UpdateObjectRequest {
     description: Option<String>,
     ifc_class: Option<String>,
     tags: Option<Vec<String>>,
+    /// Datum elevation in meters (P8-S1).
+    #[serde(default)]
+    elevation: Option<f64>,
+    /// New level attachment; `""` clears it (P8-S1).
+    #[serde(default)]
+    level_id: Option<String>,
 }
 
 async fn update_object(
@@ -439,6 +458,8 @@ async fn update_object(
             req.description,
             req.ifc_class,
             req.tags,
+            req.elevation,
+            req.level_id,
         )],
     )
     .await?;
@@ -469,6 +490,8 @@ async fn update_properties(
         req.description,
         req.ifc_class,
         req.tags,
+        None,
+        None,
     )];
     if let Some(properties) = req.properties {
         for (name, value) in properties {
@@ -858,6 +881,101 @@ async fn delete_measurement(
         c::operation::Op::DeleteMeasurement(c::DeleteMeasurementOperation { measurement_id: id });
     let result =
         mutation::apply(&state, c::Action::DeleteMeasurement, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    Ok(())
+}
+
+// ── Grid datum (P8-S1): grid lines are datum annotations, not objects ──────
+
+fn parse_grid_axis(s: &str) -> Result<c::GridAxis, String> {
+    match s.trim().to_lowercase().as_str() {
+        "along_x" | "alongx" | "x" => Ok(c::GridAxis::AlongX),
+        "along_y" | "alongy" | "y" => Ok(c::GridAxis::AlongY),
+        other => Err(format!("unknown grid axis '{}' (along_x | along_y)", other)),
+    }
+}
+
+#[derive(Deserialize)]
+struct GridLineRequest {
+    label: String,
+    axis: String,
+    coordinate: f64,
+    #[serde(default)]
+    extent_min: f64,
+    #[serde(default)]
+    extent_max: f64,
+}
+
+async fn list_grids(State(state): State<SharedState>) -> Json<Vec<omnim_model::grid::GridLine>> {
+    let p = state.project.read().await;
+    Json(p.grids.sorted().into_iter().cloned().collect())
+}
+
+async fn create_grid(
+    State(state): State<SharedState>,
+    Json(req): Json<GridLineRequest>,
+) -> Result<impl axum::response::IntoResponse, ApiError> {
+    let axis = parse_grid_axis(&req.axis).map_err(ApiError::bad_request)?;
+    let op = c::operation::Op::CreateGridLine(c::CreateGridLineOperation {
+        label: req.label,
+        axis: axis as i32,
+        coordinate: req.coordinate,
+        extent_min: req.extent_min,
+        extent_max: req.extent_max,
+    });
+    let result = mutation::apply(&state, c::Action::CreateGridLine, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("grid creation returned no id"))?;
+    let p = state.project.read().await;
+    let line = p
+        .grids
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("created grid line vanished"))?;
+    Ok((StatusCode::CREATED, Json(line)))
+}
+
+async fn update_grid(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    Json(req): Json<GridLineRequest>,
+) -> Result<Json<omnim_model::grid::GridLine>, ApiError> {
+    let axis = parse_grid_axis(&req.axis).map_err(ApiError::bad_request)?;
+    if state.project.read().await.grids.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("grid line '{}' not found", id)));
+    }
+    let op = c::operation::Op::UpdateGridLine(c::UpdateGridLineOperation {
+        grid_line_id: id.clone(),
+        label: req.label,
+        axis: axis as i32,
+        coordinate: req.coordinate,
+        extent_min: req.extent_min,
+        extent_max: req.extent_max,
+    });
+    let result = mutation::apply(&state, c::Action::UpdateGridLine, vec![mutation::op(op)]).await?;
+    mutation::require_success(result)?;
+    let p = state.project.read().await;
+    let line = p
+        .grids
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("updated grid line vanished"))?;
+    Ok(Json(line))
+}
+
+async fn delete_grid(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> Result<(), ApiError> {
+    if state.project.read().await.grids.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("grid line '{}' not found", id)));
+    }
+    let op = c::operation::Op::DeleteGridLine(c::DeleteGridLineOperation { grid_line_id: id });
+    let result = mutation::apply(&state, c::Action::DeleteGridLine, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(())
 }

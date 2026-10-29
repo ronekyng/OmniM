@@ -168,12 +168,15 @@ pub fn target(id: &str) -> Option<c::Target> {
     })
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn op_modify_object(
     id: &str,
     name: Option<String>,
     description: Option<String>,
     ifc_class: Option<String>,
     tags: Option<Vec<String>>,
+    elevation: Option<f64>,
+    level_id: Option<String>,
 ) -> c::Operation {
     c::Operation {
         op: Some(c::operation::Op::ModifyObject(c::ModifyObjectOperation {
@@ -183,6 +186,8 @@ pub fn op_modify_object(
             new_geometry: None,
             new_ifc_class: ifc_class,
             new_tags: tags.map(|tags| c::TagList { values: tags }),
+            new_elevation: elevation,
+            new_level_id: level_id,
         })),
     }
 }

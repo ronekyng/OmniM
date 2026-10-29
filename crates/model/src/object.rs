@@ -28,6 +28,13 @@ pub struct OmniObject {
     pub dirty: bool,
     #[serde(default)]
     pub catalog_ref: Option<crate::catalog::CatalogRef>,
+    /// Datum elevation in meters (P8-S1). Meaningful on `BuildingStorey`
+    /// (IfcBuildingStorey.Elevation); ignored elsewhere.
+    #[serde(default)]
+    pub elevation: Option<f64>,
+    /// Optional attachment to a storey datum: id of a `BuildingStorey` object.
+    #[serde(default)]
+    pub level_id: Option<String>,
 }
 
 impl OmniObject {
@@ -49,6 +56,8 @@ impl OmniObject {
             sketch_ids: Vec::new(),
             dirty: true,
             catalog_ref: None,
+            elevation: None,
+            level_id: None,
         }
     }
 

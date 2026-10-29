@@ -7,7 +7,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **79 条路由**（去重后，2026-10-27 审计；2026-10-28 新增持久化端点 `/api/project/save`）。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **83 条路由**（去重后，2026-10-27 审计；2026-10-28 新增持久化端点 `/api/project/save`；2026-10-29 P8-S1 新增 4 条轴网基准端点）。
 
 ## 目录
 
@@ -19,6 +19,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 6. [关系](#关系)
 7. [材质](#材质)
 8. [测量](#测量)
+8a. [轴网基准](#轴网基准)
 9. [生命周期](#生命周期)
 10. [行政区划](#行政区划)
 11. [拆分结构](#拆分结构)
@@ -105,14 +106,16 @@ curl -sS "$BASE/api/stats"
     "ifc_class": "IfcWall",
     "tags": ["facade"],
     "geometry": { "operations": [ /* ParametricGeometry，可选 */ ] },
-    "parent_id": "可选父对象 id"
+    "parent_id": "可选父对象 id",
+    "elevation": 3.9,
+    "level_id": "可选楼层(storey)对象 id"
   }
   ```
 
-  `object_type`（大小写不敏感）接受：`wall`、`slab`、`roof`、`floor`、`beam`、`column`、`door`、`window`、`road`、`pipe`、`duct`、`cabletray`、`tank`、`pump`、`valve`、`gear`、`part`、`assembly`、`component`。未知名称会导致 Omcom 创建操作记录未指定类型——请使用上面列出的名称。请求内部包装为一个 Omcom `CreateObject` 命令（会记入撤销历史），然后追加 `ifc_class`、`tags` 与 `parent_id`。响应：创建的 `OmniObject`；执行失败时 `500`。
+  `object_type`（大小写不敏感）接受：`wall`、`slab`、`roof`、`floor`、`beam`、`column`、`door`、`window`、`road`、`pipe`、`duct`、`cabletray`、`tank`、`pump`、`valve`、`gear`、`part`、`assembly`、`component`。未知名称会导致 Omcom 创建操作记录未指定类型——请使用上面列出的名称。请求内部包装为一个 Omcom `CreateObject` 命令（会记入撤销历史），然后追加 `ifc_class`、`tags` 与 `parent_id`。`elevation` 为基准标高（米，对 `storey` 有意义，对应 IfcBuildingStorey.Elevation）；`level_id` 把对象挂到既有 `BuildingStorey`，服务端校验（id 不存在或目标非楼层 → `400` 并给出理由）。响应：创建的 `OmniObject`；校验失败 `400` 并附校验理由，仅内部错误才 `500`。
 
-- `OmniObject` JSON 结构（protobuf 派生）：`{ id, name, description, object_type（整数枚举）, status（整数）, properties[], property_sets[], geometry（Geometry 或 null）, material_id, parent_id, tags[], ifc_class, features[], sketch_ids[], dirty, catalog_ref }`。
-- `PUT /api/objects/{id}` 请求体：`{ name?, description?, ifc_class?, tags? }` → 成功返回空响应，找不到为 `404`。
+- `OmniObject` JSON 结构（protobuf 派生）：`{ id, name, description, object_type（整数枚举）, status（整数）, properties[], property_sets[], geometry（Geometry 或 null）, material_id, parent_id, tags[], ifc_class, features[], sketch_ids[], dirty, catalog_ref, elevation（数值或 null，P8-S1）, level_id（字符串或 null，P8-S1） }`。
+- `PUT /api/objects/{id}` 请求体：`{ name?, description?, ifc_class?, tags?, elevation?, level_id? }`（`level_id: ""` 表示清除挂接）→ 成功返回空响应，找不到为 `404`。所有字段均可撤销/重做（P8-S1 把 `ModifyObject` 快照扩展到全部可修改字段）。
 - `PUT /api/objects/{id}/prop` 请求体：`{ "name": "FireRating", "value": "2h" }` — 值以字符串 `PropertyValue` 存储。成功返回空响应，`404`。
 - `PUT /api/objects/{id}/properties` 请求体：类似 `PUT /api/objects/{id}`，外加 `"properties": { "k": "v", ... }`（字符串映射）。适合编辑器一次性同步。成功返回空响应。
 - `GET /api/object-types/{type}/properties` → `Vec<ObjectPropertyDef>`（例如 "wall" 的属性定义）；未知类型返回空列表。
@@ -197,6 +200,26 @@ curl -sS -X PUT "$BASE/api/objects/obj-1/material" -H 'Content-Type: application
   ```
 
   `type` 为自由字符串（常用的有 `distance`、`area`、`angle`、`volume`）；`color` 默认 `#44ff88`。响应：创建的 `Measurement`（`{ id, type, points, value, color, label }`）。`DELETE` 成功返回空响应，`404` id 不存在。
+
+## 轴网基准
+
+轴网线是**基准注记而非对象**——无网格几何、不进对象树，存储在 `Project.grids`（P8-S1）。与测量一样可撤销并随项目落盘。
+
+| 方法与路径 | 用途 |
+|---|---|
+| `GET /api/grids` | 列出轴线：先 AlongX（数字族）后 AlongY（字母族），按坐标排序。 |
+| `POST /api/grids` | 创建轴线。→ `201` 返回创建结果。 |
+| `PUT /api/grids/{id}` | 全量替换更新。→ `404` id 不存在。 |
+| `DELETE /api/grids/{id}` | 删除（可撤销）。→ `404` id 不存在。 |
+
+- `POST`/`PUT` 请求体（`GridLineRequest`）：
+
+  ```json
+  { "label": "A", "axis": "along_y", "coordinate": -3.0,
+    "extent_min": 0.0, "extent_max": 24.0 }
+  ```
+
+  `axis` 取 `along_x`（平行 X、`y = coordinate`，数字族）或 `along_y`（平行 Y、`x = coordinate`，字母族）；`extent_min/max` 默认 `0`（UI 视为无限延伸）。标签在同一轴族内唯一（重复 → `400`）；空标签或未知轴 → `400`。响应结构：`{ id, label, axis: "AlongX" | "AlongY", coordinate, extent_min, extent_max }`。
 
 ## 生命周期
 

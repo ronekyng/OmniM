@@ -188,6 +188,11 @@ enum Action {
 
   // 2026-10-28 Wave 1 Slice 5: catalog instantiation
   INSTANTIATE_CATALOG = 230;
+
+  // 2026-10-29 P8-S1: grid datum
+  CREATE_GRID_LINE = 231;
+  UPDATE_GRID_LINE = 232;
+  DELETE_GRID_LINE = 233;
 }
 
 // === Operations ===
@@ -274,6 +279,10 @@ message Operation {
     LinkBreakdownAdministrativeOperation link_breakdown_administrative = 72;
     // 2026-10-28 Wave 1 Slice 5: catalog instantiation as one undoable command
     InstantiateCatalogOperation instantiate_catalog = 73;
+    // 2026-10-29 P8-S1: grid datum ops
+    CreateGridLineOperation create_grid_line = 74;
+    UpdateGridLineOperation update_grid_line = 75;
+    DeleteGridLineOperation delete_grid_line = 76;
   }
 }
 
@@ -293,6 +302,11 @@ message CreateObjectOperation {
   ParametricGeometry geometry = 4;
   repeated Property properties = 5;
   string parent_id = 6;
+  // 2026-10-29 P8-S1: building datum — elevation is meaningful on
+  // BuildingStorey (IfcBuildingStorey.Elevation); level_id attaches an object
+  // to a storey element (must reference an existing BuildingStorey).
+  optional double elevation = 7;
+  optional string level_id = 8;
 }
 
 message ModifyObjectOperation {
@@ -303,6 +317,9 @@ message ModifyObjectOperation {
   // 2026-10-28 Wave 1 Slice 2: object detail edits
   optional string new_ifc_class = 5;
   optional TagList new_tags = 6;
+  // 2026-10-29 P8-S1: datum edits (Some("") clears level_id)
+  optional double new_elevation = 7;
+  optional string new_level_id = 8;
 }
 
 // Wrapper so optional repeated tags are distinguishable from "untouched".
@@ -954,4 +971,33 @@ message InstantiateCatalogOperation {
   optional Point3D position = 4;
   double rotation_z = 5;
   bool skip_series_gate = 6;
+}
+
+// 2026-10-29 P8-S1: grid datum operations (axes are datum curves, not objects)
+
+enum GridAxis {
+  GRID_AXIS_UNSPECIFIED = 0;
+  GRID_AXIS_ALONG_X = 1;
+  GRID_AXIS_ALONG_Y = 2;
+}
+
+message CreateGridLineOperation {
+  string label = 1;
+  GridAxis axis = 2;
+  double coordinate = 3;
+  double extent_min = 4;
+  double extent_max = 5;
+}
+
+message UpdateGridLineOperation {
+  string grid_line_id = 1;
+  string label = 2;
+  GridAxis axis = 3;
+  double coordinate = 4;
+  double extent_min = 5;
+  double extent_max = 6;
+}
+
+message DeleteGridLineOperation {
+  string grid_line_id = 1;
 }

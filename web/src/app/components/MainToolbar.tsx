@@ -239,6 +239,8 @@ export function MainToolbar({
         description: form.desc || '',
         geometry: { operations: [{ operation: createOperation(form) }] },
         parent_id: parentId,
+        // P8-S1: datum elevation on storey creation (m; may be negative).
+        ...(objectType === 'storey' ? { elevation: parseFloat(form.elevation) || 0 } : {}),
       });
     }
 

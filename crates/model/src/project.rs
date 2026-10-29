@@ -28,6 +28,9 @@ pub struct Project {
     pub external_series_refs: Vec<SeriesRef>,
     #[serde(default)]
     pub measurements: MeasurementStore,
+    /// Grid datum lines (轴网), P8-S1. Datum annotations, not objects.
+    #[serde(default)]
+    pub grids: crate::grid::GridStore,
 }
 
 /// Reference to an external series (file or Library-provided).
@@ -53,6 +56,7 @@ impl Project {
             series: SeriesStore::new(),
             external_series_refs: Vec::new(),
             measurements: MeasurementStore::new(),
+            grids: crate::grid::GridStore::new(),
         };
         crate::seed_materials::seed_default_materials(&mut p.materials);
         p
