@@ -6,7 +6,16 @@ use omnim_model::Project;
 use omnim_server::{create_router, SharedProject};
 use tokio::sync::RwLock;
 
+fn init_library() {
+    use std::sync::Once;
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        *omnim_model::LIBRARY.write().unwrap() = Some(omnim_model::Library::seeded());
+    });
+}
+
 async fn test_server() -> u16 {
+    init_library();
     let project: SharedProject = Arc::new(RwLock::new(Project::new("Pipe Route Test")));
     let router = create_router(project, None);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -107,6 +116,13 @@ async fn routed_pipe_sweeps_the_polyline_and_records_the_route() {
     assert_eq!(
         prop(&obj, "pipe_radius").and_then(|v| v.as_str()),
         Some("0.15")
+    );
+    let sweep = &obj["features"][0]["path_sweep"];
+    assert_eq!(
+        sweep["section"]["Circular"]["radius"].as_f64(),
+        Some(0.15),
+        "routed pipe must be a PathSweep circular feature: {}",
+        obj["features"]
     );
     let len: f64 = prop(&obj, "route_length")
         .and_then(|v| v.as_str())

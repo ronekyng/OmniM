@@ -74,6 +74,13 @@ impl FeatureTreeTemplate {
     }
 }
 
+/// Section family for a `PathSweep` template step (P8-S4).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub enum PathSweepSectionKind {
+    Layered,
+    Circular,
+}
+
 /// A single step in a feature tree template.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct FeatureTemplateStep {
@@ -84,6 +91,10 @@ pub struct FeatureTemplateStep {
     /// Section orientation for `FeatureType::PathSweep` steps (Wave 3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub path_sweep_orientation: Option<crate::gen_rule::path_sweep::SectionOrientation>,
+    /// Section family for `FeatureType::PathSweep` steps (P8-S4): `Layered`
+    /// (default) or `Circular` (pipe; radius resolved from the `radius` param).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub path_sweep_section: Option<PathSweepSectionKind>,
     /// A second profile (for Loft's profile1 / sweep's path).
     pub aux_profile_type: Option<ProfileType>,
     /// Expression for depth (extrude distance).
@@ -112,6 +123,7 @@ impl FeatureTemplateStep {
             feature_type: crate::FeatureType::Extrude,
             profile_type: Some(profile_type),
             path_sweep_orientation: None,
+            path_sweep_section: None,
             aux_profile_type: None,
             depth_expr: Some(depth_expr.to_string()),
             angle_expr: None,
@@ -128,6 +140,7 @@ impl FeatureTemplateStep {
             feature_type: crate::FeatureType::Revolve,
             profile_type: Some(profile_type),
             path_sweep_orientation: None,
+            path_sweep_section: None,
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: Some(angle_expr.to_string()),
@@ -148,6 +161,7 @@ impl FeatureTemplateStep {
             feature_type: crate::FeatureType::Sweep,
             profile_type: Some(section),
             path_sweep_orientation: None,
+            path_sweep_section: None,
             aux_profile_type: Some(path),
             depth_expr: None,
             angle_expr: None,
@@ -168,6 +182,7 @@ impl FeatureTemplateStep {
             feature_type: crate::FeatureType::Loft,
             profile_type: Some(profile0),
             path_sweep_orientation: None,
+            path_sweep_section: None,
             aux_profile_type: Some(profile1),
             depth_expr: None,
             angle_expr: None,
@@ -205,6 +220,30 @@ impl FeatureTemplateStep {
             boolean_op: None,
             pattern_counts: None,
             path_sweep_orientation: Some(orientation),
+            path_sweep_section: None,
+        }
+    }
+
+    /// Pipe step: circular section swept along the picked path (P8-S4).
+    /// The radius comes from the instance's `radius` param (millimetres).
+    pub fn path_pipe(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            feature_type: crate::FeatureType::PathSweep,
+            profile_type: None,
+            aux_profile_type: None,
+            depth_expr: None,
+            angle_expr: None,
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            is_cut: false,
+            boolean_op: None,
+            pattern_counts: None,
+            path_sweep_orientation: Some(crate::gen_rule::path_sweep::SectionOrientation::Vertical),
+            path_sweep_section: Some(PathSweepSectionKind::Circular),
         }
     }
 
@@ -214,6 +253,7 @@ impl FeatureTemplateStep {
             feature_type: crate::FeatureType::Boolean,
             profile_type: None,
             path_sweep_orientation: None,
+            path_sweep_section: None,
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: None,
@@ -294,14 +334,38 @@ pub fn instantiate_template(
                     if ctx.path_closed { 3 } else { 2 },
                 )?;
             }
+            // P8-S4: circular pipe sections resolve the radius from the
+            // instance param (`radius`, millimetres) and skip layer/height
+            // handling; layered steps keep the Wave-3 behaviour.
+            let (layers, height, section) = match step.path_sweep_section {
+                Some(PathSweepSectionKind::Circular) => {
+                    let radius_mm = params.get("radius").copied().unwrap_or(100.0);
+                    if !(radius_mm > 0.0) {
+                        return Err("pipe template: `radius` param must be positive".into());
+                    }
+                    (
+                        Vec::new(),
+                        0.0,
+                        crate::feature::PathSweepSection::Circular {
+                            radius: radius_mm / 1000.0,
+                        },
+                    )
+                }
+                _ => (
+                    ctx.layers.clone(),
+                    ctx.height,
+                    crate::feature::PathSweepSection::Layered,
+                ),
+            };
             let feature = crate::Feature::new_path_sweep(
                 step.name.clone(),
                 crate::feature::PathSweepParams {
                     points: ctx.path.clone(),
                     closed: ctx.path_closed,
                     orientation,
-                    layers: ctx.layers.clone(),
-                    height: ctx.height,
+                    layers,
+                    height,
+                    section,
                 },
             );
             let fid = feature.id.clone();

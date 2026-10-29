@@ -53,6 +53,8 @@ pub struct PathSweepInput {
     /// Wall/roof extrusion height in metres (Vertical only).
     pub height: f64,
     pub orientation: SectionOrientation,
+    /// Section family (P8-S4): layered stack or circular pipe.
+    pub section: crate::feature::PathSweepSection,
 }
 
 impl PathSweepInput {
@@ -68,6 +70,15 @@ impl PathSweepInput {
 /// degenerate/self-intersecting closed boundaries) return `Err` with the
 /// kernel's reason — callers map that to a 400.
 pub fn generate(input: &PathSweepInput) -> Result<MeshGeometry, String> {
+    // P8-S4: circular sections (pipes) reuse the routing kernel — same mesh
+    // whether the caller is the feature tree or the genrule façade.
+    if let crate::feature::PathSweepSection::Circular { radius } = input.section {
+        return super::pipe_route::build_pipe_route(
+            &input.points,
+            radius,
+            super::pipe_route::DEFAULT_RING_SEGMENTS,
+        );
+    }
     let pts = to_point2d(&input.points);
     super::path_geom::validate_path(&pts, input.closed, if input.closed { 3 } else { 2 })?;
     let merged = super::path_geom::merge_collinear(&super::path_geom::normalize_closed(&pts));
@@ -144,6 +155,7 @@ mod tests {
             layers: layers(),
             height: 3.0,
             orientation: SectionOrientation::Vertical,
+            section: crate::feature::PathSweepSection::Layered,
         })
         .unwrap();
         assert_eq!(legacy.vertices, converged.vertices);
@@ -166,9 +178,32 @@ mod tests {
             layers: layers(),
             height: 0.0,
             orientation: SectionOrientation::Horizontal,
+            section: crate::feature::PathSweepSection::Layered,
         })
         .unwrap();
         assert_eq!(legacy.vertices, converged.vertices);
+    }
+
+    #[test]
+    fn circular_section_matches_the_routing_kernel_exactly() {
+        let route = vec![[0.0, 0.0, 0.0], [5.0, 0.0, 0.0], [5.0, 5.0, 0.0]];
+        let direct = super::super::pipe_route::build_pipe_route(
+            &route,
+            0.2,
+            super::super::pipe_route::DEFAULT_RING_SEGMENTS,
+        )
+        .unwrap();
+        let via_feature = generate(&PathSweepInput {
+            points: route,
+            closed: false,
+            layers: Vec::new(),
+            height: 0.0,
+            orientation: SectionOrientation::Vertical,
+            section: crate::feature::PathSweepSection::Circular { radius: 0.2 },
+        })
+        .unwrap();
+        assert_eq!(direct.vertices, via_feature.vertices);
+        assert_eq!(direct.faces, via_feature.faces);
     }
 
     #[test]
@@ -179,6 +214,7 @@ mod tests {
             layers: layers(),
             height: 3.0,
             orientation: SectionOrientation::Vertical,
+            section: crate::feature::PathSweepSection::Layered,
         })
         .unwrap_err();
         assert!(err.contains("zero-length"), "unexpected: {}", err);
@@ -189,6 +225,7 @@ mod tests {
             layers: layers(),
             height: 3.0,
             orientation: SectionOrientation::Horizontal,
+            section: crate::feature::PathSweepSection::Layered,
         })
         .unwrap_err();
         assert!(err.contains("at least 3"), "unexpected: {}", err);

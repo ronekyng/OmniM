@@ -2077,11 +2077,10 @@ async fn genrule_create(
                     "pipe radius must be positive".into(),
                 ));
             }
-            // P8 pipe routing: sweep a circular section along the picked path.
-            // Build/validate the mesh *before* creating the object so a bad
-            // route cannot leave an orphan behind.
-            let route = path.as_ref().map(|p| p.clone().normalize(false));
-            let (mesh, route_points, route_len) = match route {
+            // P8-S4: routed pipes now go through the formal feature-tree path
+            // (`Pipe-Path` template → PathSweep with a circular section), while
+            // the straight form keeps the legacy mesh builder.
+            match path.as_ref().map(|p| p.clone().normalize(false)) {
                 Some(spec) => {
                     if spec.closed {
                         return Err((
@@ -2090,47 +2089,63 @@ async fn genrule_create(
                         ));
                     }
                     validate_spec(&spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                    let mesh = omnim_model::gen_rule::pipe_route::build_pipe_route(
-                        &spec.points,
-                        *radius,
-                        omnim_model::gen_rule::pipe_route::DEFAULT_RING_SEGMENTS,
-                    )
-                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                    let len = omnim_model::gen_rule::pipe_route::route_length(&spec.points);
-                    (mesh, Some(spec.points.clone()), Some(len))
+                    let route_len = omnim_model::gen_rule::pipe_route::route_length(&spec.points);
+                    let params: std::collections::HashMap<String, f64> = [
+                        ("length".to_string(), route_len * 1000.0),
+                        ("radius".to_string(), *radius * 1000.0),
+                    ]
+                    .into_iter()
+                    .collect();
+                    let component_id = p
+                        .instantiate_domain_object(
+                            omnim_core::ObjectType::PipePlant,
+                            "Pipe-Path",
+                            name,
+                            &params,
+                            spec.points.clone(),
+                            false,
+                            Vec::new(),
+                            0.0,
+                            series_id,
+                        )
+                        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                    let obj = p
+                        .objects
+                        .get_mut(&component_id)
+                        .expect("pipe object was just created");
+                    obj.set_property(
+                        "route_points",
+                        str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
+                    );
+                    obj.set_property("pipe_radius", str_prop(&format!("{}", radius)));
+                    obj.set_property("route_length", str_prop(&format!("{}", route_len)));
+                    if let Some(pid) = parent_id {
+                        if !pid.is_empty() {
+                            obj.parent_id = Some(pid.to_string());
+                        }
+                    }
+                    obj.clone()
                 }
-                None => (
-                    omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20),
-                    None,
-                    None,
-                ),
-            };
-            let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p
-                .create_object(omnim_core::ObjectType::PipePlant, name)
-                .id
-                .clone();
-            let obj = p
-                .objects
-                .get_mut(&id)
-                .expect("genrule object was just created");
-            obj.geometry = Some(geom);
-            if let Some(points) = route_points {
-                obj.set_property(
-                    "route_points",
-                    str_prop(&serde_json::to_string(&points).unwrap_or_default()),
-                );
-                obj.set_property("pipe_radius", str_prop(&format!("{}", radius)));
-                if let Some(len) = route_len {
-                    obj.set_property("route_length", str_prop(&format!("{}", len)));
+                None => {
+                    let mesh =
+                        omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20);
+                    let id = p
+                        .create_object(omnim_core::ObjectType::PipePlant, name)
+                        .id
+                        .clone();
+                    let obj = p
+                        .objects
+                        .get_mut(&id)
+                        .expect("genrule object was just created");
+                    obj.geometry = Some(omnim_model::geometry::mesh_to_geometry(&mesh));
+                    if let Some(pid) = parent_id {
+                        if !pid.is_empty() {
+                            obj.parent_id = Some(pid.to_string());
+                        }
+                    }
+                    obj.clone()
                 }
             }
-            if let Some(pid) = parent_id {
-                if !pid.is_empty() {
-                    obj.parent_id = Some(pid.to_string());
-                }
-            }
-            obj.clone()
         }
         GenRuleRequest::Door {
             name,

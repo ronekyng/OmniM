@@ -22,6 +22,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Pipe routing on the feature-tree path (P8-S4a)
+
+### Added
+- **`PathSweepSection`** (`Layered` | `Circular { radius }`) on `PathSweepParams` (serde default keeps old projects loading) and a `Circular` template step kind.
+- **`Pipe-Path`** seeded ComponentDef + feature-tree template; routed `genrule: "pipe"` now instantiates it (`PathSweep` circular section) instead of building a loose mesh — the route remains recorded (`route_points`/`pipe_radius`/`route_length`), and the mesh is byte-identical to the `gen_rule::pipe_route` kernel (parity test).
+- Straight pipes (no path) keep the legacy mesh builder; level-driven extent height adjustments only apply to layered sections.
+
 ## [2026-10-29] — Pipe routing (P8-S3c)
 
 ### Added

@@ -165,7 +165,7 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 
 官方几何路径是特征树/BRep 管线；genrule 直通属于遗留/过渡方案。见 [DATA_FLOW.zh-CN.md §4](../architecture/DATA_FLOW.zh-CN.md#4-d-目录--系列实例化)。
 
-> **2026-10-29 更新（P8）。** 管道路由改为经 `LinearComponent` 内核沿拾取的 N 点折线扫掠（`gen_rule::pipe_route`），不再只做直管；路由记录在对象上（`route_points`/`pipe_radius`/`route_length`）。仍是网格化 Linear 族路径（无特征树模板），该分裂明确保留为过渡。
+> **2026-10-29 更新（P8）。** 管道路由改为经 `LinearComponent` 内核沿拾取的 N 点折线扫掠（`gen_rule::pipe_route`），不再只做直管；路由记录在对象上（`route_points`/`pipe_radius`/`route_length`）。**更新（P8-S4）**：路由管现通过 `Pipe-Path` 特征树模板实例化（`PathSweep` 圆形截面，与内核网格逐位 parity），管道在正式路径上的分裂已闭合；无路径的遗留直管仍为过渡。
 
 ### 6.4 系列门禁、材质、连接弱于文档（审计 P0-5）
 

@@ -1187,7 +1187,10 @@ impl Project {
                             changed = true;
                         }
                     }
-                    if (params.height - target_height).abs() > 1e-9 {
+                    // Height only applies to layered sections (walls).
+                    let is_layered =
+                        matches!(params.section, crate::feature::PathSweepSection::Layered);
+                    if is_layered && (params.height - target_height).abs() > 1e-9 {
                         params.height = target_height;
                         changed = true;
                     }
@@ -1515,6 +1518,7 @@ impl Project {
                             layers: params.layers,
                             height: params.height,
                             orientation: params.orientation,
+                            section: params.section,
                         },
                     )
                     .ok(),

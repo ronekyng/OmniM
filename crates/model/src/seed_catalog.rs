@@ -99,6 +99,9 @@ pub fn seed_feature_trees(registry: &mut FeatureTreeRegistry) -> Vec<(String, St
     links.push(("Floor-Path".into(), slab_path_id.clone()));
     links.push(("Roof-Path".into(), slab_path_id));
 
+    let pipe_path_id = register_pipe_path_template(registry);
+    links.push(("Pipe-Path".into(), pipe_path_id));
+
     let wall_id = register_concrete_wall_template(registry);
     links.push(("Concrete-Wall".into(), wall_id));
 
@@ -565,6 +568,12 @@ fn register_path_sweep_template(
         "layer-stack",
         orientation,
     ));
+    registry.register(template)
+}
+
+fn register_pipe_path_template(registry: &mut FeatureTreeRegistry) -> String {
+    let template = FeatureTreeTemplate::new("pipe-path-sweep")
+        .step(FeatureTemplateStep::path_pipe("pipe-sweep"));
     registry.register(template)
 }
 
@@ -1830,6 +1839,23 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     roof_path.default_material = "C30/37".into();
     roof_path.published = true;
     catalog.insert(roof_path);
+
+    // P8-S4: path-driven circular pipe (feature-tree path for pipe routing)
+    let mut pipe_path = ComponentDef::new("Pipe-Path", "Plant/Piping/Pipe");
+    pipe_path.description =
+        "Path-driven circular pipe (created as PipePlant, not Component)".into();
+    pipe_path.ifc_class = "IfcPipeSegment".into();
+    pipe_path.domain = "plant".into();
+    pipe_path.tags = vec!["pipe".into(), "path-sweep".into()];
+    pipe_path.params.push(
+        ParamDef::new("radius", 2)
+            .with_default(100.0)
+            .with_range(5.0, 2000.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    pipe_path.published = true;
+    catalog.insert(pipe_path);
 
     column.connectors.push(
         ConnectorDef::new("base", "Base")

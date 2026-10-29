@@ -609,6 +609,21 @@ pub struct PathSweepParams {
     pub layers: Vec<crate::gen_rule::layer_extrusion::LayerDef>,
     /// Extrusion height in metres (Vertical orientation only).
     pub height: f64,
+    /// Section family of the sweep (P8-S4). Older persisted features default
+    /// to `Layered` (the wall/slab family).
+    #[serde(default)]
+    pub section: PathSweepSection,
+}
+
+/// Section family swept along a `PathSweep` path (P8-S4).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+pub enum PathSweepSection {
+    /// Layer stack (walls/slabs/floors/roofs) — Wave 3.
+    #[default]
+    Layered,
+    /// Circular pipe (radius in metres) — P8 pipe routing on the formal
+    /// feature-tree path.
+    Circular { radius: f64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]

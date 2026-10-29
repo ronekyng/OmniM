@@ -22,6 +22,13 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 管道路由接入特征树（P8-S4a）
+
+### 新增（Added）
+- **`PathSweepSection`**（`Layered` | `Circular { radius }`）加入 `PathSweepParams`（serde default 保证旧项目可加载），并新增 `Circular` 模板步骤类型。
+- 种入 **`Pipe-Path`** ComponentDef + 特征树模板；路由 `genrule: "pipe"` 改为实例化该模板（`PathSweep` 圆形截面），不再生成游离网格——路由仍记录在对象上（`route_points`/`pipe_radius`/`route_length`），且网格与 `gen_rule::pipe_route` 内核逐位一致（parity 测试）。
+- 无路径直管保持遗留网格构建；标高驱动的“高度”调整仅作用于 layered 截面。
+
 ## [2026-10-29] — 管道路由（P8-S3c）
 
 ### 新增（Added）
