@@ -185,6 +185,18 @@ export type GenRuleWindowRequest = {
   parent_id?: string;
 };
 
+/** Standalone opening volume (IfcOpeningElement), host-relative (P8). */
+export type GenRuleOpeningRequest = {
+  genrule: 'opening';
+  name: string;
+  wall_id: string;
+  opening_width: number;
+  opening_height: number;
+  position_x: number;
+  position_z: number;
+  parent_id?: string;
+};
+
 export type AssemblyComponentDef = {
   name: string;
   shape: string;
@@ -246,6 +258,7 @@ export type GenRuleRequest =
   | GenRulePipeRequest
   | GenRuleDoorRequest
   | GenRuleWindowRequest
+  | GenRuleOpeningRequest
   | GenRuleAssemblyRequest
   | GenRuleLayeredRequest
   | GenRuleLineRequest;

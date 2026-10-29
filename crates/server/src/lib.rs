@@ -1676,6 +1676,20 @@ enum GenRuleRequest {
         #[serde(default)]
         parent_id: Option<String>,
     },
+    /// Standalone opening volume (P8): a host-relative void box
+    /// (IfcOpeningElement). The host wall is **not** re-cut — feature-tree
+    /// geometry stays authoritative; doors/windows carry the cut patch.
+    #[serde(rename = "opening")]
+    Opening {
+        name: String,
+        wall_id: String,
+        opening_width: f64,
+        opening_height: f64,
+        position_x: f64,
+        position_z: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
     #[serde(rename = "assembly")]
     Assembly {
         name: String,
@@ -1846,6 +1860,7 @@ async fn genrule_create(
         GenRuleRequest::Pipe { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Door { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Window { parent_id, .. } => parent_id.as_deref(),
+        GenRuleRequest::Opening { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Assembly { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Layered { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Line { parent_id, .. } => parent_id.as_deref(),
@@ -2158,6 +2173,69 @@ async fn genrule_create(
                 .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.parent_id = Some(wall_id.clone());
+            obj.clone()
+        }
+        GenRuleRequest::Opening {
+            name,
+            wall_id,
+            opening_width,
+            opening_height,
+            position_x,
+            position_z,
+            ..
+        } => {
+            let wall = p
+                .objects
+                .get(wall_id)
+                .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
+            if wall.object_type != omnim_core::ObjectType::Wall as i32 {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    format!(
+                        "opening host '{}' is not a Wall (type {})",
+                        wall_id, wall.object_type
+                    ),
+                ));
+            }
+            let bb = wall
+                .geometry
+                .as_ref()
+                .and_then(|g| g.bbox.as_ref())
+                .map(|b| {
+                    let mn = b.min.as_ref().expect("bbox min must exist");
+                    let mx = b.max.as_ref().expect("bbox max must exist");
+                    (mx.x - mn.x, mx.z - mn.z, (mx.y - mn.y).abs())
+                })
+                .unwrap_or((5.0, 3.0, 0.3));
+            let _ = wall;
+
+            let mesh = omnim_model::gen_rule::opening::build_opening_volume(
+                bb.0,
+                bb.1,
+                bb.2,
+                *opening_width,
+                *opening_height,
+                *position_x,
+                *position_z,
+            );
+            let id = p
+                .create_object(omnim_core::ObjectType::Opening, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
+            obj.geometry = Some(omnim_model::geometry::mesh_to_geometry(&mesh));
+            obj.parent_id = Some(wall_id.clone());
+            obj.set_property(
+                "host_wall_id",
+                omnim_core::PropertyValue {
+                    value_type: Some(omnim_core::property_value::ValueType::StringValue(
+                        wall_id.clone(),
+                    )),
+                },
+            );
             obj.clone()
         }
         GenRuleRequest::Layered {
@@ -2756,6 +2834,7 @@ fn object_type_name(ot: omnim_core::ObjectType) -> &'static str {
         Floor => "floor",
         Door => "door",
         Window => "window",
+        Opening => "opening",
         Beam => "beam",
         Column => "column",
         Stair => "stair",
@@ -3482,6 +3561,7 @@ fn parse_type(s: &str) -> omnim_core::ObjectType {
         "slab" => omnim_core::ObjectType::Slab,
         "door" => omnim_core::ObjectType::Door,
         "window" => omnim_core::ObjectType::Window,
+        "opening" => omnim_core::ObjectType::Opening,
         "stair" => omnim_core::ObjectType::Stair,
         "roof" => omnim_core::ObjectType::Roof,
         "duct" => omnim_core::ObjectType::Duct,

@@ -519,8 +519,9 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
   | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的折线，即 Path（开放），`[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
-  | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
+  | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?`——遗留直管；追加 `path`（`{ points, closed:false }`，≥ 2 点）启用**管道路由**（P8）：圆形截面沿折线扫掠、斜接过渡，产出 `PipePlant` 对象并记录 `route_points`/`pipe_radius` 属性。`radius ≤ 0` → `400`。 |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
+  | `opening` | `name`, `wall_id`（宿主**必须是** `Wall`）、`opening_width`、`opening_height`、`position_x`、`position_z`、`parent_id?`——创建挂到墙上的 `ObjectType::Opening` 空腔体积（IfcOpeningElement）；宿主网格不重剪 |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
   | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path` / `boundary`（见下方路径契约）, `start_*`/`end_*`, `parent_id?`, `series_id?`, `bottom_level_id?`/`top_level_id?`（P8-S2 竖向范围——**创建前**校验，非法组合不会留下孤儿对象；该族 `series_id` 仅作元数据） |
   | `line` | `name`, `path` / `alignment`（见下方路径契约，≥ 2 点）, `diameter`, `parent_id?` — 生成细引导管线（`FeatureLine`） |

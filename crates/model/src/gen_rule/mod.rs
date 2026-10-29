@@ -14,6 +14,7 @@ pub mod boolean_subtract;
 pub mod layer_extrusion;
 pub mod linear_component;
 pub mod matrix;
+pub mod opening;
 pub mod path_geom;
 pub mod path_sweep;
 
@@ -90,7 +91,7 @@ pub fn primary_gen_rule(object_type: ObjectType) -> GenRuleHint {
         }
         ObjectType::Stair => GenRuleHint::Assembly,
         ObjectType::Beam | ObjectType::Column => GenRuleHint::LinearComponent,
-        ObjectType::Door | ObjectType::Window => GenRuleHint::BooleanSubtract,
+        ObjectType::Door | ObjectType::Window | ObjectType::Opening => GenRuleHint::BooleanSubtract,
 
         ObjectType::Duct
         | ObjectType::CableTray

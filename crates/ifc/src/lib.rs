@@ -313,6 +313,7 @@ pub fn import_ifc_with_options(content: &str, options: ImportOptions) -> Result<
             "IFCSLAB" | "IFCSLABSTANDARDCASE" => c::ObjectType::Slab,
             "IFCDOOR" => c::ObjectType::Door,
             "IFCWINDOW" => c::ObjectType::Window,
+            "IFCOPENINGELEMENT" => c::ObjectType::Opening,
             "IFCSTAIR" | "IFCSTAIRFLIGHT" => c::ObjectType::Stair,
             "IFCROOF" => c::ObjectType::Roof,
             "IFCBUILDING" => c::ObjectType::Building,
@@ -1155,6 +1156,7 @@ fn export_ifc_class(obj: &omnim_model::OmniObject) -> &'static str {
             "IFCSLAB" | "IFCSLABSTANDARDCASE" => return "IFCSLAB",
             "IFCDOOR" => return "IFCDOOR",
             "IFCWINDOW" => return "IFCWINDOW",
+            "IFCOPENINGELEMENT" => return "IFCOPENINGELEMENT",
             _ => {}
         }
     }
@@ -1169,6 +1171,7 @@ fn export_ifc_class(obj: &omnim_model::OmniObject) -> &'static str {
         c::ObjectType::Slab => "IFCSLAB",
         c::ObjectType::Door => "IFCDOOR",
         c::ObjectType::Window => "IFCWINDOW",
+        c::ObjectType::Opening => "IFCOPENINGELEMENT",
         _ => "IFCBUILDINGELEMENTPROXY",
     }
 }

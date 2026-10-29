@@ -226,6 +226,8 @@ evidence: "n/a (background research)"
 | **Mechanical** | 38 | 8 | 30 | 24 | 9 | 5 |
 | **Total** | **155** | **51** | **104** | **114** | **24** | **17** |
 
+> **P8 追加（2026-10-29）**：`ObjectType::Opening`（IfcOpeningElement，值 116）为工程新增类型，不在上述调研清单内——计入后总数为 **156 列出 / 52 在 proto**（建筑 38 列出 / 23 在 proto）。
+>
 > 调研覆盖率：114/155 = **73.5%** 已研究（SolidWorks 官方重新调研后修正了 6 处臆造的 Toolbox 标记，覆盖率较修正前 78.3% 略降）；剩余 24 个 ⚠️ 为结构相似推断，17 个 ❌ 真正未研究。
 
 ## Platform Research Map

@@ -26,12 +26,12 @@ Building Engineering covers architectural, structural, MEP, and facility-related
 
 ### Core Objects
 
-> **Proto status** — ✅ in proto (`proto/omnim.proto`) · 🔀 partial (in proto, but the documented workflow/geometry is only partly implemented) · 🗓 planned-only (listed here, not in the `ObjectType` enum). Domain totals per `docs/research/COMPONENT_INVENTORY.md`: 155 listed / 51 in proto / 104 planned-only; Building 15/37 planned-only, Civil 31/41, Plant 28/39, Mechanical 30/38.
+> **Proto status** — ✅ in proto (`proto/omnim.proto`) · 🔀 partial (in proto, but the documented workflow/geometry is only partly implemented) · 🗓 planned-only (listed here, not in the `ObjectType` enum). Domain totals per `docs/research/COMPONENT_INVENTORY.md`: 156 listed / 52 in proto / 104 planned-only (P8 added `ObjectType::Opening`, IfcOpeningElement); Building 15/38 planned-only, Civil 31/41, Plant 28/39, Mechanical 30/38.
 
 | Category | Objects | Proto status |
 |----------|---------|--------------|
 | Spatial | Site, Building, BuildingStorey, Space, Zone | ✅ Site, Building, BuildingStorey, Space; 🗓 Zone |
-| Architectural | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Roof, Stair; 🗓 Ceiling, CurtainWall, Ramp |
+| Architectural | Wall, Door, Window, Opening, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Opening, Roof, Stair; 🗓 Ceiling, CurtainWall, Ramp |
 | Structural | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection | ✅ Beam, Column, Slab; 🗓 Footing, Pile, Brace, Truss, Rebar, Connection |
 | MEP | Duct, Pipe, CableTray (LinearComponent), Valve, Damper, Pump, Fan, AirTerminal | ✅ Duct, Pipe, CableTray, Valve, Pump, AirTerminal; 🗓 Damper, Fan |
 | Equipment | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture | ✅ Chiller, AHU, Transformer; 🗓 Boiler, Switchboard, Fixture |

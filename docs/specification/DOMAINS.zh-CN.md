@@ -26,12 +26,12 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 
 ### 核心对象
 
-> **Proto 状态** —— ✅ 已进 proto（`proto/omnim.proto`）· 🔀 部分（已进 proto，但文档所述工作流/几何仅部分实现）· 🗓 仅计划（此列出，但不在 `ObjectType` 枚举中）。各领域计数见 `docs/research/COMPONENT_INVENTORY.md`：共 155 个列出 / 51 个在 proto / 104 个仅计划；建筑 15/37 仅计划、土木 31/41、工厂 28/39、机械 30/38。
+> **Proto 状态** —— ✅ 已进 proto（`proto/omnim.proto`）· 🔀 部分（已进 proto，但文档所述工作流/几何仅部分实现）· 🗓 仅计划（此列出，但不在 `ObjectType` 枚举中）。各领域计数见 `docs/research/COMPONENT_INVENTORY.md`：共 156 个列出 / 52 个在 proto / 104 个仅计划（P8 追加 `ObjectType::Opening`，IfcOpeningElement）；建筑 15/38 仅计划、土木 31/41、工厂 28/39、机械 30/38。
 
 | 类别 | 对象 | Proto 状态 |
 |------|------|------------|
 | 空间 | Site, Building, BuildingStorey, Space, Zone | ✅ Site, Building, BuildingStorey, Space；🗓 Zone |
-| 建筑 | Wall, Door, Window, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Roof, Stair；🗓 Ceiling, CurtainWall, Ramp |
+| 建筑 | Wall, Door, Window, Opening, Roof, Ceiling, CurtainWall, Stair, Ramp | ✅ Wall, Door, Window, Opening, Roof, Stair；🗓 Ceiling, CurtainWall, Ramp |
 | 结构 | Beam, Column, Slab, Footing, Pile, Brace, Truss, Rebar, Connection | ✅ Beam, Column, Slab；🗓 Footing, Pile, Brace, Truss, Rebar, Connection |
 | MEP | Duct, Pipe, CableTray (LinearComponent), Valve, Damper, Pump, Fan, AirTerminal | ✅ Duct, Pipe, CableTray, Valve, Pump, AirTerminal；🗓 Damper, Fan |
 | 设备 | Chiller, Boiler, AHU, Transformer, Switchboard, Fixture | ✅ Chiller, AHU, Transformer；🗓 Boiler, Switchboard, Fixture |

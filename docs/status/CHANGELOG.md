@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Standalone openings (P8-S3b)
+
+### Added
+- **`ObjectType::Opening` (116)** mapped to `IfcOpeningElement` (import + export): a host-relative **void volume** created through `POST /api/genrule` (`genrule: "opening"`) with `wall_id`, `opening_width`, `opening_height`, `position_x/z`. The host must be an existing `Wall` (404/400 otherwise); the opening is parented to it and records `host_wall_id`. Created/deleted through the single write path (undo/redo covered).
+- Web: `opening` appears in the building type list and reuses the door/window host form (target wall + opening size + offsets).
+
+### Still open
+- The host wall mesh is **not** re-cut (feature-tree geometry stays authoritative; same transitional behaviour as doors/windows). Recorded in the capability matrix.
+
 ## [2026-10-29] — Grid datum UI + viewport (P8-S3a)
 
 ### Added

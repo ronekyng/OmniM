@@ -220,6 +220,7 @@ fn type_name(t: c::ObjectType) -> &'static str {
         Slab => "Slab",
         Door => "Door",
         Window => "Window",
+        Opening => "Opening",
         Stair => "Stair",
         Roof => "Roof",
         Floor => "Floor",

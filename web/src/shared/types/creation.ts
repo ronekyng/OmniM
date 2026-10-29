@@ -5,7 +5,7 @@ export type Point3D = { x: number; y: number; z: number };
 export type ObjectType =
   | 'wall' | 'slab' | 'roof' | 'floor'
   | 'road' | 'pipe' | 'beam' | 'column' | 'duct' | 'bridge' | 'tunnel'
-  | 'door' | 'window'
+  | 'door' | 'window' | 'opening'
   | 'tank' | 'pump' | 'valve' | 'gear' | 'equipment' | 'part' | 'assembly'
   | 'motor' | 'stair'
   | 'building' | 'storey' | 'space' | 'site'

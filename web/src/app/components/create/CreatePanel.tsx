@@ -25,7 +25,7 @@ type CreatePanelProps = {
 const OBJECT_TYPE_OPTIONS: { group: string; types: ObjectType[] }[] = [
   {
     group: '建筑',
-    types: ['wall', 'slab', 'beam', 'column', 'door', 'window', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
+    types: ['wall', 'slab', 'beam', 'column', 'door', 'window', 'opening', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
   },
   {
     group: '基础设施',

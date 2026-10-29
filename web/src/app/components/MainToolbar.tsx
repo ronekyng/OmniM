@@ -180,6 +180,18 @@ export function MainToolbar({
             parent_id: parentId,
           });
           break;
+        case 'opening':
+          obj = await api.genruleCreate({
+            genrule: 'opening',
+            name,
+            wall_id: form.targetWallId,
+            opening_width: parseFloat(form.openingWidth) || 1.0,
+            opening_height: parseFloat(form.openingHeight) || 2.1,
+            position_x: parseFloat(form.posX) || 0,
+            position_z: parseFloat(form.posZ) || 0,
+            parent_id: parentId,
+          });
+          break;
         case 'window':
           obj = await api.genruleCreate({
             genrule: 'window',

@@ -109,3 +109,30 @@ fn storey_export_roundtrips_through_import() {
         "imported project must still contain the storey"
     );
 }
+
+#[test]
+fn opening_element_maps_to_ifc_opening_element_both_ways() {
+    let mut project = omnim_model::Project::new("Openings");
+    let wall_id = project.create_object(c::ObjectType::Wall, "W1").id.clone();
+    let opening_id = project
+        .create_object(c::ObjectType::Opening, "O1")
+        .id
+        .clone();
+    project.objects.get_mut(&opening_id).unwrap().parent_id = Some(wall_id.clone());
+
+    let exported = omnim_ifc::export_ifc(&project);
+    assert!(
+        exported.contains("IFCOPENINGELEMENT"),
+        "opening must export as IfcOpeningElement"
+    );
+
+    let imported = omnim_ifc::import_ifc(&exported).unwrap();
+    assert!(
+        imported
+            .objects
+            .list()
+            .iter()
+            .any(|o| o.object_type == c::ObjectType::Opening as i32),
+        "import must map IFCOPENINGELEMENT back to ObjectType::Opening"
+    );
+}

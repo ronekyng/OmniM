@@ -22,6 +22,15 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 独立洞口对象（P8-S3b）
+
+### 新增（Added）
+- **`ObjectType::Opening`（116）** 映射 `IfcOpeningElement`（导入 + 导出）：宿主相对的**空腔体积**，经 `POST /api/genrule`（`genrule: "opening"`）创建，参数 `wall_id`、`opening_width`、`opening_height`、`position_x/z`。宿主必须是已存在的 `Wall`（否则 404/400）；洞口父关系挂到墙上并记录 `host_wall_id`。创建/删除走单一写入路径（撤销/重做覆盖）。
+- Web：建筑类型列表新增「洞口」，复用门窗的宿主表单（目标墙 + 洞口尺寸 + 偏移）。
+
+### 仍未关闭
+- 宿主墙网格**不**重剪（特征树几何保持权威；与门窗同为过渡行为）。已在能力矩阵记录。
+
 ## [2026-10-29] — 轴网 UI 与视口（P8-S3a）
 
 ### 新增（Added）

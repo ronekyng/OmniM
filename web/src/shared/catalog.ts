@@ -173,8 +173,8 @@ export function toggleFavorite(defId: string): string[] {
 
 export const DOMAIN_GROUPS: Record<string, { label: string; types: ObjectType[]; labels: Record<string, string> }> = {
   building: {
-    label: '建筑', types: ['wall', 'slab', 'column', 'beam', 'door', 'window', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
-    labels: { wall: '墙体', slab: '楼板', column: '柱', beam: '梁', door: '门', window: '窗', stair: '楼梯', roof: '屋顶', building: '建筑', storey: '楼层', space: '空间', site: '场地' },
+    label: '建筑', types: ['wall', 'slab', 'column', 'beam', 'door', 'window', 'opening', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
+    labels: { wall: '墙体', slab: '楼板', column: '柱', beam: '梁', door: '门', window: '窗', opening: '洞口', stair: '楼梯', roof: '屋顶', building: '建筑', storey: '楼层', space: '空间', site: '场地' },
   },
   civil: {
     label: '土木', types: ['road', 'bridge', 'tunnel', 'pipe', 'duct', 'feature_line', 'contour_line'],
@@ -201,7 +201,7 @@ export const OBJECT_TYPE_DOMAIN: Record<string, string> = {
   part: 'mechanical', assembly: 'mechanical', structuralsteel: 'structural',
 };
 
-export const GENRULE_TYPES = new Set<ObjectType>(['door', 'window']);
+export const GENRULE_TYPES = new Set<ObjectType>(['door', 'window', 'opening']);
 /** Types driven by the `line` genrule (thin N-point guide tubes). */
 export const LINE_GENRULE_TYPES = new Set<ObjectType>(['feature_line', 'contour_line']);
 export const CATALOG_TYPES = new Set<ObjectType>(['wall', 'slab', 'road', 'pipe', 'beam', 'column', 'tank', 'pump', 'valve']);
@@ -216,7 +216,7 @@ export const LAYERED_TYPES = new Set<ObjectType>(['wall', 'slab', 'roof', 'floor
 /** Human-readable label for an ObjectType (for catalog UI). */
 export function objectTypeLabel(type: ObjectType): string {
   const labels: Partial<Record<ObjectType, string>> = {
-    wall: '墙体', slab: '楼板', beam: '梁', column: '柱', door: '门', window: '窗',
+    wall: '墙体', slab: '楼板', beam: '梁', column: '柱', door: '门', window: '窗', opening: '洞口',
     road: '道路', pipe: '管道', duct: '风管', tank: '储罐', pump: '泵', valve: '阀门',
     stair: '楼梯', roof: '屋顶', bridge: '桥梁', tunnel: '隧道',
     building: '建筑', storey: '楼层', space: '空间', site: '场地',

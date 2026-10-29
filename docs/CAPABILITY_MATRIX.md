@@ -34,6 +34,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 | **Roof** | Surface (footprint region or 2-point profile) | ✅ 建筑 → 屋顶; 轮廓 or 坡屋面 modes | ✅ LayerEditor layers in mm | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / 🔀 (exports proxy) | ✅ |
 | **Floor** | Surface (region) | ❌ no menu entry; `/api/genrule` `mode:"floor"` only | ✅ layers in mm via API | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
 | **Door** | — (hosted opening) | ✅ Create panel; requires an existing Wall | 🔀 opening width/height + offset only | ✅* | ✅ `wall_id` required | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcDoor) | ✅ |
+| **Opening (洞口)** | Body (host-relative void volume) | ✅ Create panel (建筑 → 洞口); host wall required | 🔀 width/height/offset only; host mesh not re-cut | ✅* | ✅ parent + `host_wall_id`; host must be a Wall | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcOpeningElement) | ✅ |
 | **Window** | — (hosted opening) | ✅ Create panel; requires an existing Wall | 🔀 opening width/height + sill only | ✅* | ✅ `wall_id` required | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcWindow) | ✅ |
 | **Beam** | Linear | ✅ catalog path (creates Component); dialog falls back to box | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBeam) | ✅ |
 | **Column** | Linear | ✅ catalog path (creates Component); dialog falls back to box | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcColumn) | ✅ |
@@ -107,7 +108,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 
 ## 6. Coverage Notes and Verification
 
-- **Domain totals** ([DOMAINS](specification/DOMAINS.md), [COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)): **155 listed / 51 in proto / 104 planned-only**. Building 37 (22 in proto), Civil 41 (10), Plant 39 (11), Mechanical 38 (8).
+- **Domain totals** ([DOMAINS](specification/DOMAINS.md), [COMPONENT_INVENTORY](research/COMPONENT_INVENTORY.md)): **156 listed / 52 in proto / 104 planned-only** (P8 added `ObjectType::Opening`). Building 38 (23 in proto), Civil 41 (10), Plant 39 (11), Mechanical 38 (8).
 - **Server surface**: **83 deduplicated REST routes** ([API](reference/API.md); 2026-10-29 P8-S1 +4 grid-datum endpoints); **no WebSocket, no database**. One in-memory `Project`, optional JSON file.
 - **Persistence**: on by default (2026-10-28) — `$OMNIM_PROJECT`/`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`. All mutating endpoints save, including transform/parent/connect, materials, measurements, series/catalog edits, instantiation and IFC import.
 - **Undo**: every mutating endpoint is undoable, including transform, properties, parent/connect, material, catalog instantiation, IFC import and series edits ([WRITE_PATHS](architecture/WRITE_PATHS.md)).
