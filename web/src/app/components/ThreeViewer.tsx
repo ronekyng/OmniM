@@ -13,6 +13,7 @@ import { createInitialForm, applyPointsToForm, pickModeForForm, defaultPickModeF
 import { LAYERED_TYPES } from '../../shared/catalog';
 import { previewFormFor } from '../../shared/types/creation';
 import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayeredWallPreview, addPolygonFill, addPlaceCursor, addPathPreview } from './viewer/three/Markers';
+import { renderDatumGrids, clearDatumGridGroup } from './viewer/three/DatumGrids';
 import { polygonPreviewError } from '../../shared/creation/polyline';
 import { pickGroundPoint, pickingHint, requiredClicks } from './viewer/three/Picking';
 import { SnapIndicator } from './viewer/three/SnapIndicator';
@@ -90,6 +91,7 @@ type ViewerState = {
   transformControls: TransformControls;
   group: THREE.Group;
   measureGroup: THREE.Group;
+  datumGridGroup: THREE.Group;
   meshes: Map<string, THREE.Mesh>;
   edgeHelpers: Map<string, THREE.LineSegments>;
   sectionPlaneMesh?: THREE.Mesh;
@@ -499,6 +501,8 @@ focusObject: (id) => {
 
     const measureGroup = new THREE.Group();
     scene.add(measureGroup);
+    const datumGridGroup = new THREE.Group();
+    scene.add(datumGridGroup);
     const pickingMarkerGroup = new THREE.Group();
     scene.add(pickingMarkerGroup);
     pickingMarkerGroupRef.current = pickingMarkerGroup;
@@ -510,7 +514,7 @@ focusObject: (id) => {
     scene.add(hoverGroup);
     hoverGroupRef.current = hoverGroup;
     const snapIndicator = new SnapIndicator(scene);
-    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator };
+    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, datumGridGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator };
     stateRef.current = viewer;
 
     transformControls.addEventListener('dragging-changed', (event) => {
@@ -1062,6 +1066,7 @@ focusObject: (id) => {
       host.removeEventListener('drop', onDrop);
       disposeMeshes(viewer);
       clearMeasureGroup(viewer);
+      clearDatumGridGroup(viewer.datumGridGroup);
       clearMeasurePreviewObjects();
       viewer.snapIndicator.dispose();
       transformControls.dispose();
@@ -1112,6 +1117,7 @@ focusObject: (id) => {
       applySection(viewer, section);
       selectMeshes(viewer, selectedIdsRef.current);
       void loadMeasurements(viewer);
+      void loadDatumGrids(viewer);
     });
   }, [reloadToken]);
 
@@ -1138,6 +1144,15 @@ async function loadMeshes(viewer: ViewerState) {
     const viewMesh = createMesh(object);
     viewer.group.add(viewMesh);
     viewer.meshes.set(object.id, viewMesh);
+  }
+}
+
+async function loadDatumGrids(viewer: ViewerState) {
+  try {
+    const lines = await api.grids();
+    renderDatumGrids(viewer.datumGridGroup, lines);
+  } catch {
+    clearDatumGridGroup(viewer.datumGridGroup);
   }
 }
 

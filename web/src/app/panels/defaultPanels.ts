@@ -3,6 +3,7 @@ import { ObjectTreePanel } from './ObjectTreePanel';
 import { PropertiesPanel } from './PropertiesPanel';
 import { OmniPanelBottom } from './OmniPanelBottom';
 import { AvailableComponentsPanel } from '../components/AvailableComponentsPanel';
+import { GridPanel } from '../components/GridPanel';
 import { BuildingPanel, CivilPanel, PlantPanel, MechanicalPanel } from './DomainPanels';
 import { useAppStore } from '../store/appStore';
 
@@ -23,6 +24,14 @@ export function registerDefaultPanels() {
       visible: () => useAppStore.getState().selectedIds.length > 0 || useAppStore.getState().creationForm !== null || useAppStore.getState().creationPhase === 'picking',
       order: 0,
       title: 'Properties',
+    },
+    {
+      id: 'grid-datum',
+      position: 'left',
+      component: GridPanel,
+      visible: () => true,
+      order: 1,
+      title: '轴网',
     },
     {
       id: 'available-components',

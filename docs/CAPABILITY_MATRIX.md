@@ -101,7 +101,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 | **Site** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSite) | ✅ |
 | **Building** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuilding) | ✅ |
 | **BuildingStorey** | — (container) | ✅ Create panel ("storey"); elevation input (P8-S1) | ✅ datum `elevation` (m, IfcBuildingStorey.Elevation); 🔀 `level_id` attachment is API-only (`POST/PUT /api/objects`); vertical extent via `bottom_level_id`/`top_level_id` ✅ for path-driven objects (single-step cascade, P8-S2), 🔀 plain geometry gets the datum only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuildingStorey, native Elevation attribute, P8-S3) | ✅ |
-| **轴网 Grid (datum)** | — (datum annotation, not an object) | ❌ API only (`/api/grids`) | ✅ label/axis/coordinate CRUD, per-family unique labels, undoable | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓 (IfcGrid planned) | ✅ |
+| **轴网 Grid (datum)** | — (datum annotation, not an object) | ✅ Left panel 轴网 (P8-S3); also `/api/grids` | ✅ label/axis/coordinate CRUD, per-family unique labels, undoable; viewport draws coloured axis lines + tag sprites | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓 (IfcGrid planned) | ✅ |
 | **Space** | — (container; primitive box) | ✅ Create panel | 🔀 primitive dimensions | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSpace) | ✅ |
 | **Zone** | — (planned) | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |
 

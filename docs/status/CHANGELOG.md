@@ -22,6 +22,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Grid datum UI + viewport (P8-S3a)
+
+### Added
+- **轴网 panel** (left dock): list/add/edit/delete grid lines (`label`, axis family, coordinate, extents), wired to `/api/grids`; mutations trigger a scene reload.
+- **Viewport rendering**: datum grid lines are drawn as coloured axis lines (numbered vs lettered families) with tag sprites at the extents; 0/0 extents render as a bounded ±20 m span. Purely a datum overlay — never part of picking or the mesh sync.
+
 ## [2026-10-29] — Level UI + IFC elevation export (P8-S3)
 
 ### Added

@@ -1,4 +1,4 @@
-import type { ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint } from './types';
+import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
@@ -39,6 +39,18 @@ export const api = {
     body: JSON.stringify(body),
   }),
   mesh: () => request<MeshResponse>('/api/mesh', { cache: 'no-cache' }),
+  grids: () => request<GridLine[]>('/api/grids'),
+  createGrid: (body: unknown) => request<GridLine>('/api/grids', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }),
+  updateGrid: (id: string, body: unknown) => request<GridLine>(`/api/grids/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }),
+  deleteGrid: (id: string) => fetch(`/api/grids/${id}`, { method: 'DELETE' }),
   deleteObject: (id: string) => fetch(`/api/objects/${id}`, { method: 'DELETE' }),
   updateObject: (id: string, body: { name?: string; description?: string }) => fetch(`/api/objects/${id}`, {
     method: 'PUT',

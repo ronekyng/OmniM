@@ -101,7 +101,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 | **场地 Site** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSite） | ✅ |
 | **建筑 Building** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuilding） | ✅ |
 | **楼层 BuildingStorey** | —（容器） | ✅ 创建面板（"storey"）；标高输入（P8-S1） | ✅ 基准标高 `elevation`（米，IfcBuildingStorey.Elevation）；🔀 `level_id` 挂接仅 API（`POST/PUT /api/objects`）；竖向范围经 `bottom_level_id`/`top_level_id` ✅ 对路径驱动对象生效（单步级联，P8-S2），🔀 普通几何仅获得基准 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuildingStorey，原生 Elevation 属性，P8-S3） | ✅ |
-| **轴网 Grid（基准）** | —（基准注记，非对象） | ❌ 仅 API（`/api/grids`） | ✅ 标签/轴向/坐标 CRUD，同轴族标签唯一，可撤销 | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓（IfcGrid 计划中） | ✅ |
+| **轴网 Grid（基准）** | —（基准注记，非对象） | ✅ 左侧「轴网」面板（P8-S3）；亦可 `/api/grids` | ✅ 标签/轴向/坐标 CRUD，同轴族标签唯一，可撤销；视口绘制彩色轴线与轴号标签 | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓（IfcGrid 计划中） | ✅ |
 | **空间 Space** | —（容器；基本体盒） | ✅ 创建面板 | 🔀 基本体尺寸 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSpace） | ✅ |
 | **分区 Zone** | —（计划中） | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |
 

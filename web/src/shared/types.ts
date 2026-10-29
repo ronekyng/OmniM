@@ -62,6 +62,16 @@ export type UpdatePropertiesRequest = {
   properties?: Record<string, string>;
 };
 
+/** Grid datum line (轴网), P8-S1/S3. `axis` is the direction the line runs. */
+export type GridLine = {
+  id: string;
+  label: string;
+  axis: 'AlongX' | 'AlongY';
+  coordinate: number;
+  extent_min: number;
+  extent_max: number;
+};
+
 export type TreeNode = {
   id: string;
   name: string;
