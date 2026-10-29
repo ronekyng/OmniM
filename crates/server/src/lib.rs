@@ -1649,6 +1649,10 @@ enum GenRuleRequest {
         name: String,
         length: f64,
         radius: f64,
+        /// P8 pipe routing: N-point route (contract `{ points, closed:false }`).
+        /// When absent the legacy straight pipe (`length` + `radius`) is built.
+        #[serde(default)]
+        path: Option<PathInput>,
         #[serde(default)]
         parent_id: Option<String>,
         #[serde(default)]
@@ -1879,7 +1883,10 @@ async fn genrule_create(
     // layered family is excluded: it has no series-catalog route (it always
     // instantiates the path-driven feature-tree templates) and carries the
     // series id as metadata only.
-    if !matches!(req, GenRuleRequest::Layered { .. }) {
+    // The routed-pipe form is also excluded: the series-catalog path builds a
+    // straight catalog component and would silently discard the route.
+    let has_pipe_route = matches!(req, GenRuleRequest::Pipe { path: Some(_), .. });
+    if !matches!(req, GenRuleRequest::Layered { .. }) && !has_pipe_route {
         if let Some(sid) = series_id {
             if !sid.is_empty() {
                 let obj = genrule_create_catalog(&mut p, &req, sid, parent_id)?;
@@ -2061,9 +2068,43 @@ async fn genrule_create(
             name,
             length,
             radius,
+            path,
             ..
         } => {
-            let mesh = omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20);
+            if !(*radius > 0.0) {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "pipe radius must be positive".into(),
+                ));
+            }
+            // P8 pipe routing: sweep a circular section along the picked path.
+            // Build/validate the mesh *before* creating the object so a bad
+            // route cannot leave an orphan behind.
+            let route = path.as_ref().map(|p| p.clone().normalize(false));
+            let (mesh, route_points, route_len) = match route {
+                Some(spec) => {
+                    if spec.closed {
+                        return Err((
+                            StatusCode::BAD_REQUEST,
+                            "pipe path must be open (a pipe is a linear component)".into(),
+                        ));
+                    }
+                    validate_spec(&spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                    let mesh = omnim_model::gen_rule::pipe_route::build_pipe_route(
+                        &spec.points,
+                        *radius,
+                        omnim_model::gen_rule::pipe_route::DEFAULT_RING_SEGMENTS,
+                    )
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                    let len = omnim_model::gen_rule::pipe_route::route_length(&spec.points);
+                    (mesh, Some(spec.points.clone()), Some(len))
+                }
+                None => (
+                    omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20),
+                    None,
+                    None,
+                ),
+            };
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             let id = p
                 .create_object(omnim_core::ObjectType::PipePlant, name)
@@ -2074,6 +2115,16 @@ async fn genrule_create(
                 .get_mut(&id)
                 .expect("genrule object was just created");
             obj.geometry = Some(geom);
+            if let Some(points) = route_points {
+                obj.set_property(
+                    "route_points",
+                    str_prop(&serde_json::to_string(&points).unwrap_or_default()),
+                );
+                obj.set_property("pipe_radius", str_prop(&format!("{}", radius)));
+                if let Some(len) = route_len {
+                    obj.set_property("route_length", str_prop(&format!("{}", len)));
+                }
+            }
             if let Some(pid) = parent_id {
                 if !pid.is_empty() {
                     obj.parent_id = Some(pid.to_string());

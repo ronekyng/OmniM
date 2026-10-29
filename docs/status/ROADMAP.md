@@ -200,7 +200,7 @@ Designs agreed and documented as contracts (in the specification) but not yet im
 | 1.6 | Docs: API.md genrule section gains the authorization matrix (as design note until 1.2 lands); GLOSSARY already updated (Path/Genesis/Form/authorization matrix) | — |
 | | **Total** | **~2.5d** |
 
-Elbow (arc bend, LinearComponent family only) is deliberately out of scope here — Phase 8 pipe routing.
+Elbow / pipe routing: **delivered as an API slice (2026-10-29)** — `genrule: "pipe"` with `path` sweeps a circular section along the picked polyline through the LinearComponent kernel (continuous/mitered bends, route stored as `route_points`). Branches, fittings and a feature-tree template remain out of scope.
 
 ## Technical-Debt Backlog
 

@@ -160,6 +160,8 @@ No deviation found in the Rust backend.
 
 The official geometry path is the feature tree/BRep pipeline; the genrule pass-through is legacy/transitional. See [DATA_FLOW.md §4](../architecture/DATA_FLOW.md#4-d-catalog--series-instantiation).
 
+> **Update 2026-10-29 (P8).** Pipe routing now sweeps the picked N-point path through the `LinearComponent` kernel instead of the straight legacy pipe (`gen_rule::pipe_route`); the route is recorded on the object (`route_points`/`pipe_radius`/`route_length`). It is still a mesh-based Linear-family path (no feature-tree template), so this split remains explicitly transitional.
+
 ### 6.4 Series gate, materials, connections are weaker than documented (audit P0-5)
 
 **Documented**: series gates enforce approved components, materials, and connection compatibility.

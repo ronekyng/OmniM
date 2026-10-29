@@ -22,6 +22,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Pipe routing (P8-S3c)
+
+### Added
+- **Routed pipes** (`POST /api/genrule`, `genrule: "pipe"` + `path`): a circular section is swept along the picked N-point polyline through the LinearComponent kernel — bends are continuous/mitered rather than disjoint cylinders. The route is recorded on the object (`route_points` JSON, `pipe_radius`, `route_length`), the object type is `PipePlant`.
+- Validation: `< 2` points, a closed path, zero-length segments and `radius ≤ 0` all return `400` **before** the object is created (no orphans), and a series-selected routed pipe no longer falls into the straight catalog path.
+- Legacy `pipe` (no path, `length` + `radius`) is unchanged.
+
+### Still open
+- Branches, fitting/elbow objects and a feature-tree pipe template remain out of scope; the routed pipe is a mesh-based Linear-family path (recorded transitional in CODE_DEVIATIONS §6.3).
+
 ## [2026-10-29] — Standalone openings (P8-S3b)
 
 ### Added

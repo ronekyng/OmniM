@@ -68,7 +68,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 
 | Object type | Genesis | Create via UI | Parameters / series | Move / transform | Host / openings | Connect | Measure | Section | Clash | Quantity | Drawing | IFC in / out | Proto |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **Pipe** | Linear | ✅ 工厂 → 管道 or Create; 2 picks; catalog path creates Component | ✅ DN/length params in mm or radius/length in m; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
+| **Pipe** | Linear | ✅ 工厂 → 管道 or Create; 2 picks; catalog path creates Component; **routing** (`genrule: "pipe"` + `path`, API only) sweeps an N-point route | ✅ DN/length params in mm or radius/length in m; routed pipes record `route_points`/`pipe_radius`/`route_length`; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
 | **Tank** | Body | ✅ 工厂 quick action/catalog (Component) | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
 | **Pump** | Body | ✅ 工厂 quick action/catalog (Component) | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
 | **Valve** | Body | ✅ 工厂 quick action/catalog (Component) | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |

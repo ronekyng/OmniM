@@ -200,7 +200,7 @@ evidence: "audited against code 2026-10-27"
 | 1.6 | 文档：API.md genrule 章节加入授权矩阵（1.2 落地前以设计注记出现）；GLOSSARY 已更新（路径/创成/形态/授权矩阵） | — |
 | | **合计** | **~2.5 天** |
 
-圆弧弯头（elbow，仅 LinearComponent 家族）刻意不在此范围——属 Phase 8 管道布线。
+弯头/管道布线：**已交付 API 切片（2026-10-29）**——`genrule: "pipe"` 带 `path` 时经 LinearComponent 内核沿拾取折线扫掠圆形截面（弯头连续/斜接，路由以 `route_points` 记录）。分支、管件与特征树模板仍不在范围内。
 
 ## 技术债待办
 

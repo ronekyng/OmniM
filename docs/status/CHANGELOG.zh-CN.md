@@ -22,6 +22,16 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 管道路由（P8-S3c）
+
+### 新增（Added）
+- **路由管道**（`POST /api/genrule`，`genrule: "pipe"` + `path`）：圆形截面沿拾取的 N 点折线经 LinearComponent 内核扫掠——弯头连续过渡，而非两段独立圆柱。路由记录在对象上（`route_points` JSON、`pipe_radius`、`route_length`），对象类型为 `PipePlant`。
+- 校验：`< 2` 点、闭合路径、零长度段、`radius ≤ 0` 均在**创建前**返回 `400`（不留孤儿）；选中系列的路由管不再落入直管目录路径。
+- 遗留 `pipe`（无路径，`length` + `radius`）行为不变。
+
+### 仍未关闭
+- 分支、管件/弯头对象与管道特征树模板仍不在范围内；路由管是网格化 Linear 族路径（CODE_DEVIATIONS §6.3 记为过渡）。
+
 ## [2026-10-29] — 独立洞口对象（P8-S3b）
 
 ### 新增（Added）

@@ -17,6 +17,7 @@ pub mod matrix;
 pub mod opening;
 pub mod path_geom;
 pub mod path_sweep;
+pub mod pipe_route;
 
 use c::{MeshGeometry, ParametricGeometry};
 use omnim_core as c;
