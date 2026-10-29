@@ -745,6 +745,11 @@ async fn connect(
         Some(name) => parse_connection_type(name).map_err(ApiError::bad_request)?,
         None => omnim_core::ConnectionType::Structural,
     };
+    // P8-S4: bind the nearest instance connectors (routed pipes and other
+    // objects that carry physical attach points) and record the points.
+    let mut from_point = None;
+    let mut to_point = None;
+    let mut connection_detail = String::new();
     {
         let p = state.project.read().await;
         let duplicate = p.relations.connections().iter().any(|c| {
@@ -767,15 +772,70 @@ async fn connect(
                 )));
             }
         }
+        let connectors_from = p
+            .objects
+            .get(&from)
+            .map(|o| o.instance_connectors.clone())
+            .unwrap_or_default();
+        let connectors_to = p
+            .objects
+            .get(&to)
+            .map(|o| o.instance_connectors.clone())
+            .unwrap_or_default();
+        if !connectors_from.is_empty() && !connectors_to.is_empty() {
+            // Nearest pair wins (distinct endpoints meet at the same point).
+            let mut best: Option<(usize, usize, f64)> = None;
+            for (ia, a) in connectors_from.iter().enumerate() {
+                for (ib, b) in connectors_to.iter().enumerate() {
+                    let d2: f64 = (0..3)
+                        .map(|k| (a.position[k] - b.position[k]).powi(2))
+                        .sum();
+                    if best.is_none_or(|(_, _, bd)| d2 < bd) {
+                        best = Some((ia, ib, d2));
+                    }
+                }
+            }
+            if let Some((ia, ib, _)) = best {
+                let a = &connectors_from[ia];
+                let b = &connectors_to[ib];
+                // Bore compatibility (1.5 mm tolerance) — only when both known.
+                if a.bore > 0.0 && b.bore > 0.0 && (a.bore - b.bore).abs() > 0.0015 {
+                    return Err(ApiError::bad_request(format!(
+                        "connector bore mismatch: '{}' {:.3} m vs '{}' {:.3} m",
+                        from, a.bore, to, b.bore
+                    )));
+                }
+                if !a.connection_type_code.is_empty()
+                    && !b.connection_type_code.is_empty()
+                    && a.connection_type_code != b.connection_type_code
+                {
+                    return Err(ApiError::bad_request(format!(
+                        "connector type mismatch: '{}' vs '{}'",
+                        a.connection_type_code, b.connection_type_code
+                    )));
+                }
+                from_point = Some(omnim_core::Point3D {
+                    x: a.position[0],
+                    y: a.position[1],
+                    z: a.position[2],
+                });
+                to_point = Some(omnim_core::Point3D {
+                    x: b.position[0],
+                    y: b.position[1],
+                    z: b.position[2],
+                });
+                connection_detail = format!("from:{};to:{}", a.id, b.id);
+            }
+        }
     }
     let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(
         c::Connection {
             from_object_id: from.clone(),
             to_object_id: to.clone(),
             r#type: conn_type as i32,
-            from_point: None,
-            to_point: None,
-            connection_detail: String::new(),
+            from_point,
+            to_point,
+            connection_detail,
         },
     ))];
     let result = mutation::apply(&state, c::Action::AddConnection, ops).await?;
@@ -1897,6 +1957,10 @@ async fn genrule_create(
     }
 
     // No series selected: use the old mesh generation path (creates correct geometry)
+    // Objects created alongside the main one (P8-S4: pipe elbow fittings) so
+    // the whole user action is recorded as a single undo step.
+    let mut extra_created: Vec<omnim_model::OmniObject> = Vec::new();
+
     let obj = match &req {
         GenRuleRequest::Wall {
             name,
@@ -2109,22 +2173,87 @@ async fn genrule_create(
                             series_id,
                         )
                         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                    let obj = p
-                        .objects
-                        .get_mut(&component_id)
-                        .expect("pipe object was just created");
-                    obj.set_property(
-                        "route_points",
-                        str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
-                    );
-                    obj.set_property("pipe_radius", str_prop(&format!("{}", radius)));
-                    obj.set_property("route_length", str_prop(&format!("{}", route_len)));
-                    if let Some(pid) = parent_id {
-                        if !pid.is_empty() {
-                            obj.parent_id = Some(pid.to_string());
+                    let pipe_obj = {
+                        let obj = p
+                            .objects
+                            .get_mut(&component_id)
+                            .expect("pipe object was just created");
+                        obj.set_property(
+                            "route_points",
+                            str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
+                        );
+                        obj.set_property("pipe_radius", str_prop(&format!("{}", radius)));
+                        obj.set_property("route_length", str_prop(&format!("{}", route_len)));
+                        if let Some(pid) = parent_id {
+                            if !pid.is_empty() {
+                                obj.parent_id = Some(pid.to_string());
+                            }
                         }
+                        // P8-S4: instance connectors at the two ends. The
+                        // direction points **away** from the pipe so that two
+                        // joined ends face each other.
+                        let unit = |a: &[f64; 3], b: &[f64; 3]| -> [f64; 3] {
+                            let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+                            let len = (dx * dx + dy * dy + dz * dz).sqrt().max(1e-12);
+                            [dx / len, dy / len, dz / len]
+                        };
+                        let first = spec.points[0];
+                        let last = *spec.points.last().expect("validated >= 2 points");
+                        let second = spec.points[1];
+                        let prev = spec.points[spec.points.len() - 2];
+                        obj.instance_connectors = vec![
+                            omnim_model::InstanceConnector {
+                                id: "start".into(),
+                                name: "Start".into(),
+                                position: first,
+                                direction: unit(&second, &first),
+                                bore: radius * 2.0,
+                                connection_type_code: "pipe".into(),
+                            },
+                            omnim_model::InstanceConnector {
+                                id: "end".into(),
+                                name: "End".into(),
+                                position: last,
+                                direction: unit(&prev, &last),
+                                bore: radius * 2.0,
+                                connection_type_code: "pipe".into(),
+                            },
+                        ];
+                        obj.clone()
+                    };
+
+                    // Elbow fitting placeholders at every internal bend.
+                    for (i, point) in spec
+                        .points
+                        .iter()
+                        .enumerate()
+                        .take(spec.points.len() - 1)
+                        .skip(1)
+                    {
+                        let fid = p
+                            .create_object(
+                                omnim_core::ObjectType::Fitting,
+                                &format!("{}-elbow-{}", name, i),
+                            )
+                            .id
+                            .clone();
+                        let fitting = p
+                            .objects
+                            .get_mut(&fid)
+                            .expect("fitting object was just created");
+                        fitting.geometry = Some(omnim_model::geometry::mesh_to_geometry(
+                            &omnim_model::gen_rule::fitting::build_elbow_fitting(
+                                *point,
+                                radius * 1.15,
+                            ),
+                        ));
+                        fitting.parent_id = Some(component_id.clone());
+                        fitting.set_property("host_pipe_id", str_prop(&component_id));
+                        fitting.set_property("fitting_type", str_prop("elbow"));
+                        fitting.set_property("bore", str_prop(&format!("{}", radius * 2.0)));
+                        extra_created.push(fitting.clone());
                     }
-                    obj.clone()
+                    pipe_obj
                 }
                 None => {
                     let mesh =
@@ -2679,8 +2808,15 @@ async fn genrule_create(
     // Ensure children index is in sync after setting parent_ids
     p.objects.rebuild_children();
 
-    // Record undo command
-    exe.record_create(&obj);
+    // Record undo command — one step for the whole action (P8-S4: a routed
+    // pipe and its elbow fittings are created together).
+    if extra_created.is_empty() {
+        exe.record_create(&obj);
+    } else {
+        let mut all = vec![obj.clone()];
+        all.extend(extra_created);
+        exe.record_create_batch(&all);
+    }
 
     Ok(Json(obj))
 }

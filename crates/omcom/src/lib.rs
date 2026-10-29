@@ -824,6 +824,11 @@ pub enum Command {
     CreateObject {
         snapshot: ObjectSnapshot,
     },
+    /// 批量创建（一次用户动作产出多个对象，例如路由管 + 弯头管件）——
+    /// 单步 undo：删除全部；redo：恢复全部。
+    CreateBatch {
+        snapshots: Vec<ObjectSnapshot>,
+    },
     /// 删除对象 — undo 时恢复
     DeleteObject {
         snapshot: ObjectSnapshot,
@@ -2155,6 +2160,7 @@ impl Executor {
                                         level_id: None,
                                         bottom_level_id: None,
                                         top_level_id: None,
+                                        instance_connectors: Vec::new(),
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -2257,6 +2263,7 @@ impl Executor {
                                         level_id: None,
                                         bottom_level_id: None,
                                         top_level_id: None,
+                                        instance_connectors: Vec::new(),
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -3657,6 +3664,33 @@ impl Executor {
         }
     }
 
+    /// 手动记录一条批量创建的 undo 命令（单步撤销一组对象）。
+    pub fn record_create_batch(&mut self, objs: &[OmniObject]) {
+        if objs.is_empty() {
+            return;
+        }
+        self.redo_stack.clear();
+        let command = Command::CreateBatch {
+            snapshots: objs
+                .iter()
+                .map(|obj| ObjectSnapshot {
+                    object: obj.clone(),
+                    removed_properties: Vec::new(),
+                    old_material_id: None,
+                    old_geometry: None,
+                })
+                .collect(),
+        };
+        if let Some(tx) = &mut self.transaction_stack {
+            tx.push(command);
+        } else {
+            self.undo_stack.push(command);
+        }
+        while self.undo_stack.len() > MAX_UNDO_DEPTH {
+            self.undo_stack.remove(0);
+        }
+    }
+
     /// 手动记录一条删除对象的 undo 命令
     pub fn record_delete(&mut self, obj: &OmniObject) {
         self.redo_stack.clear();
@@ -3813,6 +3847,12 @@ impl Executor {
     /// 逆向执行命令（用于 undo）
     fn apply_inverse(&self, cmd: &Command, project: &mut Project) -> String {
         match cmd {
+            Command::CreateBatch { snapshots } => {
+                for snap in snapshots {
+                    project.objects.remove(&snap.object.id);
+                }
+                format!("undo: removed {} objects", snapshots.len())
+            }
             Command::CreateObject { snapshot } => {
                 project.objects.remove(&snapshot.object.id);
                 format!("undo: removed object {}", &snapshot.object.id[..8])
@@ -4620,6 +4660,12 @@ impl Executor {
     /// 正向执行命令（用于 redo）
     fn apply_forward(&self, cmd: &Command, project: &mut Project) -> String {
         match cmd {
+            Command::CreateBatch { snapshots } => {
+                for snap in snapshots {
+                    project.objects.insert(snap.object.clone());
+                }
+                format!("redo: created {} objects", snapshots.len())
+            }
             Command::CreateObject { snapshot } => {
                 project.objects.insert(snapshot.object.clone());
                 format!("redo: created object {}", &snapshot.object.id[..8])

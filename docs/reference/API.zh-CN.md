@@ -118,6 +118,8 @@ curl -sS "$BASE/api/stats"
 - `PUT /api/objects/{id}` 请求体：`{ name?, description?, ifc_class?, tags?, elevation?, level_id?, bottom_level_id?, top_level_id? }`（`""` 清除挂接；范围引用必须成对设置）→ 成功返回空响应，找不到为 `404`。所有字段均可撤销/重做（P8-S1 把 `ModifyObject` 快照扩展到全部可修改字段）。
 
 - **标高驱动竖向范围（P8-S2）**：对象可携带 `bottom_level_id` + `top_level_id`（`POST`/`PUT /api/objects` 与 `layered` genrule 变体）。必须成对设置；均须引用 `BuildingStorey`；顶部标高须高于底部（无标高的楼层按 0 m 计）。解析结果：`elevation` 取底部楼层标高；对路径驱动（`PathSweep`）几何——即 Wave-3 建筑族——路径基高平移到该标高、扫掠高度置为 `top − bottom`；普通盒体几何仅获得 `elevation` 基准。修改楼层 `elevation` 会把所有受约束对象作为**一步撤销**重新解析。删除仍被对象引用的楼层返回 `400`（请先解除挂接）。
+
+- **连接器绑定（P8-S4）**：`POST /api/objects/{from}/connect/{to}` 绑定**最近的实例连接器对**（对象上的 `instance_connectors`，如路由管两端）：连接记录 `from_point`/`to_point` 与 `connection_detail: "from:<id>;to:<id>"`。口径需在 1.5 mm 内一致，非空连接类型码必须相同（否则 `400`）。无实例连接器的对象保持既有行为（`from_point`/`to_point` 为空）。
 - `PUT /api/objects/{id}/prop` 请求体：`{ "name": "FireRating", "value": "2h" }` — 值以字符串 `PropertyValue` 存储。成功返回空响应，`404`。
 - `PUT /api/objects/{id}/properties` 请求体：类似 `PUT /api/objects/{id}`，外加 `"properties": { "k": "v", ... }`（字符串映射）。适合编辑器一次性同步。成功返回空响应。
 - `GET /api/object-types/{type}/properties` → `Vec<ObjectPropertyDef>`（例如 "wall" 的属性定义）；未知类型返回空列表。
@@ -519,7 +521,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
   | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的折线，即 Path（开放），`[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
-  | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?`——遗留直管；追加 `path`（`{ points, closed:false }`，≥ 2 点）启用**管道路由**（P8）：圆形截面沿折线扫掠、斜接过渡，产出 `PipePlant` 对象并记录 `route_points`/`pipe_radius` 属性。`radius ≤ 0` → `400`。 |
+  | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?`——遗留直管；追加 `path`（`{ points, closed:false }`，≥ 2 点）启用**管道路由**（P8）：圆形截面经 `Pipe-Path` 特征树沿折线扫掠，产出 `PipePlant` 对象并记录 `route_points`/`pipe_radius` 属性与 **两个实例连接器**（`start`/`end`，口径 = 2×radius，方向朝外）。每个内部弯点另生成 `Fitting` 弯头占位，全部作为**单步撤销**记录。`radius ≤ 0` → `400`。 |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
   | `opening` | `name`, `wall_id`（宿主**必须是** `Wall`）、`opening_width`、`opening_height`、`position_x`、`position_z`、`parent_id?`——创建挂到墙上的 `ObjectType::Opening` 空腔体积（IfcOpeningElement）；宿主网格不重剪 |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |

@@ -6,6 +6,23 @@ use uuid::Uuid;
 
 use crate::feature::Feature;
 
+/// Instance-level connector (P8-S4): a physical attach point on a created
+/// object (e.g. a routed pipe end), as opposed to `ComponentDef.connectors`
+/// which describe catalog definitions.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct InstanceConnector {
+    pub id: String,
+    pub name: String,
+    /// World position in metres.
+    pub position: [f64; 3],
+    /// Unit axis pointing **away** from the object (face normal).
+    pub direction: [f64; 3],
+    /// Nominal bore in metres (0.0 = unknown).
+    pub bore: f64,
+    /// Compatibility family (e.g. "pipe", "flange-dn50"); empty = any.
+    pub connection_type_code: String,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct OmniObject {
     pub id: String,
@@ -42,6 +59,10 @@ pub struct OmniObject {
     /// Vertical-extent constraints: the object's top resolves to this storey.
     #[serde(default)]
     pub top_level_id: Option<String>,
+    /// Physical attach points created with the object (P8-S4), e.g. routed
+    /// pipe ends. `connect()` binds the nearest pair and records the points.
+    #[serde(default)]
+    pub instance_connectors: Vec<InstanceConnector>,
 }
 
 impl OmniObject {
@@ -67,6 +88,7 @@ impl OmniObject {
             level_id: None,
             bottom_level_id: None,
             top_level_id: None,
+            instance_connectors: Vec::new(),
         }
     }
 

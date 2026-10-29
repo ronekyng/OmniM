@@ -22,6 +22,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Pipe instance connectors + elbow fittings (P8-S4b)
+
+### Added
+- **`OmniObject.instance_connectors`** (serde default): physical attach points with position, outward unit direction, bore (m) and an optional connection type code. Routed pipes create `start`/`end` connectors (bore = 2·radius).
+- **Connector binding in `connect()`**: the nearest connector pair is selected, `from_point`/`to_point` are recorded (previously always empty) and `connection_detail` names the pair (`from:end;to:start`). Bore mismatch (> 1.5 mm) and type-code mismatch → `400`. Objects without instance connectors behave as before.
+- **Elbow fittings**: each internal bend of a routed pipe creates a `Fitting` object (object type 307, parented to the pipe, `fitting_type: "elbow"`, bore) — placeholder sphere at 1.15× radius until real mitered/arc geometry lands.
+- `Command::CreateBatch`: a routed pipe and its fittings are created as **one undo step** (`record_create_batch`), instead of N separate entries.
+
 ## [2026-10-29] — Pipe routing on the feature-tree path (P8-S4a)
 
 ### Added

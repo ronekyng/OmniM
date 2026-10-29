@@ -36,7 +36,7 @@ pub use library::Library;
 pub use lifecycle::LifecycleStore;
 pub use material::MaterialStore;
 pub use measurement::{Measurement, MeasurementStore, Point3D};
-pub use object::OmniObject;
+pub use object::{InstanceConnector, OmniObject};
 pub use omnim_sketch;
 pub use profile::ProfileType;
 pub use project::{LevelExtentChange, Project, ProjectStats, SeriesRef, LIBRARY};

@@ -22,6 +22,14 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 管道实例连接器与弯头管件（P8-S4b）
+
+### 新增（Added）
+- **`OmniObject.instance_connectors`**（serde default）：物理连接点，含位置、朝外单位方向、口径（m）与可选连接类型码。路由管创建 `start`/`end` 两个连接器（口径 = 2×半径）。
+- **`connect()` 连接器绑定**：选择最近连接器对，记录 `from_point`/`to_point`（此前恒为空），`connection_detail` 记录连接器对（`from:end;to:start`）。口径差 > 1.5 mm 或类型码不一致 → `400`；无实例连接器的对象保持原行为。
+- **弯头管件**：路由管每个内部弯点生成 `Fitting` 对象（类型 307，父关系挂到管道，`fitting_type: "elbow"`、口径）——在真实斜接/圆弧几何落地前为 1.15×半径的球体占位。
+- `Command::CreateBatch`：路由管与弯头作为**一步撤销**（`record_create_batch`），而非 N 条独立记录。
+
 ## [2026-10-29] — 管道路由接入特征树（P8-S4a）
 
 ### 新增（Added）
