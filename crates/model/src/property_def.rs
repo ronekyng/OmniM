@@ -121,50 +121,94 @@ pub fn property_defs_for_type(object_type: i32) -> Vec<ObjectPropertyDef> {
     let t = c::ObjectType::try_from(object_type).unwrap_or(Generic);
     match t {
         Wall | Slab | Roof | Floor => vec![
-            ObjectPropertyDef::double("height", "高度").with_unit("m").with_range(0.0, 100.0, 0.01),
-            ObjectPropertyDef::double("core_thickness", "核心层厚度").with_unit("mm").with_range(0.0, 1000.0, 1.0),
-            ObjectPropertyDef::double("finish_thickness", "饰面层厚度").with_unit("mm").with_range(0.0, 1000.0, 1.0),
+            ObjectPropertyDef::double("height", "高度")
+                .with_unit("m")
+                .with_range(0.0, 100.0, 0.01),
+            ObjectPropertyDef::double("core_thickness", "核心层厚度")
+                .with_unit("mm")
+                .with_range(0.0, 1000.0, 1.0),
+            ObjectPropertyDef::double("finish_thickness", "饰面层厚度")
+                .with_unit("mm")
+                .with_range(0.0, 1000.0, 1.0),
             ObjectPropertyDef::string("layers", "层结构 (JSON)"),
         ],
         Beam | Column => vec![
-            ObjectPropertyDef::double("length", "长度").with_unit("m").with_range(0.0, 100.0, 0.01),
-            ObjectPropertyDef::double("width", "宽度").with_unit("mm").with_range(0.0, 2000.0, 1.0),
-            ObjectPropertyDef::double("height", "高度").with_unit("mm").with_range(0.0, 2000.0, 1.0),
+            ObjectPropertyDef::double("length", "长度")
+                .with_unit("m")
+                .with_range(0.0, 100.0, 0.01),
+            ObjectPropertyDef::double("width", "宽度")
+                .with_unit("mm")
+                .with_range(0.0, 2000.0, 1.0),
+            ObjectPropertyDef::double("height", "高度")
+                .with_unit("mm")
+                .with_range(0.0, 2000.0, 1.0),
         ],
         Road | Duct | CableTray => vec![
-            ObjectPropertyDef::double("length", "长度").with_unit("m").with_range(0.0, 1000.0, 0.1),
-            ObjectPropertyDef::double("width", "宽度").with_unit("m").with_range(0.0, 50.0, 0.1),
-            ObjectPropertyDef::double("thickness", "厚度").with_unit("mm").with_range(0.0, 1000.0, 1.0),
+            ObjectPropertyDef::double("length", "长度")
+                .with_unit("m")
+                .with_range(0.0, 1000.0, 0.1),
+            ObjectPropertyDef::double("width", "宽度")
+                .with_unit("m")
+                .with_range(0.0, 50.0, 0.1),
+            ObjectPropertyDef::double("thickness", "厚度")
+                .with_unit("mm")
+                .with_range(0.0, 1000.0, 1.0),
         ],
         PipePlant | PipeCivil => vec![
-            ObjectPropertyDef::double("length", "长度").with_unit("m").with_range(0.0, 1000.0, 0.1),
-            ObjectPropertyDef::double("radius", "半径").with_unit("mm").with_range(0.0, 2000.0, 1.0),
+            ObjectPropertyDef::double("length", "长度")
+                .with_unit("m")
+                .with_range(0.0, 1000.0, 0.1),
+            ObjectPropertyDef::double("radius", "半径")
+                .with_unit("mm")
+                .with_range(0.0, 2000.0, 1.0),
             ObjectPropertyDef::string("start_point", "起点 (x,y,z)"),
             ObjectPropertyDef::string("end_point", "终点 (x,y,z)"),
         ],
         Tank => vec![
-            ObjectPropertyDef::double("diameter", "直径").with_unit("m").with_range(0.0, 50.0, 0.1),
-            ObjectPropertyDef::double("height", "高度").with_unit("m").with_range(0.0, 50.0, 0.1),
+            ObjectPropertyDef::double("diameter", "直径")
+                .with_unit("m")
+                .with_range(0.0, 50.0, 0.1),
+            ObjectPropertyDef::double("height", "高度")
+                .with_unit("m")
+                .with_range(0.0, 50.0, 0.1),
         ],
         Pump => vec![
-            ObjectPropertyDef::double("DN", "DN").with_unit("mm").with_range(0.0, 2000.0, 1.0),
-            ObjectPropertyDef::double("height", "高度").with_unit("m").with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("DN", "DN")
+                .with_unit("mm")
+                .with_range(0.0, 2000.0, 1.0),
+            ObjectPropertyDef::double("height", "高度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
         ],
         Valve => vec![
-            ObjectPropertyDef::double("DN", "DN").with_unit("mm").with_range(0.0, 2000.0, 1.0),
+            ObjectPropertyDef::double("DN", "DN")
+                .with_unit("mm")
+                .with_range(0.0, 2000.0, 1.0),
             ObjectPropertyDef::string("pressure_class", "压力等级"),
         ],
         Door | Window => vec![
-            ObjectPropertyDef::double("opening_width", "开口宽度").with_unit("m").with_range(0.0, 10.0, 0.01),
-            ObjectPropertyDef::double("opening_height", "开口高度").with_unit("m").with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("opening_width", "开口宽度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("opening_height", "开口高度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
         ],
         Part => vec![
-            ObjectPropertyDef::double("width", "宽度").with_unit("m").with_range(0.0, 10.0, 0.01),
-            ObjectPropertyDef::double("depth", "深度").with_unit("m").with_range(0.0, 10.0, 0.01),
-            ObjectPropertyDef::double("height", "高度").with_unit("m").with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("width", "宽度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("depth", "深度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
+            ObjectPropertyDef::double("height", "高度")
+                .with_unit("m")
+                .with_range(0.0, 10.0, 0.01),
         ],
         Gear => vec![
-            ObjectPropertyDef::double("module", "模数").with_unit("mm").with_range(0.0, 100.0, 0.5),
+            ObjectPropertyDef::double("module", "模数")
+                .with_unit("mm")
+                .with_range(0.0, 100.0, 0.5),
             ObjectPropertyDef::double("teeth", "齿数").with_range(1.0, 500.0, 1.0),
         ],
         _ => Vec::new(),
@@ -181,7 +225,11 @@ pub fn params_to_property_defs(params: &[crate::catalog::ParamDef]) -> Vec<Objec
             let mut def = if p.choices.is_empty() {
                 ObjectPropertyDef::double(&p.name, &p.name)
             } else {
-                ObjectPropertyDef::choice(&p.name, &p.name, &p.choices.iter().map(String::as_str).collect::<Vec<_>>())
+                ObjectPropertyDef::choice(
+                    &p.name,
+                    &p.name,
+                    &p.choices.iter().map(String::as_str).collect::<Vec<_>>(),
+                )
             };
             def.unit = p.unit.clone();
             if p.min_value.is_finite() {
@@ -200,9 +248,13 @@ pub fn params_to_property_defs(params: &[crate::catalog::ParamDef]) -> Vec<Objec
 
 /// Merge catalog-derived defs (which take precedence) with the built-in schema,
 /// de-duplicating by name.
-pub fn merge_defs(builtin: Vec<ObjectPropertyDef>, catalog_params: &[crate::catalog::ParamDef]) -> Vec<ObjectPropertyDef> {
+pub fn merge_defs(
+    builtin: Vec<ObjectPropertyDef>,
+    catalog_params: &[crate::catalog::ParamDef],
+) -> Vec<ObjectPropertyDef> {
     let mut catalog = params_to_property_defs(catalog_params);
-    let mut names: std::collections::HashSet<String> = catalog.iter().map(|d| d.name.clone()).collect();
+    let mut names: std::collections::HashSet<String> =
+        catalog.iter().map(|d| d.name.clone()).collect();
     for d in builtin {
         if names.insert(d.name.clone()) {
             catalog.push(d);

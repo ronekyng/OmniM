@@ -74,7 +74,9 @@ impl OmniObject {
     }
 
     pub fn remove_property(&mut self, name: &str) -> Option<c::Property> {
-        self.properties.iter().position(|p| p.name == name)
+        self.properties
+            .iter()
+            .position(|p| p.name == name)
             .map(|i| self.properties.remove(i))
     }
 
@@ -101,7 +103,10 @@ impl OmniObject {
         self
     }
 
-    pub fn with_properties(mut self, props: impl IntoIterator<Item = (impl Into<String>, impl Into<c::PropertyValue>)>) -> Self {
+    pub fn with_properties(
+        mut self,
+        props: impl IntoIterator<Item = (impl Into<String>, impl Into<c::PropertyValue>)>,
+    ) -> Self {
         for (name, value) in props {
             self.set_property(&name.into(), value.into());
         }
@@ -144,7 +149,9 @@ impl OmniObject {
 
     /// Check if any feature in this component needs rebuild.
     pub fn has_dirty_features(&self) -> bool {
-        self.features.iter().any(|f| f.dirty || f.cached_geometry.is_none())
+        self.features
+            .iter()
+            .any(|f| f.dirty || f.cached_geometry.is_none())
     }
 
     /// Mark a specific feature and all downstream features as dirty.
@@ -257,7 +264,14 @@ fn status_name(s: c::ObjectStatus) -> &'static str {
 
 impl fmt::Display for OmniObject {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "[{}] {} ({}) status={}", &self.id[..8], self.name, self.object_type_name(), self.status_name())?;
+        write!(
+            f,
+            "[{}] {} ({}) status={}",
+            &self.id[..8],
+            self.name,
+            self.object_type_name(),
+            self.status_name()
+        )?;
         if !self.properties.is_empty() {
             write!(f, " props={}", self.properties.len())?;
         }
@@ -313,7 +327,16 @@ mod tests {
     fn test_has_dirty_features() {
         let mut obj = OmniObject::new(c::ObjectType::Component, "Comp-1");
         assert!(!obj.has_dirty_features());
-        let f = crate::Feature::new_extrude("ext1", "sketch-1", 1.0, c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+        let f = crate::Feature::new_extrude(
+            "ext1",
+            "sketch-1",
+            1.0,
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        );
         obj.features.push(f);
         assert!(obj.has_dirty_features());
     }

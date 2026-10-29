@@ -9,8 +9,8 @@
 //! - 应用 Transform（平移、旋转、缩放）
 //! - 合并所有 mesh
 
-use omnim_core as c;
 use c::{Box, Cylinder, MeshGeometry, ParametricGeometry, ParametricOperation, Point3D, Transform};
+use omnim_core as c;
 
 /// 子组件定义
 #[derive(Debug, Clone)]
@@ -31,31 +31,46 @@ impl AssemblyComponent {
             geometry: ParametricGeometry {
                 operations: vec![ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Box(Box {
-                        length: l, width: w, height: h,
+                        length: l,
+                        width: w,
+                        height: h,
                     })),
                 }],
             },
             transform: Transform {
                 translation: Some(Point3D { x, y, z }),
-                rotation: None, scale: None, matrix: Vec::new(),
+                rotation: None,
+                scale: None,
+                matrix: Vec::new(),
             },
         }
     }
 
     /// 创建一个简单 Cylinder 子组件
-    pub fn cylinder_component(name: &str, radius: f64, height: f64, x: f64, y: f64, z: f64) -> Self {
+    pub fn cylinder_component(
+        name: &str,
+        radius: f64,
+        height: f64,
+        x: f64,
+        y: f64,
+        z: f64,
+    ) -> Self {
         Self {
             name: name.into(),
             geometry: ParametricGeometry {
                 operations: vec![ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Cylinder(Cylinder {
-                        radius, height, segments: 16,
+                        radius,
+                        height,
+                        segments: 16,
                     })),
                 }],
             },
             transform: Transform {
                 translation: Some(Point3D { x, y, z }),
-                rotation: None, scale: None, matrix: Vec::new(),
+                rotation: None,
+                scale: None,
+                matrix: Vec::new(),
             },
         }
     }
@@ -70,7 +85,9 @@ pub struct AssemblyInput {
 
 impl Default for AssemblyInput {
     fn default() -> Self {
-        Self { components: Vec::new() }
+        Self {
+            components: Vec::new(),
+        }
     }
 }
 
@@ -78,14 +95,18 @@ impl Default for AssemblyInput {
 ///
 /// 将每个子组件转为 mesh、应用变换、合并为一个 mesh。
 pub fn generate(input: &AssemblyInput) -> MeshGeometry {
-    let component_meshes: Vec<MeshGeometry> = input.components.iter().map(|comp| {
-        let param_mesh = crate::geometry::parametric_to_mesh(&comp.geometry);
-        if is_identity_transform(&comp.transform) {
-            param_mesh
-        } else {
-            crate::geometry::transform_mesh(&param_mesh, &comp.transform)
-        }
-    }).collect();
+    let component_meshes: Vec<MeshGeometry> = input
+        .components
+        .iter()
+        .map(|comp| {
+            let param_mesh = crate::geometry::parametric_to_mesh(&comp.geometry);
+            if is_identity_transform(&comp.transform) {
+                param_mesh
+            } else {
+                crate::geometry::transform_mesh(&param_mesh, &comp.transform)
+            }
+        })
+        .collect();
 
     crate::geometry::merge_meshes(&component_meshes)
 }
@@ -123,13 +144,44 @@ pub fn build_ahu(length: f64, width: f64, height: f64) -> MeshGeometry {
         // 机箱主体
         AssemblyComponent::box_component("Casing", length, width, height, 0.0, 0.0, 0.0),
         // 风扇段（圆柱，在机箱顶部）
-        AssemblyComponent::cylinder_component("Fan", width * 0.3, height * 0.4, 0.0, 0.0, height * 0.5),
+        AssemblyComponent::cylinder_component(
+            "Fan",
+            width * 0.3,
+            height * 0.4,
+            0.0,
+            0.0,
+            height * 0.5,
+        ),
         // 进风口（在 +X 端）
-        AssemblyComponent::box_component("AirInlet", 0.05, width * 0.6, height * 0.3, length / 2.0 + 0.025, 0.0, height * 0.2),
+        AssemblyComponent::box_component(
+            "AirInlet",
+            0.05,
+            width * 0.6,
+            height * 0.3,
+            length / 2.0 + 0.025,
+            0.0,
+            height * 0.2,
+        ),
         // 出风口（在 -X 端）
-        AssemblyComponent::box_component("AirOutlet", 0.05, width * 0.6, height * 0.3, -length / 2.0 - 0.025, 0.0, height * 0.2),
+        AssemblyComponent::box_component(
+            "AirOutlet",
+            0.05,
+            width * 0.6,
+            height * 0.3,
+            -length / 2.0 - 0.025,
+            0.0,
+            height * 0.2,
+        ),
         // 控制箱（小盒子在侧面）
-        AssemblyComponent::box_component("ControlBox", length * 0.15, width * 0.1, height * 0.25, length * 0.2, width / 2.0 + 0.05, height * 0.3),
+        AssemblyComponent::box_component(
+            "ControlBox",
+            length * 0.15,
+            width * 0.1,
+            height * 0.25,
+            length * 0.2,
+            width / 2.0 + 0.05,
+            height * 0.3,
+        ),
     ];
     build_assembly(components)
 }
@@ -140,7 +192,12 @@ pub fn build_ahu(length: f64, width: f64, height: f64) -> MeshGeometry {
 /// - total_rise: 总高度
 /// - total_run: 总水平长度
 /// - tread_count: 踏步数量
-pub fn build_stair(width: f64, total_rise: f64, total_run: f64, tread_count: usize) -> MeshGeometry {
+pub fn build_stair(
+    width: f64,
+    total_rise: f64,
+    total_run: f64,
+    tread_count: usize,
+) -> MeshGeometry {
     let mut components = Vec::new();
     let n = tread_count.max(2);
     let riser_height = total_rise / n as f64;
@@ -152,27 +209,45 @@ pub fn build_stair(width: f64, total_rise: f64, total_run: f64, tread_count: usi
         // 每个踏步 = 一个扁平的踏步板 + 一个踢面
         components.push(AssemblyComponent::box_component(
             &format!("Tread-{}", i),
-            tread_depth, width, riser_height * 0.1, // 薄的踏步板
-            x, 0.0, z,
+            tread_depth,
+            width,
+            riser_height * 0.1, // 薄的踏步板
+            x,
+            0.0,
+            z,
         ));
         // 踢面（竖板）
         if i < n - 1 {
             components.push(AssemblyComponent::box_component(
                 &format!("Riser-{}", i),
-                riser_height * 0.05, width, riser_height,
-                x + tread_depth / 2.0, 0.0, z + riser_height * 0.55,
+                riser_height * 0.05,
+                width,
+                riser_height,
+                x + tread_depth / 2.0,
+                0.0,
+                z + riser_height * 0.55,
             ));
         }
     }
 
     // 两侧的梯梁
     components.push(AssemblyComponent::box_component(
-        "Stringer-Left", total_run, 0.05, total_rise,
-        0.0, -width / 2.0 - 0.025, total_rise / 2.0,
+        "Stringer-Left",
+        total_run,
+        0.05,
+        total_rise,
+        0.0,
+        -width / 2.0 - 0.025,
+        total_rise / 2.0,
     ));
     components.push(AssemblyComponent::box_component(
-        "Stringer-Right", total_run, 0.05, total_rise,
-        0.0, width / 2.0 + 0.025, total_rise / 2.0,
+        "Stringer-Right",
+        total_run,
+        0.05,
+        total_rise,
+        0.0,
+        width / 2.0 + 0.025,
+        total_rise / 2.0,
     ));
 
     build_assembly(components)
@@ -188,20 +263,75 @@ pub fn build_reactor(height: f64, diameter: f64) -> MeshGeometry {
         // 主体（圆柱）
         AssemblyComponent::cylinder_component("Vessel", r, height * 0.7, 0.0, 0.0, 0.0),
         // 顶部半球封头
-        AssemblyComponent::box_component("TopHead", diameter * 1.1, diameter * 1.1, height * 0.15, 0.0, 0.0, height * 0.425),
+        AssemblyComponent::box_component(
+            "TopHead",
+            diameter * 1.1,
+            diameter * 1.1,
+            height * 0.15,
+            0.0,
+            0.0,
+            height * 0.425,
+        ),
         // 底部半球封头
-        AssemblyComponent::box_component("BottomHead", diameter * 1.1, diameter * 1.1, height * 0.15, 0.0, 0.0, -height * 0.425),
+        AssemblyComponent::box_component(
+            "BottomHead",
+            diameter * 1.1,
+            diameter * 1.1,
+            height * 0.15,
+            0.0,
+            0.0,
+            -height * 0.425,
+        ),
         // 搅拌器电机（顶部小圆柱）
-        AssemblyComponent::cylinder_component("Motor", r * 0.2, height * 0.1, 0.0, 0.0, height * 0.55),
+        AssemblyComponent::cylinder_component(
+            "Motor",
+            r * 0.2,
+            height * 0.1,
+            0.0,
+            0.0,
+            height * 0.55,
+        ),
         // 进料口（侧方）
         AssemblyComponent::cylinder_component("Inlet", r * 0.15, 0.1, height * 0.2, r + 0.05, 0.0),
         // 出料口（底部）
         AssemblyComponent::cylinder_component("Outlet", r * 0.15, 0.15, 0.0, 0.0, -height * 0.5),
         // 4 个支腿
-        AssemblyComponent::box_component("Leg-1", 0.1, 0.1, height * 0.15, r * 0.7, r * 0.7, -height * 0.5 - height * 0.075),
-        AssemblyComponent::box_component("Leg-2", 0.1, 0.1, height * 0.15, -r * 0.7, r * 0.7, -height * 0.5 - height * 0.075),
-        AssemblyComponent::box_component("Leg-3", 0.1, 0.1, height * 0.15, r * 0.7, -r * 0.7, -height * 0.5 - height * 0.075),
-        AssemblyComponent::box_component("Leg-4", 0.1, 0.1, height * 0.15, -r * 0.7, -r * 0.7, -height * 0.5 - height * 0.075),
+        AssemblyComponent::box_component(
+            "Leg-1",
+            0.1,
+            0.1,
+            height * 0.15,
+            r * 0.7,
+            r * 0.7,
+            -height * 0.5 - height * 0.075,
+        ),
+        AssemblyComponent::box_component(
+            "Leg-2",
+            0.1,
+            0.1,
+            height * 0.15,
+            -r * 0.7,
+            r * 0.7,
+            -height * 0.5 - height * 0.075,
+        ),
+        AssemblyComponent::box_component(
+            "Leg-3",
+            0.1,
+            0.1,
+            height * 0.15,
+            r * 0.7,
+            -r * 0.7,
+            -height * 0.5 - height * 0.075,
+        ),
+        AssemblyComponent::box_component(
+            "Leg-4",
+            0.1,
+            0.1,
+            height * 0.15,
+            -r * 0.7,
+            -r * 0.7,
+            -height * 0.5 - height * 0.075,
+        ),
     ];
     build_assembly(components)
 }
@@ -211,18 +341,56 @@ pub fn build_reactor(height: f64, diameter: f64) -> MeshGeometry {
 /// - motor_length, motor_width, motor_height: 电机尺寸
 /// - pump_radius: 泵体半径
 /// - pump_height: 泵体高度
-pub fn build_pump(motor_length: f64, motor_width: f64, motor_height: f64, pump_radius: f64, pump_height: f64) -> MeshGeometry {
+pub fn build_pump(
+    motor_length: f64,
+    motor_width: f64,
+    motor_height: f64,
+    pump_radius: f64,
+    pump_height: f64,
+) -> MeshGeometry {
     let components = vec![
         // 电机部分
-        AssemblyComponent::box_component("Motor", motor_length, motor_width, motor_height, -motor_length / 2.0 - pump_radius, 0.0, 0.0),
+        AssemblyComponent::box_component(
+            "Motor",
+            motor_length,
+            motor_width,
+            motor_height,
+            -motor_length / 2.0 - pump_radius,
+            0.0,
+            0.0,
+        ),
         // 泵体（圆柱）
         AssemblyComponent::cylinder_component("PumpBody", pump_radius, pump_height, 0.0, 0.0, 0.0),
         // 进口法兰
-        AssemblyComponent::box_component("InletFlange", 0.05, pump_radius * 1.5, pump_radius * 1.5, 0.0, pump_radius + 0.025, 0.0),
+        AssemblyComponent::box_component(
+            "InletFlange",
+            0.05,
+            pump_radius * 1.5,
+            pump_radius * 1.5,
+            0.0,
+            pump_radius + 0.025,
+            0.0,
+        ),
         // 出口法兰（顶部）
-        AssemblyComponent::box_component("OutletFlange", pump_radius * 1.5, pump_radius * 1.5, 0.05, 0.0, 0.0, pump_radius + 0.025),
+        AssemblyComponent::box_component(
+            "OutletFlange",
+            pump_radius * 1.5,
+            pump_radius * 1.5,
+            0.05,
+            0.0,
+            0.0,
+            pump_radius + 0.025,
+        ),
         // 底座
-        AssemblyComponent::box_component("Base", motor_length + pump_radius * 2.0, motor_width + 0.1, 0.05, 0.0, 0.0, -pump_height / 2.0 - 0.025),
+        AssemblyComponent::box_component(
+            "Base",
+            motor_length + pump_radius * 2.0,
+            motor_width + 0.1,
+            0.05,
+            0.0,
+            0.0,
+            -pump_height / 2.0 - 0.025,
+        ),
     ];
     build_assembly(components)
 }
@@ -237,7 +405,9 @@ mod tests {
             geometry: ParametricGeometry {
                 operations: vec![c::ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Box(Box {
-                        length: l, width: w, height: h,
+                        length: l,
+                        width: w,
+                        height: h,
                     })),
                 }],
             },
@@ -265,12 +435,18 @@ mod tests {
             geometry: ParametricGeometry {
                 operations: vec![c::ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Cylinder(Cylinder {
-                        radius: 0.5, height: 2.0, segments: 16,
+                        radius: 0.5,
+                        height: 2.0,
+                        segments: 16,
                     })),
                 }],
             },
             transform: Transform {
-                translation: Some(Point3D { x: 0.0, y: 0.0, z: 0.5 }),
+                translation: Some(Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.5,
+                }),
                 rotation: None,
                 scale: None,
                 matrix: Vec::new(),
@@ -287,12 +463,18 @@ mod tests {
             geometry: ParametricGeometry {
                 operations: vec![c::ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Box(Box {
-                        length: 1.0, width: 1.0, height: 1.0,
+                        length: 1.0,
+                        width: 1.0,
+                        height: 1.0,
                     })),
                 }],
             },
             transform: Transform {
-                translation: Some(Point3D { x: 0.0, y: 0.0, z: 0.0 }),
+                translation: Some(Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                }),
                 rotation: None,
                 scale: None,
                 matrix: Vec::new(),
@@ -303,12 +485,18 @@ mod tests {
             geometry: ParametricGeometry {
                 operations: vec![c::ParametricOperation {
                     operation: Some(c::parametric_operation::Operation::Box(Box {
-                        length: 1.0, width: 1.0, height: 1.0,
+                        length: 1.0,
+                        width: 1.0,
+                        height: 1.0,
                     })),
                 }],
             },
             transform: Transform {
-                translation: Some(Point3D { x: 3.0, y: 0.0, z: 0.0 }),
+                translation: Some(Point3D {
+                    x: 3.0,
+                    y: 0.0,
+                    z: 0.0,
+                }),
                 rotation: None,
                 scale: None,
                 matrix: Vec::new(),

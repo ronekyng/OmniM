@@ -8,8 +8,8 @@
 //! - 移除宿主 mesh 中质心落在子包围盒内的三角形
 //! - 在剪切边界处沿检测到的主轴线方向生成封闭面
 
-use omnim_core as c;
 use c::{FaceIndices, MeshGeometry, Point3D, Vector3D};
+use omnim_core as c;
 
 /// 布尔差集输入参数
 #[derive(Debug, Clone)]
@@ -31,23 +31,46 @@ impl BBox {
     fn from_mesh(mesh: &MeshGeometry) -> Self {
         if mesh.vertices.is_empty() {
             return Self {
-                min: Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                max: Point3D { x: 0.0, y: 0.0, z: 0.0 },
+                min: Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                max: Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             };
         }
-        let mut mn = Point3D { x: f64::INFINITY, y: f64::INFINITY, z: f64::INFINITY };
-        let mut mx = Point3D { x: f64::NEG_INFINITY, y: f64::NEG_INFINITY, z: f64::NEG_INFINITY };
+        let mut mn = Point3D {
+            x: f64::INFINITY,
+            y: f64::INFINITY,
+            z: f64::INFINITY,
+        };
+        let mut mx = Point3D {
+            x: f64::NEG_INFINITY,
+            y: f64::NEG_INFINITY,
+            z: f64::NEG_INFINITY,
+        };
         for v in &mesh.vertices {
-            mn.x = mn.x.min(v.x); mn.y = mn.y.min(v.y); mn.z = mn.z.min(v.z);
-            mx.x = mx.x.max(v.x); mx.y = mx.y.max(v.y); mx.z = mx.z.max(v.z);
+            mn.x = mn.x.min(v.x);
+            mn.y = mn.y.min(v.y);
+            mn.z = mn.z.min(v.z);
+            mx.x = mx.x.max(v.x);
+            mx.y = mx.y.max(v.y);
+            mx.z = mx.z.max(v.z);
         }
         Self { min: mn, max: mx }
     }
 
     fn contains(&self, p: &Point3D, tolerance: f64) -> bool {
-        p.x >= self.min.x - tolerance && p.x <= self.max.x + tolerance
-            && p.y >= self.min.y - tolerance && p.y <= self.max.y + tolerance
-            && p.z >= self.min.z - tolerance && p.z <= self.max.z + tolerance
+        p.x >= self.min.x - tolerance
+            && p.x <= self.max.x + tolerance
+            && p.y >= self.min.y - tolerance
+            && p.y <= self.max.y + tolerance
+            && p.z >= self.min.z - tolerance
+            && p.z <= self.max.z + tolerance
     }
 
     fn center(&self) -> Point3D {
@@ -63,9 +86,13 @@ impl BBox {
         let sx = self.max.x - self.min.x;
         let sy = self.max.y - self.min.y;
         let sz = self.max.z - self.min.z;
-        if sx >= sy && sx >= sz { 0 }
-        else if sy >= sx && sy >= sz { 1 }
-        else { 2 }
+        if sx >= sy && sx >= sz {
+            0
+        } else if sy >= sx && sy >= sz {
+            1
+        } else {
+            2
+        }
     }
 
     /// 沿主轴方向的两个端面中心
@@ -79,9 +106,18 @@ impl BBox {
         let mut neg = center.clone();
         let mut pos = center.clone();
         match axis {
-            0 => { neg.x -= half_extent; pos.x += half_extent; }
-            1 => { neg.y -= half_extent; pos.y += half_extent; }
-            _ => { neg.z -= half_extent; pos.z += half_extent; }
+            0 => {
+                neg.x -= half_extent;
+                pos.x += half_extent;
+            }
+            1 => {
+                neg.y -= half_extent;
+                pos.y += half_extent;
+            }
+            _ => {
+                neg.z -= half_extent;
+                pos.z += half_extent;
+            }
         }
         (neg, pos)
     }
@@ -129,12 +165,18 @@ pub fn generate(input: &BooleanSubtractInput) -> MeshGeometry {
                     if idx < input.host_mesh.normals.len() {
                         normals.push(input.host_mesh.normals[idx].clone());
                     } else {
-                        normals.push(Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+                        normals.push(Vector3D {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 1.0,
+                        });
                     }
                 }
             }
             faces.push(FaceIndices {
-                vertex_indices: (0..face.vertex_indices.len() as i32).map(|i| base + i).collect(),
+                vertex_indices: (0..face.vertex_indices.len() as i32)
+                    .map(|i| base + i)
+                    .collect(),
             });
         } else {
             // 移除的三角形：收集其边界边（与保留三角形的共享边）
@@ -167,8 +209,13 @@ pub fn generate(input: &BooleanSubtractInput) -> MeshGeometry {
     // 从剪切边界边构建封闭多边形
     if cut_edges.len() >= 3 {
         let cap_mesh = generate_cap_from_edges(
-            &input.host_mesh, &cut_edges, &sub_bbox,
-            &neg_center, &pos_center, dominant_axis, tolerance,
+            &input.host_mesh,
+            &cut_edges,
+            &sub_bbox,
+            &neg_center,
+            &pos_center,
+            dominant_axis,
+            tolerance,
         );
         let offset = vertices.len() as i32;
         vertices.extend(cap_mesh.vertices.iter().cloned());
@@ -218,20 +265,24 @@ fn generate_cap_from_edges(
     let mut faces = Vec::new();
 
     // 收集边界顶点索引（去重）
-    let mut vert_indices: Vec<i32> = cut_edges.iter()
-        .flat_map(|(a, b)| vec![*a, *b])
-        .collect();
+    let mut vert_indices: Vec<i32> = cut_edges.iter().flat_map(|(a, b)| vec![*a, *b]).collect();
     vert_indices.sort();
     vert_indices.dedup();
 
     if vert_indices.len() < 3 {
-        return MeshGeometry { vertices, normals, uvs: Vec::new(), faces };
+        return MeshGeometry {
+            vertices,
+            normals,
+            uvs: Vec::new(),
+            faces,
+        };
     }
 
     // 对边界顶点按位置排序，形成环
     // 按角度排序：计算中心，然后按绕中心的角度排列
     let center = sub_bbox.center();
-    let edge_verts: Vec<Point3D> = vert_indices.iter()
+    let edge_verts: Vec<Point3D> = vert_indices
+        .iter()
         .map(|idx| {
             if *idx >= 0 && (*idx as usize) < host.vertices.len() {
                 host.vertices[*idx as usize].clone()
@@ -242,7 +293,9 @@ fn generate_cap_from_edges(
         .collect();
 
     // 按绕主轴的角度排序
-    let mut indexed: Vec<(usize, f64)> = vert_indices.iter().enumerate()
+    let mut indexed: Vec<(usize, f64)> = vert_indices
+        .iter()
+        .enumerate()
         .map(|(i, _)| {
             let v = &edge_verts[i];
             let angle = match axis {
@@ -256,7 +309,12 @@ fn generate_cap_from_edges(
     indexed.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal));
 
     if indexed.len() < 3 {
-        return MeshGeometry { vertices, normals, uvs: Vec::new(), faces };
+        return MeshGeometry {
+            vertices,
+            normals,
+            uvs: Vec::new(),
+            faces,
+        };
     }
 
     // 两端各生成一个封闭面
@@ -267,15 +325,39 @@ fn generate_cap_from_edges(
         // 法线方向（沿主轴）
         let normal = if is_neg {
             match axis {
-                0 => Vector3D { x: -1.0, y: 0.0, z: 0.0 },
-                1 => Vector3D { x: 0.0, y: -1.0, z: 0.0 },
-                _ => Vector3D { x: 0.0, y: 0.0, z: -1.0 },
+                0 => Vector3D {
+                    x: -1.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                1 => Vector3D {
+                    x: 0.0,
+                    y: -1.0,
+                    z: 0.0,
+                },
+                _ => Vector3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: -1.0,
+                },
             }
         } else {
             match axis {
-                0 => Vector3D { x: 1.0, y: 0.0, z: 0.0 },
-                1 => Vector3D { x: 0.0, y: 1.0, z: 0.0 },
-                _ => Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+                0 => Vector3D {
+                    x: 1.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                1 => Vector3D {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                },
+                _ => Vector3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 1.0,
+                },
             }
         };
 
@@ -283,9 +365,21 @@ fn generate_cap_from_edges(
         for (i, _) in &indexed {
             let v = &edge_verts[*i];
             let projected = match axis {
-                0 => Point3D { x: cap_center.x, y: v.y, z: v.z },
-                1 => Point3D { x: v.x, y: cap_center.y, z: v.z },
-                _ => Point3D { x: v.x, y: v.y, z: cap_center.z },
+                0 => Point3D {
+                    x: cap_center.x,
+                    y: v.y,
+                    z: v.z,
+                },
+                1 => Point3D {
+                    x: v.x,
+                    y: cap_center.y,
+                    z: v.z,
+                },
+                _ => Point3D {
+                    x: v.x,
+                    y: v.y,
+                    z: cap_center.z,
+                },
             };
             vertices.push(projected);
             normals.push(normal.clone());
@@ -302,18 +396,30 @@ fn generate_cap_from_edges(
             let a = base + i as i32;
             let b = base + nxt as i32;
             if is_neg {
-                faces.push(FaceIndices { vertex_indices: vec![center_idx, a, b] });
+                faces.push(FaceIndices {
+                    vertex_indices: vec![center_idx, a, b],
+                });
             } else {
-                faces.push(FaceIndices { vertex_indices: vec![a, center_idx, b] });
+                faces.push(FaceIndices {
+                    vertex_indices: vec![a, center_idx, b],
+                });
             }
         }
     }
 
-    MeshGeometry { vertices, normals, uvs: Vec::new(), faces }
+    MeshGeometry {
+        vertices,
+        normals,
+        uvs: Vec::new(),
+        faces,
+    }
 }
 
 /// 基于减除体的 AABB 生成端面（兜底方案）
-fn generate_bbox_cap_faces(subtract: &MeshGeometry, axis: usize) -> (Vec<Point3D>, Vec<Vector3D>, Vec<FaceIndices>) {
+fn generate_bbox_cap_faces(
+    subtract: &MeshGeometry,
+    axis: usize,
+) -> (Vec<Point3D>, Vec<Vector3D>, Vec<FaceIndices>) {
     let sub_bbox = BBox::from_mesh(subtract);
     let (mut vertices, mut normals, mut faces) = (Vec::new(), Vec::new(), Vec::new());
 
@@ -323,29 +429,114 @@ fn generate_bbox_cap_faces(subtract: &MeshGeometry, axis: usize) -> (Vec<Point3D
 
         let (cx, cy, cz, normal) = if is_neg {
             match axis {
-                0 => (sub_bbox.min.x, 0.0, 0.0, Vector3D { x: -1.0, y: 0.0, z: 0.0 }),
-                1 => (0.0, sub_bbox.min.y, 0.0, Vector3D { x: 0.0, y: -1.0, z: 0.0 }),
-                _ => (0.0, 0.0, sub_bbox.min.z, Vector3D { x: 0.0, y: 0.0, z: -1.0 }),
+                0 => (
+                    sub_bbox.min.x,
+                    0.0,
+                    0.0,
+                    Vector3D {
+                        x: -1.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
+                1 => (
+                    0.0,
+                    sub_bbox.min.y,
+                    0.0,
+                    Vector3D {
+                        x: 0.0,
+                        y: -1.0,
+                        z: 0.0,
+                    },
+                ),
+                _ => (
+                    0.0,
+                    0.0,
+                    sub_bbox.min.z,
+                    Vector3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: -1.0,
+                    },
+                ),
             }
         } else {
             match axis {
-                0 => (sub_bbox.max.x, 0.0, 0.0, Vector3D { x: 1.0, y: 0.0, z: 0.0 }),
-                1 => (0.0, sub_bbox.max.y, 0.0, Vector3D { x: 0.0, y: 1.0, z: 0.0 }),
-                _ => (0.0, 0.0, sub_bbox.max.z, Vector3D { x: 0.0, y: 0.0, z: 1.0 }),
+                0 => (
+                    sub_bbox.max.x,
+                    0.0,
+                    0.0,
+                    Vector3D {
+                        x: 1.0,
+                        y: 0.0,
+                        z: 0.0,
+                    },
+                ),
+                1 => (
+                    0.0,
+                    sub_bbox.max.y,
+                    0.0,
+                    Vector3D {
+                        x: 0.0,
+                        y: 1.0,
+                        z: 0.0,
+                    },
+                ),
+                _ => (
+                    0.0,
+                    0.0,
+                    sub_bbox.max.z,
+                    Vector3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 1.0,
+                    },
+                ),
             }
         };
 
         let (y0, y1, z0, z1) = match axis {
-            0 => (sub_bbox.min.y, sub_bbox.max.y, sub_bbox.min.z, sub_bbox.max.z),
-            1 => (sub_bbox.min.z, sub_bbox.max.z, sub_bbox.min.x, sub_bbox.max.x),
-            _ => (sub_bbox.min.x, sub_bbox.max.x, sub_bbox.min.y, sub_bbox.max.y),
+            0 => (
+                sub_bbox.min.y,
+                sub_bbox.max.y,
+                sub_bbox.min.z,
+                sub_bbox.max.z,
+            ),
+            1 => (
+                sub_bbox.min.z,
+                sub_bbox.max.z,
+                sub_bbox.min.x,
+                sub_bbox.max.x,
+            ),
+            _ => (
+                sub_bbox.min.x,
+                sub_bbox.max.x,
+                sub_bbox.min.y,
+                sub_bbox.max.y,
+            ),
         };
 
         let corners = [
-            Point3D { x: cx + (if axis == 1 { z0 } else { 0.0 }), y: cy + (if axis == 1 { 0.0 } else { y0 }), z: cz + (if axis == 1 { y0 } else { z0 }) },
-            Point3D { x: cx + (if axis == 1 { z1 } else { 0.0 }), y: cy + (if axis == 1 { 0.0 } else { y1 }), z: cz + (if axis == 1 { y0 } else { z0 }) },
-            Point3D { x: cx + (if axis == 1 { z1 } else { 0.0 }), y: cy + (if axis == 1 { 0.0 } else { y1 }), z: cz + (if axis == 1 { y1 } else { z1 }) },
-            Point3D { x: cx + (if axis == 1 { z0 } else { 0.0 }), y: cy + (if axis == 1 { 0.0 } else { y0 }), z: cz + (if axis == 1 { y1 } else { z0 }) },
+            Point3D {
+                x: cx + (if axis == 1 { z0 } else { 0.0 }),
+                y: cy + (if axis == 1 { 0.0 } else { y0 }),
+                z: cz + (if axis == 1 { y0 } else { z0 }),
+            },
+            Point3D {
+                x: cx + (if axis == 1 { z1 } else { 0.0 }),
+                y: cy + (if axis == 1 { 0.0 } else { y1 }),
+                z: cz + (if axis == 1 { y0 } else { z0 }),
+            },
+            Point3D {
+                x: cx + (if axis == 1 { z1 } else { 0.0 }),
+                y: cy + (if axis == 1 { 0.0 } else { y1 }),
+                z: cz + (if axis == 1 { y1 } else { z1 }),
+            },
+            Point3D {
+                x: cx + (if axis == 1 { z0 } else { 0.0 }),
+                y: cy + (if axis == 1 { 0.0 } else { y0 }),
+                z: cz + (if axis == 1 { y1 } else { z0 }),
+            },
         ];
 
         for c in &corners {
@@ -354,11 +545,19 @@ fn generate_bbox_cap_faces(subtract: &MeshGeometry, axis: usize) -> (Vec<Point3D
         }
 
         if is_neg {
-            faces.push(FaceIndices { vertex_indices: vec![base, base + 2, base + 1] });
-            faces.push(FaceIndices { vertex_indices: vec![base, base + 3, base + 2] });
+            faces.push(FaceIndices {
+                vertex_indices: vec![base, base + 2, base + 1],
+            });
+            faces.push(FaceIndices {
+                vertex_indices: vec![base, base + 3, base + 2],
+            });
         } else {
-            faces.push(FaceIndices { vertex_indices: vec![base, base + 1, base + 2] });
-            faces.push(FaceIndices { vertex_indices: vec![base, base + 2, base + 3] });
+            faces.push(FaceIndices {
+                vertex_indices: vec![base, base + 1, base + 2],
+            });
+            faces.push(FaceIndices {
+                vertex_indices: vec![base, base + 2, base + 3],
+            });
         }
     }
 
@@ -367,7 +566,11 @@ fn generate_bbox_cap_faces(subtract: &MeshGeometry, axis: usize) -> (Vec<Point3D
 
 /// 计算三角形的质心
 fn triangle_centroid(vertices: &[Point3D], indices: &[i32]) -> Point3D {
-    let mut sum = Point3D { x: 0.0, y: 0.0, z: 0.0 };
+    let mut sum = Point3D {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     let mut count = 0;
     for idx in indices {
         if *idx >= 0 && (*idx as usize) < vertices.len() {
@@ -378,9 +581,17 @@ fn triangle_centroid(vertices: &[Point3D], indices: &[i32]) -> Point3D {
         }
     }
     if count > 0 {
-        Point3D { x: sum.x / count as f64, y: sum.y / count as f64, z: sum.z / count as f64 }
+        Point3D {
+            x: sum.x / count as f64,
+            y: sum.y / count as f64,
+            z: sum.z / count as f64,
+        }
     } else {
-        Point3D { x: 0.0, y: 0.0, z: 0.0 }
+        Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 }
 
@@ -403,8 +614,8 @@ pub fn build_door_opening(
     position_x: f64,
     position_z: f64,
 ) -> MeshGeometry {
-    use crate::mesh_gen;
     use crate::geometry::transform_mesh;
+    use crate::mesh_gen;
 
     let (h_v, h_n, h_f) = mesh_gen::box_mesh(&c::Box {
         length: wall_length,
@@ -412,7 +623,10 @@ pub fn build_door_opening(
         height: wall_height,
     });
     let host_mesh = MeshGeometry {
-        vertices: h_v, normals: h_n, uvs: Vec::new(), faces: h_f,
+        vertices: h_v,
+        normals: h_n,
+        uvs: Vec::new(),
+        faces: h_f,
     };
 
     let (s_v, s_n, s_f) = mesh_gen::box_mesh(&c::Box {
@@ -421,18 +635,28 @@ pub fn build_door_opening(
         height: opening_height,
     });
     let positioned_sub = transform_mesh(
-        &MeshGeometry { vertices: s_v, normals: s_n, uvs: Vec::new(), faces: s_f },
+        &MeshGeometry {
+            vertices: s_v,
+            normals: s_n,
+            uvs: Vec::new(),
+            faces: s_f,
+        },
         &c::Transform {
             translation: Some(Point3D {
                 x: position_x - wall_length / 2.0 + opening_width / 2.0,
                 y: 0.0,
                 z: position_z - wall_height / 2.0 + opening_height / 2.0,
             }),
-            rotation: None, scale: None, matrix: Vec::new(),
+            rotation: None,
+            scale: None,
+            matrix: Vec::new(),
         },
     );
 
-    generate(&BooleanSubtractInput { host_mesh, subtract_mesh: positioned_sub })
+    generate(&BooleanSubtractInput {
+        host_mesh,
+        subtract_mesh: positioned_sub,
+    })
 }
 
 /// 在墙上开窗洞
@@ -447,7 +671,15 @@ pub fn build_window_opening(
     position_x: f64,
     sill_height: f64,
 ) -> MeshGeometry {
-    build_door_opening(wall_length, wall_height, wall_thickness, opening_width, opening_height, position_x, sill_height)
+    build_door_opening(
+        wall_length,
+        wall_height,
+        wall_thickness,
+        opening_width,
+        opening_height,
+        position_x,
+        sill_height,
+    )
 }
 
 /// 在楼板上开洞
@@ -464,28 +696,49 @@ pub fn build_slab_opening(
     position_x: f64,
     position_y: f64,
 ) -> MeshGeometry {
-    use crate::mesh_gen;
     use crate::geometry::transform_mesh;
+    use crate::mesh_gen;
 
     let (h_v, h_n, h_f) = mesh_gen::box_mesh(&c::Box {
-        length: slab_length, width: slab_width, height: slab_thickness,
+        length: slab_length,
+        width: slab_width,
+        height: slab_thickness,
     });
     let host_mesh = MeshGeometry {
-        vertices: h_v, normals: h_n, uvs: Vec::new(), faces: h_f,
+        vertices: h_v,
+        normals: h_n,
+        uvs: Vec::new(),
+        faces: h_f,
     };
 
     let (s_v, s_n, s_f) = mesh_gen::box_mesh(&c::Box {
-        length: hole_width, width: hole_length, height: slab_thickness * 1.1,
+        length: hole_width,
+        width: hole_length,
+        height: slab_thickness * 1.1,
     });
     let positioned_sub = transform_mesh(
-        &MeshGeometry { vertices: s_v, normals: s_n, uvs: Vec::new(), faces: s_f },
+        &MeshGeometry {
+            vertices: s_v,
+            normals: s_n,
+            uvs: Vec::new(),
+            faces: s_f,
+        },
         &c::Transform {
-            translation: Some(Point3D { x: position_x, y: position_y, z: 0.0 }),
-            rotation: None, scale: None, matrix: Vec::new(),
+            translation: Some(Point3D {
+                x: position_x,
+                y: position_y,
+                z: 0.0,
+            }),
+            rotation: None,
+            scale: None,
+            matrix: Vec::new(),
         },
     );
 
-    generate(&BooleanSubtractInput { host_mesh, subtract_mesh: positioned_sub })
+    generate(&BooleanSubtractInput {
+        host_mesh,
+        subtract_mesh: positioned_sub,
+    })
 }
 
 #[cfg(test)]
@@ -495,12 +748,24 @@ mod tests {
 
     #[test]
     fn test_subtract_empty_subtract() {
-        let (v, n, f) = mesh_gen::box_mesh(&c::Box { length: 2.0, width: 2.0, height: 2.0 });
-        let host = MeshGeometry { vertices: v, normals: n, uvs: Vec::new(), faces: f };
+        let (v, n, f) = mesh_gen::box_mesh(&c::Box {
+            length: 2.0,
+            width: 2.0,
+            height: 2.0,
+        });
+        let host = MeshGeometry {
+            vertices: v,
+            normals: n,
+            uvs: Vec::new(),
+            faces: f,
+        };
         let result = generate(&BooleanSubtractInput {
             host_mesh: host.clone(),
             subtract_mesh: MeshGeometry {
-                vertices: Vec::new(), normals: Vec::new(), uvs: Vec::new(), faces: Vec::new(),
+                vertices: Vec::new(),
+                normals: Vec::new(),
+                uvs: Vec::new(),
+                faces: Vec::new(),
             },
         });
         assert_eq!(result.vertices.len(), host.vertices.len());
@@ -512,22 +777,48 @@ mod tests {
         assert!(!mesh.vertices.is_empty());
         assert!(mesh.faces.len() > 0);
         // 应有 cap 面
-        assert!(mesh.faces.len() > 4, "expected more faces for caps, got {}", mesh.faces.len());
+        assert!(
+            mesh.faces.len() > 4,
+            "expected more faces for caps, got {}",
+            mesh.faces.len()
+        );
     }
 
     #[test]
     fn test_subtract_full_overlap() {
-        let (v, n, f) = mesh_gen::box_mesh(&c::Box { length: 1.0, width: 1.0, height: 1.0 });
-        let host = MeshGeometry { vertices: v, normals: n, uvs: Vec::new(), faces: f };
+        let (v, n, f) = mesh_gen::box_mesh(&c::Box {
+            length: 1.0,
+            width: 1.0,
+            height: 1.0,
+        });
+        let host = MeshGeometry {
+            vertices: v,
+            normals: n,
+            uvs: Vec::new(),
+            faces: f,
+        };
         let result = generate(&BooleanSubtractInput {
             host_mesh: host,
             subtract_mesh: {
-                let (v2, n2, f2) = mesh_gen::box_mesh(&c::Box { length: 3.0, width: 3.0, height: 3.0 });
-                MeshGeometry { vertices: v2, normals: n2, uvs: Vec::new(), faces: f2 }
+                let (v2, n2, f2) = mesh_gen::box_mesh(&c::Box {
+                    length: 3.0,
+                    width: 3.0,
+                    height: 3.0,
+                });
+                MeshGeometry {
+                    vertices: v2,
+                    normals: n2,
+                    uvs: Vec::new(),
+                    faces: f2,
+                }
             },
         });
         // 所有三角形被移除，只剩 cap 面
-        assert!(result.faces.len() >= 2, "expected at least 2 cap faces, got {}", result.faces.len());
+        assert!(
+            result.faces.len() >= 2,
+            "expected at least 2 cap faces, got {}",
+            result.faces.len()
+        );
     }
 
     #[test]
@@ -547,17 +838,44 @@ mod tests {
     #[test]
     fn test_partial_overlap() {
         // 减除体只与宿主部分重叠
-        let (v, n, f) = mesh_gen::box_mesh(&c::Box { length: 4.0, width: 4.0, height: 4.0 });
-        let host = MeshGeometry { vertices: v, normals: n, uvs: Vec::new(), faces: f };
-        let (sv, sn, sf) = mesh_gen::box_mesh(&c::Box { length: 2.0, width: 6.0, height: 2.0 });
+        let (v, n, f) = mesh_gen::box_mesh(&c::Box {
+            length: 4.0,
+            width: 4.0,
+            height: 4.0,
+        });
+        let host = MeshGeometry {
+            vertices: v,
+            normals: n,
+            uvs: Vec::new(),
+            faces: f,
+        };
+        let (sv, sn, sf) = mesh_gen::box_mesh(&c::Box {
+            length: 2.0,
+            width: 6.0,
+            height: 2.0,
+        });
         let sub = crate::geometry::transform_mesh(
-            &MeshGeometry { vertices: sv, normals: sn, uvs: Vec::new(), faces: sf },
+            &MeshGeometry {
+                vertices: sv,
+                normals: sn,
+                uvs: Vec::new(),
+                faces: sf,
+            },
             &c::Transform {
-                translation: Some(Point3D { x: 0.0, y: 0.0, z: 0.0 }),
-                rotation: None, scale: None, matrix: Vec::new(),
+                translation: Some(Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                }),
+                rotation: None,
+                scale: None,
+                matrix: Vec::new(),
             },
         );
-        let result = generate(&BooleanSubtractInput { host_mesh: host, subtract_mesh: sub });
+        let result = generate(&BooleanSubtractInput {
+            host_mesh: host,
+            subtract_mesh: sub,
+        });
         assert!(!result.vertices.is_empty());
         // 至少应有几根三角形保留 + cap 面
         assert!(result.faces.len() >= 2);

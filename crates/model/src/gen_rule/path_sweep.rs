@@ -25,7 +25,10 @@ use serde::{Deserialize, Serialize};
 use super::layer_extrusion::{self, LayerDef};
 
 fn to_point2d(points: &[[f64; 3]]) -> Vec<Point2D> {
-    points.iter().map(|c| Point2D { x: c[0], y: c[1] }).collect()
+    points
+        .iter()
+        .map(|c| Point2D { x: c[0], y: c[1] })
+        .collect()
 }
 
 /// Section orientation of the swept stack.
@@ -59,7 +62,6 @@ impl PathSweepInput {
     pub fn base_z(&self) -> f64 {
         self.points.first().map(|p| p[2]).unwrap_or(0.0)
     }
-
 }
 
 /// Run the sweep. Validation errors (too few points, zero-length segments,
@@ -93,7 +95,14 @@ pub fn generate(input: &PathSweepInput) -> Result<MeshGeometry, String> {
 /// Convert world points to `Point3D` (used by callers that need the 3D form,
 /// e.g. LinearComponent engines).
 pub fn to_point3d(points: &[[f64; 3]]) -> Vec<Point3D> {
-    points.iter().map(|c| Point3D { x: c[0], y: c[1], z: c[2] }).collect()
+    points
+        .iter()
+        .map(|c| Point3D {
+            x: c[0],
+            y: c[1],
+            z: c[2],
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -102,8 +111,18 @@ mod tests {
 
     fn layers() -> Vec<LayerDef> {
         vec![
-            LayerDef { name: "core".into(), thickness: 200.0, material_id: Some("C30".into()), function: "structural".into() },
-            LayerDef { name: "finish".into(), thickness: 20.0, material_id: Some("Mortar".into()), function: "finish".into() },
+            LayerDef {
+                name: "core".into(),
+                thickness: 200.0,
+                material_id: Some("C30".into()),
+                function: "structural".into(),
+            },
+            LayerDef {
+                name: "finish".into(),
+                thickness: 20.0,
+                material_id: Some("Mortar".into()),
+                function: "finish".into(),
+            },
         ]
     }
 
@@ -133,7 +152,12 @@ mod tests {
 
     #[test]
     fn horizontal_slab_matches_legacy_kernel_exactly() {
-        let boundary = vec![[0.0, 0.0, 2.0], [5.0, 0.0, 2.0], [5.0, 4.0, 2.0], [0.0, 4.0, 2.0]];
+        let boundary = vec![
+            [0.0, 0.0, 2.0],
+            [5.0, 0.0, 2.0],
+            [5.0, 4.0, 2.0],
+            [0.0, 4.0, 2.0],
+        ];
         let merged = super::super::path_geom::merge_collinear(&to_point2d(&boundary));
         let legacy = layer_extrusion::build_layered_slab_path_elevated(&merged, &layers(), 2.0);
         let converged = generate(&PathSweepInput {

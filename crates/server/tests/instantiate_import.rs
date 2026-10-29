@@ -41,13 +41,21 @@ async fn object_count(project: &SharedProject) -> usize {
 
 async fn undo(port: u16) {
     let client = reqwest::Client::new();
-    let resp = client.post(api_url(port, "/api/undo")).send().await.unwrap();
+    let resp = client
+        .post(api_url(port, "/api/undo"))
+        .send()
+        .await
+        .unwrap();
     assert!(resp.status().is_success());
 }
 
 async fn redo(port: u16) {
     let client = reqwest::Client::new();
-    let resp = client.post(api_url(port, "/api/redo")).send().await.unwrap();
+    let resp = client
+        .post(api_url(port, "/api/redo"))
+        .send()
+        .await
+        .unwrap();
     assert!(resp.status().is_success());
 }
 
@@ -61,8 +69,12 @@ async fn seeded_def_with_tree(port: u16) -> Option<serde_json::Value> {
         .json()
         .await
         .unwrap();
-    defs.into_iter()
-        .find(|d| d["feature_tree_id"].as_str().map(|s| !s.is_empty()).unwrap_or(false))
+    defs.into_iter().find(|d| {
+        d["feature_tree_id"]
+            .as_str()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
+    })
 }
 
 const SIMPLE_IFC: &str = include_str!("../../../fixtures/ifc/simple.ifc");
@@ -71,7 +83,9 @@ const SIMPLE_IFC: &str = include_str!("../../../fixtures/ifc/simple.ifc");
 async fn preview_does_not_mutate_the_project() {
     let (port, project) = test_server().await;
     let client = reqwest::Client::new();
-    let def = seeded_def_with_tree(port).await.expect("seeded catalog has a feature-tree def");
+    let def = seeded_def_with_tree(port)
+        .await
+        .expect("seeded catalog has a feature-tree def");
 
     let before = object_count(&project).await;
     let resp = client
@@ -80,12 +94,23 @@ async fn preview_does_not_mutate_the_project() {
         .send()
         .await
         .unwrap();
-    assert!(resp.status().is_success(), "preview failed: {}", resp.text().await.unwrap());
+    assert!(
+        resp.status().is_success(),
+        "preview failed: {}",
+        resp.text().await.unwrap()
+    );
 
-    assert_eq!(object_count(&project).await, before, "preview leaked an object into the project");
+    assert_eq!(
+        object_count(&project).await,
+        before,
+        "preview leaked an object into the project"
+    );
     let leaked = {
         let p = project.read().await;
-        p.objects.list().iter().any(|o| o.name.starts_with("__preview_"))
+        p.objects
+            .list()
+            .iter()
+            .any(|o| o.name.starts_with("__preview_"))
     };
     assert!(!leaked, "preview object was left behind");
 }
@@ -94,7 +119,9 @@ async fn preview_does_not_mutate_the_project() {
 async fn catalog_instantiation_is_one_undoable_transaction() {
     let (port, project) = test_server().await;
     let client = reqwest::Client::new();
-    let def = seeded_def_with_tree(port).await.expect("seeded catalog has a feature-tree def");
+    let def = seeded_def_with_tree(port)
+        .await
+        .expect("seeded catalog has a feature-tree def");
 
     let resp = client
         .post(api_url(port, "/api/catalog/instantiate"))
@@ -107,19 +134,47 @@ async fn catalog_instantiation_is_one_undoable_transaction() {
         .send()
         .await
         .unwrap();
-    assert!(resp.status().is_success(), "instantiate failed: {}", resp.text().await.unwrap());
+    assert!(
+        resp.status().is_success(),
+        "instantiate failed: {}",
+        resp.text().await.unwrap()
+    );
     let body: serde_json::Value = resp.json().await.unwrap();
     let id = body["component_id"].as_str().unwrap().to_string();
 
-    assert_eq!(client.get(api_url(port, &format!("/api/objects/{}", id))).send().await.unwrap().status(), 200);
+    assert_eq!(
+        client
+            .get(api_url(port, &format!("/api/objects/{}", id)))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        200
+    );
     assert_eq!(object_count(&project).await, 1);
 
     undo(port).await;
-    assert_eq!(object_count(&project).await, 0, "instantiation left the object behind after undo");
-    assert_eq!(client.get(api_url(port, &format!("/api/objects/{}", id))).send().await.unwrap().status(), 404);
+    assert_eq!(
+        object_count(&project).await,
+        0,
+        "instantiation left the object behind after undo"
+    );
+    assert_eq!(
+        client
+            .get(api_url(port, &format!("/api/objects/{}", id)))
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        404
+    );
 
     redo(port).await;
-    assert_eq!(object_count(&project).await, 1, "redo did not restore the instance");
+    assert_eq!(
+        object_count(&project).await,
+        1,
+        "redo did not restore the instance"
+    );
 }
 
 #[tokio::test]
@@ -142,10 +197,18 @@ async fn ifc_merge_import_is_undoable() {
     assert!(imported > 0);
 
     undo(port).await;
-    assert_eq!(object_count(&project).await, 0, "IFC import was not undone as one transaction");
+    assert_eq!(
+        object_count(&project).await,
+        0,
+        "IFC import was not undone as one transaction"
+    );
 
     redo(port).await;
-    assert_eq!(object_count(&project).await, imported, "IFC import redo did not restore objects");
+    assert_eq!(
+        object_count(&project).await,
+        imported,
+        "IFC import redo did not restore objects"
+    );
 }
 
 #[tokio::test]
@@ -177,10 +240,18 @@ async fn ifc_replace_import_is_undoable() {
     assert_ne!(imported, 2, "replace import did not change the project");
 
     undo(port).await;
-    assert_eq!(object_count(&project).await, 2, "replace import undo did not restore the old project");
+    assert_eq!(
+        object_count(&project).await,
+        2,
+        "replace import undo did not restore the old project"
+    );
 
     redo(port).await;
-    assert_eq!(object_count(&project).await, imported, "replace import redo did not reapply");
+    assert_eq!(
+        object_count(&project).await,
+        imported,
+        "replace import redo did not reapply"
+    );
 }
 
 #[tokio::test]

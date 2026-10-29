@@ -69,10 +69,7 @@ pub fn object_description_prompt(object_json: &str) -> String {
 
 /// 用户 Prompt：项目概况
 pub fn project_summary_prompt(stats_json: &str) -> String {
-    format!(
-        "Summarize this engineering project:\n\n{}",
-        stats_json
-    )
+    format!("Summarize this engineering project:\n\n{}", stats_json)
 }
 
 /// 用户 Prompt：变更摘要

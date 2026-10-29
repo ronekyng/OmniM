@@ -110,7 +110,10 @@ impl MockProvider {
                     .replace(" a ", " ")
                     .replace(" an ", " ")
                     .replace(" the ", " ");
-                let rest_normalized = rest_normalized.split_whitespace().collect::<Vec<_>>().join(" ");
+                let rest_normalized = rest_normalized
+                    .split_whitespace()
+                    .collect::<Vec<_>>()
+                    .join(" ");
                 for variant in &[rest, rest_normalized.as_str()] {
                     for (key, value) in &self.responses {
                         if variant.contains(key) {
@@ -149,9 +152,8 @@ impl LlmProvider for MockProvider {
             .find_mock_response(user_prompt)
             .unwrap_or_else(|| self.fallback_response(user_prompt));
 
-        serde_json::from_str(&response).map_err(|e| {
-            AmirError::ParseError(format!("Mock parse error: {}", e))
-        })
+        serde_json::from_str(&response)
+            .map_err(|e| AmirError::ParseError(format!("Mock parse error: {}", e)))
     }
 
     async fn completion(

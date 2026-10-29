@@ -36,7 +36,11 @@ impl AnthropicProvider {
         }
     }
 
-    async fn messages_api(&self, system: &str, messages: Vec<serde_json::Value>) -> Result<String, AmirError> {
+    async fn messages_api(
+        &self,
+        system: &str,
+        messages: Vec<serde_json::Value>,
+    ) -> Result<String, AmirError> {
         let url = format!("{}/messages", self.base_url);
 
         let body = json!({
@@ -76,13 +80,9 @@ impl AnthropicProvider {
 
         let content = json["content"]
             .as_array()
-            .and_then(|arr| {
-                arr.iter().find(|c| c["type"] == "text")
-            })
+            .and_then(|arr| arr.iter().find(|c| c["type"] == "text"))
             .and_then(|c| c["text"].as_str())
-            .ok_or_else(|| {
-                AmirError::ParseError("No text content in Anthropic response".into())
-            })?;
+            .ok_or_else(|| AmirError::ParseError("No text content in Anthropic response".into()))?;
 
         Ok(content.to_string())
     }
@@ -95,12 +95,10 @@ impl LlmProvider for AnthropicProvider {
         system_prompt: &str,
         user_prompt: &str,
     ) -> Result<serde_json::Value, AmirError> {
-        let messages = vec![
-            json!({
-                "role": "user",
-                "content": user_prompt
-            }),
-        ];
+        let messages = vec![json!({
+            "role": "user",
+            "content": user_prompt
+        })];
 
         let content = self.messages_api(system_prompt, messages).await?;
 
@@ -123,12 +121,10 @@ impl LlmProvider for AnthropicProvider {
         system_prompt: &str,
         user_prompt: &str,
     ) -> Result<String, AmirError> {
-        let messages = vec![
-            json!({
-                "role": "user",
-                "content": user_prompt
-            }),
-        ];
+        let messages = vec![json!({
+            "role": "user",
+            "content": user_prompt
+        })];
 
         self.messages_api(system_prompt, messages).await
     }

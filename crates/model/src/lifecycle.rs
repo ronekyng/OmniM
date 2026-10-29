@@ -91,7 +91,11 @@ impl LifecycleStore {
 mod tests {
     use super::*;
 
-    fn make_record(phase: c::LifecyclePhase, name: &str, obj_ids: Vec<&str>) -> c::ProjectLifecycleRecord {
+    fn make_record(
+        phase: c::LifecyclePhase,
+        name: &str,
+        obj_ids: Vec<&str>,
+    ) -> c::ProjectLifecycleRecord {
         c::ProjectLifecycleRecord {
             id: name.to_string(),
             phase: phase as i32,
@@ -116,8 +120,16 @@ mod tests {
     #[test]
     fn test_lifecycle_store() {
         let mut store = LifecycleStore::new();
-        store.insert(make_record(c::LifecyclePhase::Planning, "r1", vec!["obj-1"]));
-        store.insert(make_record(c::LifecyclePhase::Design, "r2", vec!["obj-1", "obj-2"]));
+        store.insert(make_record(
+            c::LifecyclePhase::Planning,
+            "r1",
+            vec!["obj-1"],
+        ));
+        store.insert(make_record(
+            c::LifecyclePhase::Design,
+            "r2",
+            vec!["obj-1", "obj-2"],
+        ));
 
         assert_eq!(store.len(), 2);
         let planning = store.find_by_phase(c::LifecyclePhase::Planning);
@@ -129,8 +141,16 @@ mod tests {
     #[test]
     fn test_remove_record() {
         let mut store = LifecycleStore::new();
-        store.insert(make_record(c::LifecyclePhase::Construction, "cr1", vec!["site-1"]));
-        store.insert(make_record(c::LifecyclePhase::Construction, "cr2", vec!["site-1"]));
+        store.insert(make_record(
+            c::LifecyclePhase::Construction,
+            "cr1",
+            vec!["site-1"],
+        ));
+        store.insert(make_record(
+            c::LifecyclePhase::Construction,
+            "cr2",
+            vec!["site-1"],
+        ));
 
         assert_eq!(store.len(), 2);
         store.remove("cr1");
@@ -166,7 +186,11 @@ mod tests {
     fn test_remove_updates_indexes() {
         let mut store = LifecycleStore::new();
         store.insert(make_record(c::LifecyclePhase::Design, "d1", vec!["obj-a"]));
-        store.insert(make_record(c::LifecyclePhase::Design, "d2", vec!["obj-a", "obj-b"]));
+        store.insert(make_record(
+            c::LifecyclePhase::Design,
+            "d2",
+            vec!["obj-a", "obj-b"],
+        ));
 
         store.remove("d1");
         assert_eq!(store.find_by_phase(c::LifecyclePhase::Design).len(), 1);

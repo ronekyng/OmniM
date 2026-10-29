@@ -1,7 +1,7 @@
-use std::sync::Arc;
-use tokio::sync::RwLock;
 use omnim_model::Project;
 use omnim_server::{create_router, SharedProject};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 /// Start the server on a random port and return the port number.
 async fn start_test_server() -> u16 {
@@ -155,13 +155,20 @@ async fn test_create_object_with_geometry() {
     let status = create_resp.status();
     if status != 200 {
         let body = create_resp.text().await.unwrap_or_default();
-        panic!("Create with geometry failed: HTTP {} body: {}", status, body);
+        panic!(
+            "Create with geometry failed: HTTP {} body: {}",
+            status, body
+        );
     }
 
     let created: serde_json::Value = create_resp.json().await.unwrap();
     assert_eq!(created["name"], "GeomWall");
     assert_eq!(created["object_type"], OT_WALL);
-    assert!(created["geometry"].is_object(), "Expected geometry object, got {:?}", created["geometry"]);
+    assert!(
+        created["geometry"].is_object(),
+        "Expected geometry object, got {:?}",
+        created["geometry"]
+    );
 }
 
 #[tokio::test]
@@ -615,11 +622,7 @@ async fn test_get_mesh() {
         .unwrap();
 
     // Get mesh
-    let mesh_resp = client
-        .get(api_url(port, "/api/mesh"))
-        .send()
-        .await
-        .unwrap();
+    let mesh_resp = client.get(api_url(port, "/api/mesh")).send().await.unwrap();
 
     assert_eq!(mesh_resp.status(), 200);
     let mesh: serde_json::Value = mesh_resp.json().await.unwrap();
@@ -788,7 +791,10 @@ async fn test_connect_objects() {
 
     // Connect
     let conn_resp = client
-        .post(api_url(port, &format!("/api/objects/{}/connect/{}", id1, id2)))
+        .post(api_url(
+            port,
+            &format!("/api/objects/{}/connect/{}", id1, id2),
+        ))
         .send()
         .await
         .unwrap();
@@ -1124,7 +1130,9 @@ async fn test_amir_translate_with_mock() {
 
     assert_eq!(resp.status(), 200);
     let explain: serde_json::Value = resp.json().await.unwrap();
-    assert!(explain["explanations"].as_array().map_or(false, |a| a.len() == 1));
+    assert!(explain["explanations"]
+        .as_array()
+        .map_or(false, |a| a.len() == 1));
 
     // /api/amir/describe
     let resp = client
@@ -1152,13 +1160,18 @@ async fn create_rectangle_sketch(client: &reqwest::Client, port: u16, name: &str
     let resp = client
         .post(api_url(port, "/api/sketches"))
         .json(&serde_json::json!({ "name": name }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let sketch: serde_json::Value = resp.json().await.unwrap();
     let sketch_id = sketch["id"].as_str().unwrap().to_string();
 
     let resp = client
-        .post(api_url(port, &format!("/api/sketches/{}/entities", sketch_id)))
+        .post(api_url(
+            port,
+            &format!("/api/sketches/{}/entities", sketch_id),
+        ))
         .json(&serde_json::json!({
             "entity_type": "rectangle",
             "points": [
@@ -1166,12 +1179,16 @@ async fn create_rectangle_sketch(client: &reqwest::Client, port: u16, name: &str
                 { "x": 2.0, "y": 1.0, "z": 0.0 }
             ]
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 
     let resp = client
         .post(api_url(port, &format!("/api/sketches/{}/solve", sketch_id)))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 
     sketch_id
@@ -1186,7 +1203,9 @@ async fn test_feature_pipeline_extrude() {
     let resp = client
         .post(api_url(port, "/api/components"))
         .json(&serde_json::json!({ "name": "TestComponent" }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let comp: serde_json::Value = resp.json().await.unwrap();
     let comp_id = comp["id"].as_str().unwrap().to_string();
@@ -1196,7 +1215,10 @@ async fn test_feature_pipeline_extrude() {
 
     // 3. Add extrude feature
     let resp = client
-        .post(api_url(port, &format!("/api/components/{}/features", comp_id)))
+        .post(api_url(
+            port,
+            &format!("/api/components/{}/features", comp_id),
+        ))
         .json(&serde_json::json!({
             "feature_type": "extrude",
             "sketch_id": sketch_id,
@@ -1205,7 +1227,9 @@ async fn test_feature_pipeline_extrude() {
             "direction_y": 0.0,
             "direction_z": 1.0
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let feat: serde_json::Value = resp.json().await.unwrap();
     let feature_id = feat["id"].as_str().unwrap().to_string();
@@ -1214,30 +1238,47 @@ async fn test_feature_pipeline_extrude() {
     // 4. Verify component was rebuilt with geometry
     let resp = client
         .get(api_url(port, &format!("/api/components/{}", comp_id)))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let comp: serde_json::Value = resp.json().await.unwrap();
     assert!(comp["feature_count"].as_i64().unwrap() >= 1);
 
     // 5. List features
     let resp = client
-        .get(api_url(port, &format!("/api/components/{}/features", comp_id)))
-        .send().await.unwrap();
+        .get(api_url(
+            port,
+            &format!("/api/components/{}/features", comp_id),
+        ))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let features: Vec<serde_json::Value> = resp.json().await.unwrap();
     assert!(!features.is_empty());
 
     // 6. Update feature depth
     let resp = client
-        .put(api_url(port, &format!("/api/components/{}/features/{}", comp_id, feature_id)))
+        .put(api_url(
+            port,
+            &format!("/api/components/{}/features/{}", comp_id, feature_id),
+        ))
         .json(&serde_json::json!({ "depth": 5.0 }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 
     // 7. Remove feature
     let resp = client
-        .delete(api_url(port, &format!("/api/components/{}/features/{}", comp_id, feature_id)))
-        .send().await.unwrap();
+        .delete(api_url(
+            port,
+            &format!("/api/components/{}/features/{}", comp_id, feature_id),
+        ))
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 }
 
@@ -1250,7 +1291,9 @@ async fn test_feature_pipeline_revolve() {
     let resp = client
         .post(api_url(port, "/api/components"))
         .json(&serde_json::json!({ "name": "RevolveTest" }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     let comp: serde_json::Value = resp.json().await.unwrap();
     let comp_id = comp["id"].as_str().unwrap().to_string();
 
@@ -1259,7 +1302,10 @@ async fn test_feature_pipeline_revolve() {
 
     // Add revolve feature
     let resp = client
-        .post(api_url(port, &format!("/api/components/{}/features", comp_id)))
+        .post(api_url(
+            port,
+            &format!("/api/components/{}/features", comp_id),
+        ))
         .json(&serde_json::json!({
             "feature_type": "revolve",
             "sketch_id": sketch_id,
@@ -1268,7 +1314,9 @@ async fn test_feature_pipeline_revolve() {
             "axis_direction_y": 0.0,
             "axis_direction_z": 1.0
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let feat: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(feat["feature_type"].as_str().unwrap(), "revolve");
@@ -1283,7 +1331,9 @@ async fn test_feature_pipeline_loft() {
     let resp = client
         .post(api_url(port, "/api/components"))
         .json(&serde_json::json!({ "name": "LoftTest" }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     let comp: serde_json::Value = resp.json().await.unwrap();
     let comp_id = comp["id"].as_str().unwrap().to_string();
 
@@ -1293,13 +1343,18 @@ async fn test_feature_pipeline_loft() {
 
     // Add loft feature
     let resp = client
-        .post(api_url(port, &format!("/api/components/{}/features", comp_id)))
+        .post(api_url(
+            port,
+            &format!("/api/components/{}/features", comp_id),
+        ))
         .json(&serde_json::json!({
             "feature_type": "loft",
             "sketch_id": sketch0,
             "input_sketch_ids": [sketch0, sketch1]
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let feat: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(feat["feature_type"].as_str().unwrap(), "loft");
@@ -1313,14 +1368,19 @@ async fn test_sketch_extrude_endpoint_uses_brep() {
     let sketch_id = create_rectangle_sketch(&client, port, "legacy-extrude").await;
 
     let resp = client
-        .post(api_url(port, &format!("/api/sketches/{}/extrude", sketch_id)))
+        .post(api_url(
+            port,
+            &format!("/api/sketches/{}/extrude", sketch_id),
+        ))
         .json(&serde_json::json!({
             "depth": 2.0,
             "direction_x": 0.0,
             "direction_y": 0.0,
             "direction_z": 1.0
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     let status = resp.status();
     let body = resp.text().await.unwrap();
     assert_eq!(status, 200, "extrude failed: {}", body);
@@ -1338,7 +1398,10 @@ async fn test_sketch_revolve_endpoint_uses_brep() {
     let sketch_id = create_rectangle_sketch(&client, port, "legacy-revolve").await;
 
     let resp = client
-        .post(api_url(port, &format!("/api/sketches/{}/revolve", sketch_id)))
+        .post(api_url(
+            port,
+            &format!("/api/sketches/{}/revolve", sketch_id),
+        ))
         .json(&serde_json::json!({
             "angle": 3.14159,
             "axis_origin_x": 0.0,
@@ -1348,7 +1411,9 @@ async fn test_sketch_revolve_endpoint_uses_brep() {
             "axis_direction_y": 0.0,
             "axis_direction_z": 1.0
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
     let result: serde_json::Value = resp.json().await.unwrap();
     assert!(result["success"].as_bool().unwrap());
@@ -1363,7 +1428,9 @@ async fn test_feature_chamfer_fillet_produces_no_geometry() {
     let resp = client
         .post(api_url(port, "/api/components"))
         .json(&serde_json::json!({ "name": "ChamferTest" }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     let comp: serde_json::Value = resp.json().await.unwrap();
     let comp_id = comp["id"].as_str().unwrap().to_string();
 
@@ -1371,17 +1438,24 @@ async fn test_feature_chamfer_fillet_produces_no_geometry() {
 
     // Add chamfer feature — should succeed but produce no geometry
     let resp = client
-        .post(api_url(port, &format!("/api/components/{}/features", comp_id)))
+        .post(api_url(
+            port,
+            &format!("/api/components/{}/features", comp_id),
+        ))
         .json(&serde_json::json!({
             "feature_type": "chamfer",
             "sketch_id": sketch_id
         }))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 
     // Component should still exist and rebuild without error
     let resp = client
         .get(api_url(port, &format!("/api/components/{}", comp_id)))
-        .send().await.unwrap();
+        .send()
+        .await
+        .unwrap();
     assert_eq!(resp.status(), 200);
 }

@@ -18,7 +18,11 @@ pub struct BreakdownNode {
 }
 
 impl BreakdownNode {
-    pub fn new(level: c::BreakdownLevel, name: impl Into<String>, convention: c::BreakdownConvention) -> Self {
+    pub fn new(
+        level: c::BreakdownLevel,
+        name: impl Into<String>,
+        convention: c::BreakdownConvention,
+    ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             level: level as i32,
@@ -132,7 +136,10 @@ impl BreakdownStore {
                 .push(id.clone());
         }
         self.by_level.entry(level).or_default().push(id.clone());
-        self.by_convention.entry(convention).or_default().push(id.clone());
+        self.by_convention
+            .entry(convention)
+            .or_default()
+            .push(id.clone());
         self.nodes.insert(id.clone(), node);
         id
     }
@@ -243,7 +250,11 @@ mod tests {
     #[test]
     fn test_insert_and_get() {
         let mut store = BreakdownStore::new();
-        let node = BreakdownNode::new(c::BreakdownLevel::Project, "MyProject", c::BreakdownConvention::Building);
+        let node = BreakdownNode::new(
+            c::BreakdownLevel::Project,
+            "MyProject",
+            c::BreakdownConvention::Building,
+        );
         let id = store.insert(node);
         assert!(store.get(&id).is_some());
         assert_eq!(store.len(), 1);
@@ -252,12 +263,20 @@ mod tests {
     #[test]
     fn test_parent_child() {
         let mut store = BreakdownStore::new();
-        let proj = BreakdownNode::new(c::BreakdownLevel::Project, "P1", c::BreakdownConvention::Building);
+        let proj = BreakdownNode::new(
+            c::BreakdownLevel::Project,
+            "P1",
+            c::BreakdownConvention::Building,
+        );
         let proj_id = proj.id.clone();
         store.insert(proj);
 
-        let bldg = BreakdownNode::new(c::BreakdownLevel::Building, "B1", c::BreakdownConvention::Building)
-            .with_parent(proj_id.clone());
+        let bldg = BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B1",
+            c::BreakdownConvention::Building,
+        )
+        .with_parent(proj_id.clone());
         let bldg_id = bldg.id.clone();
         store.insert(bldg);
 
@@ -269,17 +288,29 @@ mod tests {
     #[test]
     fn test_ancestors() {
         let mut store = BreakdownStore::new();
-        let prog = BreakdownNode::new(c::BreakdownLevel::Program, "Program1", c::BreakdownConvention::Plant);
+        let prog = BreakdownNode::new(
+            c::BreakdownLevel::Program,
+            "Program1",
+            c::BreakdownConvention::Plant,
+        );
         let prog_id = prog.id.clone();
         store.insert(prog);
 
-        let proj = BreakdownNode::new(c::BreakdownLevel::Project, "Project1", c::BreakdownConvention::Plant)
-            .with_parent(prog_id.clone());
+        let proj = BreakdownNode::new(
+            c::BreakdownLevel::Project,
+            "Project1",
+            c::BreakdownConvention::Plant,
+        )
+        .with_parent(prog_id.clone());
         let proj_id = proj.id.clone();
         store.insert(proj);
 
-        let unit = BreakdownNode::new(c::BreakdownLevel::Unit, "Unit1", c::BreakdownConvention::Plant)
-            .with_parent(proj_id.clone());
+        let unit = BreakdownNode::new(
+            c::BreakdownLevel::Unit,
+            "Unit1",
+            c::BreakdownConvention::Plant,
+        )
+        .with_parent(proj_id.clone());
         let unit_id = unit.id.clone();
         store.insert(unit);
 
@@ -292,15 +323,27 @@ mod tests {
     #[test]
     fn test_descendants() {
         let mut store = BreakdownStore::new();
-        let proj = BreakdownNode::new(c::BreakdownLevel::Project, "P1", c::BreakdownConvention::Civil);
+        let proj = BreakdownNode::new(
+            c::BreakdownLevel::Project,
+            "P1",
+            c::BreakdownConvention::Civil,
+        );
         let proj_id = proj.id.clone();
         store.insert(proj);
 
-        let b1 = BreakdownNode::new(c::BreakdownLevel::Building, "B1", c::BreakdownConvention::Civil)
-            .with_parent(proj_id.clone());
+        let b1 = BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B1",
+            c::BreakdownConvention::Civil,
+        )
+        .with_parent(proj_id.clone());
         store.insert(b1);
-        let b2 = BreakdownNode::new(c::BreakdownLevel::Building, "B2", c::BreakdownConvention::Civil)
-            .with_parent(proj_id.clone());
+        let b2 = BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B2",
+            c::BreakdownConvention::Civil,
+        )
+        .with_parent(proj_id.clone());
         store.insert(b2);
 
         let descendants = store.descendants_of(&proj_id);
@@ -310,8 +353,16 @@ mod tests {
     #[test]
     fn test_roots() {
         let mut store = BreakdownStore::new();
-        store.insert(BreakdownNode::new(c::BreakdownLevel::Program, "P1", c::BreakdownConvention::Building));
-        store.insert(BreakdownNode::new(c::BreakdownLevel::Program, "P2", c::BreakdownConvention::Building));
+        store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Program,
+            "P1",
+            c::BreakdownConvention::Building,
+        ));
+        store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Program,
+            "P2",
+            c::BreakdownConvention::Building,
+        ));
 
         let roots = store.roots();
         assert_eq!(roots.len(), 2);
@@ -320,7 +371,11 @@ mod tests {
     #[test]
     fn test_link_objects() {
         let mut store = BreakdownStore::new();
-        let id = store.insert(BreakdownNode::new(c::BreakdownLevel::Building, "B1", c::BreakdownConvention::Building));
+        let id = store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B1",
+            c::BreakdownConvention::Building,
+        ));
         let node = store.get_mut(&id).unwrap();
         node.link_object("obj-1");
         node.link_object("obj-2");
@@ -333,8 +388,16 @@ mod tests {
     #[test]
     fn test_convention_filter() {
         let mut store = BreakdownStore::new();
-        store.insert(BreakdownNode::new(c::BreakdownLevel::Building, "B1", c::BreakdownConvention::Building));
-        store.insert(BreakdownNode::new(c::BreakdownLevel::Building, "B2", c::BreakdownConvention::Plant));
+        store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B1",
+            c::BreakdownConvention::Building,
+        ));
+        store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Building,
+            "B2",
+            c::BreakdownConvention::Plant,
+        ));
 
         let building_nodes = store.find_by_convention(c::BreakdownConvention::Building);
         assert_eq!(building_nodes.len(), 1);
@@ -345,7 +408,11 @@ mod tests {
     #[test]
     fn test_remove() {
         let mut store = BreakdownStore::new();
-        let id = store.insert(BreakdownNode::new(c::BreakdownLevel::Project, "P1", c::BreakdownConvention::Building));
+        let id = store.insert(BreakdownNode::new(
+            c::BreakdownLevel::Project,
+            "P1",
+            c::BreakdownConvention::Building,
+        ));
         store.remove(&id);
         assert!(store.get(&id).is_none());
         assert!(store.is_empty());

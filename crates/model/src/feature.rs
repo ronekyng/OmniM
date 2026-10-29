@@ -69,8 +69,16 @@ impl Feature {
             depth,
             direction,
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -100,10 +108,22 @@ impl Feature {
             input_sketch_ids: Vec::new(),
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -132,10 +152,22 @@ impl Feature {
             input_sketch_ids: vec![path_sketch_id.into()],
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -161,10 +193,22 @@ impl Feature {
             dependency_ids: Vec::new(),
             axis_sketch_id: String::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -179,10 +223,7 @@ impl Feature {
         }
     }
 
-    pub fn new_loft(
-        name: impl Into<String>,
-        section_sketch_ids: Vec<String>,
-    ) -> Self {
+    pub fn new_loft(name: impl Into<String>, section_sketch_ids: Vec<String>) -> Self {
         let first = section_sketch_ids.first().cloned().unwrap_or_default();
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -193,10 +234,22 @@ impl Feature {
             input_sketch_ids: section_sketch_ids,
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -226,10 +279,22 @@ impl Feature {
             path_sweep: None,
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: operation == BooleanOp::Subtract,
             order: 0,
             suppressed: false,
@@ -243,10 +308,7 @@ impl Feature {
         }
     }
 
-    pub fn new_fusion(
-        name: impl Into<String>,
-        section_sketch_ids: Vec<String>,
-    ) -> Self {
+    pub fn new_fusion(name: impl Into<String>, section_sketch_ids: Vec<String>) -> Self {
         let first = section_sketch_ids.first().cloned().unwrap_or_default();
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -257,10 +319,22 @@ impl Feature {
             input_sketch_ids: section_sketch_ids,
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -275,10 +349,7 @@ impl Feature {
         }
     }
 
-    pub fn new_lofted_fusion(
-        name: impl Into<String>,
-        section_sketch_ids: Vec<String>,
-    ) -> Self {
+    pub fn new_lofted_fusion(name: impl Into<String>, section_sketch_ids: Vec<String>) -> Self {
         let first = section_sketch_ids.first().cloned().unwrap_or_default();
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -289,10 +360,22 @@ impl Feature {
             input_sketch_ids: section_sketch_ids,
             dependency_ids: Vec::new(),
             depth: 0.0,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -321,10 +404,22 @@ impl Feature {
             input_sketch_ids: Vec::new(),
             dependency_ids,
             depth: distance,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: true,
             order: 0,
             suppressed: false,
@@ -339,11 +434,7 @@ impl Feature {
         }
     }
 
-    pub fn new_fillet(
-        name: impl Into<String>,
-        radius: f64,
-        dependency_ids: Vec<String>,
-    ) -> Self {
+    pub fn new_fillet(name: impl Into<String>, radius: f64, dependency_ids: Vec<String>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name: name.into(),
@@ -353,10 +444,22 @@ impl Feature {
             input_sketch_ids: Vec::new(),
             dependency_ids,
             depth: radius,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: true,
             order: 0,
             suppressed: false,
@@ -390,10 +493,22 @@ impl Feature {
             input_sketch_ids: Vec::new(),
             dependency_ids,
             depth: spacing_x,
-            direction: c::Vector3D { x: spacing_x, y: spacing_y, z: spacing_z },
+            direction: c::Vector3D {
+                x: spacing_x,
+                y: spacing_y,
+                z: spacing_z,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             order: 0,
             suppressed: false,
@@ -408,11 +523,7 @@ impl Feature {
         }
     }
 
-    pub fn new_shell(
-        name: impl Into<String>,
-        thickness: f64,
-        dependency_ids: Vec<String>,
-    ) -> Self {
+    pub fn new_shell(name: impl Into<String>, thickness: f64, dependency_ids: Vec<String>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name: name.into(),
@@ -422,10 +533,22 @@ impl Feature {
             input_sketch_ids: Vec::new(),
             dependency_ids,
             depth: thickness,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             angle: 0.0,
-            axis_origin: c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            axis_direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            axis_origin: c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            axis_direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: true,
             order: 0,
             suppressed: false,
@@ -501,7 +624,16 @@ mod tests {
 
     #[test]
     fn test_new_extrude() {
-        let f = Feature::new_extrude("ext1", "sketch-1", 5.0, c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+        let f = Feature::new_extrude(
+            "ext1",
+            "sketch-1",
+            5.0,
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        );
         assert_eq!(f.name, "ext1");
         assert_eq!(f.feature_type, FeatureType::Extrude);
         assert_eq!(f.depth, 5.0);
@@ -583,12 +715,27 @@ mod tests {
 
     #[test]
     fn test_mark_dirty() {
-        let mut f = Feature::new_extrude("ext1", "s1", 1.0, c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+        let mut f = Feature::new_extrude(
+            "ext1",
+            "s1",
+            1.0,
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        );
         assert!(f.dirty);
         f.dirty = false;
         f.cached_geometry = Some(c::MeshGeometry {
-            vertices: vec![c::Point3D { x: 0.0, y: 0.0, z: 0.0 }],
-            normals: Vec::new(), uvs: Vec::new(), faces: Vec::new(),
+            vertices: vec![c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            }],
+            normals: Vec::new(),
+            uvs: Vec::new(),
+            faces: Vec::new(),
         });
         f.mark_dirty();
         assert!(f.dirty);

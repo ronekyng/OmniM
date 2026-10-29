@@ -1,8 +1,8 @@
 use omnim_core as c;
 use serde::{Deserialize, Serialize};
 
-use crate::CatalogStore;
 use crate::feature_template::FeatureTreeRegistry;
+use crate::CatalogStore;
 use crate::ComponentStore;
 
 /// The shared Library holds the master Component Catalog, Component templates, and feature tree templates.
@@ -72,24 +72,23 @@ impl Library {
     }
 
     /// Get a feature tree template by ID from the library registry.
-    pub fn get_feature_tree(&self, id: &str) -> Option<&crate::feature_template::FeatureTreeTemplate> {
+    pub fn get_feature_tree(
+        &self,
+        id: &str,
+    ) -> Option<&crate::feature_template::FeatureTreeTemplate> {
         self.feature_trees.get(id)
     }
 
     /// Load a Library from a `.omnimlib` file (JSONC/JSON5 format).
     pub fn load_from_file(path: &str) -> Result<Self, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("read {}: {}", path, e))?;
-        json5::from_str(&content)
-            .map_err(|e| format!("parse {}: {}", path, e))
+        let content = std::fs::read_to_string(path).map_err(|e| format!("read {}: {}", path, e))?;
+        json5::from_str(&content).map_err(|e| format!("parse {}: {}", path, e))
     }
 
     /// Save the Library to a `.omnimlib` file (pretty JSON).
     pub fn save_to_file(&self, path: &str) -> Result<(), String> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| format!("serialize: {}", e))?;
-        std::fs::write(path, json)
-            .map_err(|e| format!("write {}: {}", path, e))?;
+        let json = serde_json::to_string_pretty(self).map_err(|e| format!("serialize: {}", e))?;
+        std::fs::write(path, json).map_err(|e| format!("write {}: {}", path, e))?;
         Ok(())
     }
 }

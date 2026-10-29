@@ -1,13 +1,11 @@
 use crate::types::*;
 
 /// 意图分类器 — 将 LLM 的结构化输出转为 ParsedIntent
-pub struct IntentClassifier {
-}
+pub struct IntentClassifier {}
 
 impl IntentClassifier {
     pub fn new() -> Self {
-        Self {
-        }
+        Self {}
     }
 
     /// 将原始 LLM 响应分类为 ParsedIntent
@@ -25,9 +23,7 @@ impl IntentClassifier {
             .map(|e| Entity {
                 entity_type: match e.entity_type.to_lowercase().as_str() {
                     "object_type" => EntityType::ObjectType,
-                    "object_reference" | "object_ref" | "reference" => {
-                        EntityType::ObjectReference
-                    }
+                    "object_reference" | "object_ref" | "reference" => EntityType::ObjectReference,
                     "property_name" => EntityType::PropertyName,
                     "property_value" => EntityType::PropertyValue,
                     "unit" => EntityType::Unit,
@@ -50,19 +46,18 @@ impl IntentClassifier {
     fn map_intent(&self, resp: &LlmIntentResponse) -> Result<Intent, AmirError> {
         match resp.intent.to_lowercase().as_str() {
             "create_object" => {
-                let object_type = resp
-                    .object_type
-                    .clone()
-                    .unwrap_or_else(|| "generic".into());
+                let object_type = resp.object_type.clone().unwrap_or_else(|| "generic".into());
                 let mut params = resp.parameters.clone();
 
                 // 如果没有提供 name，自动生成
-                if params.get("name").and_then(|v| v.as_str()).unwrap_or("").is_empty() {
+                if params
+                    .get("name")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .is_empty()
+                {
                     if let Some(name) = &resp.object_name {
-                        params.insert(
-                            "name".into(),
-                            serde_json::Value::String(name.clone()),
-                        );
+                        params.insert("name".into(), serde_json::Value::String(name.clone()));
                     }
                 }
 
@@ -73,23 +68,14 @@ impl IntentClassifier {
                 })
             }
             "modify_object" => Ok(Intent::ModifyObject {
-                target_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                target_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 modifications: resp.parameters.clone(),
             }),
             "delete_object" => Ok(Intent::DeleteObject {
-                target_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                target_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
             }),
             "move_object" => Ok(Intent::MoveObject {
-                target_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                target_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 new_parent_ref: resp
                     .parameters
                     .get("parent")
@@ -98,10 +84,7 @@ impl IntentClassifier {
                     .to_string(),
             }),
             "set_property" => Ok(Intent::SetProperty {
-                target_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                target_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 property_name: resp
                     .parameters
                     .get("property_name")
@@ -182,23 +165,14 @@ impl IntentClassifier {
                     .map(|s| s.to_string()),
             }),
             "modify_lifecycle_record" => Ok(Intent::ModifyLifecycleRecord {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 modifications: resp.parameters.clone(),
             }),
             "delete_lifecycle_record" => Ok(Intent::DeleteLifecycleRecord {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
             }),
             "link_record_to_object" => Ok(Intent::LinkRecordToObject {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 object_ref: resp
                     .parameters
                     .get("object")
@@ -207,22 +181,13 @@ impl IntentClassifier {
                     .to_string(),
             }),
             "update_schedule" => Ok(Intent::UpdateSchedule {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
             }),
             "update_cost" => Ok(Intent::UpdateCost {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
             }),
             "update_progress" => Ok(Intent::UpdateProgress {
-                record_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                record_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
             }),
             "create_work_order" => Ok(Intent::CreateWorkOrder {
                 asset_ref: resp
@@ -250,10 +215,7 @@ impl IntentClassifier {
                     .to_string(),
             }),
             "create_sketch" => Ok(Intent::CreateSketch {
-                parent_ref: resp
-                    .target_ref
-                    .clone()
-                    .unwrap_or_else(|| "selected".into()),
+                parent_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                 plane: resp
                     .parameters
                     .get("plane")
@@ -268,10 +230,7 @@ impl IntentClassifier {
                     .and_then(|v| v.as_f64())
                     .unwrap_or(100.0);
                 Ok(Intent::ExtrudeSketch {
-                    sketch_ref: resp
-                        .target_ref
-                        .clone()
-                        .unwrap_or_else(|| "selected".into()),
+                    sketch_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                     depth,
                     direction: resp
                         .parameters
@@ -287,23 +246,14 @@ impl IntentClassifier {
                     .and_then(|v| v.as_f64())
                     .unwrap_or(360.0);
                 Ok(Intent::RevolveSketch {
-                    sketch_ref: resp
-                        .target_ref
-                        .clone()
-                        .unwrap_or_else(|| "selected".into()),
+                    sketch_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                     angle,
                 })
             }
             "add_feature" => {
-                let feature_type = resp
-                    .object_type
-                    .clone()
-                    .unwrap_or_else(|| "extrude".into());
+                let feature_type = resp.object_type.clone().unwrap_or_else(|| "extrude".into());
                 Ok(Intent::AddFeature {
-                    parent_ref: resp
-                        .target_ref
-                        .clone()
-                        .unwrap_or_else(|| "selected".into()),
+                    parent_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                     feature_type,
                     parameters: resp.parameters.clone(),
                 })
@@ -329,10 +279,7 @@ impl IntentClassifier {
                     .unwrap_or("")
                     .to_string();
                 Ok(Intent::BooleanOp {
-                    target_ref: resp
-                        .target_ref
-                        .clone()
-                        .unwrap_or_else(|| "selected".into()),
+                    target_ref: resp.target_ref.clone().unwrap_or_else(|| "selected".into()),
                     tool_ref,
                     operation,
                 })

@@ -105,11 +105,27 @@ impl ParamDef {
         }
     }
 
-    pub fn with_default(mut self, v: f64) -> Self { self.default_value = v; self }
-    pub fn with_range(mut self, min: f64, max: f64) -> Self { self.min_value = min; self.max_value = max; self }
-    pub fn with_step(mut self, s: f64) -> Self { self.step = s; self }
-    pub fn with_unit(mut self, u: impl Into<String>) -> Self { self.unit = u.into(); self }
-    pub fn with_choices(mut self, c: Vec<String>) -> Self { self.choices = c; self }
+    pub fn with_default(mut self, v: f64) -> Self {
+        self.default_value = v;
+        self
+    }
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min_value = min;
+        self.max_value = max;
+        self
+    }
+    pub fn with_step(mut self, s: f64) -> Self {
+        self.step = s;
+        self
+    }
+    pub fn with_unit(mut self, u: impl Into<String>) -> Self {
+        self.unit = u.into();
+        self
+    }
+    pub fn with_choices(mut self, c: Vec<String>) -> Self {
+        self.choices = c;
+        self
+    }
 }
 
 impl From<&c::ParamDef> for ParamDef {
@@ -190,12 +206,29 @@ impl ConnectorDef {
         self
     }
 
-    pub fn with_bore(mut self, bore: impl Into<String>) -> Self { self.bore_expr = bore.into(); self }
-    pub fn with_type_code(mut self, code: impl Into<String>) -> Self { self.connection_type_code = code.into(); self }
-    pub fn with_up(mut self, x: impl Into<String>, y: impl Into<String>, z: impl Into<String>) -> Self {
-        self.up_x_expr = x.into(); self.up_y_expr = y.into(); self.up_z_expr = z.into(); self
+    pub fn with_bore(mut self, bore: impl Into<String>) -> Self {
+        self.bore_expr = bore.into();
+        self
     }
-    pub fn with_role(mut self, role: i32) -> Self { self.role = role; self }
+    pub fn with_type_code(mut self, code: impl Into<String>) -> Self {
+        self.connection_type_code = code.into();
+        self
+    }
+    pub fn with_up(
+        mut self,
+        x: impl Into<String>,
+        y: impl Into<String>,
+        z: impl Into<String>,
+    ) -> Self {
+        self.up_x_expr = x.into();
+        self.up_y_expr = y.into();
+        self.up_z_expr = z.into();
+        self
+    }
+    pub fn with_role(mut self, role: i32) -> Self {
+        self.role = role;
+        self
+    }
 }
 
 impl From<&c::ConnectorDef> for ConnectorDef {
@@ -248,7 +281,10 @@ impl CatalogStore {
         let id = comp.id.clone();
         let category = comp.category.clone();
         self.components.insert(id.clone(), comp);
-        self.by_category.entry(category).or_default().push(id.clone());
+        self.by_category
+            .entry(category)
+            .or_default()
+            .push(id.clone());
         self.components.get_mut(&id).unwrap()
     }
 
@@ -281,7 +317,8 @@ impl CatalogStore {
     }
 
     pub fn list_by_category(&self, category: &str) -> Vec<&ComponentDef> {
-        self.components.values()
+        self.components
+            .values()
             .filter(|c| c.category == category || c.category.starts_with(&format!("{}/", category)))
             .collect()
     }
@@ -353,7 +390,8 @@ pub enum ConnectorType {
 ///
 /// Returns a map from platform → (code → ConnectorType).
 /// Platforms: "C3D" (Civil3D), "OmniM", "E3D"
-pub fn connector_code_map() -> std::collections::HashMap<String, std::collections::HashMap<String, ConnectorType>> {
+pub fn connector_code_map(
+) -> std::collections::HashMap<String, std::collections::HashMap<String, ConnectorType>> {
     let mut map = std::collections::HashMap::new();
 
     // OmniM native codes

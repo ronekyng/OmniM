@@ -30,14 +30,20 @@ impl ObjectStore {
         self.children.clear();
         for (id, obj) in &self.objects {
             if let Some(pid) = &obj.parent_id {
-                self.children.entry(pid.clone()).or_default().push(id.clone());
+                self.children
+                    .entry(pid.clone())
+                    .or_default()
+                    .push(id.clone());
             }
         }
     }
 
     pub fn insert(&mut self, obj: OmniObject) -> &mut OmniObject {
         if let Some(pid) = &obj.parent_id {
-            self.children.entry(pid.clone()).or_default().push(obj.id.clone());
+            self.children
+                .entry(pid.clone())
+                .or_default()
+                .push(obj.id.clone());
         }
         let id = obj.id.clone();
         self.objects.insert(id.clone(), obj);
@@ -91,7 +97,10 @@ impl ObjectStore {
     }
 
     pub fn find_by_type(&self, object_type: c::ObjectType) -> Vec<&OmniObject> {
-        self.objects.values().filter(|o| o.object_type == object_type as i32).collect()
+        self.objects
+            .values()
+            .filter(|o| o.object_type == object_type as i32)
+            .collect()
     }
 
     pub fn find_by_tag(&self, tag: &str) -> Vec<&OmniObject> {
@@ -100,20 +109,32 @@ impl ObjectStore {
 
     /// 查找同时拥有所有指定 tag 的对象（交集）
     pub fn find_by_tags(&self, tags: &[&str]) -> Vec<&OmniObject> {
-        self.objects.values().filter(|o| tags.iter().all(|t| o.has_tag(t))).collect()
+        self.objects
+            .values()
+            .filter(|o| tags.iter().all(|t| o.has_tag(t)))
+            .collect()
     }
 
     /// 查找拥有任意一个指定 tag 的对象（并集）
     pub fn find_by_any_tag(&self, tags: &[&str]) -> Vec<&OmniObject> {
-        self.objects.values().filter(|o| tags.iter().any(|t| o.has_tag(t))).collect()
+        self.objects
+            .values()
+            .filter(|o| tags.iter().any(|t| o.has_tag(t)))
+            .collect()
     }
 
     pub fn find_by_ifc_class(&self, ifc_class: &str) -> Vec<&OmniObject> {
-        self.objects.values().filter(|o| o.ifc_class == ifc_class).collect()
+        self.objects
+            .values()
+            .filter(|o| o.ifc_class == ifc_class)
+            .collect()
     }
 
     pub fn roots(&self) -> Vec<&OmniObject> {
-        self.objects.values().filter(|o| o.parent_id.is_none()).collect()
+        self.objects
+            .values()
+            .filter(|o| o.parent_id.is_none())
+            .collect()
     }
 }
 
@@ -162,7 +183,9 @@ mod tests {
     #[test]
     fn test_find_by_tag() {
         let mut store = ObjectStore::new();
-        store.insert(OmniObject::new(c::ObjectType::Wall, "Wall-1").with_tags(["structural", "exterior"]));
+        store.insert(
+            OmniObject::new(c::ObjectType::Wall, "Wall-1").with_tags(["structural", "exterior"]),
+        );
         store.insert(OmniObject::new(c::ObjectType::Wall, "Wall-2").with_tags(["interior"]));
 
         assert_eq!(store.find_by_tag("structural").len(), 1);

@@ -34,7 +34,10 @@ pub struct ApiError {
 
 impl ApiError {
     pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
-        Self { status, message: message.into() }
+        Self {
+            status,
+            message: message.into(),
+        }
     }
 
     pub fn bad_request(message: impl Into<String>) -> Self {
@@ -52,7 +55,10 @@ impl ApiError {
 
 impl From<StatusCode> for ApiError {
     fn from(status: StatusCode) -> Self {
-        Self { status, message: status.to_string() }
+        Self {
+            status,
+            message: status.to_string(),
+        }
     }
 }
 
@@ -66,10 +72,13 @@ impl IntoResponse for ApiError {
 pub fn envelope(action: c::Action, ops: Vec<c::Operation>) -> c::OmniCommand {
     c::OmniCommand {
         version: "1.0".into(),
-        id: format!("mut-{}", SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos()),
+        id: format!(
+            "mut-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ),
         action: action as i32,
         actor: None,
         target: None,
@@ -93,7 +102,13 @@ pub async fn apply(
 ) -> Result<ExecutionResult, ApiError> {
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
-    Ok(apply_locked(&state.save_path, &mut exe, action, ops, &mut p))
+    Ok(apply_locked(
+        &state.save_path,
+        &mut exe,
+        action,
+        ops,
+        &mut p,
+    ))
 }
 
 /// Same as [`apply`] for handlers that already hold both write locks
@@ -174,30 +189,32 @@ pub fn op_modify_object(
 
 pub fn op_set_property(id: &str, name: &str, value: &str) -> c::Operation {
     c::Operation {
-        op: Some(c::operation::Op::SetObjectProperty(c::SetObjectPropertyOperation {
-            object_id: id.to_string(),
-            property: Some(c::Property {
-                name: name.to_string(),
-                value: Some(c::PropertyValue {
-                    value_type: Some(c::property_value::ValueType::StringValue(value.to_string())),
+        op: Some(c::operation::Op::SetObjectProperty(
+            c::SetObjectPropertyOperation {
+                object_id: id.to_string(),
+                property: Some(c::Property {
+                    name: name.to_string(),
+                    value: Some(c::PropertyValue {
+                        value_type: Some(c::property_value::ValueType::StringValue(
+                            value.to_string(),
+                        )),
+                    }),
+                    unit: String::new(),
+                    description: String::new(),
                 }),
-                unit: String::new(),
-                description: String::new(),
-            }),
-        })),
+            },
+        )),
     }
 }
 
 pub fn op_create_material(m: c::Material) -> c::Operation {
     c::Operation {
-        op: Some(c::operation::Op::CreateMaterial(c::CreateMaterialOperation {
-            material: Some(m),
-        })),
+        op: Some(c::operation::Op::CreateMaterial(
+            c::CreateMaterialOperation { material: Some(m) },
+        )),
     }
 }
 
-pub fn op_relationship(
-    op: c::operation::Op,
-) -> c::Operation {
+pub fn op_relationship(op: c::operation::Op) -> c::Operation {
     c::Operation { op: Some(op) }
 }

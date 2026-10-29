@@ -1,15 +1,15 @@
-use std::{collections::HashMap, sync::Arc};
 use axum::{
     extract::{DefaultBodyLimit, Path, Query, State},
     http::StatusCode,
-    response::{Json, IntoResponse},
-    routing::{get, post, put, delete},
+    response::{IntoResponse, Json},
+    routing::{delete, get, post, put},
     Router,
 };
-use omnim_model::{Project, LIBRARY};
+use omnim_amir::{AmirConfig, AmirEngine, AmirError};
 use omnim_core as c;
-use omnim_amir::{AmirEngine, AmirConfig, AmirError};
+use omnim_model::{Project, LIBRARY};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
@@ -28,21 +28,19 @@ pub type SharedProject = Arc<RwLock<Project>>;
 pub type SharedState = Arc<AppState>;
 
 pub fn create_router(project: SharedProject, save_path: Option<String>) -> Router {
-    let amir = AmirConfig::from_env()
-        .ok()
-        .and_then(|cfg| {
-            let provider_name = cfg.provider.clone();
-            match AmirEngine::new(cfg) {
-                Ok(engine) => {
-                    println!("  AMIR AI engine initialized (provider: {})", provider_name);
-                    Some(engine)
-                }
-                Err(e) => {
-                    println!("  AMIR AI engine initialization failed: {}", e);
-                    None
-                }
+    let amir = AmirConfig::from_env().ok().and_then(|cfg| {
+        let provider_name = cfg.provider.clone();
+        match AmirEngine::new(cfg) {
+            Ok(engine) => {
+                println!("  AMIR AI engine initialized (provider: {})", provider_name);
+                Some(engine)
             }
-        });
+            Err(e) => {
+                println!("  AMIR AI engine initialization failed: {}", e);
+                None
+            }
+        }
+    });
 
     let state = Arc::new(AppState {
         project,
@@ -61,30 +59,57 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/tree", get(get_tree))
         .route("/api/stats", get(get_stats))
         .route("/api/objects", get(list_objects))
-        .route("/api/objects/{id}", get(get_object).put(update_object).delete(delete_object))
+        .route(
+            "/api/objects/{id}",
+            get(get_object).put(update_object).delete(delete_object),
+        )
         .route("/api/objects", post(create_object))
         .route("/api/objects/{id}/prop", put(set_property))
-        .route("/api/object-types/{type}/properties", get(get_object_type_properties))
+        .route(
+            "/api/object-types/{type}/properties",
+            get(get_object_type_properties),
+        )
         .route("/api/objects/{id}/properties", put(update_properties))
         .route("/api/objects/{id}/transform", put(transform_object))
         .route("/api/objects/{id}/parent", put(set_parent))
         .route("/api/objects/{from}/connect/{to}", post(connect))
         .route("/api/materials", get(list_materials).post(create_material))
         .route("/api/objects/{id}/material", put(assign_material))
-        .route("/api/measurements", get(list_measurements).post(create_measurement))
+        .route(
+            "/api/measurements",
+            get(list_measurements).post(create_measurement),
+        )
         .route("/api/measurements/{id}", delete(delete_measurement))
         .route("/api/lifecycle", get(list_lifecycle).post(create_lifecycle))
         .route("/api/lifecycle/{id}/link/{obj_id}", post(link_record))
-        .route("/api/administrative", get(list_administrative).post(create_administrative))
-        .route("/api/administrative/{id}", get(get_administrative).delete(delete_administrative))
+        .route(
+            "/api/administrative",
+            get(list_administrative).post(create_administrative),
+        )
+        .route(
+            "/api/administrative/{id}",
+            get(get_administrative).delete(delete_administrative),
+        )
         .route("/api/administrative/{id}/children", get(get_admin_children))
-        .route("/api/administrative/ancestors/{id}", get(get_admin_ancestors))
+        .route(
+            "/api/administrative/ancestors/{id}",
+            get(get_admin_ancestors),
+        )
         .route("/api/administrative/code/{code}", get(get_admin_by_code))
         .route("/api/breakdown", get(list_breakdown).post(create_breakdown))
-        .route("/api/breakdown/{id}", get(get_breakdown).delete(delete_breakdown))
+        .route(
+            "/api/breakdown/{id}",
+            get(get_breakdown).delete(delete_breakdown),
+        )
         .route("/api/breakdown/{id}/children", get(get_breakdown_children))
-        .route("/api/breakdown/{id}/descendants", get(get_breakdown_descendants))
-        .route("/api/breakdown/{id}/ancestors", get(get_breakdown_ancestors))
+        .route(
+            "/api/breakdown/{id}/descendants",
+            get(get_breakdown_descendants),
+        )
+        .route(
+            "/api/breakdown/{id}/ancestors",
+            get(get_breakdown_ancestors),
+        )
         .route("/api/breakdown/{id}/link-obj", post(link_breakdown_object))
         .route("/api/breakdown/{id}/link-admin", post(link_breakdown_admin))
         .route("/api/omcom", post(execute_omcom))
@@ -100,25 +125,60 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/amir/describe", post(amir_describe))
         .route("/api/amir/explain", post(amir_explain))
         .route("/api/sketches", get(list_sketches).post(create_sketch))
-        .route("/api/sketches/{id}", get(get_sketch).put(update_sketch).delete(delete_sketch))
+        .route(
+            "/api/sketches/{id}",
+            get(get_sketch).put(update_sketch).delete(delete_sketch),
+        )
         .route("/api/sketches/{id}/entities", post(add_sketch_entity))
-        .route("/api/sketches/{id}/constraints", post(add_sketch_constraint))
+        .route(
+            "/api/sketches/{id}/constraints",
+            post(add_sketch_constraint),
+        )
         .route("/api/sketches/{id}/solve", post(solve_sketch))
-        .route("/api/sketches/{id}/entities/{idx}", put(update_sketch_entity).delete(delete_sketch_entity))
-        .route("/api/sketches/{id}/constraints/{idx}", delete(remove_sketch_constraint))
+        .route(
+            "/api/sketches/{id}/entities/{idx}",
+            put(update_sketch_entity).delete(delete_sketch_entity),
+        )
+        .route(
+            "/api/sketches/{id}/constraints/{idx}",
+            delete(remove_sketch_constraint),
+        )
         .route("/api/sketches/{id}/extrude", post(extrude_sketch_handler))
         .route("/api/sketches/{id}/revolve", post(revolve_sketch_handler))
-        .route("/api/components", get(list_components).post(create_component_handler))
-        .route("/api/components/{id}", get(get_component).delete(delete_component))
-        .route("/api/components/{id}/features", get(list_features).post(add_feature_handler))
-        .route("/api/components/{id}/features/{fid}", put(update_feature_handler).delete(remove_feature_handler))
-        .route("/api/components/{id}/rebuild", post(rebuild_component_handler))
+        .route(
+            "/api/components",
+            get(list_components).post(create_component_handler),
+        )
+        .route(
+            "/api/components/{id}",
+            get(get_component).delete(delete_component),
+        )
+        .route(
+            "/api/components/{id}/features",
+            get(list_features).post(add_feature_handler),
+        )
+        .route(
+            "/api/components/{id}/features/{fid}",
+            put(update_feature_handler).delete(remove_feature_handler),
+        )
+        .route(
+            "/api/components/{id}/rebuild",
+            post(rebuild_component_handler),
+        )
         .route("/api/components/{id}/section", get(section_handler))
         // === Catalog routes ===
         .route("/api/catalog", get(list_catalog).post(create_component_def))
-        .route("/api/catalog/{id}", get(get_component_def).put(update_component_def).delete(delete_component_def))
+        .route(
+            "/api/catalog/{id}",
+            get(get_component_def)
+                .put(update_component_def)
+                .delete(delete_component_def),
+        )
         .route("/api/catalog/{id}/params", post(add_component_param))
-        .route("/api/catalog/{id}/params/{idx}", put(update_component_param).delete(delete_component_param))
+        .route(
+            "/api/catalog/{id}/params/{idx}",
+            put(update_component_param).delete(delete_component_param),
+        )
         .route("/api/catalog/{id}/connectors", post(add_connector))
         .route("/api/catalog/{id}/feature-tree", put(assign_feature_tree))
         .route("/api/catalog/{id}/publish", post(publish_component))
@@ -128,12 +188,23 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/series", get(list_series).post(create_series_handler))
         .route("/api/series/save", post(save_series_handler))
         .route("/api/series/load", post(load_series_handler))
-        .route("/api/series/{id}", get(get_series).put(update_series_handler).delete(delete_series_handler))
+        .route(
+            "/api/series/{id}",
+            get(get_series)
+                .put(update_series_handler)
+                .delete(delete_series_handler),
+        )
         .route("/api/series/{id}/selectors", post(add_selector_handler))
         .route("/api/series/{id}/answers", post(add_answer_handler))
         .route("/api/series/{id}/spec", post(add_spec_component_handler))
-        .route("/api/series/{id}/constraints", post(add_param_constraint_handler))
-        .route("/api/series/{id}/constraints/{idx}", put(update_param_constraint_handler).delete(delete_param_constraint_handler))
+        .route(
+            "/api/series/{id}/constraints",
+            post(add_param_constraint_handler),
+        )
+        .route(
+            "/api/series/{id}/constraints/{idx}",
+            put(update_param_constraint_handler).delete(delete_param_constraint_handler),
+        )
         .route("/api/series/{id}/select", post(select_from_series))
         .route("/api/catalog/instantiate", post(instantiate_from_catalog))
         .route("/api/catalog/preview", post(preview_catalog_component))
@@ -142,7 +213,9 @@ fn build_router(state: SharedState) -> Router {
         .with_state(state)
 }
 
-async fn health() -> &'static str { "ok" }
+async fn health() -> &'static str {
+    "ok"
+}
 
 async fn get_project(State(state): State<SharedState>) -> Json<Project> {
     Json(state.project.read().await.clone())
@@ -157,10 +230,18 @@ async fn save_project(
     State(state): State<SharedState>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
     let Some(path) = state.save_path.clone() else {
-        return Err((StatusCode::BAD_REQUEST, "persistence is disabled (OMNIM_EPHEMERAL=1)".into()));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "persistence is disabled (OMNIM_EPHEMERAL=1)".into(),
+        ));
     };
     let p = state.project.read().await;
-    p.save(&path).map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("save failed: {}", e)))?;
+    p.save(&path).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("save failed: {}", e),
+        )
+    })?;
     Ok(Json(serde_json::json!({ "success": true, "saved": path })))
 }
 
@@ -177,7 +258,12 @@ struct TreeNode {
 async fn get_tree(State(state): State<SharedState>) -> Json<Vec<TreeNode>> {
     let p = state.project.read().await;
     let roots = p.objects.roots();
-    Json(roots.into_iter().map(|obj| build_tree_node(&p, obj)).collect())
+    Json(
+        roots
+            .into_iter()
+            .map(|obj| build_tree_node(&p, obj))
+            .collect(),
+    )
 }
 
 fn build_tree_node(project: &Project, obj: &omnim_model::OmniObject) -> TreeNode {
@@ -187,7 +273,12 @@ fn build_tree_node(project: &Project, obj: &omnim_model::OmniObject) -> TreeNode
         object_type: obj.object_type_name().to_string(),
         ifc_class: obj.ifc_class.clone(),
         has_geometry: obj.geometry.is_some(),
-        children: project.objects.children_of(&obj.id).into_iter().map(|child| build_tree_node(project, child)).collect(),
+        children: project
+            .objects
+            .children_of(&obj.id)
+            .into_iter()
+            .map(|child| build_tree_node(project, child))
+            .collect(),
     }
 }
 
@@ -223,7 +314,11 @@ async fn get_object(
     Path(id): Path<String>,
 ) -> Result<Json<omnim_model::OmniObject>, StatusCode> {
     let p = state.project.read().await;
-    p.objects.get(&id).cloned().map(Json).ok_or(StatusCode::NOT_FOUND)
+    p.objects
+        .get(&id)
+        .cloned()
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 #[derive(Deserialize)]
@@ -247,10 +342,13 @@ async fn create_object(
     let parent_id = req.parent_id.clone().unwrap_or_default();
     let instr = c::OmniCommand {
         version: "1.0".into(),
-        id: format!("create-{}", std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_nanos()),
+        id: format!(
+            "create-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_nanos()
+        ),
         action: c::Action::CreateObject as i32,
         actor: None,
         target: None,
@@ -274,7 +372,11 @@ async fn create_object(
         return Err(StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    let obj_id = result.created_ids.first().ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+    let obj_id = result
+        .created_ids
+        .first()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .clone();
 
     // If parent_id was specified, set up the containment relationship through
     // the executor (MoveObject) so it lands on the undo stack too.
@@ -290,7 +392,11 @@ async fn create_object(
         }
     }
 
-    let obj = p.objects.get(&obj_id).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?.clone();
+    let obj = p
+        .objects
+        .get(&obj_id)
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
+        .clone();
 
     // Apply extra fields not supported by Omcom CreateObject protocol
     if req.ifc_class.is_some() || req.tags.is_some() {
@@ -464,13 +570,15 @@ async fn transform_object(
         return Err(ApiError::not_found(format!("object '{}' not found", id)));
     }
     let op = c::Operation {
-        op: Some(c::operation::Op::TransformGeometry(c::TransformGeometryOperation {
-            object_id: id.clone(),
-            translation: req.translation,
-            rotation: req.rotation,
-            scale: req.scale,
-            pivot: req.origin,
-        })),
+        op: Some(c::operation::Op::TransformGeometry(
+            c::TransformGeometryOperation {
+                object_id: id.clone(),
+                translation: req.translation,
+                rotation: req.rotation,
+                scale: req.scale,
+                pivot: req.origin,
+            },
+        )),
     };
     let result = mutation::apply(&state, c::Action::TransformGeometry, vec![op]).await?;
     mutation::require_success(result)?;
@@ -524,7 +632,9 @@ fn connector_type_codes(project: &Project, object_id: &str) -> Option<Vec<String
     let def_id = obj.catalog_ref.as_ref()?.component_def_id.clone();
     let library = LIBRARY.read().unwrap();
     let library = library.as_ref()?;
-    let def = library.catalog.get(&def_id)
+    let def = library
+        .catalog
+        .get(&def_id)
         .or_else(|| library.catalog.find_by_name(&def_id))?;
     let codes: Vec<String> = def
         .connectors
@@ -532,7 +642,11 @@ fn connector_type_codes(project: &Project, object_id: &str) -> Option<Vec<String
         .map(|c| c.connection_type_code.trim().to_lowercase())
         .filter(|c| !c.is_empty())
         .collect();
-    if codes.is_empty() { None } else { Some(codes) }
+    if codes.is_empty() {
+        None
+    } else {
+        Some(codes)
+    }
 }
 
 fn parse_connection_type(name: &str) -> Result<omnim_core::ConnectionType, String> {
@@ -593,14 +707,16 @@ async fn connect(
             }
         }
     }
-    let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(c::Connection {
-        from_object_id: from.clone(),
-        to_object_id: to.clone(),
-        r#type: conn_type as i32,
-        from_point: None,
-        to_point: None,
-        connection_detail: String::new(),
-    }))];
+    let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(
+        c::Connection {
+            from_object_id: from.clone(),
+            to_object_id: to.clone(),
+            r#type: conn_type as i32,
+            from_point: None,
+            to_point: None,
+            connection_detail: String::new(),
+        },
+    ))];
     let result = mutation::apply(&state, c::Action::AddConnection, ops).await?;
     mutation::require_success(result)?;
     Ok(())
@@ -630,7 +746,12 @@ async fn create_material(
         density: req.density.unwrap_or(0.0),
         ..Default::default()
     };
-    let result = mutation::apply(&state, c::Action::CreateMaterial, vec![mutation::op_create_material(material)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::CreateMaterial,
+        vec![mutation::op_create_material(material)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(())
 }
@@ -648,10 +769,12 @@ async fn assign_material(
     if !state.project.read().await.objects.contains(&id) {
         return Err(ApiError::not_found(format!("object '{}' not found", id)));
     }
-    let ops = vec![mutation::op_relationship(c::operation::Op::SetMaterial(c::SetMaterialOperation {
-        object_id: id,
-        material_id: req.material_id,
-    }))];
+    let ops = vec![mutation::op_relationship(c::operation::Op::SetMaterial(
+        c::SetMaterialOperation {
+            object_id: id,
+            material_id: req.material_id,
+        },
+    ))];
     let result = mutation::apply(&state, c::Action::SetMaterial, ops).await?;
     mutation::require_success(result)?;
     Ok(())
@@ -659,7 +782,9 @@ async fn assign_material(
 
 // ── Measurement endpoints ──
 
-async fn list_measurements(State(state): State<SharedState>) -> Json<Vec<omnim_model::Measurement>> {
+async fn list_measurements(
+    State(state): State<SharedState>,
+) -> Json<Vec<omnim_model::Measurement>> {
     let p = state.project.read().await;
     Json(p.measurements.all().to_vec())
 }
@@ -682,7 +807,11 @@ async fn create_measurement(
         points: req
             .points
             .iter()
-            .map(|p| c::Point3D { x: p.x, y: p.y, z: p.z })
+            .map(|p| c::Point3D {
+                x: p.x,
+                y: p.y,
+                z: p.z,
+            })
             .collect(),
         value: req.value,
         label: req.label,
@@ -720,11 +849,13 @@ async fn delete_measurement(
         .iter()
         .any(|m| m.id == id)
     {
-        return Err(ApiError::not_found(format!("measurement '{}' not found", id)));
+        return Err(ApiError::not_found(format!(
+            "measurement '{}' not found",
+            id
+        )));
     }
-    let op = c::operation::Op::DeleteMeasurement(c::DeleteMeasurementOperation {
-        measurement_id: id,
-    });
+    let op =
+        c::operation::Op::DeleteMeasurement(c::DeleteMeasurementOperation { measurement_id: id });
     let result =
         mutation::apply(&state, c::Action::DeleteMeasurement, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
@@ -739,7 +870,9 @@ struct CreateLifecycleRequest {
     description: Option<String>,
 }
 
-async fn list_lifecycle(State(state): State<SharedState>) -> Json<Vec<omnim_core::ProjectLifecycleRecord>> {
+async fn list_lifecycle(
+    State(state): State<SharedState>,
+) -> Json<Vec<omnim_core::ProjectLifecycleRecord>> {
     let p = state.project.read().await;
     Json(p.lifecycle.list().into_iter().cloned().collect())
 }
@@ -825,7 +958,13 @@ fn admin_to_response(d: &omnim_model::AdministrativeDivision) -> AdminDivRespons
 
 async fn list_administrative(State(state): State<SharedState>) -> Json<Vec<AdminDivResponse>> {
     let p = state.project.read().await;
-    Json(p.administrative.list().into_iter().map(admin_to_response).collect())
+    Json(
+        p.administrative
+            .list()
+            .into_iter()
+            .map(admin_to_response)
+            .collect(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -841,15 +980,14 @@ async fn create_administrative(
     State(state): State<SharedState>,
     Json(req): Json<CreateAdminRequest>,
 ) -> Result<Json<AdminDivResponse>, ApiError> {
-    let op = c::operation::Op::CreateAdministrativeDivision(
-        c::CreateAdministrativeDivisionOperation {
+    let op =
+        c::operation::Op::CreateAdministrativeDivision(c::CreateAdministrativeDivisionOperation {
             level: parse_admin_level(&req.level) as i32,
             name: req.name,
             code: req.code,
             native_name: req.native_name,
             parent_id: req.parent_id,
-        },
-    );
+        });
     let result = mutation::apply(
         &state,
         c::Action::CreateAdministrativeDivision,
@@ -875,7 +1013,8 @@ async fn get_administrative(
     Path(id): Path<String>,
 ) -> Result<Json<AdminDivResponse>, StatusCode> {
     let p = state.project.read().await;
-    p.administrative.get(&id)
+    p.administrative
+        .get(&id)
         .map(admin_to_response)
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
@@ -891,9 +1030,10 @@ async fn delete_administrative(
             id
         )));
     }
-    let op = c::operation::Op::DeleteAdministrativeDivision(
-        c::DeleteAdministrativeDivisionOperation { division_id: id },
-    );
+    let op =
+        c::operation::Op::DeleteAdministrativeDivision(c::DeleteAdministrativeDivisionOperation {
+            division_id: id,
+        });
     let result = mutation::apply(
         &state,
         c::Action::DeleteAdministrativeDivision,
@@ -909,7 +1049,13 @@ async fn get_admin_children(
     Path(id): Path<String>,
 ) -> Json<Vec<AdminDivResponse>> {
     let p = state.project.read().await;
-    Json(p.administrative.children_of(&id).into_iter().map(admin_to_response).collect())
+    Json(
+        p.administrative
+            .children_of(&id)
+            .into_iter()
+            .map(admin_to_response)
+            .collect(),
+    )
 }
 
 async fn get_admin_ancestors(
@@ -917,7 +1063,13 @@ async fn get_admin_ancestors(
     Path(id): Path<String>,
 ) -> Json<Vec<AdminDivResponse>> {
     let p = state.project.read().await;
-    Json(p.administrative.ancestors_of(&id).into_iter().map(admin_to_response).collect())
+    Json(
+        p.administrative
+            .ancestors_of(&id)
+            .into_iter()
+            .map(admin_to_response)
+            .collect(),
+    )
 }
 
 async fn get_admin_by_code(
@@ -925,7 +1077,8 @@ async fn get_admin_by_code(
     Path(code): Path<String>,
 ) -> Result<Json<AdminDivResponse>, StatusCode> {
     let p = state.project.read().await;
-    p.administrative.find_by_code(&code)
+    p.administrative
+        .find_by_code(&code)
         .map(admin_to_response)
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
@@ -962,7 +1115,13 @@ fn breakdown_to_response(n: &omnim_model::BreakdownNode) -> BreakdownResponse {
 
 async fn list_breakdown(State(state): State<SharedState>) -> Json<Vec<BreakdownResponse>> {
     let p = state.project.read().await;
-    Json(p.breakdown.list().into_iter().map(breakdown_to_response).collect())
+    Json(
+        p.breakdown
+            .list()
+            .into_iter()
+            .map(breakdown_to_response)
+            .collect(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -1010,7 +1169,8 @@ async fn get_breakdown(
     Path(id): Path<String>,
 ) -> Result<Json<BreakdownResponse>, StatusCode> {
     let p = state.project.read().await;
-    p.breakdown.get(&id)
+    p.breakdown
+        .get(&id)
         .map(breakdown_to_response)
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
@@ -1026,11 +1186,13 @@ async fn delete_breakdown(
             id
         )));
     }
-    let op = c::operation::Op::DeleteBreakdownNode(c::DeleteBreakdownNodeOperation {
-        node_id: id,
-    });
-    let result =
-        mutation::apply(&state, c::Action::DeleteBreakdownNode, vec![mutation::op(op)]).await?;
+    let op = c::operation::Op::DeleteBreakdownNode(c::DeleteBreakdownNodeOperation { node_id: id });
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteBreakdownNode,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(())
 }
@@ -1040,7 +1202,13 @@ async fn get_breakdown_children(
     Path(id): Path<String>,
 ) -> Json<Vec<BreakdownResponse>> {
     let p = state.project.read().await;
-    Json(p.breakdown.children_of(&id).into_iter().map(breakdown_to_response).collect())
+    Json(
+        p.breakdown
+            .children_of(&id)
+            .into_iter()
+            .map(breakdown_to_response)
+            .collect(),
+    )
 }
 
 async fn get_breakdown_descendants(
@@ -1048,7 +1216,13 @@ async fn get_breakdown_descendants(
     Path(id): Path<String>,
 ) -> Json<Vec<BreakdownResponse>> {
     let p = state.project.read().await;
-    Json(p.breakdown.descendants_of(&id).into_iter().map(breakdown_to_response).collect())
+    Json(
+        p.breakdown
+            .descendants_of(&id)
+            .into_iter()
+            .map(breakdown_to_response)
+            .collect(),
+    )
 }
 
 async fn get_breakdown_ancestors(
@@ -1056,7 +1230,13 @@ async fn get_breakdown_ancestors(
     Path(id): Path<String>,
 ) -> Json<Vec<BreakdownResponse>> {
     let p = state.project.read().await;
-    Json(p.breakdown.ancestors_of(&id).into_iter().map(breakdown_to_response).collect())
+    Json(
+        p.breakdown
+            .ancestors_of(&id)
+            .into_iter()
+            .map(breakdown_to_response)
+            .collect(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -1079,8 +1259,12 @@ async fn link_breakdown_object(
         node_id: id,
         object_id: req.object_id,
     });
-    let result =
-        mutation::apply(&state, c::Action::LinkBreakdownObject, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::LinkBreakdownObject,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(())
 }
@@ -1161,7 +1345,9 @@ async fn amir_translate(
     };
 
     let selected = req.selected_ids.as_deref().unwrap_or(&[]);
-    engine.translate_with_context(&req.text, selected, Some(&context)).await
+    engine
+        .translate_with_context(&req.text, selected, Some(&context))
+        .await
         .map(Json)
         .map_err(|e| map_amir_error(e))
 }
@@ -1182,7 +1368,9 @@ async fn amir_chat(
     };
 
     let selected = req.selected_ids.as_deref().unwrap_or(&[]);
-    engine.chat_with_context(req.session_id, &req.text, selected, Some(&context)).await
+    engine
+        .chat_with_context(req.session_id, &req.text, selected, Some(&context))
+        .await
         .map(Json)
         .map_err(|e| map_amir_error(e))
 }
@@ -1198,7 +1386,9 @@ async fn amir_describe(
     ))?;
 
     let ids = req.object_ids.as_deref();
-    engine.describe(ids, &req.format.unwrap_or_else(|| "text".into())).await
+    engine
+        .describe(ids, &req.format.unwrap_or_else(|| "text".into()))
+        .await
         .map(Json)
         .map_err(|e| map_amir_error(e))
 }
@@ -1210,9 +1400,11 @@ async fn amir_explain(
 ) -> Json<omnim_amir::ExplainResponse> {
     let engine = match state.amir.as_ref() {
         Some(e) => e,
-        None => return Json(omnim_amir::ExplainResponse {
-            explanations: vec!["AMIR not configured".into()],
-        }),
+        None => {
+            return Json(omnim_amir::ExplainResponse {
+                explanations: vec!["AMIR not configured".into()],
+            })
+        }
     };
     Json(engine.explain_errors(&req.errors, req.context.as_deref()))
 }
@@ -1240,9 +1432,41 @@ fn map_amir_error(err: AmirError) -> (StatusCode, String) {
 #[serde(tag = "genrule")]
 enum GenRuleRequest {
     #[serde(rename = "wall")]
-    Wall { name: String, length: f64, height: f64, core_thickness: f64, finish_thickness: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String>, #[serde(default)] start_x: f64, #[serde(default)] start_y: f64, #[serde(default)] start_z: f64, #[serde(default)] end_x: f64, #[serde(default)] end_y: f64, #[serde(default)] end_z: f64 },
+    Wall {
+        name: String,
+        length: f64,
+        height: f64,
+        core_thickness: f64,
+        finish_thickness: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+        #[serde(default)]
+        series_id: Option<String>,
+        #[serde(default)]
+        start_x: f64,
+        #[serde(default)]
+        start_y: f64,
+        #[serde(default)]
+        start_z: f64,
+        #[serde(default)]
+        end_x: f64,
+        #[serde(default)]
+        end_y: f64,
+        #[serde(default)]
+        end_z: f64,
+    },
     #[serde(rename = "slab")]
-    Slab { name: String, length: f64, width: f64, structural_thickness: f64, finish_thickness: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
+    Slab {
+        name: String,
+        length: f64,
+        width: f64,
+        structural_thickness: f64,
+        finish_thickness: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+        #[serde(default)]
+        series_id: Option<String>,
+    },
     #[serde(rename = "road")]
     /// Road (Road): when only `length` is given a straight road is generated;
     /// when the picked `alignment` ([x,y,z] N-point broken polyline, serde default empty,
@@ -1265,13 +1489,44 @@ enum GenRuleRequest {
         series_id: Option<String>,
     },
     #[serde(rename = "pipe")]
-    Pipe { name: String, length: f64, radius: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
+    Pipe {
+        name: String,
+        length: f64,
+        radius: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+        #[serde(default)]
+        series_id: Option<String>,
+    },
     #[serde(rename = "door")]
-    Door { name: String, wall_id: String, opening_width: f64, opening_height: f64, position_x: f64, position_z: f64, #[serde(default)] parent_id: Option<String> },
+    Door {
+        name: String,
+        wall_id: String,
+        opening_width: f64,
+        opening_height: f64,
+        position_x: f64,
+        position_z: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
     #[serde(rename = "window")]
-    Window { name: String, wall_id: String, opening_width: f64, opening_height: f64, position_x: f64, position_z: f64, #[serde(default)] parent_id: Option<String> },
+    Window {
+        name: String,
+        wall_id: String,
+        opening_width: f64,
+        opening_height: f64,
+        position_x: f64,
+        position_z: f64,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
     #[serde(rename = "assembly")]
-    Assembly { name: String, components: Vec<AssemblyComponentDef>, #[serde(default)] parent_id: Option<String> },
+    Assembly {
+        name: String,
+        components: Vec<AssemblyComponentDef>,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
     /// Layered surface component (wall/slab/roof/floor) driven by an arbitrary
     /// layer stack, generated via the LayerExtrusion engine. This is the product
     /// path for the LayerEditor UI.
@@ -1283,9 +1538,9 @@ enum GenRuleRequest {
         #[serde(default)]
         length: f64,
         #[serde(default)]
-        width: f64,   // slab footprint width
+        width: f64, // slab footprint width
         #[serde(default)]
-        height: f64,  // wall/roof height
+        height: f64, // wall/roof height
         layers: Vec<LayerDefRequest>,
         /// Center-line path (wall / roof-profile): contract `{ points, closed }`
         /// or legacy bare array. Closed form for walls = region pieces.
@@ -1375,7 +1630,10 @@ impl PathInput {
     fn normalize(self, legacy_closed: bool) -> PathSpec {
         match self {
             PathInput::Contract { points, closed } => PathSpec { points, closed },
-            PathInput::Legacy(points) => PathSpec { points, closed: legacy_closed },
+            PathInput::Legacy(points) => PathSpec {
+                points,
+                closed: legacy_closed,
+            },
         }
     }
 }
@@ -1443,9 +1701,7 @@ async fn genrule_create(
     // If a series is explicitly selected, use the catalog/series path
     if let Some(sid) = series_id {
         if !sid.is_empty() {
-            let obj = genrule_create_catalog(
-                &mut p, &req, sid, parent_id,
-            )?;
+            let obj = genrule_create_catalog(&mut p, &req, sid, parent_id)?;
             exe.record_create(&obj);
             return Ok(Json(obj));
         }
@@ -1453,10 +1709,26 @@ async fn genrule_create(
 
     // No series selected: use the old mesh generation path (creates correct geometry)
     let obj = match &req {
-        GenRuleRequest::Wall { name, length, height, core_thickness, finish_thickness, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
+        GenRuleRequest::Wall {
+            name,
+            length,
+            height,
+            core_thickness,
+            finish_thickness,
+            start_x,
+            start_y,
+            start_z,
+            end_x,
+            end_y,
+            end_z,
+            ..
+        } => {
             let miter_ext = 3.0 * (*core_thickness + 2.0 * *finish_thickness);
             let mut mesh = omnim_model::gen_rule::layer_extrusion::build_wall(
-                *length + miter_ext, *height, *core_thickness, *finish_thickness,
+                *length + miter_ext,
+                *height,
+                *core_thickness,
+                *finish_thickness,
             );
             // Transform wall to align with start->end direction
             if *end_x != *start_x || *end_y != *start_y || *end_z != *start_z {
@@ -1471,36 +1743,81 @@ async fn genrule_create(
                         y: (*start_y + *end_y) / 2.0,
                         z: (*start_z + *end_z) / 2.0,
                     }),
-                    rotation: Some(omnim_core::Rotation { x: 0.0, y: 0.0, z: half_sin, w: half_cos }),
+                    rotation: Some(omnim_core::Rotation {
+                        x: 0.0,
+                        y: 0.0,
+                        z: half_sin,
+                        w: half_cos,
+                    }),
                     scale: None,
                 };
                 mesh = omnim_model::geometry::transform_mesh(&mesh, &t);
             }
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Wall, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Wall, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Slab { name, length, width, structural_thickness, finish_thickness, .. } => {
+        GenRuleRequest::Slab {
+            name,
+            length,
+            width,
+            structural_thickness,
+            finish_thickness,
+            ..
+        } => {
             let mesh = omnim_model::gen_rule::layer_extrusion::build_slab(
-                *length, *width, *structural_thickness, *finish_thickness,
+                *length,
+                *width,
+                *structural_thickness,
+                *finish_thickness,
             );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Slab, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Slab, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Road { name, length, width, thickness, path, alignment, .. } => {
+        GenRuleRequest::Road {
+            name,
+            length,
+            width,
+            thickness,
+            path,
+            alignment,
+            ..
+        } => {
             // 路径契约：path { points, closed:false } 为规范输入，alignment[] 为遗留别名；
             // 两者同时出现视为歧义。授权矩阵：road × linear。
             let road_spec: Option<PathSpec> = match (path, alignment) {
                 (Some(_), Some(_)) => {
-                    return Err((StatusCode::BAD_REQUEST,
-                        "provide either `path` or legacy `alignment`, not both".into()));
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into(),
+                    ));
                 }
                 (Some(p), None) => Some(p.clone().normalize(false)),
                 (None, Some(a)) => Some(a.clone().normalize(false)),
@@ -1508,7 +1825,11 @@ async fn genrule_create(
             };
             if let Some(ref spec) = road_spec {
                 if spec.closed {
-                    return Err((StatusCode::BAD_REQUEST, "road path must be open (a road is a linear component, not a region)".into()));
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "road path must be open (a road is a linear component, not a region)"
+                            .into(),
+                    ));
                 }
                 omnim_model::gen_rule::matrix::authorize("road", "linear")
                     .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
@@ -1519,39 +1840,81 @@ async fn genrule_create(
             let mesh = match &road_spec {
                 Some(spec) if spec.points.len() >= 2 => {
                     omnim_model::gen_rule::linear_component::build_road_alignment(
-                        &spec.points, *width, *thickness, 30,
+                        &spec.points,
+                        *width,
+                        *thickness,
+                        30,
                     )
                 }
                 _ => omnim_model::gen_rule::linear_component::build_road(
-                    *length, *width, *thickness * 0.7, *thickness * 0.3, 30,
+                    *length,
+                    *width,
+                    *thickness * 0.7,
+                    *thickness * 0.3,
+                    30,
                 ),
             };
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Road, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Road, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
             if road_spec.is_some() {
                 obj.set_property("genesis_class", str_prop("Linear"));
                 obj.set_property("genesis_form", str_prop("linear"));
             }
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Pipe { name, length, radius, .. } => {
+        GenRuleRequest::Pipe {
+            name,
+            length,
+            radius,
+            ..
+        } => {
             let mesh = omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20);
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::PipePlant, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::PipePlant, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Door { name, wall_id, opening_width, opening_height, position_x, position_z, .. } => {
-            let wall = p.objects.get(wall_id).ok_or((
-                StatusCode::NOT_FOUND,
-                format!("Wall {} not found", wall_id),
-            ))?;
-            let bb = wall.geometry.as_ref()
+        GenRuleRequest::Door {
+            name,
+            wall_id,
+            opening_width,
+            opening_height,
+            position_x,
+            position_z,
+            ..
+        } => {
+            let wall = p
+                .objects
+                .get(wall_id)
+                .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
+            let bb = wall
+                .geometry
+                .as_ref()
                 .and_then(|g| g.bbox.as_ref())
                 .map(|b| {
                     let mn = b.min.as_ref().expect("bbox min must exist");
@@ -1562,21 +1925,43 @@ async fn genrule_create(
             let _ = wall;
 
             let mesh = omnim_model::gen_rule::boolean_subtract::build_door_opening(
-                bb.0, bb.1, bb.2, *opening_width, *opening_height, *position_x, *position_z,
+                bb.0,
+                bb.1,
+                bb.2,
+                *opening_width,
+                *opening_height,
+                *position_x,
+                *position_z,
             );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Door, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Door, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.parent_id = Some(wall_id.clone());
             obj.clone()
         }
-        GenRuleRequest::Window { name, wall_id, opening_width, opening_height, position_x, position_z, .. } => {
-            let wall = p.objects.get(wall_id).ok_or((
-                StatusCode::NOT_FOUND,
-                format!("Wall {} not found", wall_id),
-            ))?;
-            let bb = wall.geometry.as_ref()
+        GenRuleRequest::Window {
+            name,
+            wall_id,
+            opening_width,
+            opening_height,
+            position_x,
+            position_z,
+            ..
+        } => {
+            let wall = p
+                .objects
+                .get(wall_id)
+                .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
+            let bb = wall
+                .geometry
+                .as_ref()
                 .and_then(|g| g.bbox.as_ref())
                 .map(|b| {
                     let mn = b.min.as_ref().expect("bbox min must exist");
@@ -1587,19 +1972,53 @@ async fn genrule_create(
             let _ = wall;
 
             let mesh = omnim_model::gen_rule::boolean_subtract::build_door_opening(
-                bb.0, bb.1, bb.2, *opening_width, *opening_height, *position_x, *position_z,
+                bb.0,
+                bb.1,
+                bb.2,
+                *opening_width,
+                *opening_height,
+                *position_x,
+                *position_z,
             );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Window, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Window, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.parent_id = Some(wall_id.clone());
             obj.clone()
         }
-        GenRuleRequest::Layered { name, mode, length, width, height, layers, path, boundary, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
-            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_roof_profile, LayerDef as MLayerDef};
+        GenRuleRequest::Layered {
+            name,
+            mode,
+            length,
+            width,
+            height,
+            layers,
+            path,
+            boundary,
+            start_x,
+            start_y,
+            start_z,
+            end_x,
+            end_y,
+            end_z,
+            ..
+        } => {
+            use omnim_model::gen_rule::layer_extrusion::{
+                build_layered_roof_profile, build_layered_slab, build_layered_wall,
+                LayerDef as MLayerDef,
+            };
             if layers.is_empty() {
-                return Err((StatusCode::BAD_REQUEST, "layered genrule requires at least one layer".into()));
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "layered genrule requires at least one layer".into(),
+                ));
             }
             let layer_defs: Vec<MLayerDef> = layers.iter().map(|l| l.to_layer_def()).collect();
             let object_type = match mode.as_str() {
@@ -1619,12 +2038,15 @@ async fn genrule_create(
             let open = path.clone().map(|p| p.normalize(false));
             let closed = boundary.clone().map(|b| b.normalize(true));
             if open.is_some() && closed.is_some() {
-                return Err((StatusCode::BAD_REQUEST,
-                    "provide either `path` or `boundary`, not both".into()));
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "provide either `path` or `boundary`, not both".into(),
+                ));
             }
             let is_roof_profile = open.as_ref().is_some_and(|spec| {
                 spec.points.len() == 2
-                    && (spec.points[0][0], spec.points[0][1]) != (spec.points[1][0], spec.points[1][1])
+                    && (spec.points[0][0], spec.points[0][1])
+                        != (spec.points[1][0], spec.points[1][1])
             });
             let form: Option<&'static str> = if open.is_some() {
                 if kind == "roof" {
@@ -1679,16 +2101,28 @@ async fn genrule_create(
                             y: (*start_y + *end_y) / 2.0,
                             z: (*start_z + *end_z) / 2.0,
                         }),
-                        rotation: Some(omnim_core::Rotation { x: 0.0, y: 0.0, z: half_sin, w: half_cos }),
+                        rotation: Some(omnim_core::Rotation {
+                            x: 0.0,
+                            y: 0.0,
+                            z: half_sin,
+                            w: half_cos,
+                        }),
                         scale: None,
                     };
                     mesh = omnim_model::geometry::transform_mesh(&mesh, &t);
                 }
                 let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
                 let id = p.create_object(object_type, name).id.clone();
-                let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+                let obj = p
+                    .objects
+                    .get_mut(&id)
+                    .expect("genrule object was just created");
                 obj.geometry = Some(geom);
-                if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+                if let Some(pid) = parent_id {
+                    if !pid.is_empty() {
+                        obj.parent_id = Some(pid.to_string());
+                    }
+                }
                 return Ok(Json(obj.clone()));
             }
 
@@ -1699,23 +2133,36 @@ async fn genrule_create(
                 let w = if *width <= 0.0 { 1.0 } else { *width };
                 let mesh = build_layered_roof_profile(
                     [spec.points[0][0], spec.points[0][1]],
-                    [spec.points[1][0], spec.points[1][1]], w, &layer_defs, spec.points[0][2],
+                    [spec.points[1][0], spec.points[1][1]],
+                    w,
+                    &layer_defs,
+                    spec.points[0][2],
                 );
                 let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
                 let id = p.create_object(object_type, name).id.clone();
-                let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+                let obj = p
+                    .objects
+                    .get_mut(&id)
+                    .expect("genrule object was just created");
                 obj.geometry = Some(geom);
                 if let Some(f) = form {
-                    let cf = omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
+                    let cf = omnim_model::gen_rule::matrix::authorize(kind, f)
+                        .expect("authorized above");
                     obj.set_property("genesis_class", str_prop(cf.class.as_str()));
                     obj.set_property("genesis_form", str_prop(cf.form));
                 }
-                if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+                if let Some(pid) = parent_id {
+                    if !pid.is_empty() {
+                        obj.parent_id = Some(pid.to_string());
+                    }
+                }
                 return Ok(Json(obj.clone()));
             }
 
             // Path points (world metres, z preserved — B1 convention).
-            let spec = open.clone().or_else(|| closed.clone())
+            let spec = open
+                .clone()
+                .or_else(|| closed.clone())
                 .expect("has_path_input guarantees one of path/boundary");
             let param_values: std::collections::HashMap<String, f64> = [
                 ("length".to_string(), *length * 1000.0),
@@ -1726,32 +2173,59 @@ async fn genrule_create(
             .filter(|(_, v)| *v > 0.0)
             .collect();
             let height_m = if kind == "wall" { *height } else { 0.0 };
-            let component_id = p.instantiate_domain_object(
-                object_type, def_id, name, &param_values,
-                spec.points.clone(), spec.closed, layer_defs.clone(), height_m, None,
-            ).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-            let obj = p.objects.get_mut(&component_id)
+            let component_id = p
+                .instantiate_domain_object(
+                    object_type,
+                    def_id,
+                    name,
+                    &param_values,
+                    spec.points.clone(),
+                    spec.closed,
+                    layer_defs.clone(),
+                    height_m,
+                    None,
+                )
+                .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            let obj = p
+                .objects
+                .get_mut(&component_id)
                 .expect("domain object was just created");
             if let Some(f) = form {
-                let cf = omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
+                let cf =
+                    omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
                 obj.set_property("genesis_class", str_prop(cf.class.as_str()));
                 obj.set_property("genesis_form", str_prop(cf.form));
             }
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Line { name, path, alignment, diameter, .. } => {
+        GenRuleRequest::Line {
+            name,
+            path,
+            alignment,
+            diameter,
+            ..
+        } => {
             use omnim_core::Point3D;
             // 路径契约同 Road：path 为规范输入，alignment[] 为遗留别名。授权矩阵：line × point。
             let line_spec: PathSpec = match (path, alignment) {
                 (Some(_), Some(_)) => {
-                    return Err((StatusCode::BAD_REQUEST,
-                        "provide either `path` or legacy `alignment`, not both".into()));
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into(),
+                    ));
                 }
                 (Some(p), None) => p.clone().normalize(false),
                 (None, Some(a)) => a.clone().normalize(false),
                 (None, None) => {
-                    return Err((StatusCode::BAD_REQUEST, "line genrule requires at least 2 points".into()));
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "line genrule requires at least 2 points".into(),
+                    ));
                 }
             };
             if line_spec.closed {
@@ -1760,50 +2234,106 @@ async fn genrule_create(
             omnim_model::gen_rule::matrix::authorize("line", "point")
                 .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
             validate_spec(&line_spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-            let pts: Vec<Point3D> = line_spec.points.iter().map(|c| Point3D { x: c[0], y: c[1], z: c[2] }).collect();
-            let mesh = omnim_model::gen_rule::linear_component::build_guide_line(&pts, if *diameter > 0.0 { *diameter } else { 0.05 }, 16);
+            let pts: Vec<Point3D> = line_spec
+                .points
+                .iter()
+                .map(|c| Point3D {
+                    x: c[0],
+                    y: c[1],
+                    z: c[2],
+                })
+                .collect();
+            let mesh = omnim_model::gen_rule::linear_component::build_guide_line(
+                &pts,
+                if *diameter > 0.0 { *diameter } else { 0.05 },
+                16,
+            );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             // FeatureLine/ContourLine map to the proto ObjectType when available.
             let object_type = omnim_core::ObjectType::FeatureLine;
             let id = p.create_object(object_type, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.set_property("genesis_class", str_prop("Point"));
             obj.set_property("genesis_form", str_prop("point"));
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
-        GenRuleRequest::Assembly { name, components, .. } => {
+        GenRuleRequest::Assembly {
+            name, components, ..
+        } => {
             use omnim_core::parametric_operation::Operation;
-            use omnim_model::gen_rule::assembly::{AssemblyComponent as Ac, build_assembly};
-            use omnim_core::{ParametricGeometry, ParametricOperation, Transform, Point3D};
-            let assy_components: Vec<Ac> = components.iter().map(|c| {
-                let op = match c.shape.as_str() {
-                    "cylinder" => Operation::Cylinder(omnim_core::Cylinder { radius: c.p1, height: c.p2, segments: c.p3.max(3.0) as i32 }),
-                    "sphere" => Operation::Sphere(omnim_core::Sphere { radius: c.p1, segments: c.p2.max(3.0) as i32 }),
-                    "cone" => Operation::Cone(omnim_core::Cone { radius_bottom: c.p1, radius_top: c.p2, height: c.p3, segments: 16 }),
-                    _ => Operation::Box(omnim_core::Box { length: c.p1, width: c.p2, height: c.p3 }),
-                };
-                Ac {
-                    name: c.name.clone(),
-                    geometry: ParametricGeometry {
-                        operations: vec![ParametricOperation { operation: Some(op) }],
-                    },
-                    transform: Transform {
-                        translation: Some(Point3D { x: c.tx, y: c.ty, z: c.tz }),
-                        rotation: None,
-                        scale: None,
-                        matrix: Vec::new(),
-                    },
-                }
-            }).collect();
+            use omnim_core::{ParametricGeometry, ParametricOperation, Point3D, Transform};
+            use omnim_model::gen_rule::assembly::{build_assembly, AssemblyComponent as Ac};
+            let assy_components: Vec<Ac> = components
+                .iter()
+                .map(|c| {
+                    let op = match c.shape.as_str() {
+                        "cylinder" => Operation::Cylinder(omnim_core::Cylinder {
+                            radius: c.p1,
+                            height: c.p2,
+                            segments: c.p3.max(3.0) as i32,
+                        }),
+                        "sphere" => Operation::Sphere(omnim_core::Sphere {
+                            radius: c.p1,
+                            segments: c.p2.max(3.0) as i32,
+                        }),
+                        "cone" => Operation::Cone(omnim_core::Cone {
+                            radius_bottom: c.p1,
+                            radius_top: c.p2,
+                            height: c.p3,
+                            segments: 16,
+                        }),
+                        _ => Operation::Box(omnim_core::Box {
+                            length: c.p1,
+                            width: c.p2,
+                            height: c.p3,
+                        }),
+                    };
+                    Ac {
+                        name: c.name.clone(),
+                        geometry: ParametricGeometry {
+                            operations: vec![ParametricOperation {
+                                operation: Some(op),
+                            }],
+                        },
+                        transform: Transform {
+                            translation: Some(Point3D {
+                                x: c.tx,
+                                y: c.ty,
+                                z: c.tz,
+                            }),
+                            rotation: None,
+                            scale: None,
+                            matrix: Vec::new(),
+                        },
+                    }
+                })
+                .collect();
 
             let mesh = build_assembly(assy_components);
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
-            let id = p.create_object(omnim_core::ObjectType::Assembly, name).id.clone();
-            let obj = p.objects.get_mut(&id).expect("genrule object was just created");
+            let id = p
+                .create_object(omnim_core::ObjectType::Assembly, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
             obj.geometry = Some(geom);
-            if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
             obj.clone()
         }
     };
@@ -1836,16 +2366,30 @@ fn genrule_create_catalog(
         GenRuleRequest::Slab { name, .. } => (name.as_str(), omnim_core::ObjectType::Slab),
         GenRuleRequest::Road { name, .. } => (name.as_str(), omnim_core::ObjectType::Road),
         GenRuleRequest::Pipe { name, .. } => (name.as_str(), omnim_core::ObjectType::PipePlant),
-        _ => return Err((StatusCode::BAD_REQUEST, "series not supported for this type".into())),
+        _ => {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                "series not supported for this type".into(),
+            ))
+        }
     };
 
-    let answer = omnim_model::Project::object_type_to_series_answer_pub(object_type)
-        .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("no series answer for type {:?}", object_type)))?;
+    let answer =
+        omnim_model::Project::object_type_to_series_answer_pub(object_type).ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("no series answer for type {:?}", object_type),
+            )
+        })?;
 
     // Domain check
     let (_series_domain, _series_name_clone, series_id_clone) = {
-        let s = p.series.find_by_name(series_id)
-            .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("series '{}' not found", series_id)))?;
+        let s = p.series.find_by_name(series_id).ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("series '{}' not found", series_id),
+            )
+        })?;
         let expected_domain = object_type_to_domain(object_type);
         if s.domain != expected_domain {
             return Err((
@@ -1853,8 +2397,10 @@ fn genrule_create_catalog(
                 format!(
                     "series '{}' has domain '{}', but '{}' requires domain '{}'. \
                      Select a series from the '{}' domain (e.g., Concrete-C30 for building walls).",
-                    s.name, s.domain,
-                    object_type_name(object_type), expected_domain,
+                    s.name,
+                    s.domain,
+                    object_type_name(object_type),
+                    expected_domain,
                     expected_domain,
                 ),
             ));
@@ -1864,24 +2410,54 @@ fn genrule_create_catalog(
 
     // Select the component def from the series
     let comp_def_id = {
-        let s = p.series.find_by_name(series_id)
-            .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("series '{}' not found", series_id)))?;
-        let result = SelectionEngine::select(s, &[answer])
-            .map_err(|e| (StatusCode::BAD_REQUEST, format!("series selection failed: {}", e)))?;
+        let s = p.series.find_by_name(series_id).ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("series '{}' not found", series_id),
+            )
+        })?;
+        let result = SelectionEngine::select(s, &[answer]).map_err(|e| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("series selection failed: {}", e),
+            )
+        })?;
         let library = LIBRARY.read().unwrap();
         let library = library.as_ref().unwrap();
-        let comp_def = library.catalog.get(&result.component_def_id)
+        let comp_def = library
+            .catalog
+            .get(&result.component_def_id)
             .or_else(|| library.catalog.find_by_name(&result.component_def_id))
-            .ok_or_else(|| (StatusCode::BAD_REQUEST, format!("component def '{}' not found", result.component_def_id)))?;
+            .ok_or_else(|| {
+                (
+                    StatusCode::BAD_REQUEST,
+                    format!("component def '{}' not found", result.component_def_id),
+                )
+            })?;
         (comp_def.id.clone(), result.selector_path)
     };
 
     // Create a plain object (not a Component) with correct geometry
     let mesh = match req {
-        GenRuleRequest::Wall { length, height, core_thickness, finish_thickness, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
+        GenRuleRequest::Wall {
+            length,
+            height,
+            core_thickness,
+            finish_thickness,
+            start_x,
+            start_y,
+            start_z,
+            end_x,
+            end_y,
+            end_z,
+            ..
+        } => {
             let miter_ext = 3.0 * (*core_thickness + 2.0 * *finish_thickness);
             let mut m = omnim_model::gen_rule::layer_extrusion::build_wall(
-                *length + miter_ext, *height, *core_thickness, *finish_thickness,
+                *length + miter_ext,
+                *height,
+                *core_thickness,
+                *finish_thickness,
             );
             // Transform wall to align with start->end direction
             if *end_x != *start_x || *end_y != *start_y || *end_z != *start_z {
@@ -1896,23 +2472,42 @@ fn genrule_create_catalog(
                         y: (*start_y + *end_y) / 2.0,
                         z: (*start_z + *end_z) / 2.0,
                     }),
-                    rotation: Some(omnim_core::Rotation { x: 0.0, y: 0.0, z: half_sin, w: half_cos }),
+                    rotation: Some(omnim_core::Rotation {
+                        x: 0.0,
+                        y: 0.0,
+                        z: half_sin,
+                        w: half_cos,
+                    }),
                     scale: None,
                 };
                 m = omnim_model::geometry::transform_mesh(&m, &t);
             }
             m
         }
-        GenRuleRequest::Slab { length, width, structural_thickness, finish_thickness, .. } => {
-            omnim_model::gen_rule::layer_extrusion::build_slab(
-                *length, *width, *structural_thickness, *finish_thickness,
-            )
-        }
-        GenRuleRequest::Road { length, width, thickness, .. } => {
-            omnim_model::gen_rule::linear_component::build_road(
-                *length, *width, *thickness * 0.7, *thickness * 0.3, 30,
-            )
-        }
+        GenRuleRequest::Slab {
+            length,
+            width,
+            structural_thickness,
+            finish_thickness,
+            ..
+        } => omnim_model::gen_rule::layer_extrusion::build_slab(
+            *length,
+            *width,
+            *structural_thickness,
+            *finish_thickness,
+        ),
+        GenRuleRequest::Road {
+            length,
+            width,
+            thickness,
+            ..
+        } => omnim_model::gen_rule::linear_component::build_road(
+            *length,
+            *width,
+            *thickness * 0.7,
+            *thickness * 0.3,
+            30,
+        ),
         GenRuleRequest::Pipe { length, radius, .. } => {
             omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20)
         }
@@ -1947,13 +2542,12 @@ fn genrule_create_catalog(
 fn object_type_to_domain(ot: omnim_core::ObjectType) -> &'static str {
     use omnim_core::ObjectType::*;
     match ot {
-        Wall | Slab | Floor | Door | Window | Beam | Column | Stair | Roof
-        | Building | BuildingStorey | Space | Site => "building",
-        Road | Bridge | Tunnel | Dam | Culvert | RetainingWall | PipeCivil
-        | Pier | Manhole | Abutment => "civil",
-        PipePlant | Duct | CableTray | AirTerminal | Tank | Pump | Valve
-        | HeatExchanger | Reactor | StructuralSteel | Fitting | Luminaire
-        | Ahu | Chiller | Transformer => "piping",
+        Wall | Slab | Floor | Door | Window | Beam | Column | Stair | Roof | Building
+        | BuildingStorey | Space | Site => "building",
+        Road | Bridge | Tunnel | Dam | Culvert | RetainingWall | PipeCivil | Pier | Manhole
+        | Abutment => "civil",
+        PipePlant | Duct | CableTray | AirTerminal | Tank | Pump | Valve | HeatExchanger
+        | Reactor | StructuralSteel | Fitting | Luminaire | Ahu | Chiller | Transformer => "piping",
         FeatureLine | ContourLine => "general",
         _ => "general",
     }
@@ -2074,8 +2668,16 @@ fn sketch_to_response(s: &omnim_sketch::Sketch) -> SketchResponse {
     SketchResponse {
         id: s.id.clone(),
         name: s.name.clone(),
-        origin: Point3DJson { x: s.origin.x, y: s.origin.y, z: s.origin.z },
-        normal: Vector3DJson { x: s.normal.x, y: s.normal.y, z: s.normal.z },
+        origin: Point3DJson {
+            x: s.origin.x,
+            y: s.origin.y,
+            z: s.origin.z,
+        },
+        normal: Vector3DJson {
+            x: s.normal.x,
+            y: s.normal.y,
+            z: s.normal.z,
+        },
         entity_count: s.entities.len(),
         constraint_count: s.constraints.len(),
         solved: s.solved,
@@ -2089,9 +2691,21 @@ async fn list_sketches(
 ) -> Json<Vec<SketchResponse>> {
     let p = state.project.read().await;
     if let Some(comp_id) = params.get("component_id") {
-        Json(p.sketches.find_by_component(comp_id).iter().map(|s| sketch_to_response(s)).collect())
+        Json(
+            p.sketches
+                .find_by_component(comp_id)
+                .iter()
+                .map(|s| sketch_to_response(s))
+                .collect(),
+        )
     } else {
-        Json(p.sketches.list().iter().map(|s| sketch_to_response(s)).collect())
+        Json(
+            p.sketches
+                .list()
+                .iter()
+                .map(|s| sketch_to_response(s))
+                .collect(),
+        )
     }
 }
 
@@ -2099,16 +2713,45 @@ async fn create_sketch(
     State(state): State<SharedState>,
     Json(req): Json<CreateSketchRequest>,
 ) -> Result<Json<SketchResponse>, ApiError> {
-    let origin = req.origin.map(|o| c::Point3D { x: o.x, y: o.y, z: o.z })
-        .unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-    let normal = req.normal.map(|n| c::Vector3D { x: n.x, y: n.y, z: n.z })
-        .unwrap_or(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+    let origin = req
+        .origin
+        .map(|o| c::Point3D {
+            x: o.x,
+            y: o.y,
+            z: o.z,
+        })
+        .unwrap_or(c::Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        });
+    let normal = req
+        .normal
+        .map(|n| c::Vector3D {
+            x: n.x,
+            y: n.y,
+            z: n.z,
+        })
+        .unwrap_or(c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        });
     let component_id = req.component_id.clone().unwrap_or_default();
     if !component_id.is_empty() {
-        let bad = state.project.read().await.objects.get(&component_id)
-            .map(|o| o.object_type != c::ObjectType::Component as i32).unwrap_or(true);
+        let bad = state
+            .project
+            .read()
+            .await
+            .objects
+            .get(&component_id)
+            .map(|o| o.object_type != c::ObjectType::Component as i32)
+            .unwrap_or(true);
         if bad {
-            return Err(ApiError::bad_request(format!("Component '{}' not found", component_id)));
+            return Err(ApiError::bad_request(format!(
+                "Component '{}' not found",
+                component_id
+            )));
         }
     }
     let op = c::operation::Op::CreateSketch(c::CreateSketchOperation {
@@ -2119,11 +2762,16 @@ async fn create_sketch(
     });
     let result = mutation::apply(&state, c::Action::CreateSketch, vec![mutation::op(op)]).await?;
     let result = mutation::require_success(result)?;
-    let sketch_id = result.created_ids.first().cloned()
-        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch creation returned no id"))?;
+    let sketch_id = result.created_ids.first().cloned().ok_or_else(|| {
+        ApiError::new(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "sketch creation returned no id",
+        )
+    })?;
     let p = state.project.read().await;
-    let sketch = p.sketches.get(&sketch_id)
-        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "created sketch vanished"))?;
+    let sketch = p.sketches.get(&sketch_id).ok_or_else(|| {
+        ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "created sketch vanished")
+    })?;
     Ok(Json(sketch_to_response(sketch)))
 }
 
@@ -2132,7 +2780,8 @@ async fn get_sketch(
     Path(id): Path<String>,
 ) -> Result<Json<omnim_sketch::Sketch>, (StatusCode, String)> {
     let p = state.project.read().await;
-    p.sketches.get(&id)
+    p.sketches
+        .get(&id)
         .cloned()
         .map(Json)
         .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Sketch {} not found", id)))
@@ -2167,13 +2816,19 @@ async fn update_sketch(
     }
     let op = c::operation::Op::UpdateSketch(c::UpdateSketchOperation {
         sketch_id: id.clone(),
-        origin: req.origin.map(|o| c::Point3D { x: o.x, y: o.y, z: o.z }),
+        origin: req.origin.map(|o| c::Point3D {
+            x: o.x,
+            y: o.y,
+            z: o.z,
+        }),
         name: req.name,
     });
     let result = mutation::apply(&state, c::Action::UpdateSketch, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     let p = state.project.read().await;
-    let sketch = p.sketches.get(&id)
+    let sketch = p
+        .sketches
+        .get(&id)
         .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch vanished"))?;
     Ok(Json(sketch.clone()))
 }
@@ -2197,7 +2852,12 @@ async fn add_sketch_entity(
         "ellipse" => c::SketchEntityType::SketchEllipse,
         "spline" => c::SketchEntityType::SketchSpline,
         "polyline" => c::SketchEntityType::SketchPolyline,
-        _ => return Err(ApiError::bad_request(format!("Unknown entity type: {}", req.entity_type))),
+        _ => {
+            return Err(ApiError::bad_request(format!(
+                "Unknown entity type: {}",
+                req.entity_type
+            )))
+        }
     };
 
     let op = c::operation::Op::AddSketchEntity(c::AddSketchEntityOperation {
@@ -2205,17 +2865,34 @@ async fn add_sketch_entity(
         entity: Some(c::SketchEntityData {
             id: String::new(),
             entity_type: entity_type as i32,
-            points: req.points.iter().map(|p| c::Point3D { x: p.x, y: p.y, z: p.z }).collect(),
+            points: req
+                .points
+                .iter()
+                .map(|p| c::Point3D {
+                    x: p.x,
+                    y: p.y,
+                    z: p.z,
+                })
+                .collect(),
             radius: req.radius.unwrap_or(0.0),
             sides: req.sides.unwrap_or(0),
             construction: req.construction,
         }),
     });
-    let result = mutation::apply(&state, c::Action::AddSketchEntity, vec![mutation::op(op)]).await?;
+    let result =
+        mutation::apply(&state, c::Action::AddSketchEntity, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     let p = state.project.read().await;
-    let idx = p.sketches.get(&id).and_then(|s| s.entities.len().checked_sub(1))
-        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch entity creation returned no index"))?;
+    let idx = p
+        .sketches
+        .get(&id)
+        .and_then(|s| s.entities.len().checked_sub(1))
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "sketch entity creation returned no index",
+            )
+        })?;
     Ok(Json(serde_json::json!({ "index": idx })))
 }
 
@@ -2248,11 +2925,18 @@ async fn add_sketch_constraint(
         "pt_on_line" => c::SketchConstraintType::SketchPtOnLine,
         "pt_on_circle" => c::SketchConstraintType::SketchPtOnCircle,
         "same_orientation" => c::SketchConstraintType::SketchSameOrientation,
-        _ => return Err(ApiError::bad_request(format!("Unknown constraint type: {}", req.constraint_type))),
+        _ => {
+            return Err(ApiError::bad_request(format!(
+                "Unknown constraint type: {}",
+                req.constraint_type
+            )))
+        }
     };
 
     // SketchPointRef indices are 1-based on the wire; the REST contract is 0-based.
-    let entity_refs: Vec<c::SketchPointRef> = req.entity_refs.iter()
+    let entity_refs: Vec<c::SketchPointRef> = req
+        .entity_refs
+        .iter()
         .map(|(ei, pi)| c::SketchPointRef {
             entity_index: (ei + 1) as i32,
             point_index: (pi + 1) as i32,
@@ -2268,11 +2952,24 @@ async fn add_sketch_constraint(
             value: req.value.unwrap_or(0.0),
         }),
     });
-    let result = mutation::apply(&state, c::Action::AddSketchConstraint, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::AddSketchConstraint,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     let p = state.project.read().await;
-    let idx = p.sketches.get(&id).and_then(|s| s.constraints.len().checked_sub(1))
-        .ok_or_else(|| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "sketch constraint creation returned no index"))?;
+    let idx = p
+        .sketches
+        .get(&id)
+        .and_then(|s| s.constraints.len().checked_sub(1))
+        .ok_or_else(|| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "sketch constraint creation returned no index",
+            )
+        })?;
     Ok(Json(serde_json::json!({ "index": idx })))
 }
 
@@ -2292,7 +2989,9 @@ async fn solve_sketch(
     // does not carry — derive them deterministically from a probe copy.
     let probe = {
         let p = state.project.read().await;
-        let sketch = p.sketches.get(&id)
+        let sketch = p
+            .sketches
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
         sketch.clone()
     };
@@ -2316,17 +3015,27 @@ async fn delete_sketch_entity(
 ) -> Result<StatusCode, ApiError> {
     {
         let p = state.project.read().await;
-        let sketch = p.sketches.get(&id)
+        let sketch = p
+            .sketches
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
         if idx >= sketch.entities.len() {
-            return Err(ApiError::not_found(format!("Entity index {} out of range", idx)));
+            return Err(ApiError::not_found(format!(
+                "Entity index {} out of range",
+                idx
+            )));
         }
     }
     let op = c::operation::Op::DeleteSketchEntity(c::DeleteSketchEntityOperation {
         sketch_id: id,
         entity_index: (idx + 1) as i32,
     });
-    let result = mutation::apply(&state, c::Action::DeleteSketchEntity, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteSketchEntity,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -2340,21 +3049,40 @@ async fn update_sketch_entity(
     if p.sketches.get(&id).is_none() {
         return Err(ApiError::not_found(format!("Sketch {} not found", id)));
     }
-    if p.sketches.get(&id).map(|s| idx >= s.entities.len()).unwrap_or(true) {
-        return Err(ApiError::not_found(format!("Entity index {} out of range", idx)));
+    if p.sketches
+        .get(&id)
+        .map(|s| idx >= s.entities.len())
+        .unwrap_or(true)
+    {
+        return Err(ApiError::not_found(format!(
+            "Entity index {} out of range",
+            idx
+        )));
     }
     drop(p);
     let op = c::operation::Op::UpdateSketchEntity(c::UpdateSketchEntityOperation {
         sketch_id: id,
         entity_index: (idx + 1) as i32,
         points: req.points.map(|points| c::PointList {
-            values: points.iter().map(|p| c::Point3D { x: p.x, y: p.y, z: p.z }).collect(),
+            values: points
+                .iter()
+                .map(|p| c::Point3D {
+                    x: p.x,
+                    y: p.y,
+                    z: p.z,
+                })
+                .collect(),
         }),
         radius: req.radius,
         sides: req.sides,
         construction: req.construction,
     });
-    let result = mutation::apply(&state, c::Action::UpdateSketchEntity, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::UpdateSketchEntity,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -2365,17 +3093,27 @@ async fn remove_sketch_constraint(
 ) -> Result<StatusCode, ApiError> {
     {
         let p = state.project.read().await;
-        let sketch = p.sketches.get(&id)
+        let sketch = p
+            .sketches
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
         if idx >= sketch.constraints.len() {
-            return Err(ApiError::not_found(format!("Constraint index {} out of range", idx)));
+            return Err(ApiError::not_found(format!(
+                "Constraint index {} out of range",
+                idx
+            )));
         }
     }
     let op = c::operation::Op::RemoveSketchConstraint(c::RemoveSketchConstraintOperation {
         sketch_id: id,
         constraint_index: (idx + 1) as i32,
     });
-    let result = mutation::apply(&state, c::Action::RemoveSketchConstraint, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(
+        &state,
+        c::Action::RemoveSketchConstraint,
+        vec![mutation::op(op)],
+    )
+    .await?;
     mutation::require_success(result)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -2398,9 +3136,15 @@ async fn undo(
     match exe.undo(&mut p) {
         Ok(msg) => {
             mutation::persist(&state.save_path, &p);
-            Ok(Json(UndoRedoResponse { success: true, message: msg }))
+            Ok(Json(UndoRedoResponse {
+                success: true,
+                message: msg,
+            }))
         }
-        Err(e) => Ok(Json(UndoRedoResponse { success: false, message: e })),
+        Err(e) => Ok(Json(UndoRedoResponse {
+            success: false,
+            message: e,
+        })),
     }
 }
 
@@ -2412,9 +3156,15 @@ async fn redo(
     match exe.redo(&mut p) {
         Ok(msg) => {
             mutation::persist(&state.save_path, &p);
-            Ok(Json(UndoRedoResponse { success: true, message: msg }))
+            Ok(Json(UndoRedoResponse {
+                success: true,
+                message: msg,
+            }))
         }
-        Err(e) => Ok(Json(UndoRedoResponse { success: false, message: e })),
+        Err(e) => Ok(Json(UndoRedoResponse {
+            success: false,
+            message: e,
+        })),
     }
 }
 
@@ -2425,9 +3175,7 @@ struct UndoStatusResponse {
     undo_depth: usize,
 }
 
-async fn undo_status(
-    State(state): State<SharedState>,
-) -> Json<UndoStatusResponse> {
+async fn undo_status(State(state): State<SharedState>) -> Json<UndoStatusResponse> {
     let exe = state.executor.read().await;
     Json(UndoStatusResponse {
         can_undo: exe.can_undo(),
@@ -2473,7 +3221,9 @@ async fn get_mesh(State(state): State<SharedState>) -> Json<MeshResponse> {
 
                 for face in &mesh.faces {
                     let indices = &face.vertex_indices;
-                    if indices.len() < 3 { continue; }
+                    if indices.len() < 3 {
+                        continue;
+                    }
                     for i in 1..indices.len() - 1 {
                         for &idx in &[indices[0], indices[i], indices[i + 1]] {
                             let idx = idx as usize;
@@ -2497,8 +3247,16 @@ async fn get_mesh(State(state): State<SharedState>) -> Json<MeshResponse> {
                 }
 
                 let bbox = omnim_model::geometry::compute_bbox(&mesh);
-                let bbox_min = bbox.min.as_ref().map(|m| [m.x as f32, m.y as f32, m.z as f32]).unwrap_or([0.0; 3]);
-                let bbox_max = bbox.max.as_ref().map(|m| [m.x as f32, m.y as f32, m.z as f32]).unwrap_or([0.0; 3]);
+                let bbox_min = bbox
+                    .min
+                    .as_ref()
+                    .map(|m| [m.x as f32, m.y as f32, m.z as f32])
+                    .unwrap_or([0.0; 3]);
+                let bbox_max = bbox
+                    .max
+                    .as_ref()
+                    .map(|m| [m.x as f32, m.y as f32, m.z as f32])
+                    .unwrap_or([0.0; 3]);
 
                 objects.push(MeshObject {
                     id: obj.id.clone(),
@@ -2647,7 +3405,10 @@ pub async fn start(server_cfg: ServerConfig) {
     socket.bind(sock_addr).expect("bind address");
     let listener = socket.listen(1024).expect("listen");
 
-    println!("OmniM Server running at http://{}:{}", server_cfg.host, server_cfg.port);
+    println!(
+        "OmniM Server running at http://{}:{}",
+        server_cfg.host, server_cfg.port
+    );
 
     let router = create_router(server_cfg.project, server_cfg.save_path);
     axum::serve(listener, router).await.expect("server error");
@@ -2664,10 +3425,16 @@ pub struct ServerConfig {
 async fn export_ifc(State(state): State<SharedState>) -> impl IntoResponse {
     let p = state.project.read().await;
     let ifc_content = omnim_ifc::export_ifc(&p);
-    ([
-        ("Content-Type", "application/ifc"),
-        ("Content-Disposition", "attachment; filename=\"project.ifc\""),
-    ], ifc_content)
+    (
+        [
+            ("Content-Type", "application/ifc"),
+            (
+                "Content-Disposition",
+                "attachment; filename=\"project.ifc\"",
+            ),
+        ],
+        ifc_content,
+    )
 }
 
 // Import uses raw string body, not this struct
@@ -2692,9 +3459,12 @@ async fn import_ifc(
     Query(query): Query<ImportIfcQuery>,
     body: String,
 ) -> Result<Json<ImportIfcResponse>, StatusCode> {
-    let imported = omnim_ifc::import_ifc_with_options(&body, omnim_ifc::ImportOptions {
-        normalize_to_origin: query.normalize.unwrap_or(true),
-    });
+    let imported = omnim_ifc::import_ifc_with_options(
+        &body,
+        omnim_ifc::ImportOptions {
+            normalize_to_origin: query.normalize.unwrap_or(true),
+        },
+    );
 
     match imported {
         Ok(imported_proj) => {
@@ -2774,7 +3544,9 @@ async fn extrude_sketch_handler(
     // probe copy so an unsolvable profile fails with the same 400 as before.
     let must_solve = {
         let p = state.project.read().await;
-        let sketch = p.sketches.get(&id)
+        let sketch = p
+            .sketches
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
         if sketch.solved {
             false
@@ -2791,7 +3563,9 @@ async fn extrude_sketch_handler(
     let mut ops = Vec::new();
     if must_solve {
         ops.push(mutation::op(c::operation::Op::SolveSketch(
-            c::SolveSketchOperation { sketch_id: id.clone() },
+            c::SolveSketchOperation {
+                sketch_id: id.clone(),
+            },
         )));
     }
     ops.push(mutation::op(c::operation::Op::ExtrudeSketch(
@@ -2807,14 +3581,23 @@ async fn extrude_sketch_handler(
     )));
     let result = mutation::apply(&state, c::Action::ExtrudeSketch, ops).await?;
     let result = mutation::require_success(result)?;
-    let object_id = result.created_ids.last().cloned()
+    let object_id = result
+        .created_ids
+        .last()
+        .cloned()
         .ok_or_else(|| ApiError::internal("extrude created no object"))?;
 
     let p = state.project.read().await;
-    let obj = p.objects.get(&object_id)
+    let obj = p
+        .objects
+        .get(&object_id)
         .ok_or_else(|| ApiError::internal("extruded object vanished"))?;
-    let mesh = obj.geometry.as_ref().and_then(omnim_model::geometry::geometry_to_mesh);
-    let (vertices, faces) = mesh.map(|m| (m.vertices.len(), m.faces.len()))
+    let mesh = obj
+        .geometry
+        .as_ref()
+        .and_then(omnim_model::geometry::geometry_to_mesh);
+    let (vertices, faces) = mesh
+        .map(|m| (m.vertices.len(), m.faces.len()))
         .unwrap_or((0, 0));
     Ok(Json(FeatureResponse {
         success: true,
@@ -2845,7 +3628,9 @@ async fn revolve_sketch_handler(
     // probe copy so an unsolvable profile fails with the same 400 as before.
     let must_solve = {
         let p = state.project.read().await;
-        let sketch = p.sketches.get(&id)
+        let sketch = p
+            .sketches
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Sketch {} not found", id)))?;
         if sketch.solved {
             false
@@ -2862,7 +3647,9 @@ async fn revolve_sketch_handler(
     let mut ops = Vec::new();
     if must_solve {
         ops.push(mutation::op(c::operation::Op::SolveSketch(
-            c::SolveSketchOperation { sketch_id: id.clone() },
+            c::SolveSketchOperation {
+                sketch_id: id.clone(),
+            },
         )));
     }
     ops.push(mutation::op(c::operation::Op::RevolveSketch(
@@ -2883,14 +3670,23 @@ async fn revolve_sketch_handler(
     )));
     let result = mutation::apply(&state, c::Action::RevolveSketch, ops).await?;
     let result = mutation::require_success(result)?;
-    let object_id = result.created_ids.last().cloned()
+    let object_id = result
+        .created_ids
+        .last()
+        .cloned()
         .ok_or_else(|| ApiError::internal("revolve created no object"))?;
 
     let p = state.project.read().await;
-    let obj = p.objects.get(&object_id)
+    let obj = p
+        .objects
+        .get(&object_id)
         .ok_or_else(|| ApiError::internal("revolved object vanished"))?;
-    let mesh = obj.geometry.as_ref().and_then(omnim_model::geometry::geometry_to_mesh);
-    let (vertices, faces) = mesh.map(|m| (m.vertices.len(), m.faces.len()))
+    let mesh = obj
+        .geometry
+        .as_ref()
+        .and_then(omnim_model::geometry::geometry_to_mesh);
+    let (vertices, faces) = mesh
+        .map(|m| (m.vertices.len(), m.faces.len()))
         .unwrap_or((0, 0));
     Ok(Json(FeatureResponse {
         success: true,
@@ -2923,16 +3719,21 @@ struct CreateComponentRequest {
 async fn list_components(State(state): State<SharedState>) -> Json<Vec<ComponentResponse>> {
     let p = state.project.read().await;
     let comps = p.component_ids();
-    Json(comps.iter().map(|id| {
-        let obj = p.objects.get(id).unwrap();
-        ComponentResponse {
-            id: obj.id.clone(),
-            name: obj.name.clone(),
-            feature_count: obj.features.len(),
-            sketch_ids: obj.sketch_ids.clone(),
-            parent_id: obj.parent_id.clone(),
-        }
-    }).collect())
+    Json(
+        comps
+            .iter()
+            .map(|id| {
+                let obj = p.objects.get(id).unwrap();
+                ComponentResponse {
+                    id: obj.id.clone(),
+                    name: obj.name.clone(),
+                    feature_count: obj.features.len(),
+                    sketch_ids: obj.sketch_ids.clone(),
+                    parent_id: obj.parent_id.clone(),
+                }
+            })
+            .collect(),
+    )
 }
 
 async fn create_component_handler(
@@ -2943,12 +3744,18 @@ async fn create_component_handler(
         name: req.name,
         parent_id: req.parent_id.clone().unwrap_or_default(),
     });
-    let result = mutation::apply(&state, c::Action::CreateComponent, vec![mutation::op(op)]).await?;
+    let result =
+        mutation::apply(&state, c::Action::CreateComponent, vec![mutation::op(op)]).await?;
     let result = mutation::require_success(result)?;
-    let id = result.created_ids.first().cloned()
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
         .ok_or_else(|| ApiError::internal("component creation returned no id"))?;
     let p = state.project.read().await;
-    let obj = p.objects.get(&id)
+    let obj = p
+        .objects
+        .get(&id)
         .ok_or_else(|| ApiError::internal("created component vanished"))?;
     Ok(Json(ComponentResponse {
         id: obj.id.clone(),
@@ -2964,10 +3771,15 @@ async fn get_component(
     State(state): State<SharedState>,
 ) -> Result<Json<ComponentResponse>, (StatusCode, String)> {
     let p = state.project.read().await;
-    let obj = p.objects.get(&id)
+    let obj = p
+        .objects
+        .get(&id)
         .ok_or_else(|| (StatusCode::NOT_FOUND, format!("Component {} not found", id)))?;
     if obj.object_type != c::ObjectType::Component as i32 {
-        return Err((StatusCode::BAD_REQUEST, format!("Object {} is not a Component", id)));
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("Object {} is not a Component", id),
+        ));
     }
     Ok(Json(ComponentResponse {
         id: obj.id.clone(),
@@ -2984,14 +3796,22 @@ async fn delete_component(
 ) -> Result<Json<serde_json::Value>, ApiError> {
     {
         let p = state.project.read().await;
-        let obj = p.objects.get(&id)
+        let obj = p
+            .objects
+            .get(&id)
             .ok_or_else(|| ApiError::not_found(format!("Component {} not found", id)))?;
         if obj.object_type != c::ObjectType::Component as i32 {
-            return Err(ApiError::bad_request(format!("Object {} is not a Component", id)));
+            return Err(ApiError::bad_request(format!(
+                "Object {} is not a Component",
+                id
+            )));
         }
     }
-    let op = c::operation::Op::DeleteComponent(c::DeleteComponentOperation { component_id: id.clone() });
-    let result = mutation::apply(&state, c::Action::DeleteComponent, vec![mutation::op(op)]).await?;
+    let op = c::operation::Op::DeleteComponent(c::DeleteComponentOperation {
+        component_id: id.clone(),
+    });
+    let result =
+        mutation::apply(&state, c::Action::DeleteComponent, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true, "id": id})))
 }
@@ -3036,22 +3856,28 @@ async fn list_features(
     State(state): State<SharedState>,
 ) -> Result<Json<Vec<FeatureResponseItem>>, (StatusCode, String)> {
     let p = state.project.read().await;
-    let features = p.get_features(&id)
+    let features = p
+        .get_features(&id)
         .map_err(|e| (StatusCode::NOT_FOUND, e))?;
-    Ok(Json(features.iter().map(|f| FeatureResponseItem {
-        id: f.id.clone(),
-        name: f.name.clone(),
-        feature_type: format!("{:?}", f.feature_type).to_lowercase(),
-        sketch_id: f.sketch_id.clone(),
-        input_sketch_ids: f.input_sketch_ids.clone(),
-        axis_sketch_id: f.axis_sketch_id.clone(),
-        depth: f.depth,
-        angle: f.angle,
-        is_cut: f.is_cut,
-        order: f.order,
-        suppressed: f.suppressed,
-        dirty: f.dirty,
-    }).collect()))
+    Ok(Json(
+        features
+            .iter()
+            .map(|f| FeatureResponseItem {
+                id: f.id.clone(),
+                name: f.name.clone(),
+                feature_type: format!("{:?}", f.feature_type).to_lowercase(),
+                sketch_id: f.sketch_id.clone(),
+                input_sketch_ids: f.input_sketch_ids.clone(),
+                axis_sketch_id: f.axis_sketch_id.clone(),
+                depth: f.depth,
+                angle: f.angle,
+                is_cut: f.is_cut,
+                order: f.order,
+                suppressed: f.suppressed,
+                dirty: f.dirty,
+            })
+            .collect(),
+    ))
 }
 
 async fn add_feature_handler(
@@ -3060,8 +3886,18 @@ async fn add_feature_handler(
     Json(req): Json<AddFeatureRequest>,
 ) -> Result<Json<FeatureResponseItem>, ApiError> {
     // Verify sketch exists (same 404 as before; component errors surface as 400)
-    if state.project.read().await.sketches.get(&req.sketch_id).is_none() {
-        return Err(ApiError::not_found(format!("Sketch {} not found", req.sketch_id)));
+    if state
+        .project
+        .read()
+        .await
+        .sketches
+        .get(&req.sketch_id)
+        .is_none()
+    {
+        return Err(ApiError::not_found(format!(
+            "Sketch {} not found",
+            req.sketch_id
+        )));
     }
 
     let feature_type = match req.feature_type.to_lowercase().as_str() {
@@ -3097,30 +3933,48 @@ async fn add_feature_handler(
                         z: req.direction_z.unwrap_or(1.0),
                     }),
                     angle: req.angle.unwrap_or(0.0),
-                    axis_origin: Some(c::Point3D { x: 0.0, y: 0.0, z: 0.0 }),
-                    axis_direction: Some(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }),
+                    axis_origin: Some(c::Point3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    }),
+                    axis_direction: Some(c::Vector3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 1.0,
+                    }),
                     is_cut: req.is_cut.unwrap_or(false),
                     input_sketch_ids: req.input_sketch_ids.clone().unwrap_or_default(),
                     axis_sketch_id: req.axis_sketch_id.clone().unwrap_or_default(),
                     name: Some(format!("{}-{}", req.feature_type, &req.sketch_id[..8])),
                     lod: Some(req.lod.unwrap_or(omnim_model::brep::DEFAULT_TOLERANCE)),
                 })),
-                mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
-                    component_id: component_id.clone(),
-                    feature_id: None,
-                })),
+                mutation::op(c::operation::Op::RebuildFeatures(
+                    c::RebuildFeaturesOperation {
+                        component_id: component_id.clone(),
+                        feature_id: None,
+                    },
+                )),
             ],
         )
         .await?;
         let result = mutation::require_success(result)?;
-        result.created_ids.first().cloned()
+        result
+            .created_ids
+            .first()
+            .cloned()
             .ok_or_else(|| ApiError::internal("add_feature returned no feature id"))?
     };
 
     let p = state.project.read().await;
-    let obj = p.objects.get(&component_id)
+    let obj = p
+        .objects
+        .get(&component_id)
         .ok_or_else(|| ApiError::internal("component vanished"))?;
-    let f = obj.features.iter().find(|f| f.id == feature_id)
+    let f = obj
+        .features
+        .iter()
+        .find(|f| f.id == feature_id)
         .ok_or_else(|| ApiError::internal("added feature vanished"))?;
 
     Ok(Json(FeatureResponseItem {
@@ -3169,10 +4023,16 @@ async fn update_feature_handler(
         let p = state.project.read().await;
         if let Some(obj) = p.objects.get(&component_id) {
             if !obj.features.iter().any(|f| f.id == feature_id) {
-                return Err(ApiError::not_found(format!("feature '{}' not found", feature_id)));
+                return Err(ApiError::not_found(format!(
+                    "feature '{}' not found",
+                    feature_id
+                )));
             }
         } else {
-            return Err(ApiError::not_found(format!("component '{}' not found", component_id)));
+            return Err(ApiError::not_found(format!(
+                "component '{}' not found",
+                component_id
+            )));
         }
     }
     // Two ops in one command: edit the feature, then rebuild the component.
@@ -3186,8 +4046,14 @@ async fn update_feature_handler(
             angle: req.angle,
             is_cut: req.is_cut,
             suppressed: req.suppressed,
-            input_sketch_ids: req.input_sketch_ids.clone().map(|ids| c::TagList { values: ids }),
-            dependency_ids: req.dependency_ids.clone().map(|ids| c::TagList { values: ids }),
+            input_sketch_ids: req
+                .input_sketch_ids
+                .clone()
+                .map(|ids| c::TagList { values: ids }),
+            dependency_ids: req
+                .dependency_ids
+                .clone()
+                .map(|ids| c::TagList { values: ids }),
             direction: req.direction.clone(),
             axis_origin: req.axis_origin.clone(),
             axis_direction: req.axis_direction.clone(),
@@ -3197,10 +4063,12 @@ async fn update_feature_handler(
             pattern_count_y: req.pattern_count_y.map(|c| c as i32),
             pattern_count_z: req.pattern_count_z.map(|c| c as i32),
         })),
-        mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
-            component_id: component_id.clone(),
-            feature_id: None,
-        })),
+        mutation::op(c::operation::Op::RebuildFeatures(
+            c::RebuildFeaturesOperation {
+                component_id: component_id.clone(),
+                feature_id: None,
+            },
+        )),
     ];
     let result = mutation::apply(&state, c::Action::UpdateFeature, ops).await?;
     mutation::require_success(result)?;
@@ -3217,11 +4085,15 @@ async fn remove_feature_handler(
         if let Some(obj) = p.objects.get(&component_id) {
             if !obj.features.iter().any(|f| f.id == feature_id) {
                 return Err(ApiError::not_found(format!(
-                    "feature '{}' not found in component '{}'", feature_id, component_id
+                    "feature '{}' not found in component '{}'",
+                    feature_id, component_id
                 )));
             }
         } else {
-            return Err(ApiError::not_found(format!("component '{}' not found", component_id)));
+            return Err(ApiError::not_found(format!(
+                "component '{}' not found",
+                component_id
+            )));
         }
     }
     // Two ops in one command: remove the feature, then rebuild the component.
@@ -3230,10 +4102,12 @@ async fn remove_feature_handler(
             component_id: component_id.clone(),
             feature_id: feature_id.clone(),
         })),
-        mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
-            component_id: component_id.clone(),
-            feature_id: None,
-        })),
+        mutation::op(c::operation::Op::RebuildFeatures(
+            c::RebuildFeaturesOperation {
+                component_id: component_id.clone(),
+                feature_id: None,
+            },
+        )),
     ];
     let result = mutation::apply(&state, c::Action::RemoveFeature, ops).await?;
     mutation::require_success(result)?;
@@ -3244,10 +4118,12 @@ async fn rebuild_component_handler(
     Path(id): Path<String>,
     State(state): State<SharedState>,
 ) -> Result<Json<serde_json::Value>, ApiError> {
-    let op = mutation::op(c::operation::Op::RebuildFeatures(c::RebuildFeaturesOperation {
-        component_id: id.clone(),
-        feature_id: None,
-    }));
+    let op = mutation::op(c::operation::Op::RebuildFeatures(
+        c::RebuildFeaturesOperation {
+            component_id: id.clone(),
+            feature_id: None,
+        },
+    ));
     let result = mutation::apply(&state, c::Action::RebuildFeatures, vec![op]).await?;
     mutation::require_success(result)?;
     Ok(Json(serde_json::json!({"success": true})))
@@ -3272,13 +4148,18 @@ async fn section_handler(
     }
 
     let p = state.project.read().await;
-    let obj = p.objects.get(&id)
-        .ok_or_else(|| (StatusCode::NOT_FOUND, format!("component '{}' not found", id)))?;
+    let obj = p.objects.get(&id).ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            format!("component '{}' not found", id),
+        )
+    })?;
 
-    let meshes: Vec<c::MeshGeometry> = obj.features.iter()
+    let meshes: Vec<c::MeshGeometry> = obj
+        .features
+        .iter()
         .filter_map(|f| f.cached_geometry.clone())
         .collect();
-
 
     let merged = if meshes.len() > 1 {
         omnim_model::geometry::merge_meshes(&meshes)
@@ -3297,7 +4178,18 @@ async fn section_handler(
 // ============================================================
 
 async fn list_catalog() -> Json<Vec<omnim_model::catalog::ComponentDef>> {
-    Json(LIBRARY.read().unwrap().as_ref().unwrap().catalog.list().into_iter().cloned().collect())
+    Json(
+        LIBRARY
+            .read()
+            .unwrap()
+            .as_ref()
+            .unwrap()
+            .catalog
+            .list()
+            .into_iter()
+            .cloned()
+            .collect(),
+    )
 }
 
 #[derive(Deserialize)]
@@ -3329,11 +4221,22 @@ async fn create_component_def(
         tags: req.tags,
         domain: req.domain,
     });
-    let result = mutation::apply(&state, c::Action::DefineComponent, vec![mutation::op(op)]).await?;
+    let result =
+        mutation::apply(&state, c::Action::DefineComponent, vec![mutation::op(op)]).await?;
     let result = mutation::require_success(result)?;
-    let id = result.created_ids.first().cloned()
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
         .ok_or_else(|| ApiError::internal("define_component returned no id"))?;
-    let comp = LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).cloned()
+    let comp = LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .cloned()
         .ok_or_else(|| ApiError::internal("defined component vanished"))?;
     Ok(Json(comp))
 }
@@ -3341,18 +4244,42 @@ async fn create_component_def(
 async fn get_component_def(
     Path(id): Path<String>,
 ) -> Result<Json<omnim_model::catalog::ComponentDef>, StatusCode> {
-    LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).cloned().map(Json).ok_or(StatusCode::NOT_FOUND)
+    LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .cloned()
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 async fn delete_component_def(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
-    let op = c::operation::Op::DeleteComponentDef(c::DeleteComponentDefOperation { component_id: id });
-    let result = mutation::apply(&state, c::Action::DeleteComponentDef, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let op =
+        c::operation::Op::DeleteComponentDef(c::DeleteComponentDefOperation { component_id: id });
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteComponentDef,
+        vec![mutation::op(op)],
+    )
+    .await
+    .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3382,15 +4309,27 @@ struct AddParamRequest {
     description: String,
 }
 
-fn default_param_type() -> i32 { 1 }
-fn default_max_value() -> f64 { f64::MAX }
+fn default_param_type() -> i32 {
+    1
+}
+fn default_max_value() -> f64 {
+    f64::MAX
+}
 
 async fn add_component_param(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddParamRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
     let op = c::operation::Op::AddComponentParam(c::AddComponentParamOperation {
@@ -3406,7 +4345,9 @@ async fn add_component_param(
         choices: req.choices,
         description: req.description,
     });
-    let result = mutation::apply(&state, c::Action::AddComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(&state, c::Action::AddComponentParam, vec![mutation::op(op)])
+        .await
+        .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3443,14 +4384,24 @@ struct AddConnectorRequest {
     up_z_expr: String,
 }
 
-fn default_dir_z() -> String { "1".into() }
+fn default_dir_z() -> String {
+    "1".into()
+}
 
 async fn add_connector(
     State(state): State<SharedState>,
     Path(id): Path<String>,
     Json(req): Json<AddConnectorRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
     let op = c::operation::Op::AddConnector(c::AddConnectorOperation {
@@ -3470,7 +4421,9 @@ async fn add_connector(
         up_y_expr: req.up_y_expr,
         up_z_expr: req.up_z_expr,
     });
-    let result = mutation::apply(&state, c::Action::AddConnector, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(&state, c::Action::AddConnector, vec![mutation::op(op)])
+        .await
+        .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3481,11 +4434,21 @@ async fn publish_component(
     State(state): State<SharedState>,
     Path(id): Path<String>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
     let op = c::operation::Op::PublishComponent(c::PublishComponentOperation { component_id: id });
-    let result = mutation::apply(&state, c::Action::PublishComponent, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(&state, c::Action::PublishComponent, vec![mutation::op(op)])
+        .await
+        .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3521,7 +4484,15 @@ async fn update_component_def(
     Path(id): Path<String>,
     Json(req): Json<UpdateComponentDefRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
     let op = c::operation::Op::UpdateComponentDef(c::UpdateComponentDefOperation {
@@ -3537,7 +4508,13 @@ async fn update_component_def(
         default_material: req.default_material,
         properties: req.properties.unwrap_or_default(),
     });
-    let result = mutation::apply(&state, c::Action::UpdateComponentDef, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(
+        &state,
+        c::Action::UpdateComponentDef,
+        vec![mutation::op(op)],
+    )
+    .await
+    .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3573,7 +4550,13 @@ async fn update_component_param(
     Path((id, idx)): Path<(String, usize)>,
     Json(req): Json<UpdateParamRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id)
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
         .map(|comp| idx >= comp.params.len())
         .unwrap_or(true)
     {
@@ -3593,7 +4576,13 @@ async fn update_component_param(
         choices: req.choices.map(|c| c::TagList { values: c }),
         description: req.description,
     });
-    let result = mutation::apply(&state, c::Action::UpdateComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(
+        &state,
+        c::Action::UpdateComponentParam,
+        vec![mutation::op(op)],
+    )
+    .await
+    .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3604,7 +4593,13 @@ async fn delete_component_param(
     State(state): State<SharedState>,
     Path((id, idx)): Path<(String, usize)>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id)
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
         .map(|comp| idx >= comp.params.len())
         .unwrap_or(true)
     {
@@ -3614,7 +4609,13 @@ async fn delete_component_param(
         component_id: id,
         param_index: (idx + 1) as i32,
     });
-    let result = mutation::apply(&state, c::Action::DeleteComponentParam, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(
+        &state,
+        c::Action::DeleteComponentParam,
+        vec![mutation::op(op)],
+    )
+    .await
+    .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3631,14 +4632,24 @@ async fn assign_feature_tree(
     Path(id): Path<String>,
     Json(req): Json<AssignFeatureTreeRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    if LIBRARY.read().unwrap().as_ref().unwrap().catalog.get(&id).is_none() {
+    if LIBRARY
+        .read()
+        .unwrap()
+        .as_ref()
+        .unwrap()
+        .catalog
+        .get(&id)
+        .is_none()
+    {
         return Err(StatusCode::NOT_FOUND);
     }
     let op = c::operation::Op::AssignFeatureTree(c::AssignFeatureTreeOperation {
         component_id: id,
         feature_tree_id: req.feature_tree_id,
     });
-    let result = mutation::apply(&state, c::Action::AssignFeatureTree, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
+    let result = mutation::apply(&state, c::Action::AssignFeatureTree, vec![mutation::op(op)])
+        .await
+        .map_err(|e| e.status)?;
     if !result.success {
         return Err(StatusCode::BAD_REQUEST);
     }
@@ -3651,16 +4662,21 @@ struct ExportCatalogResponse {
     component_count: usize,
 }
 
-async fn export_catalog_handler(
-) -> Result<Json<ExportCatalogResponse>, (StatusCode, String)> {
+async fn export_catalog_handler() -> Result<Json<ExportCatalogResponse>, (StatusCode, String)> {
     let lib = LIBRARY.read().unwrap();
     let lib = lib.as_ref().unwrap();
-    let ts = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
     let path = format!("/tmp/omnimlib-{}.omnimlib", ts);
     lib.save_to_file(&path)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
     let count = lib.catalog.len();
-    Ok(Json(ExportCatalogResponse { path, component_count: count }))
+    Ok(Json(ExportCatalogResponse {
+        path,
+        component_count: count,
+    }))
 }
 
 #[derive(Deserialize)]
@@ -3687,14 +4703,19 @@ async fn import_catalog_handler(
         library.catalog.insert(comp.clone());
     }
     let count = names.len();
-    Ok(Json(ImportCatalogResponse { component_count: count, names }))
+    Ok(Json(ImportCatalogResponse {
+        component_count: count,
+        names,
+    }))
 }
 
 // ============================================================
 // Series REST API
 // ============================================================
 
-async fn list_series(State(state): State<SharedState>) -> Json<Vec<omnim_model::series_store::Series>> {
+async fn list_series(
+    State(state): State<SharedState>,
+) -> Json<Vec<omnim_model::series_store::Series>> {
     let p = state.project.read().await;
     Json(p.series.list().into_iter().cloned().collect())
 }
@@ -3733,17 +4754,17 @@ fn series_selector<'a>(
         }
         None
     }
-    series.root_selector.as_ref().and_then(|root| find(root, selector_id))
+    series
+        .root_selector
+        .as_ref()
+        .and_then(|root| find(root, selector_id))
 }
 
 fn series_has_spec_component(
     series: &omnim_model::series_store::Series,
     component_def_id: &str,
 ) -> bool {
-    fn walk(
-        selector: &omnim_model::series_store::Selector,
-        component_def_id: &str,
-    ) -> bool {
+    fn walk(selector: &omnim_model::series_store::Selector, component_def_id: &str) -> bool {
         selector.answers.iter().any(|answer| match &answer.outcome {
             omnim_model::series_store::AnswerOutcome::Component(spec) => {
                 spec.component_def_id == component_def_id
@@ -3803,8 +4824,7 @@ async fn create_series_handler(
         domain: req.domain,
         standard_reference: req.standard_reference,
     });
-    let result =
-        mutation::apply(&state, c::Action::CreateSeries, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(&state, c::Action::CreateSeries, vec![mutation::op(op)]).await?;
     let result = mutation::require_success(result)?;
     let id = result
         .created_ids
@@ -3825,7 +4845,11 @@ async fn get_series(
     Path(id): Path<String>,
 ) -> Result<Json<omnim_model::series_store::Series>, StatusCode> {
     let p = state.project.read().await;
-    p.series.get(&id).cloned().map(Json).ok_or(StatusCode::NOT_FOUND)
+    p.series
+        .get(&id)
+        .cloned()
+        .map(Json)
+        .ok_or(StatusCode::NOT_FOUND)
 }
 
 #[derive(Deserialize)]
@@ -3871,8 +4895,7 @@ async fn update_series_handler(
         replace_metadata,
         metadata,
     });
-    let result =
-        mutation::apply(&state, c::Action::UpdateSeries, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(&state, c::Action::UpdateSeries, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(StatusCode::OK)
 }
@@ -3885,8 +4908,7 @@ async fn delete_series_handler(
         return Err(ApiError::not_found(format!("series '{}' not found", id)));
     }
     let op = c::operation::Op::DeleteSeries(c::DeleteSeriesOperation { series_id: id });
-    let result =
-        mutation::apply(&state, c::Action::DeleteSeries, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(&state, c::Action::DeleteSeries, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -3910,8 +4932,7 @@ async fn add_selector_handler(
         selector_id: req.selector_id,
         question: req.question,
     });
-    let result =
-        mutation::apply(&state, c::Action::AddSelector, vec![mutation::op(op)]).await?;
+    let result = mutation::apply(&state, c::Action::AddSelector, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(StatusCode::CREATED)
 }
@@ -4000,12 +5021,8 @@ async fn add_spec_component_handler(
         material: req.material,
         connection_type_code: req.connection_type_code,
     });
-    let result = mutation::apply(
-        &state,
-        c::Action::AddSpecComponent,
-        vec![mutation::op(op)],
-    )
-    .await?;
+    let result =
+        mutation::apply(&state, c::Action::AddSpecComponent, vec![mutation::op(op)]).await?;
     mutation::require_success(result)?;
     Ok(StatusCode::CREATED)
 }
@@ -4090,9 +5107,7 @@ async fn update_param_constraint_handler(
         let p = state.project.read().await;
         match p.series.get(&id) {
             None => false,
-            Some(series) => {
-                series_has_param_constraint(series, &req.component_def_id, idx)
-            }
+            Some(series) => series_has_param_constraint(series, &req.component_def_id, idx),
         }
     };
     if !series_exists {
@@ -4136,9 +5151,7 @@ async fn delete_param_constraint_handler(
         let p = state.project.read().await;
         match p.series.get(&id) {
             None => false,
-            Some(series) => {
-                series_has_param_constraint(series, &req.component_def_id, idx)
-            }
+            Some(series) => series_has_param_constraint(series, &req.component_def_id, idx),
         }
     };
     if !series_exists {
@@ -4180,7 +5193,9 @@ async fn select_from_series(
     Json(req): Json<SelectRequest>,
 ) -> Result<Json<SelectResponse>, (StatusCode, String)> {
     let p = state.project.read().await;
-    let series = p.series.get(&id)
+    let series = p
+        .series
+        .get(&id)
         .ok_or_else(|| (StatusCode::NOT_FOUND, format!("series '{}' not found", id)))?;
     let answer_refs: Vec<&str> = req.answers.iter().map(|s| s.as_str()).collect();
     match omnim_model::series_store::SelectionEngine::select(series, &answer_refs) {
@@ -4220,12 +5235,22 @@ async fn save_series_handler(
     State(state): State<SharedState>,
 ) -> Result<Json<SaveSeriesResponse>, (StatusCode, String)> {
     let p = state.project.read().await;
-    let path = format!("/tmp/omnimseries-{}.omnimseries", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs());
+    let path = format!(
+        "/tmp/omnimseries-{}.omnimseries",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+    );
     let store = p.series.clone();
-    store.save_to_file(&path)
+    store
+        .save_to_file(&path)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
     let count = store.len();
-    Ok(Json(SaveSeriesResponse { path, saved_count: count }))
+    Ok(Json(SaveSeriesResponse {
+        path,
+        saved_count: count,
+    }))
 }
 
 /// Load series from an external `.omnimseries` file.
@@ -4282,31 +5307,36 @@ async fn instantiate_from_catalog(
     State(state): State<SharedState>,
     Json(req): Json<InstantiateRequest>,
 ) -> Result<Json<InstantiateResponse>, (StatusCode, String)> {
-    let op = mutation::op(c::operation::Op::InstantiateCatalog(c::InstantiateCatalogOperation {
-        component_def_id: req.component_def_id.clone(),
-        instance_name: req.instance_name.clone(),
-        params: req.params.clone(),
-        position: req.position.clone(),
-        rotation_z: req.rotation_z,
-        skip_series_gate: req.skip_series_gate,
-    }));
+    let op = mutation::op(c::operation::Op::InstantiateCatalog(
+        c::InstantiateCatalogOperation {
+            component_def_id: req.component_def_id.clone(),
+            instance_name: req.instance_name.clone(),
+            params: req.params.clone(),
+            position: req.position.clone(),
+            rotation_z: req.rotation_z,
+            skip_series_gate: req.skip_series_gate,
+        },
+    ));
     let result = mutation::apply(&state, c::Action::InstantiateCatalog, vec![op])
         .await
         .map_err(|e| (e.status, e.message))?;
     if !result.success {
         return Err((StatusCode::BAD_REQUEST, result.message));
     }
-    let component_id = result
-        .created_ids
-        .first()
-        .cloned()
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "instantiate returned no id".into()))?;
+    let component_id = result.created_ids.first().cloned().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "instantiate returned no id".into(),
+        )
+    })?;
 
     let p = state.project.read().await;
-    let obj = p
-        .objects
-        .get(&component_id)
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "created component not found".into()))?;
+    let obj = p.objects.get(&component_id).ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "created component not found".into(),
+        )
+    })?;
 
     Ok(Json(InstantiateResponse {
         component_id: obj.id.clone(),
@@ -4344,10 +5374,12 @@ async fn preview_catalog_component(
         )
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
 
-    let obj = preview_project
-        .objects
-        .get(&component_id)
-        .ok_or_else(|| (StatusCode::INTERNAL_SERVER_ERROR, "preview component not found".into()))?;
+    let obj = preview_project.objects.get(&component_id).ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "preview component not found".into(),
+        )
+    })?;
 
     let mesh = obj
         .geometry

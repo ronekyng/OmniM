@@ -1,9 +1,9 @@
-pub mod i_shape;
 pub mod box_shape;
 pub mod circular;
+pub mod i_shape;
 pub mod pipe_schedule;
-pub mod u_shape;
 pub mod t_shape;
+pub mod u_shape;
 
 use omnim_core as c;
 use serde::{Deserialize, Serialize};
@@ -12,18 +12,56 @@ pub type ProfilePoints = Vec<c::Point3D>;
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ProfileType {
-    IShape { height: f64, width: f64, web_thickness: f64, flange_thickness: f64 },
-    BoxShape { width: f64, height: f64, thickness: f64 },
-    Circle { radius: f64, segments: usize },
-    Annulus { outer_radius: f64, inner_radius: f64, segments: usize },
-    Rectangle { width: f64, height: f64 },
-    LShape { leg1: f64, leg2: f64, thickness: f64 },
-    UShape { height: f64, width: f64, web_thickness: f64, flange_thickness: f64 },
-    TShape { height: f64, width: f64, web_thickness: f64, flange_thickness: f64 },
-    PipeSchedule { segments: usize },
+    IShape {
+        height: f64,
+        width: f64,
+        web_thickness: f64,
+        flange_thickness: f64,
+    },
+    BoxShape {
+        width: f64,
+        height: f64,
+        thickness: f64,
+    },
+    Circle {
+        radius: f64,
+        segments: usize,
+    },
+    Annulus {
+        outer_radius: f64,
+        inner_radius: f64,
+        segments: usize,
+    },
+    Rectangle {
+        width: f64,
+        height: f64,
+    },
+    LShape {
+        leg1: f64,
+        leg2: f64,
+        thickness: f64,
+    },
+    UShape {
+        height: f64,
+        width: f64,
+        web_thickness: f64,
+        flange_thickness: f64,
+    },
+    TShape {
+        height: f64,
+        width: f64,
+        web_thickness: f64,
+        flange_thickness: f64,
+    },
+    PipeSchedule {
+        segments: usize,
+    },
     /// Rectangle whose width/height are resolved from component params at
     /// instantiation time (enables 2-point wall/slab creation).
-    ParametricRect { width_param: String, height_param: String },
+    ParametricRect {
+        width_param: String,
+        height_param: String,
+    },
 }
 
 pub fn resolve_pipe_schedule_profile(dn: f64, schedule: f64, segments: usize) -> ProfilePoints {
@@ -91,33 +129,42 @@ fn resolve_pipe_schedule_inner(dn: f64, schedule: String, segments: usize) -> Pr
 
 pub fn generate(profile_type: &ProfileType) -> ProfilePoints {
     match profile_type {
-        ProfileType::IShape { height, width, web_thickness, flange_thickness } => {
-            i_shape::i_section(*height, *width, *web_thickness, *flange_thickness)
-        }
-        ProfileType::BoxShape { width, height, thickness } => {
-            box_shape::box_section(*width, *height, *thickness)
-        }
-        ProfileType::Circle { radius, segments } => {
-            circular::circle(*radius, *segments)
-        }
-        ProfileType::Annulus { outer_radius, inner_radius, segments } => {
-            circular::annulus(*outer_radius, *inner_radius, *segments)
-        }
-        ProfileType::Rectangle { width, height } => {
-            box_shape::rectangle(*width, *height)
-        }
-        ProfileType::LShape { leg1, leg2, thickness } => {
-            box_shape::l_section(*leg1, *leg2, *thickness)
-        }
-        ProfileType::UShape { height, width, web_thickness, flange_thickness } => {
-            u_shape::u_section(*height, *width, *web_thickness, *flange_thickness)
-        }
-        ProfileType::TShape { height, width, web_thickness, flange_thickness } => {
-            t_shape::t_section(*height, *width, *web_thickness, *flange_thickness)
-        }
-        ProfileType::PipeSchedule { segments } => {
-            circular::circle(50.0, *segments)
-        }
+        ProfileType::IShape {
+            height,
+            width,
+            web_thickness,
+            flange_thickness,
+        } => i_shape::i_section(*height, *width, *web_thickness, *flange_thickness),
+        ProfileType::BoxShape {
+            width,
+            height,
+            thickness,
+        } => box_shape::box_section(*width, *height, *thickness),
+        ProfileType::Circle { radius, segments } => circular::circle(*radius, *segments),
+        ProfileType::Annulus {
+            outer_radius,
+            inner_radius,
+            segments,
+        } => circular::annulus(*outer_radius, *inner_radius, *segments),
+        ProfileType::Rectangle { width, height } => box_shape::rectangle(*width, *height),
+        ProfileType::LShape {
+            leg1,
+            leg2,
+            thickness,
+        } => box_shape::l_section(*leg1, *leg2, *thickness),
+        ProfileType::UShape {
+            height,
+            width,
+            web_thickness,
+            flange_thickness,
+        } => u_shape::u_section(*height, *width, *web_thickness, *flange_thickness),
+        ProfileType::TShape {
+            height,
+            width,
+            web_thickness,
+            flange_thickness,
+        } => t_shape::t_section(*height, *width, *web_thickness, *flange_thickness),
+        ProfileType::PipeSchedule { segments } => circular::circle(50.0, *segments),
         ProfileType::ParametricRect { .. } => {
             // generate() has no params, so return a safe default.
             // The actual dimensions are resolved in instantiate_template.

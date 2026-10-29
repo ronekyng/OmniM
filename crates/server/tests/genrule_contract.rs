@@ -46,7 +46,11 @@ async fn genrule(port: u16, body: serde_json::Value) -> (u16, String) {
 
 async fn undo(port: u16) {
     let client = reqwest::Client::new();
-    let resp = client.post(api_url(port, "/api/undo")).send().await.unwrap();
+    let resp = client
+        .post(api_url(port, "/api/undo"))
+        .send()
+        .await
+        .unwrap();
     assert!(resp.status().is_success());
 }
 
@@ -64,91 +68,143 @@ fn layers() -> serde_json::Value {
 #[tokio::test]
 async fn wall_panel_via_contract_path() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-contract",
-        "height": 3.0,
-        "path": { "points": [
-            [0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 3.0, 0.0]
-        ], "closed": false },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-contract",
+            "height": 3.0,
+            "path": { "points": [
+                [0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 3.0, 0.0]
+            ], "closed": false },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "contract wall failed: {}", obj);
     let obj = json_of(&obj);
-    assert_eq!(obj["properties"].as_array().unwrap().iter().any(|p| p["name"] == "genesis_class" && p["value"]["value_type"]["StringValue"] == "Surface"), true);
-    assert_eq!(obj["properties"].as_array().unwrap().iter().any(|p| p["name"] == "genesis_form" && p["value"]["value_type"]["StringValue"] == "panel"), true);
+    assert_eq!(
+        obj["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "genesis_class"
+                && p["value"]["value_type"]["StringValue"] == "Surface"),
+        true
+    );
+    assert_eq!(
+        obj["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "genesis_form"
+                && p["value"]["value_type"]["StringValue"] == "panel"),
+        true
+    );
 }
 
 #[tokio::test]
 async fn wall_panel_via_legacy_path_alias() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-legacy",
-        "height": 3.0,
-        "path": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]],
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-legacy",
+            "height": 3.0,
+            "path": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]],
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "legacy path alias failed: {}", obj);
 }
 
 #[tokio::test]
 async fn wall_region_via_closed_contract() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-region",
-        "height": 3.0,
-        "boundary": { "points": [
-            [0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.2, 0.0], [0.0, 0.2, 0.0]
-        ], "closed": true },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-region",
+            "height": 3.0,
+            "boundary": { "points": [
+                [0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.2, 0.0], [0.0, 0.2, 0.0]
+            ], "closed": true },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "wall region failed: {}", obj);
     let obj = json_of(&obj);
-    assert_eq!(obj["properties"].as_array().unwrap().iter().any(|p| p["name"] == "genesis_form" && p["value"]["value_type"]["StringValue"] == "region"), true);
+    assert_eq!(
+        obj["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "genesis_form"
+                && p["value"]["value_type"]["StringValue"] == "region"),
+        true
+    );
 }
 
 #[tokio::test]
 async fn slab_region_ok_but_panel_rejected_by_matrix() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "slab",
-        "name": "S-region",
-        "boundary": { "points": [
-            [0.0, 0.0, 0.0], [5.0, 0.0, 0.0], [5.0, 4.0, 0.0], [0.0, 4.0, 0.0]
-        ], "closed": true },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "slab",
+            "name": "S-region",
+            "boundary": { "points": [
+                [0.0, 0.0, 0.0], [5.0, 0.0, 0.0], [5.0, 4.0, 0.0], [0.0, 4.0, 0.0]
+            ], "closed": true },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "slab region failed: {}", obj);
 
     // Slab has no open-path form — the matrix rejects it with the contract reason.
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "slab",
-        "name": "S-panel",
-        "path": { "points": [[0.0, 0.0, 0.0], [5.0, 0.0, 0.0]], "closed": false },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "slab",
+            "name": "S-panel",
+            "path": { "points": [[0.0, 0.0, 0.0], [5.0, 0.0, 0.0]], "closed": false },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
-    assert!(obj.contains("creation method 'panel' is not authorized for object type 'slab'"), "unexpected error: {}", obj);
+    assert!(
+        obj.contains("creation method 'panel' is not authorized for object type 'slab'"),
+        "unexpected error: {}",
+        obj
+    );
 }
 
 #[tokio::test]
 async fn roof_profile_requires_exactly_two_points() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "roof",
-        "name": "R-profile",
-        "width": 3.0,
-        "path": { "points": [[0.0, 0.0, 2.0], [6.0, 0.0, 2.0]], "closed": false },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "roof",
+            "name": "R-profile",
+            "width": 3.0,
+            "path": { "points": [[0.0, 0.0, 2.0], [6.0, 0.0, 2.0]], "closed": false },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "roof profile failed: {}", obj);
 
     let (status, obj) = genrule(port, serde_json::json!({
@@ -160,7 +216,11 @@ async fn roof_profile_requires_exactly_two_points() {
         "layers": layers()
     })).await;
     assert_eq!(status, 400);
-    assert!(obj.contains("exactly 2 distinct points"), "unexpected error: {}", obj);
+    assert!(
+        obj.contains("exactly 2 distinct points"),
+        "unexpected error: {}",
+        obj
+    );
 }
 
 #[tokio::test]
@@ -175,15 +235,27 @@ async fn road_accepts_contract_and_legacy_alias_but_not_closed() {
     })).await;
     assert_eq!(status, 200, "road contract failed: {}", obj);
     let obj = json_of(&obj);
-    assert_eq!(obj["properties"].as_array().unwrap().iter().any(|p| p["name"] == "genesis_class" && p["value"]["value_type"]["StringValue"] == "Linear"), true);
+    assert_eq!(
+        obj["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "genesis_class"
+                && p["value"]["value_type"]["StringValue"] == "Linear"),
+        true
+    );
 
     // Legacy alias
-    let (status, _) = genrule(port, serde_json::json!({
-        "genrule": "road",
-        "name": "RD-legacy",
-        "width": 6.0, "thickness": 0.4, "length": 10.0,
-        "alignment": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
-    })).await;
+    let (status, _) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "road",
+            "name": "RD-legacy",
+            "width": 6.0, "thickness": 0.4, "length": 10.0,
+            "alignment": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
 
     // Road is linear, not a region
@@ -207,7 +279,15 @@ async fn line_guide_via_contract_and_rejection_of_closed() {
     })).await;
     assert_eq!(status, 200, "line contract failed: {}", obj);
     let obj = json_of(&obj);
-    assert_eq!(obj["properties"].as_array().unwrap().iter().any(|p| p["name"] == "genesis_class" && p["value"]["value_type"]["StringValue"] == "Point"), true);
+    assert_eq!(
+        obj["properties"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "genesis_class"
+                && p["value"]["value_type"]["StringValue"] == "Point"),
+        true
+    );
 
     let (status, _) = genrule(port, serde_json::json!({
         "genrule": "line",
@@ -220,25 +300,33 @@ async fn line_guide_via_contract_and_rejection_of_closed() {
 #[tokio::test]
 async fn ambiguous_input_is_rejected() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-both",
-        "height": 3.0,
-        "path": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]],
-        "boundary": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.2, 0.0], [0.0, 0.2, 0.0]],
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-both",
+            "height": 3.0,
+            "path": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]],
+            "boundary": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.2, 0.0], [0.0, 0.2, 0.0]],
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
     assert!(obj.contains("not both"), "unexpected error: {}", obj);
 
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "road",
-        "name": "RD-both",
-        "width": 6.0, "thickness": 0.4, "length": 10.0,
-        "path": { "points": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]], "closed": false },
-        "alignment": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "road",
+            "name": "RD-both",
+            "width": 6.0, "thickness": 0.4, "length": 10.0,
+            "path": { "points": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]], "closed": false },
+            "alignment": [[0.0, 0.0, 0.0], [10.0, 0.0, 0.0]]
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
     assert!(obj.contains("not both"), "unexpected error: {}", obj);
 }
@@ -246,20 +334,28 @@ async fn ambiguous_input_is_rejected() {
 #[tokio::test]
 async fn closed_wall_boundary_with_bowtie_is_rejected() {
     let (port, _) = test_server().await;
-    let (status, obj) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-bowtie",
-        "height": 3.0,
-        "boundary": { "points": [
-            [0.0, 0.0, 0.0], [4.0, 4.0, 0.0], [4.0, 0.0, 0.0], [0.0, 4.0, 0.0]
-        ], "closed": true },
-        "layers": layers()
-    })).await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-bowtie",
+            "height": 3.0,
+            "boundary": { "points": [
+                [0.0, 0.0, 0.0], [4.0, 4.0, 0.0], [4.0, 0.0, 0.0], [0.0, 4.0, 0.0]
+            ], "closed": true },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
     // The validation stack may fire on degenerate area or self-intersection;
     // both are polygon rejections.
-    assert!(obj.contains("self-intersecting") || obj.contains("degenerate"), "unexpected error: {}", obj);
+    assert!(
+        obj.contains("self-intersecting") || obj.contains("degenerate"),
+        "unexpected error: {}",
+        obj
+    );
 }
 
 // ── Wave 3: geometry-path convergence (path-driven ⇒ domain type + features) ──
@@ -267,14 +363,18 @@ async fn closed_wall_boundary_with_bowtie_is_rejected() {
 #[tokio::test]
 async fn path_driven_wall_is_domain_typed_with_feature_tree() {
     let (port, project) = test_server().await;
-    let (status, body) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "wall",
-        "name": "W-conv",
-        "height": 3.0,
-        "path": { "points": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]], "closed": false },
-        "layers": layers()
-    })).await;
+    let (status, body) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-conv",
+            "height": 3.0,
+            "path": { "points": [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0]], "closed": false },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "converged wall failed: {}", body);
     let obj = json_of(&body);
 
@@ -285,7 +385,10 @@ async fn path_driven_wall_is_domain_typed_with_feature_tree() {
     let features = obj["features"].as_array().expect("features array");
     assert_eq!(features.len(), 1);
     assert_eq!(features[0]["feature_type"], "PathSweep");
-    assert!(features[0]["cached_geometry"].is_object(), "feature must carry cached geometry");
+    assert!(
+        features[0]["cached_geometry"].is_object(),
+        "feature must carry cached geometry"
+    );
 
     // Catalog traceability.
     let props = obj["properties"].as_array().unwrap();
@@ -295,30 +398,44 @@ async fn path_driven_wall_is_domain_typed_with_feature_tree() {
         && p["value"]["value_type"]["StringValue"] == "Wall-Path"));
 
     // Genesis recorded.
-    assert!(props.iter().any(|p| p["name"] == "genesis_form"
-        && p["value"]["value_type"]["StringValue"] == "panel"));
+    assert!(
+        props
+            .iter()
+            .any(|p| p["name"] == "genesis_form"
+                && p["value"]["value_type"]["StringValue"] == "panel")
+    );
 
     // Non-empty geometry on the object itself (rebuild merged the feature).
-    assert!(obj["geometry"]["representation"].is_object(), "wall must have geometry");
+    assert!(
+        obj["geometry"]["representation"].is_object(),
+        "wall must have geometry"
+    );
 
     // Undo removes it (it went through record_create on the executor).
     undo(port).await;
     let p = project.read().await;
-    assert!(p.objects.get(obj["id"].as_str().unwrap()).is_none(), "converged wall must be undoable");
+    assert!(
+        p.objects.get(obj["id"].as_str().unwrap()).is_none(),
+        "converged wall must be undoable"
+    );
 }
 
 #[tokio::test]
 async fn slab_via_closed_contract_is_domain_typed() {
     let (port, _) = test_server().await;
-    let (status, body) = genrule(port, serde_json::json!({
-        "genrule": "layered",
-        "mode": "slab",
-        "name": "S-conv",
-        "boundary": { "points": [
-            [0.0, 0.0, 1.0], [5.0, 0.0, 1.0], [5.0, 4.0, 1.0], [0.0, 4.0, 1.0]
-        ], "closed": true },
-        "layers": layers()
-    })).await;
+    let (status, body) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "slab",
+            "name": "S-conv",
+            "boundary": { "points": [
+                [0.0, 0.0, 1.0], [5.0, 0.0, 1.0], [5.0, 4.0, 1.0], [0.0, 4.0, 1.0]
+            ], "closed": true },
+            "layers": layers()
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "converged slab failed: {}", body);
     let obj = json_of(&body);
     assert_eq!(obj["object_type"], 103, "slab must be ObjectType::Slab");

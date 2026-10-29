@@ -62,10 +62,15 @@ impl AmirEngine {
         selected_ids: &[String],
         project_context: Option<&str>,
     ) -> Result<AmirTranslateResponse, AmirError> {
-        let parsed = self.prompt_parser.parse(text, selected_ids, project_context).await?;
+        let parsed = self
+            .prompt_parser
+            .parse(text, selected_ids, project_context)
+            .await?;
         let intents = self.intent_classifier.classify(parsed).await?;
 
-        let (ordered_intents, conflicts, _plan) = self.orchestrator.orchestrate(std::slice::from_ref(&intents))?;
+        let (ordered_intents, conflicts, _plan) = self
+            .orchestrator
+            .orchestrate(std::slice::from_ref(&intents))?;
 
         let mut commands = Vec::new();
         for intent in &ordered_intents {
@@ -78,10 +83,7 @@ impl AmirEngine {
             .map(|c| format!("[{}] {}", Into::<&str>::into(&c.severity), c.message))
             .collect();
 
-        let summary = self
-            .reverse_parser
-            .commands_to_nl(&commands)
-            .await?;
+        let summary = self.reverse_parser.commands_to_nl(&commands).await?;
 
         let cmd_values: Vec<serde_json::Value> = commands
             .iter()
@@ -103,7 +105,8 @@ impl AmirEngine {
         text: &str,
         selected_ids: &[String],
     ) -> Result<AmirChatResponse, AmirError> {
-        self.chat_with_context(session_id, text, selected_ids, None).await
+        self.chat_with_context(session_id, text, selected_ids, None)
+            .await
     }
 
     /// 多轮对话（带项目上下文）
@@ -120,16 +123,22 @@ impl AmirEngine {
         let context_text = self.session_manager.build_context(&session_id);
 
         let full_context = match project_context {
-            Some(ctx) if !ctx.is_empty() => {
-                Some(format!("{}\n\nPrevious conversation:\n{}", ctx, context_text))
-            }
+            Some(ctx) if !ctx.is_empty() => Some(format!(
+                "{}\n\nPrevious conversation:\n{}",
+                ctx, context_text
+            )),
             _ => Some(format!("Previous conversation:\n{}", context_text)),
         };
 
-        let parsed = self.prompt_parser.parse(text, selected_ids, full_context.as_deref()).await?;
+        let parsed = self
+            .prompt_parser
+            .parse(text, selected_ids, full_context.as_deref())
+            .await?;
         let intents = self.intent_classifier.classify(parsed).await?;
 
-        let (ordered_intents, _conflicts, _plan) = self.orchestrator.orchestrate(std::slice::from_ref(&intents))?;
+        let (ordered_intents, _conflicts, _plan) = self
+            .orchestrator
+            .orchestrate(std::slice::from_ref(&intents))?;
 
         let mut commands = Vec::new();
         for intent in &ordered_intents {
@@ -137,17 +146,15 @@ impl AmirEngine {
             commands.extend(cmds);
         }
 
-        let summary = self
-            .reverse_parser
-            .commands_to_nl(&commands)
-            .await?;
+        let summary = self.reverse_parser.commands_to_nl(&commands).await?;
 
         let cmd_values: Vec<serde_json::Value> = commands
             .iter()
             .map(|c| serde_json::to_value(c).unwrap_or_default())
             .collect();
 
-        self.session_manager.add_assistant_message(&session_id, &summary);
+        self.session_manager
+            .add_assistant_message(&session_id, &summary);
 
         Ok(AmirChatResponse {
             session_id,
@@ -197,8 +204,7 @@ pub struct AmirConfig {
 impl AmirConfig {
     /// 从环境变量创建配置
     pub fn from_env() -> Result<Self, AmirError> {
-        let provider = std::env::var("AMIR_PROVIDER")
-            .unwrap_or_else(|_| "mock".to_string());
+        let provider = std::env::var("AMIR_PROVIDER").unwrap_or_else(|_| "mock".to_string());
 
         Ok(Self {
             provider,

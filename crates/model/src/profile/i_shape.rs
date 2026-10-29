@@ -21,24 +21,72 @@ pub fn i_section(
     let hw = width / 2.0;
     let tw2 = web_thickness / 2.0;
     let tf = flange_thickness;
-    let y1 = hh;                    // top flange top
-    let y2 = hh - tf;               // top flange bottom
-    let y3 = -hh + tf;              // bottom flange top
-    let y4 = -hh;                   // bottom flange bottom
+    let y1 = hh; // top flange top
+    let y2 = hh - tf; // top flange bottom
+    let y3 = -hh + tf; // bottom flange top
+    let y4 = -hh; // bottom flange bottom
 
     vec![
-        c::Point3D { x: -hw, y: y1, z: 0.0 },
-        c::Point3D { x:  hw, y: y1, z: 0.0 },
-        c::Point3D { x:  hw, y: y2, z: 0.0 },
-        c::Point3D { x:  tw2, y: y2, z: 0.0 },
-        c::Point3D { x:  tw2, y: y3, z: 0.0 },
-        c::Point3D { x:  hw, y: y3, z: 0.0 },
-        c::Point3D { x:  hw, y: y4, z: 0.0 },
-        c::Point3D { x: -hw, y: y4, z: 0.0 },
-        c::Point3D { x: -hw, y: y3, z: 0.0 },
-        c::Point3D { x: -tw2, y: y3, z: 0.0 },
-        c::Point3D { x: -tw2, y: y2, z: 0.0 },
-        c::Point3D { x: -hw, y: y2, z: 0.0 },
+        c::Point3D {
+            x: -hw,
+            y: y1,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y1,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: tw2,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: tw2,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y4,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: y4,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -tw2,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -tw2,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: y2,
+            z: 0.0,
+        },
     ]
 }
 

@@ -16,11 +16,8 @@ pub trait LlmProvider: Send + Sync {
     ) -> Result<serde_json::Value, AmirError>;
 
     /// 请求自由文本输出
-    async fn completion(
-        &self,
-        system_prompt: &str,
-        user_prompt: &str,
-    ) -> Result<String, AmirError>;
+    async fn completion(&self, system_prompt: &str, user_prompt: &str)
+        -> Result<String, AmirError>;
 
     /// 供应商名称
     fn provider_name(&self) -> &str;
@@ -58,7 +55,11 @@ impl LlmProvider for RetryProvider {
     ) -> Result<serde_json::Value, AmirError> {
         let mut last_err = None;
         for attempt in 0..=self.max_retries {
-            match self.inner.structured_completion(system_prompt, user_prompt).await {
+            match self
+                .inner
+                .structured_completion(system_prompt, user_prompt)
+                .await
+            {
                 Ok(val) => return Ok(val),
                 Err(e) => {
                     // 仅重试网络类错误，解析/配置错误直接透传
@@ -111,10 +112,12 @@ pub fn create_provider(config: &ProviderConfig) -> Result<Box<dyn LlmProvider>, 
         "openai" => Box::new(openai::OpenAiProvider::new(config)),
         "anthropic" => Box::new(anthropic::AnthropicProvider::new(config)),
         "mock" => Box::new(mock::MockProvider::new()),
-        _ => return Err(AmirError::ProviderNotConfigured(format!(
-            "Unknown provider '{}'. Supported: openai, anthropic, mock",
-            config.provider
-        ))),
+        _ => {
+            return Err(AmirError::ProviderNotConfigured(format!(
+                "Unknown provider '{}'. Supported: openai, anthropic, mock",
+                config.provider
+            )))
+        }
     };
     // mock provider 不需要重试
     if config.provider == "mock" {

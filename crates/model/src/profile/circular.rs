@@ -102,7 +102,8 @@ mod tests {
         let pts = annulus(50.0, 40.0, 32);
         assert!(pts.len() > 32);
         let d = ((pts[0].x - pts[pts.len() - 1].x).powi(2)
-            + (pts[0].y - pts[pts.len() - 1].y).powi(2)).sqrt();
+            + (pts[0].y - pts[pts.len() - 1].y).powi(2))
+        .sqrt();
         assert!(d < 1e-10);
     }
 

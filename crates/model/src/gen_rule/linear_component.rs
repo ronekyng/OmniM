@@ -18,8 +18,8 @@
 //! 见 layer_extrusion.rs）；DN、弯头、地形目标是 Linear 语义，禁止进入
 //! Surface 家族。跨类组合一律先过 `gen_rule::matrix::authorize`。
 
-use omnim_core as c;
 use c::{FaceIndices, MeshGeometry, Point2D, Point3D, Vector3D};
+use omnim_core as c;
 
 /// 截面形状
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -73,8 +73,16 @@ impl Default for LinearComponentInput {
     fn default() -> Self {
         Self {
             alignment: vec![
-                Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                Point3D { x: 10.0, y: 0.0, z: 0.0 },
+                Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3D {
+                    x: 10.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             ],
             cross_sections: vec![CrossSectionAtStation {
                 station: 0.0,
@@ -128,10 +136,27 @@ pub fn generate(input: &LinearComponentInput) -> MeshGeometry {
 
             match cs.shape {
                 CrossSectionShape::Rectangular => {
-                    generate_rectangular_ring(pt, &forward, &right, &up, &cs, &mut vertices, &mut normals);
+                    generate_rectangular_ring(
+                        pt,
+                        &forward,
+                        &right,
+                        &up,
+                        &cs,
+                        &mut vertices,
+                        &mut normals,
+                    );
                 }
                 CrossSectionShape::Circular => {
-                    generate_circular_ring(pt, &forward, &right, &up, &cs, input.ring_segments, &mut vertices, &mut normals);
+                    generate_circular_ring(
+                        pt,
+                        &forward,
+                        &right,
+                        &up,
+                        &cs,
+                        input.ring_segments,
+                        &mut vertices,
+                        &mut normals,
+                    );
                 }
             }
         }
@@ -163,8 +188,12 @@ pub fn generate(input: &LinearComponentInput) -> MeshGeometry {
                     let b = prev_base + nxt as i32;
                     let c = curr_base + j as i32;
                     let d = curr_base + nxt as i32;
-                    faces.push(FaceIndices { vertex_indices: vec![a, c, d] });
-                    faces.push(FaceIndices { vertex_indices: vec![a, d, b] });
+                    faces.push(FaceIndices {
+                        vertex_indices: vec![a, c, d],
+                    });
+                    faces.push(FaceIndices {
+                        vertex_indices: vec![a, d, b],
+                    });
                 }
 
                 // 生成 UV
@@ -180,7 +209,9 @@ pub fn generate(input: &LinearComponentInput) -> MeshGeometry {
     }
 
     // 两端加盖
-    if let (Some(first_layer_starts), Some(last_layer_starts)) = (ring_starts.first(), ring_starts.last()) {
+    if let (Some(first_layer_starts), Some(last_layer_starts)) =
+        (ring_starts.first(), ring_starts.last())
+    {
         for layer_idx in 0..max_layers(&input.cross_sections) {
             if layer_idx >= first_layer_starts.len() || layer_idx >= last_layer_starts.len() {
                 break;
@@ -194,8 +225,22 @@ pub fn generate(input: &LinearComponentInput) -> MeshGeometry {
                 CrossSectionShape::Circular => {
                     // 圆形端盖：以环中心为顶点的扇形
                     let verts_per_ring = input.ring_segments;
-                    cap_circular_end(first_layer_starts[layer_idx], verts_per_ring, &mut vertices, &mut normals, &mut faces, true);
-                    cap_circular_end(last_layer_starts[layer_idx], verts_per_ring, &mut vertices, &mut normals, &mut faces, false);
+                    cap_circular_end(
+                        first_layer_starts[layer_idx],
+                        verts_per_ring,
+                        &mut vertices,
+                        &mut normals,
+                        &mut faces,
+                        true,
+                    );
+                    cap_circular_end(
+                        last_layer_starts[layer_idx],
+                        verts_per_ring,
+                        &mut vertices,
+                        &mut normals,
+                        &mut faces,
+                        false,
+                    );
                 }
             }
         }
@@ -224,10 +269,10 @@ fn generate_rectangular_ring(
 
     // 4 个角点：顺序为 左下、右下、右上、左上（沿环方向）
     let corners = [
-        (-hw, -ht),  // 左下
-        ( hw, -ht),  // 右下
-        ( hw,  ht),  // 右上
-        (-hw,  ht),  // 左上
+        (-hw, -ht), // 左下
+        (hw, -ht),  // 右下
+        (hw, ht),   // 右上
+        (-hw, ht),  // 左上
     ];
 
     for (dx, dy) in &corners {
@@ -245,10 +290,16 @@ fn generate_rectangular_ring(
         let len = (out_dir.x * out_dir.x + out_dir.y * out_dir.y + out_dir.z * out_dir.z).sqrt();
         if len > 1e-10 {
             normals.push(Vector3D {
-                x: out_dir.x / len, y: out_dir.y / len, z: out_dir.z / len,
+                x: out_dir.x / len,
+                y: out_dir.y / len,
+                z: out_dir.z / len,
             });
         } else {
-            normals.push(Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+            normals.push(Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            });
         }
     }
 }
@@ -287,7 +338,11 @@ fn generate_circular_ring(
         let ny = right.y * (lx / n_len) + up.y * (ly / n_len);
         let nz = right.z * (lx / n_len) + up.z * (ly / n_len);
         let n_mag = (nx * nx + ny * ny + nz * nz).sqrt().max(1e-10);
-        normals.push(Vector3D { x: nx / n_mag, y: ny / n_mag, z: nz / n_mag });
+        normals.push(Vector3D {
+            x: nx / n_mag,
+            y: ny / n_mag,
+            z: nz / n_mag,
+        });
     }
 }
 
@@ -295,12 +350,20 @@ fn generate_circular_ring(
 fn cap_rectangular_end(base: i32, faces: &mut Vec<FaceIndices>, is_start: bool) {
     if is_start {
         // 起点端面（朝向 -forward）
-        faces.push(FaceIndices { vertex_indices: vec![base, base + 1, base + 2] });
-        faces.push(FaceIndices { vertex_indices: vec![base, base + 2, base + 3] });
+        faces.push(FaceIndices {
+            vertex_indices: vec![base, base + 1, base + 2],
+        });
+        faces.push(FaceIndices {
+            vertex_indices: vec![base, base + 2, base + 3],
+        });
     } else {
         // 终点端面（朝向 +forward）
-        faces.push(FaceIndices { vertex_indices: vec![base, base + 2, base + 1] });
-        faces.push(FaceIndices { vertex_indices: vec![base, base + 3, base + 2] });
+        faces.push(FaceIndices {
+            vertex_indices: vec![base, base + 2, base + 1],
+        });
+        faces.push(FaceIndices {
+            vertex_indices: vec![base, base + 3, base + 2],
+        });
     }
 }
 
@@ -325,7 +388,11 @@ fn cap_circular_end(
     };
 
     // 计算端面法线（基于环上三角面）
-    let mut nml = Vector3D { x: 0.0, y: 0.0, z: 0.0 };
+    let mut nml = Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     if ring_verts.len() >= 3 {
         let e1 = &ring_verts[1];
         let e2 = &ring_verts[2];
@@ -338,10 +405,16 @@ fn cap_circular_end(
         nml.x = ey * fz - ez * fy;
         nml.y = ez * fx - ex * fz;
         nml.z = ex * fy - ey * fx;
-        let len = (nml.x * nml.x + nml.y * nml.y + nml.z * nml.z).sqrt().max(1e-10);
-        nml.x /= len; nml.y /= len; nml.z /= len;
+        let len = (nml.x * nml.x + nml.y * nml.y + nml.z * nml.z)
+            .sqrt()
+            .max(1e-10);
+        nml.x /= len;
+        nml.y /= len;
+        nml.z /= len;
         if !is_start {
-            nml.x = -nml.x; nml.y = -nml.y; nml.z = -nml.z;
+            nml.x = -nml.x;
+            nml.y = -nml.y;
+            nml.z = -nml.z;
         }
     }
 
@@ -356,9 +429,13 @@ fn cap_circular_end(
         let a = base as i32 + i as i32;
         let b = base as i32 + nxt as i32;
         if is_start {
-            faces.push(FaceIndices { vertex_indices: vec![a, b, center_idx] });
+            faces.push(FaceIndices {
+                vertex_indices: vec![a, b, center_idx],
+            });
         } else {
-            faces.push(FaceIndices { vertex_indices: vec![a, center_idx, b] });
+            faces.push(FaceIndices {
+                vertex_indices: vec![a, center_idx, b],
+            });
         }
     }
 }
@@ -369,7 +446,11 @@ fn max_layers(css: &[CrossSectionAtStation]) -> usize {
 }
 
 /// 根据 t 插值指定层的截面参数
-fn interpolate_cross_section_layer(css: &[CrossSectionAtStation], t: f64, layer_idx: usize) -> CrossSectionLayer {
+fn interpolate_cross_section_layer(
+    css: &[CrossSectionAtStation],
+    t: f64,
+    layer_idx: usize,
+) -> CrossSectionLayer {
     if css.is_empty() {
         return default_layer();
     }
@@ -378,7 +459,11 @@ fn interpolate_cross_section_layer(css: &[CrossSectionAtStation], t: f64, layer_
     let lo = find_segment(css, t);
 
     let cs_lo = &css[lo];
-    let cs_hi = if lo + 1 < css.len() { &css[lo + 1] } else { &css[lo] };
+    let cs_hi = if lo + 1 < css.len() {
+        &css[lo + 1]
+    } else {
+        &css[lo]
+    };
 
     let range = cs_hi.station - cs_lo.station;
     let local_t = if range > 1e-10 {
@@ -395,7 +480,8 @@ fn interpolate_cross_section_layer(css: &[CrossSectionAtStation], t: f64, layer_
             name: l0.name.clone(),
             shape: l0.shape,
             default_width: l0.default_width + (l1.default_width - l0.default_width) * local_t,
-            default_thickness: l0.default_thickness + (l1.default_thickness - l0.default_thickness) * local_t,
+            default_thickness: l0.default_thickness
+                + (l1.default_thickness - l0.default_thickness) * local_t,
             material_id: l0.material_id.clone(),
             function: l0.function.clone(),
         },
@@ -488,9 +574,21 @@ fn find_segment_by_length(lengths: &[f64], target: f64) -> usize {
 /// 计算 Frenet 坐标系（forward, right, up）
 fn compute_frenet_frame(path: &[Point3D], idx: usize, _t: f64) -> (Vector3D, Vector3D, Vector3D) {
     let n = path.len();
-    let default_forward = Vector3D { x: 1.0, y: 0.0, z: 0.0 };
-    let default_right = Vector3D { x: 0.0, y: 1.0, z: 0.0 };
-    let default_up = Vector3D { x: 0.0, y: 0.0, z: 1.0 };
+    let default_forward = Vector3D {
+        x: 1.0,
+        y: 0.0,
+        z: 0.0,
+    };
+    let default_right = Vector3D {
+        x: 0.0,
+        y: 1.0,
+        z: 0.0,
+    };
+    let default_up = Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
 
     if n < 2 {
         return (default_forward, default_right, default_up);
@@ -511,19 +609,31 @@ fn compute_frenet_frame(path: &[Point3D], idx: usize, _t: f64) -> (Vector3D, Vec
     let len = (dx * dx + dy * dy + dz * dz).sqrt();
 
     let forward = if len > 1e-10 {
-        Vector3D { x: dx / len, y: dy / len, z: dz / len }
+        Vector3D {
+            x: dx / len,
+            y: dy / len,
+            z: dz / len,
+        }
     } else {
         default_forward
     };
 
     // Right = cross(forward, world_up)
-    let world_up = Vector3D { x: 0.0, y: 0.0, z: 1.0 };
+    let world_up = Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    };
 
     // 处理 forward 平行于 world_up 的情况
     let f_up_dot = forward.x * world_up.x + forward.y * world_up.y + forward.z * world_up.z;
     let right = if f_up_dot.abs() > 0.999 {
         // forward 与 world_up 平行，使用 world_right 作为替代
-        Vector3D { x: 0.0, y: 1.0, z: 0.0 }
+        Vector3D {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        }
     } else {
         let r = cross(&forward, &world_up);
         v3_normalize(&r)
@@ -542,9 +652,17 @@ fn v3_magnitude(v: &Vector3D) -> f64 {
 fn v3_normalize(v: &Vector3D) -> Vector3D {
     let m = v3_magnitude(v);
     if m > 1e-10 {
-        Vector3D { x: v.x / m, y: v.y / m, z: v.z / m }
+        Vector3D {
+            x: v.x / m,
+            y: v.y / m,
+            z: v.z / m,
+        }
     } else {
-        Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+        Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        }
     }
 }
 
@@ -568,15 +686,23 @@ fn cross(a: &Vector3D, b: &Vector3D) -> Vector3D {
 pub fn build_pipe(length: f64, radius: f64, segments: usize) -> MeshGeometry {
     let input = LinearComponentInput {
         alignment: vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: length, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: length,
+                y: 0.0,
+                z: 0.0,
+            },
         ],
         cross_sections: vec![CrossSectionAtStation {
             station: 0.0,
             layers: vec![CrossSectionLayer {
                 name: "Pipe".into(),
                 shape: CrossSectionShape::Circular,
-                default_width: radius * 2.0,  // 直径
+                default_width: radius * 2.0, // 直径
                 default_thickness: 0.0,
                 material_id: None,
                 function: "pipe".into(),
@@ -594,12 +720,25 @@ pub fn build_pipe(length: f64, radius: f64, segments: usize) -> MeshGeometry {
 /// - inner_radius: 内管半径
 /// - insulation_thickness: 保温层厚度
 /// - segments: 分段数
-pub fn build_insulated_pipe(length: f64, inner_radius: f64, insulation_thickness: f64, segments: usize) -> MeshGeometry {
+pub fn build_insulated_pipe(
+    length: f64,
+    inner_radius: f64,
+    insulation_thickness: f64,
+    segments: usize,
+) -> MeshGeometry {
     let outer_radius = inner_radius + insulation_thickness;
     let input = LinearComponentInput {
         alignment: vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: length, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: length,
+                y: 0.0,
+                z: 0.0,
+            },
         ],
         cross_sections: vec![CrossSectionAtStation {
             station: 0.0,
@@ -635,11 +774,25 @@ pub fn build_insulated_pipe(length: f64, inner_radius: f64, insulation_thickness
 /// - base_thickness: 路基厚度
 /// - surface_thickness: 面层厚度
 /// - segments: 分段数
-pub fn build_road(length: f64, width: f64, base_thickness: f64, surface_thickness: f64, segments: usize) -> MeshGeometry {
+pub fn build_road(
+    length: f64,
+    width: f64,
+    base_thickness: f64,
+    surface_thickness: f64,
+    segments: usize,
+) -> MeshGeometry {
     let input = LinearComponentInput {
         alignment: vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: length, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: length,
+                y: 0.0,
+                z: 0.0,
+            },
         ],
         cross_sections: vec![CrossSectionAtStation {
             station: 0.0,
@@ -676,8 +829,16 @@ pub fn build_road(length: f64, width: f64, base_thickness: f64, surface_thicknes
 pub fn build_beam(length: f64, width: f64, depth: f64) -> MeshGeometry {
     let input = LinearComponentInput {
         alignment: vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: length, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: length,
+                y: 0.0,
+                z: 0.0,
+            },
         ],
         cross_sections: vec![CrossSectionAtStation {
             station: 0.0,
@@ -701,11 +862,25 @@ pub fn build_beam(length: f64, width: f64, depth: f64) -> MeshGeometry {
 /// - length: 梁长
 /// - start_width, start_depth: 起点截面
 /// - end_width, end_depth: 终点截面
-pub fn build_tapered_beam(length: f64, start_width: f64, start_depth: f64, end_width: f64, end_depth: f64) -> MeshGeometry {
+pub fn build_tapered_beam(
+    length: f64,
+    start_width: f64,
+    start_depth: f64,
+    end_width: f64,
+    end_depth: f64,
+) -> MeshGeometry {
     let input = LinearComponentInput {
         alignment: vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: length, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: length,
+                y: 0.0,
+                z: 0.0,
+            },
         ],
         cross_sections: vec![
             CrossSectionAtStation {
@@ -772,29 +947,46 @@ pub fn build_guide_line(alignment: &[Point3D], diameter: f64, segments: usize) -
 /// - width: 路面宽度
 /// - thickness: 路面总厚（内部还是按 70% 路基 + 30% 面层拆分）
 /// - segments: 每段的采样分段数
-pub fn build_road_alignment(alignment: &[[f64; 3]], width: f64, thickness: f64, segments: usize) -> MeshGeometry {
-    let meshes: Vec<MeshGeometry> = alignment.windows(2).map(|w| {
-        let (a, b) = (w[0], w[1]);
-        let dx = b[0] - a[0];
-        let dy = b[1] - a[1];
-        let len = (dx * dx + dy * dy).sqrt();
-        if len < 1e-9 {
-            return crate::geometry::merge_meshes(&[]);
-        }
-        let seg = build_road(len, width, thickness * 0.7, thickness * 0.3, segments);
-        // 段方向角绕 Z 旋转（不取半角：build_road 的网格从原点沿 +X 延伸 0..len），
-        // 再平移到段起点，z 取段起点拾取高程
-        let angle = dy.atan2(dx);
-        let half = angle / 2.0;
-        let (sin_h, cos_h) = half.sin_cos();
-        let t = c::Transform {
-            translation: Some(Point3D { x: a[0], y: a[1], z: a[2] }),
-            rotation: Some(c::Rotation { x: 0.0, y: 0.0, z: sin_h, w: cos_h }),
-            scale: None,
-            matrix: Vec::new(),
-        };
-        crate::geometry::transform_mesh(&seg, &t)
-    }).collect();
+pub fn build_road_alignment(
+    alignment: &[[f64; 3]],
+    width: f64,
+    thickness: f64,
+    segments: usize,
+) -> MeshGeometry {
+    let meshes: Vec<MeshGeometry> = alignment
+        .windows(2)
+        .map(|w| {
+            let (a, b) = (w[0], w[1]);
+            let dx = b[0] - a[0];
+            let dy = b[1] - a[1];
+            let len = (dx * dx + dy * dy).sqrt();
+            if len < 1e-9 {
+                return crate::geometry::merge_meshes(&[]);
+            }
+            let seg = build_road(len, width, thickness * 0.7, thickness * 0.3, segments);
+            // 段方向角绕 Z 旋转（不取半角：build_road 的网格从原点沿 +X 延伸 0..len），
+            // 再平移到段起点，z 取段起点拾取高程
+            let angle = dy.atan2(dx);
+            let half = angle / 2.0;
+            let (sin_h, cos_h) = half.sin_cos();
+            let t = c::Transform {
+                translation: Some(Point3D {
+                    x: a[0],
+                    y: a[1],
+                    z: a[2],
+                }),
+                rotation: Some(c::Rotation {
+                    x: 0.0,
+                    y: 0.0,
+                    z: sin_h,
+                    w: cos_h,
+                }),
+                scale: None,
+                matrix: Vec::new(),
+            };
+            crate::geometry::transform_mesh(&seg, &t)
+        })
+        .collect();
     crate::geometry::merge_meshes(&meshes)
 }
 
@@ -822,8 +1014,16 @@ mod tests {
     #[test]
     fn test_interpolate_path() {
         let pts = vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 10.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ];
         let sampled = interpolate_path(&pts, 4);
         assert_eq!(sampled.len(), 5);
@@ -833,9 +1033,21 @@ mod tests {
     #[test]
     fn test_curved_path() {
         let pts = vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 5.0, y: 5.0, z: 0.0 },
-            Point3D { x: 10.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 5.0,
+                y: 5.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ];
         let input = LinearComponentInput {
             alignment: pts,
@@ -851,8 +1063,16 @@ mod tests {
     fn test_variable_cross_section() {
         let input = LinearComponentInput {
             alignment: vec![
-                Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                Point3D { x: 20.0, y: 0.0, z: 0.0 },
+                Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3D {
+                    x: 20.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             ],
             cross_sections: vec![
                 CrossSectionAtStation {
@@ -885,15 +1105,29 @@ mod tests {
         assert!(!mesh.vertices.is_empty());
 
         // 验证变截面：起点和终点的宽度应不同
-        let max_x = mesh.vertices.iter().map(|v| v.x).fold(f64::NEG_INFINITY, f64::max);
-        let min_x = mesh.vertices.iter().map(|v| v.x).fold(f64::INFINITY, f64::min);
+        let max_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let min_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::INFINITY, f64::min);
         // 找到起点截面（x ≈ min_x）的顶点 Y 范围
-        let start_ys: Vec<f64> = mesh.vertices.iter()
+        let start_ys: Vec<f64> = mesh
+            .vertices
+            .iter()
             .filter(|v| (v.x - min_x).abs() < 0.1)
-            .map(|v| v.y).collect();
-        let end_ys: Vec<f64> = mesh.vertices.iter()
+            .map(|v| v.y)
+            .collect();
+        let end_ys: Vec<f64> = mesh
+            .vertices
+            .iter()
             .filter(|v| (v.x - max_x).abs() < 0.1)
-            .map(|v| v.y).collect();
+            .map(|v| v.y)
+            .collect();
         if !start_ys.is_empty() && !end_ys.is_empty() {
             let s_max = start_ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             let s_min = start_ys.iter().copied().fold(f64::INFINITY, f64::min);
@@ -901,7 +1135,12 @@ mod tests {
             let e_min = end_ys.iter().copied().fold(f64::INFINITY, f64::min);
             let s_w = s_max - s_min;
             let e_w = e_max - e_min;
-            assert!(e_w > s_w, "end width {} should be > start width {}", e_w, s_w);
+            assert!(
+                e_w > s_w,
+                "end width {} should be > start width {}",
+                e_w,
+                s_w
+            );
         }
     }
 
@@ -911,14 +1150,22 @@ mod tests {
         // 确保生成的是圆形截面：检查所有顶点到中心轴的距离 ≈ radius
         // 取中间截面的顶点
         let mid_x = 2.5;
-        let ring_verts: Vec<&Point3D> = mesh.vertices.iter()
+        let ring_verts: Vec<&Point3D> = mesh
+            .vertices
+            .iter()
             .filter(|v| (v.x - mid_x).abs() < 0.1)
             .collect();
         if ring_verts.len() >= 4 {
-            let avg_radius: f64 = ring_verts.iter()
+            let avg_radius: f64 = ring_verts
+                .iter()
                 .map(|v| (v.y * v.y + v.z * v.z).sqrt())
-                .sum::<f64>() / ring_verts.len() as f64;
-            assert!((avg_radius - 1.0).abs() < 0.2, "pipe radius should be ~1.0, got {}", avg_radius);
+                .sum::<f64>()
+                / ring_verts.len() as f64;
+            assert!(
+                (avg_radius - 1.0).abs() < 0.2,
+                "pipe radius should be ~1.0, got {}",
+                avg_radius
+            );
         }
     }
 
@@ -928,8 +1175,10 @@ mod tests {
         assert!(!mesh.vertices.is_empty());
         // 双层管道应比单层有更多顶点
         let single = build_pipe(3.0, 0.5, 8);
-        assert!(mesh.vertices.len() > single.vertices.len(),
-            "insulated pipe should have more vertices than single pipe");
+        assert!(
+            mesh.vertices.len() > single.vertices.len(),
+            "insulated pipe should have more vertices than single pipe"
+        );
     }
 
     #[test]
@@ -937,18 +1186,39 @@ mod tests {
         let mesh = build_tapered_beam(4.0, 0.3, 0.5, 0.5, 0.8);
         assert!(!mesh.vertices.is_empty());
         // 验证两端宽度不同
-        let max_x = mesh.vertices.iter().map(|v| v.x).fold(f64::NEG_INFINITY, f64::max);
-        let min_x = mesh.vertices.iter().map(|v| v.x).fold(f64::INFINITY, f64::min);
-        let start_ys: Vec<f64> = mesh.vertices.iter()
+        let max_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let min_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::INFINITY, f64::min);
+        let start_ys: Vec<f64> = mesh
+            .vertices
+            .iter()
             .filter(|v| (v.x - min_x).abs() < 0.1)
-            .map(|v| v.y).collect();
-        let end_ys: Vec<f64> = mesh.vertices.iter()
+            .map(|v| v.y)
+            .collect();
+        let end_ys: Vec<f64> = mesh
+            .vertices
+            .iter()
             .filter(|v| (v.x - max_x).abs() < 0.1)
-            .map(|v| v.y).collect();
+            .map(|v| v.y)
+            .collect();
         if !start_ys.is_empty() && !end_ys.is_empty() {
-            let s_w = start_ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) - start_ys.iter().copied().fold(f64::INFINITY, f64::min);
-            let e_w = end_ys.iter().copied().fold(f64::NEG_INFINITY, f64::max) - end_ys.iter().copied().fold(f64::INFINITY, f64::min);
-            assert!(e_w > s_w, "end width {} should be > start width {} for tapered beam", e_w, s_w);
+            let s_w = start_ys.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+                - start_ys.iter().copied().fold(f64::INFINITY, f64::min);
+            let e_w = end_ys.iter().copied().fold(f64::NEG_INFINITY, f64::max)
+                - end_ys.iter().copied().fold(f64::INFINITY, f64::min);
+            assert!(
+                e_w > s_w,
+                "end width {} should be > start width {} for tapered beam",
+                e_w,
+                s_w
+            );
         }
     }
 
@@ -957,8 +1227,16 @@ mod tests {
         // 测试垂直方向路径（如竖管或桥墩）
         let input = LinearComponentInput {
             alignment: vec![
-                Point3D { x: 0.0, y: 0.0, z: 0.0 },
-                Point3D { x: 0.0, y: 0.0, z: 10.0 },
+                Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 10.0,
+                },
             ],
             cross_sections: vec![CrossSectionAtStation {
                 station: 0.0,
@@ -983,52 +1261,131 @@ mod tests {
     fn test_guide_line_n_point_path() {
         // N 点折线路径的特征线：应沿每一段生成管状几何
         let path = vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 5.0, y: 0.0, z: 0.0 },
-            Point3D { x: 5.0, y: 5.0, z: 0.0 },
-            Point3D { x: 10.0, y: 5.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 5.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 5.0,
+                y: 5.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 10.0,
+                y: 5.0,
+                z: 0.0,
+            },
         ];
         // 用足够多的分段采样，使某环落在折点 (5,0) 附近
         let mesh = build_guide_line(&path, 0.05, 64);
         assert!(!mesh.vertices.is_empty());
         // 折点附近 (5,0) 应有顶点落在附近
-        let has_near = |x: f64, y: f64| mesh.vertices.iter().any(|v| (v.x - x).abs() < 0.3 && (v.y - y).abs() < 0.3);
-        assert!(has_near(5.0, 0.0), "corner point (5,0) area should have vertices");
-        assert!(has_near(10.0, 5.0), "end point (10,5) area should have vertices");
+        let has_near = |x: f64, y: f64| {
+            mesh.vertices
+                .iter()
+                .any(|v| (v.x - x).abs() < 0.3 && (v.y - y).abs() < 0.3)
+        };
+        assert!(
+            has_near(5.0, 0.0),
+            "corner point (5,0) area should have vertices"
+        );
+        assert!(
+            has_near(10.0, 5.0),
+            "end point (10,5) area should have vertices"
+        );
     }
 
     #[test]
     fn test_road_alignment_3_segments() {
         // B3：3 段折线道路：(0,0)→(3,0)→(3,4)→(8,4)，总段长 3+4+5 = 12
-        let alignment: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0], [3.0, 0.0, 0.0], [3.0, 4.0, 0.0], [8.0, 4.0, 0.0]];
+        let alignment: Vec<[f64; 3]> = vec![
+            [0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0],
+            [3.0, 4.0, 0.0],
+            [8.0, 4.0, 0.0],
+        ];
         let width = 1.0;
         let mesh = build_road_alignment(&alignment, width, 0.3, 6);
         assert!(!mesh.vertices.is_empty());
 
         // bbox 覆盖所有拾取点的 xy（含宽度方向的半宽补偿）
-        let min_x = mesh.vertices.iter().map(|v| v.x).fold(f64::INFINITY, f64::min);
-        let max_x = mesh.vertices.iter().map(|v| v.x).fold(f64::NEG_INFINITY, f64::max);
-        let min_y = mesh.vertices.iter().map(|v| v.y).fold(f64::INFINITY, f64::min);
-        let max_y = mesh.vertices.iter().map(|v| v.y).fold(f64::NEG_INFINITY, f64::max);
-        assert!(min_x <= 0.0 + 1e-6 && max_x >= 8.0 - 1e-6, "bbox x [{}, {}] should span 0..8", min_x, max_x);
-        assert!(min_y <= 0.0 - width / 2.0 + 1e-6, "bbox y min should reach -width/2, got {}", min_y);
-        assert!(max_y >= 4.0 + width / 2.0 - 1e-6, "bbox y max should reach 4 + width/2, got {}", max_y);
+        let min_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::INFINITY, f64::min);
+        let max_x = mesh
+            .vertices
+            .iter()
+            .map(|v| v.x)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let min_y = mesh
+            .vertices
+            .iter()
+            .map(|v| v.y)
+            .fold(f64::INFINITY, f64::min);
+        let max_y = mesh
+            .vertices
+            .iter()
+            .map(|v| v.y)
+            .fold(f64::NEG_INFINITY, f64::max);
+        assert!(
+            min_x <= 0.0 + 1e-6 && max_x >= 8.0 - 1e-6,
+            "bbox x [{}, {}] should span 0..8",
+            min_x,
+            max_x
+        );
+        assert!(
+            min_y <= 0.0 - width / 2.0 + 1e-6,
+            "bbox y min should reach -width/2, got {}",
+            min_y
+        );
+        assert!(
+            max_y >= 4.0 + width / 2.0 - 1e-6,
+            "bbox y max should reach 4 + width/2, got {}",
+            max_y
+        );
 
         // 折点 (3,0) 与 (3,4) 附近应有顶点（逐段生成，而非单一跨距长条）
-        let has_near = |x: f64, y: f64| mesh.vertices.iter().any(|v| (v.x - x).abs() < 0.55 && (v.y - y).abs() < 0.55);
-        assert!(has_near(3.0, 0.0), "corner (3,0) should be covered by per-segment meshes");
-        assert!(has_near(3.0, 4.0), "corner (3,4) should be covered by per-segment meshes");
+        let has_near = |x: f64, y: f64| {
+            mesh.vertices
+                .iter()
+                .any(|v| (v.x - x).abs() < 0.55 && (v.y - y).abs() < 0.55)
+        };
+        assert!(
+            has_near(3.0, 0.0),
+            "corner (3,0) should be covered by per-segment meshes"
+        );
+        assert!(
+            has_near(3.0, 4.0),
+            "corner (3,4) should be covered by per-segment meshes"
+        );
 
         // 每段按段角旋转：第二段沿 +Y 方向，其延长后的顶点分布应体现旋转
         // （若恒等旋转，第二段会沿 +X 而非 +Y）
-        let verts_y_gap = mesh.vertices.iter().any(|v| v.y > 3.0 && v.y < 4.0 && (v.x - 3.0).abs() < 0.6);
-        assert!(verts_y_gap, "second segment should extend along +Y (rotated), not +X");
+        let verts_y_gap = mesh
+            .vertices
+            .iter()
+            .any(|v| v.y > 3.0 && v.y < 4.0 && (v.x - 3.0).abs() < 0.6);
+        assert!(
+            verts_y_gap,
+            "second segment should extend along +Y (rotated), not +X"
+        );
 
         // 顶点数应等于逐直线段 hex 数之和（3 段均非退化 → 3 × build_road）
         let single = build_road(3.0, width, 0.3 * 0.7, 0.3 * 0.3, 6);
-        assert!(mesh.vertices.len() >= 3 * single.vertices.len() - 8,
+        assert!(
+            mesh.vertices.len() >= 3 * single.vertices.len() - 8,
             "alignment mesh should contain all per-segment rings: {} vs 3×{}",
-            mesh.vertices.len(), single.vertices.len());
+            mesh.vertices.len(),
+            single.vertices.len()
+        );
     }
 
     #[test]
@@ -1039,7 +1396,15 @@ mod tests {
         let zs: Vec<f64> = mesh.vertices.iter().map(|v| v.z).collect();
         let min_z = zs.iter().cloned().fold(f64::INFINITY, f64::min);
         let max_z = zs.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-        assert!(min_z > 4.0 - 0.3, "min z should reflect segment start elevations, got {}", min_z);
-        assert!(max_z < 7.0 + 0.3, "max z should reflect last segment start elevation, got {}", max_z);
+        assert!(
+            min_z > 4.0 - 0.3,
+            "min z should reflect segment start elevations, got {}",
+            min_z
+        );
+        assert!(
+            max_z < 7.0 + 0.3,
+            "max z should reflect last segment start elevation, got {}",
+            max_z
+        );
     }
 }

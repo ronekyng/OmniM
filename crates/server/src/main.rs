@@ -8,18 +8,18 @@ use tokio::sync::RwLock;
 const DEFAULT_PROJECT_FILE: &str = "project.omnim";
 
 fn init_library() {
-    let lib_path = dirs::home_dir()
-        .map(|p| p.join(".omnim").join("library.omnimlib"));
+    let lib_path = dirs::home_dir().map(|p| p.join(".omnim").join("library.omnimlib"));
 
     let library = match &lib_path {
-        Some(p) if p.exists() => {
-            Library::load_from_file(p.to_str().unwrap())
-                .unwrap_or_else(|e| {
-                    eprintln!("Warning: failed to load library from {}: {}", p.display(), e);
-                    eprintln!("Falling back to built-in seeded library.");
-                    Library::seeded()
-                })
-        }
+        Some(p) if p.exists() => Library::load_from_file(p.to_str().unwrap()).unwrap_or_else(|e| {
+            eprintln!(
+                "Warning: failed to load library from {}: {}",
+                p.display(),
+                e
+            );
+            eprintln!("Falling back to built-in seeded library.");
+            Library::seeded()
+        }),
         _ => Library::seeded(),
     };
     *LIBRARY.write().unwrap() = Some(library);
@@ -35,7 +35,10 @@ fn load_or_new(path: &str) -> Project {
 /// OMNIM_EPHEMERAL=1|true|yes → run fully in memory (no file writes).
 fn is_ephemeral() -> bool {
     matches!(
-        env::var("OMNIM_EPHEMERAL").unwrap_or_default().to_lowercase().as_str(),
+        env::var("OMNIM_EPHEMERAL")
+            .unwrap_or_default()
+            .to_lowercase()
+            .as_str(),
         "1" | "true" | "yes"
     )
 }
@@ -43,7 +46,8 @@ fn is_ephemeral() -> bool {
 fn main() {
     init_library();
 
-    let project_file = env::var("OMNIM_PROJECT").unwrap_or_else(|_| DEFAULT_PROJECT_FILE.to_string());
+    let project_file =
+        env::var("OMNIM_PROJECT").unwrap_or_else(|_| DEFAULT_PROJECT_FILE.to_string());
     let proj = load_or_new(&project_file);
 
     let host = env::var("OMNIM_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());

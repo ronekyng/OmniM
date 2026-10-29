@@ -14,7 +14,9 @@ pub struct FeatureTreeRegistry {
 
 impl FeatureTreeRegistry {
     pub fn new() -> Self {
-        Self { templates: HashMap::new() }
+        Self {
+            templates: HashMap::new(),
+        }
     }
 
     pub fn register(&mut self, template: FeatureTreeTemplate) -> String {
@@ -60,7 +62,8 @@ impl FeatureTreeTemplate {
     /// The expression can be a simple parameter name (e.g., "length") or
     /// a formula (e.g., "1.5 * DN").
     pub fn bind(mut self, comp_param: &str, expr: &str) -> Self {
-        self.param_bindings.insert(comp_param.to_string(), expr.to_string());
+        self.param_bindings
+            .insert(comp_param.to_string(), expr.to_string());
         self
     }
 
@@ -119,11 +122,7 @@ impl FeatureTemplateStep {
         }
     }
 
-    pub fn revolve(
-        name: &str,
-        profile_type: ProfileType,
-        angle_expr: &str,
-    ) -> Self {
+    pub fn revolve(name: &str, profile_type: ProfileType, angle_expr: &str) -> Self {
         Self {
             name: name.to_string(),
             feature_type: crate::FeatureType::Revolve,
@@ -132,18 +131,18 @@ impl FeatureTemplateStep {
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: Some(angle_expr.to_string()),
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             boolean_op: None,
             pattern_counts: None,
         }
     }
 
-    pub fn sweep(
-        name: &str,
-        section: ProfileType,
-        path: ProfileType,
-    ) -> Self {
+    pub fn sweep(name: &str, section: ProfileType, path: ProfileType) -> Self {
         Self {
             name: name.to_string(),
             feature_type: crate::FeatureType::Sweep,
@@ -152,18 +151,18 @@ impl FeatureTemplateStep {
             aux_profile_type: Some(path),
             depth_expr: None,
             angle_expr: None,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             boolean_op: None,
             pattern_counts: None,
         }
     }
 
-    pub fn loft(
-        name: &str,
-        profile0: ProfileType,
-        profile1: ProfileType,
-    ) -> Self {
+    pub fn loft(name: &str, profile0: ProfileType, profile1: ProfileType) -> Self {
         Self {
             name: name.to_string(),
             feature_type: crate::FeatureType::Loft,
@@ -172,7 +171,11 @@ impl FeatureTemplateStep {
             aux_profile_type: Some(profile1),
             depth_expr: None,
             angle_expr: None,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             boolean_op: None,
             pattern_counts: None,
@@ -193,7 +196,11 @@ impl FeatureTemplateStep {
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: None,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             is_cut: false,
             boolean_op: None,
             pattern_counts: None,
@@ -210,7 +217,11 @@ impl FeatureTemplateStep {
             aux_profile_type: None,
             depth_expr: None,
             angle_expr: None,
-            direction: c::Vector3D { x: 0.0, y: 0.0, z: 0.0 },
+            direction: c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
             is_cut: op == crate::BooleanOp::Subtract,
             boolean_op: Some(op),
             pattern_counts: None,
@@ -265,7 +276,8 @@ pub fn instantiate_template(
                     step.name
                 ));
             }
-            let orientation = step.path_sweep_orientation
+            let orientation = step
+                .path_sweep_orientation
                 .unwrap_or(crate::gen_rule::path_sweep::SectionOrientation::Vertical);
             // Fail fast on invalid paths (too few points, zero-length
             // segments, degenerate/self-intersecting boundaries) — the same
@@ -293,7 +305,9 @@ pub fn instantiate_template(
                 },
             );
             let fid = feature.id.clone();
-            let obj = project.objects.get_mut(component_id)
+            let obj = project
+                .objects
+                .get_mut(component_id)
                 .ok_or_else(|| format!("component '{}' not found", component_id))?;
             obj.features.push(feature);
             feature_ids.push(fid);
@@ -308,7 +322,10 @@ pub fn instantiate_template(
                     let schedule = params.get("schedule").copied().unwrap_or(0.0);
                     profile::resolve_pipe_schedule_profile(dn, schedule, *segments)
                 }
-                ProfileType::ParametricRect { width_param, height_param } => {
+                ProfileType::ParametricRect {
+                    width_param,
+                    height_param,
+                } => {
                     let width = params.get(width_param).copied().unwrap_or(5000.0);
                     let height = params.get(height_param).copied().unwrap_or(200.0);
                     profile::generate(&ProfileType::Rectangle { width, height })
@@ -329,31 +346,24 @@ pub fn instantiate_template(
         }
 
         // 2. Create feature
-        let resolve = |expr: &str| -> f64 {
-            resolve_param(expr, params)
-        };
+        let resolve = |expr: &str| -> f64 { resolve_param(expr, params) };
 
         let feature = match step.feature_type {
             crate::FeatureType::Extrude => {
                 let depth = step.depth_expr.as_ref().map(|e| resolve(e)).unwrap_or(1.0);
-                let mut f = crate::Feature::new_extrude(
-                    &step.name,
-                    &sketch_id,
-                    depth,
-                    step.direction,
-                );
+                let mut f =
+                    crate::Feature::new_extrude(&step.name, &sketch_id, depth, step.direction);
                 f.is_cut = step.is_cut;
                 f
             }
             crate::FeatureType::Revolve => {
-                let angle_deg = step.angle_expr.as_ref().map(|e| resolve(e)).unwrap_or(360.0);
+                let angle_deg = step
+                    .angle_expr
+                    .as_ref()
+                    .map(|e| resolve(e))
+                    .unwrap_or(360.0);
                 let angle_rad = angle_deg * std::f64::consts::PI / 180.0;
-                let mut f = crate::Feature::new_revolve(
-                    &step.name,
-                    &sketch_id,
-                    "",
-                    angle_rad,
-                );
+                let mut f = crate::Feature::new_revolve(&step.name, &sketch_id, "", angle_rad);
                 f.is_cut = step.is_cut;
                 f
             }
@@ -363,16 +373,18 @@ pub fn instantiate_template(
             }
             crate::FeatureType::Pattern => {
                 let (cx, cy, cz) = step.pattern_counts.unwrap_or((1, 1, 1));
-                let sp = step.depth_expr.as_ref().map(|e| resolve(e)).unwrap_or(100.0);
-                crate::Feature::new_pattern(
-                    &step.name, cx, cy, cz,
-                    sp, sp, 0.0, vec![],
-                )
+                let sp = step
+                    .depth_expr
+                    .as_ref()
+                    .map(|e| resolve(e))
+                    .unwrap_or(100.0);
+                crate::Feature::new_pattern(&step.name, cx, cy, cz, sp, sp, 0.0, vec![])
             }
             crate::FeatureType::Sweep => {
                 let path_sketch_id = if let Some(ref pt) = step.aux_profile_type {
                     let profile = profile::generate(pt);
-                    let sketch = create_profile_sketch(project, &format!("{}_path", step.name), &profile)?;
+                    let sketch =
+                        create_profile_sketch(project, &format!("{}_path", step.name), &profile)?;
                     let sid = sketch.id.clone();
                     project.sketches.insert(sketch);
                     sketch_ids.push(sid.clone());
@@ -387,7 +399,8 @@ pub fn instantiate_template(
             crate::FeatureType::Loft => {
                 let profile1_id = if let Some(ref pt) = step.aux_profile_type {
                     let profile = profile::generate(pt);
-                    let sketch = create_profile_sketch(project, &format!("{}_end", step.name), &profile)?;
+                    let sketch =
+                        create_profile_sketch(project, &format!("{}_end", step.name), &profile)?;
                     let sid = sketch.id.clone();
                     project.sketches.insert(sketch);
                     sketch_ids.push(sid.clone());
@@ -416,8 +429,16 @@ fn create_profile_sketch(
 ) -> Result<omnim_sketch::Sketch, String> {
     let mut sketch = omnim_sketch::Sketch::new(
         name,
-        c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-        c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+        c::Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        },
     );
 
     for i in 0..profile.len() {
@@ -444,9 +465,15 @@ fn create_profile_sketch(
 
     // Mark as solved (profile points are already determined)
     sketch.solved = true;
-    let points: Vec<(usize, usize, c::Point3D)> = sketch.entities.iter().enumerate()
+    let points: Vec<(usize, usize, c::Point3D)> = sketch
+        .entities
+        .iter()
+        .enumerate()
         .flat_map(|(ei, entity)| {
-            entity.points.iter().enumerate()
+            entity
+                .points
+                .iter()
+                .enumerate()
                 .map(move |(pi, pt)| (ei, pi, *pt))
         })
         .collect();
@@ -546,9 +573,21 @@ mod tests {
     fn test_create_profile_sketch_triangle() {
         let mut project = crate::project::Project::new("test");
         let profile = vec![
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 100.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 0.0, y: 100.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 100.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 0.0,
+                y: 100.0,
+                z: 0.0,
+            },
         ];
         let sketch = create_profile_sketch(&mut project, "tri", &profile).unwrap();
         assert!(sketch.solved);
@@ -573,13 +612,23 @@ mod tests {
                     flange_thickness: 9.8,
                 },
                 "length",
-                c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+                c::Vector3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 1.0,
+                },
             ));
 
         let mut params = HashMap::new();
         params.insert("length".into(), 6000.0);
 
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
+        let result = instantiate_template(
+            &mut project,
+            &cid_clone,
+            &template,
+            &params,
+            &TemplateContext::default(),
+        );
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 1);
@@ -599,15 +648,28 @@ mod tests {
         let cid_clone = cid.id.clone();
         project.objects.insert(cid);
 
-        let template = FeatureTreeTemplate::new("circ-sweep")
-            .step(FeatureTemplateStep::sweep(
-                "main",
-                ProfileType::Circle { radius: 50.0, segments: 16 },
-                ProfileType::UShape { height: 100.0, width: 50.0, web_thickness: 5.0, flange_thickness: 8.0 },
-            ));
+        let template = FeatureTreeTemplate::new("circ-sweep").step(FeatureTemplateStep::sweep(
+            "main",
+            ProfileType::Circle {
+                radius: 50.0,
+                segments: 16,
+            },
+            ProfileType::UShape {
+                height: 100.0,
+                width: 50.0,
+                web_thickness: 5.0,
+                flange_thickness: 8.0,
+            },
+        ));
 
         let params = HashMap::new();
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
+        let result = instantiate_template(
+            &mut project,
+            &cid_clone,
+            &template,
+            &params,
+            &TemplateContext::default(),
+        );
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, _feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 2);
@@ -620,15 +682,26 @@ mod tests {
         let cid_clone = cid.id.clone();
         project.objects.insert(cid);
 
-        let template = FeatureTreeTemplate::new("rect-loft")
-            .step(FeatureTemplateStep::loft(
-                "main",
-                ProfileType::Circle { radius: 50.0, segments: 16 },
-                ProfileType::Rectangle { width: 100.0, height: 100.0 },
-            ));
+        let template = FeatureTreeTemplate::new("rect-loft").step(FeatureTemplateStep::loft(
+            "main",
+            ProfileType::Circle {
+                radius: 50.0,
+                segments: 16,
+            },
+            ProfileType::Rectangle {
+                width: 100.0,
+                height: 100.0,
+            },
+        ));
 
         let params = HashMap::new();
-        let result = instantiate_template(&mut project, &cid_clone, &template, &params, &TemplateContext::default());
+        let result = instantiate_template(
+            &mut project,
+            &cid_clone,
+            &template,
+            &params,
+            &TemplateContext::default(),
+        );
         assert!(result.is_ok(), "instantiate failed: {:?}", result.err());
         let (sketch_ids, feature_ids) = result.unwrap();
         assert_eq!(sketch_ids.len(), 2);

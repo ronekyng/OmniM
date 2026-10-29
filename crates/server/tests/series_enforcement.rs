@@ -57,39 +57,73 @@ async fn get_json(port: u16, path: &str) -> serde_json::Value {
 /// Build a series that constrains `Concrete-Beam-Rect` (seeded def with a
 /// feature tree): material Zinc + width min/max + depth fixed.
 async fn build_beam_series(port: u16) -> String {
-    let (status, _) = post_json(port, "/api/materials", serde_json::json!({
-        "id": "mat-zinc", "name": "Zinc", "category": "metal", "density": 7140.0
-    })).await;
-    assert!(status == 200 || status == 400, "material create failed: {}", status);
+    let (status, _) = post_json(
+        port,
+        "/api/materials",
+        serde_json::json!({
+            "id": "mat-zinc", "name": "Zinc", "category": "metal", "density": 7140.0
+        }),
+    )
+    .await;
+    assert!(
+        status == 200 || status == 400,
+        "material create failed: {}",
+        status
+    );
 
-    let (status, body) = post_json(port, "/api/series", serde_json::json!({
-        "name": "Enforcement-Series", "domain": "building"
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/series",
+        serde_json::json!({
+            "name": "Enforcement-Series", "domain": "building"
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "series create failed: {}", body);
     let series_id = json_of(&body)["id"].as_str().unwrap().to_string();
 
     for (path, body) in [
-        ("/api/series/{}/selectors", serde_json::json!({
-            "selector_id": "s1", "question": "Pick a beam"
-        })),
-        ("/api/series/{}/answers", serde_json::json!({
-            "selector_id": "s1", "answer_id": "a1", "answer_value": "beam"
-        })),
-        ("/api/series/{}/spec", serde_json::json!({
-            "selector_id": "s1", "answer_id": "a1",
-            "component_def_id": "Concrete-Beam-Rect", "material": "Zinc"
-        })),
-        ("/api/series/{}/constraints", serde_json::json!({
-            "component_def_id": "Concrete-Beam-Rect", "param_name": "width",
-            "default_value": 300.0, "min_value": 200.0, "max_value": 600.0
-        })),
-        ("/api/series/{}/constraints", serde_json::json!({
-            "component_def_id": "Concrete-Beam-Rect", "param_name": "depth",
-            "default_value": 500.0, "fixed_value": "500"
-        })),
+        (
+            "/api/series/{}/selectors",
+            serde_json::json!({
+                "selector_id": "s1", "question": "Pick a beam"
+            }),
+        ),
+        (
+            "/api/series/{}/answers",
+            serde_json::json!({
+                "selector_id": "s1", "answer_id": "a1", "answer_value": "beam"
+            }),
+        ),
+        (
+            "/api/series/{}/spec",
+            serde_json::json!({
+                "selector_id": "s1", "answer_id": "a1",
+                "component_def_id": "Concrete-Beam-Rect", "material": "Zinc"
+            }),
+        ),
+        (
+            "/api/series/{}/constraints",
+            serde_json::json!({
+                "component_def_id": "Concrete-Beam-Rect", "param_name": "width",
+                "default_value": 300.0, "min_value": 200.0, "max_value": 600.0
+            }),
+        ),
+        (
+            "/api/series/{}/constraints",
+            serde_json::json!({
+                "component_def_id": "Concrete-Beam-Rect", "param_name": "depth",
+                "default_value": 500.0, "fixed_value": "500"
+            }),
+        ),
     ] {
         let (status, body) = post_json(port, &path.replace("{}", &series_id), body).await;
-        assert!(status == 200 || status == 201, "series setup failed: {} {}", status, body);
+        assert!(
+            status == 200 || status == 201,
+            "series setup failed: {} {}",
+            status,
+            body
+        );
     }
     series_id
 }
@@ -102,37 +136,60 @@ fn json_of(body: &str) -> serde_json::Value {
 async fn param_override_above_series_max_is_rejected() {
     let (port, _) = test_server().await;
     build_beam_series(port).await;
-    let (status, body) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-too-wide",
-        "params": { "width": 900.0 }
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-too-wide",
+            "params": { "width": 900.0 }
+        }),
+    )
+    .await;
     assert_eq!(status, 400, "expected max enforcement, got: {}", body);
-    assert!(body.contains("exceeds the series maximum 600"), "unexpected error: {}", body);
+    assert!(
+        body.contains("exceeds the series maximum 600"),
+        "unexpected error: {}",
+        body
+    );
 }
 
 #[tokio::test]
 async fn param_override_below_series_min_is_rejected() {
     let (port, _) = test_server().await;
     build_beam_series(port).await;
-    let (status, body) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-too-narrow",
-        "params": { "width": 100.0 }
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-too-narrow",
+            "params": { "width": 100.0 }
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
-    assert!(body.contains("below the series minimum 200"), "unexpected error: {}", body);
+    assert!(
+        body.contains("below the series minimum 200"),
+        "unexpected error: {}",
+        body
+    );
 }
 
 #[tokio::test]
 async fn fixed_param_rejects_any_other_value() {
     let (port, _) = test_server().await;
     build_beam_series(port).await;
-    let (status, body) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-depth",
-        "params": { "depth": 400.0 }
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-depth",
+            "params": { "depth": 400.0 }
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
     assert!(body.contains("fixed to 500"), "unexpected error: {}", body);
 }
@@ -141,59 +198,98 @@ async fn fixed_param_rejects_any_other_value() {
 async fn spec_material_is_applied_to_the_instance() {
     let (port, _) = test_server().await;
     build_beam_series(port).await;
-    let (status, body) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-ok",
-        "params": { "width": 300.0, "depth": 500.0 }
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-ok",
+            "params": { "width": 300.0, "depth": 500.0 }
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "instantiate failed: {}", body);
     let id = json_of(&body)["component_id"].as_str().unwrap().to_string();
     let obj = get_json(port, &format!("/api/objects/{}", id)).await;
-    assert_eq!(obj["material_id"], "mat-zinc", "spec material was not applied");
+    assert_eq!(
+        obj["material_id"], "mat-zinc",
+        "spec material was not applied"
+    );
 }
 
 #[tokio::test]
 async fn unknown_spec_material_is_an_error() {
     let (port, _) = test_server().await;
     // Series with a material that does not exist in the project.
-    let (status, body) = post_json(port, "/api/series", serde_json::json!({
-        "name": "Bad-Material-Series", "domain": "building"
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/series",
+        serde_json::json!({
+            "name": "Bad-Material-Series", "domain": "building"
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "{}", body);
     let series_id = json_of(&body)["id"].as_str().unwrap().to_string();
     for (path, body) in [
-        ("/api/series/{}/selectors", serde_json::json!({
-            "selector_id": "s1", "question": "Pick"
-        })),
-        ("/api/series/{}/answers", serde_json::json!({
-            "selector_id": "s1", "answer_id": "a1", "answer_value": "x"
-        })),
-        ("/api/series/{}/spec", serde_json::json!({
-            "selector_id": "s1", "answer_id": "a1",
-            "component_def_id": "Concrete-Beam-Rect", "material": "Unobtainium"
-        })),
+        (
+            "/api/series/{}/selectors",
+            serde_json::json!({
+                "selector_id": "s1", "question": "Pick"
+            }),
+        ),
+        (
+            "/api/series/{}/answers",
+            serde_json::json!({
+                "selector_id": "s1", "answer_id": "a1", "answer_value": "x"
+            }),
+        ),
+        (
+            "/api/series/{}/spec",
+            serde_json::json!({
+                "selector_id": "s1", "answer_id": "a1",
+                "component_def_id": "Concrete-Beam-Rect", "material": "Unobtainium"
+            }),
+        ),
     ] {
         let (status, body) = post_json(port, &path.replace("{}", &series_id), body).await;
         assert!(status == 200 || status == 201, "{} {}", status, body);
     }
-    let (status, body) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-nomaterial"
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-nomaterial"
+        }),
+    )
+    .await;
     assert_eq!(status, 400);
-    assert!(body.contains("series material 'Unobtainium' not found"), "unexpected error: {}", body);
+    assert!(
+        body.contains("series material 'Unobtainium' not found"),
+        "unexpected error: {}",
+        body
+    );
 }
 
 #[tokio::test]
 async fn no_series_loaded_means_no_enforcement() {
     let (port, _) = test_server().await;
     // Same def, no series in the project: legacy behavior (def defaults only).
-    let (status, _) = post_json(port, "/api/catalog/instantiate", serde_json::json!({
-        "component_def_id": "Concrete-Beam-Rect",
-        "instance_name": "B-free",
-        "params": { "width": 900.0 }
-    })).await;
-    assert_eq!(status, 200, "def defaults must not be series-enforced without a series");
+    let (status, _) = post_json(
+        port,
+        "/api/catalog/instantiate",
+        serde_json::json!({
+            "component_def_id": "Concrete-Beam-Rect",
+            "instance_name": "B-free",
+            "params": { "width": 900.0 }
+        }),
+    )
+    .await;
+    assert_eq!(
+        status, 200,
+        "def defaults must not be series-enforced without a series"
+    );
 }
 
 #[tokio::test]
@@ -208,32 +304,66 @@ async fn connect_rejects_self_duplicate_and_unknown_type() {
             .send()
             .await
             .unwrap();
-        ids.push(resp.json::<serde_json::Value>().await.unwrap()["id"].as_str().unwrap().to_string());
+        ids.push(
+            resp.json::<serde_json::Value>().await.unwrap()["id"]
+                .as_str()
+                .unwrap()
+                .to_string(),
+        );
     }
     let (a, b) = (ids[0].clone(), ids[1].clone());
 
     // Self-connection
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}", a, a), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}", a, a),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 400, "{}", body);
     assert!(body.contains("itself"));
 
     // First connect succeeds
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}", a, b), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}", a, b),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 200, "{}", body);
 
     // Duplicate (either direction)
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}", b, a), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}", b, a),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 400, "{}", body);
     assert!(body.contains("already connected"));
 
     // Unknown connection type (valid unconnected pair)
-    let (status, _) = post_json(port, "/api/objects", serde_json::json!({
-        "object_type": "wall", "name": "CC"
-    })).await;
+    let (status, _) = post_json(
+        port,
+        "/api/objects",
+        serde_json::json!({
+            "object_type": "wall", "name": "CC"
+        }),
+    )
+    .await;
     assert_eq!(status, 200);
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}?connection_type=warp", b, a), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}?connection_type=warp", b, a),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 400, "{}", body);
-    assert!(body.contains("unknown connection type"), "unexpected: {}", body);
+    assert!(
+        body.contains("unknown connection type"),
+        "unexpected: {}",
+        body
+    );
 }
 
 #[tokio::test]
@@ -243,18 +373,30 @@ async fn connect_checks_connector_type_code_compatibility() {
 
     // Find a seeded def that has a feature tree (so it can instantiate).
     let defs = get_json(port, "/api/catalog").await;
-    let def = defs.as_array().unwrap().iter()
+    let def = defs
+        .as_array()
+        .unwrap()
+        .iter()
         .find(|d| d["name"] == "Concrete-Footing-Isolated")
         .expect("seeded footing def");
     let def_id = def["id"].as_str().unwrap().to_string();
     let tree_id = def["feature_tree_id"].as_str().unwrap().to_string();
 
     // Give it a typed connector.
-    let (status, body) = post_json(port, &format!("/api/catalog/{}/connectors", def_id), serde_json::json!({
-        "connector_id": "c-flange", "connector_name": "Flange",
-        "connection_type_code": "flange-dn50"
-    })).await;
-    assert!(status == 200 || status == 201, "connector add failed: {}", body);
+    let (status, body) = post_json(
+        port,
+        &format!("/api/catalog/{}/connectors", def_id),
+        serde_json::json!({
+            "connector_id": "c-flange", "connector_name": "Flange",
+            "connection_type_code": "flange-dn50"
+        }),
+    )
+    .await;
+    assert!(
+        status == 200 || status == 201,
+        "connector add failed: {}",
+        body
+    );
 
     let instantiate = |port: u16, name: String, def_for: String| {
         let def_id = def_for;
@@ -282,35 +424,63 @@ async fn connect_checks_connector_type_code_compatibility() {
     let b = json_of(&b2)["component_id"].as_str().unwrap().to_string();
 
     // Compatible (same def → same code set)
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}", a, b), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}", a, b),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 200, "{}", body);
 
     // Incompatible: second def reuses the tree but advertises a different code.
-    let (status, body) = post_json(port, "/api/catalog", serde_json::json!({
-        "name": "Weld-Footing", "category": "metal"
-    })).await;
+    let (status, body) = post_json(
+        port,
+        "/api/catalog",
+        serde_json::json!({
+            "name": "Weld-Footing", "category": "metal"
+        }),
+    )
+    .await;
     assert_eq!(status, 200, "{}", body);
     let other_id = json_of(&body)["id"].as_str().unwrap().to_string();
     let resp = client
-        .put(api_url(port, &format!("/api/catalog/{}/feature-tree", other_id)))
+        .put(api_url(
+            port,
+            &format!("/api/catalog/{}/feature-tree", other_id),
+        ))
         .json(&serde_json::json!({ "feature_tree_id": tree_id }))
         .send()
         .await
         .unwrap();
     let status = resp.status().as_u16();
     let body = resp.text().await.unwrap();
-    assert!(status == 200 || status == 204, "assign tree failed: {} {}", status, body);
-    let (status, body) = post_json(port, &format!("/api/catalog/{}/connectors", other_id), serde_json::json!({
-        "connector_id": "c-weld", "connector_name": "Weld",
-        "connection_type_code": "weld"
-    })).await;
+    assert!(
+        status == 200 || status == 204,
+        "assign tree failed: {} {}",
+        status,
+        body
+    );
+    let (status, body) = post_json(
+        port,
+        &format!("/api/catalog/{}/connectors", other_id),
+        serde_json::json!({
+            "connector_id": "c-weld", "connector_name": "Weld",
+            "connection_type_code": "weld"
+        }),
+    )
+    .await;
     assert!(status == 200 || status == 201, "{}", body);
 
     let (s3, b3) = instantiate(port, "Inst-C".into(), other_id.clone()).await;
     assert_eq!(s3, 200, "{}", b3);
     let c = json_of(&b3)["component_id"].as_str().unwrap().to_string();
 
-    let (status, body) = post_json(port, &format!("/api/objects/{}/connect/{}", a, c), serde_json::json!({})).await;
+    let (status, body) = post_json(
+        port,
+        &format!("/api/objects/{}/connect/{}", a, c),
+        serde_json::json!({}),
+    )
+    .await;
     assert_eq!(status, 400);
     assert!(body.contains("incompatible"), "unexpected error: {}", body);
 }

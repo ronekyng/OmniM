@@ -9,8 +9,8 @@
 //! - IFCSWEPTDISKAREASOLID (扫掠圆盘)
 //! - 各种剖面类型 (I/L/T/U/Z/Trapezoid/Ellipse/Derived/Composite)
 
-use std::collections::HashMap;
 use omnim_core as c;
+use std::collections::HashMap;
 
 use crate::{IfcDocument, IfcEntity, IfcValue};
 
@@ -137,10 +137,22 @@ fn extract_rect_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c:
     let width = doc.get_float(profile, 1)?;
     let height = doc.get_float(profile, 2)?;
     Some(vec![
-        c::Point2D { x: -width / 2.0, y: -height / 2.0 },
-        c::Point2D { x: width / 2.0, y: -height / 2.0 },
-        c::Point2D { x: width / 2.0, y: height / 2.0 },
-        c::Point2D { x: -width / 2.0, y: height / 2.0 },
+        c::Point2D {
+            x: -width / 2.0,
+            y: -height / 2.0,
+        },
+        c::Point2D {
+            x: width / 2.0,
+            y: -height / 2.0,
+        },
+        c::Point2D {
+            x: width / 2.0,
+            y: height / 2.0,
+        },
+        c::Point2D {
+            x: -width / 2.0,
+            y: height / 2.0,
+        },
     ])
 }
 
@@ -151,13 +163,19 @@ fn extract_circle_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<
     let mut pts = Vec::new();
     for i in 0..segs {
         let a = 2.0 * std::f64::consts::PI * i as f64 / segs as f64;
-        pts.push(c::Point2D { x: radius * a.cos(), y: radius * a.sin() });
+        pts.push(c::Point2D {
+            x: radius * a.cos(),
+            y: radius * a.sin(),
+        });
     }
     Some(pts)
 }
 
 /// 任意闭合轮廓 (IfcPolyline)
-pub(crate) fn extract_polyline_2d(doc: &IfcDocument, curve_entity: &IfcEntity) -> Option<Vec<c::Point2D>> {
+pub(crate) fn extract_polyline_2d(
+    doc: &IfcDocument,
+    curve_entity: &IfcEntity,
+) -> Option<Vec<c::Point2D>> {
     let points_list = match curve_entity.args.get(0) {
         Some(IfcValue::List(points)) => points,
         _ => return None,
@@ -174,11 +192,18 @@ pub(crate) fn extract_polyline_2d(doc: &IfcDocument, curve_entity: &IfcEntity) -
             }
         }
     }
-    if pts.len() >= 3 { Some(pts) } else { None }
+    if pts.len() >= 3 {
+        Some(pts)
+    } else {
+        None
+    }
 }
 
 /// 任意闭合轮廓
-fn extract_arbitrary_closed_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
+fn extract_arbitrary_closed_profile(
+    doc: &IfcDocument,
+    profile: &IfcEntity,
+) -> Option<Vec<c::Point2D>> {
     let curve_ref = doc.get_ref(profile, 2)?;
     let curve = doc.get(curve_ref)?;
     if curve.entity_type == "IFCPOLYLINE" {
@@ -190,7 +215,10 @@ fn extract_arbitrary_closed_profile(doc: &IfcDocument, profile: &IfcEntity) -> O
 }
 
 /// 带空洞的任意剖面 (仅取外轮廓)
-fn extract_arbitrary_profile_with_voids(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
+fn extract_arbitrary_profile_with_voids(
+    doc: &IfcDocument,
+    profile: &IfcEntity,
+) -> Option<Vec<c::Point2D>> {
     let outer_curve_ref = doc.get_ref(profile, 2)?;
     let curve = doc.get(outer_curve_ref)?;
     if curve.entity_type == "IFCPOLYLINE" {
@@ -204,8 +232,8 @@ fn extract_arbitrary_profile_with_voids(doc: &IfcDocument, profile: &IfcEntity) 
 ///
 /// 参数顺序: OverallWidth, OverallDepth, WebThickness, FlangeThickness, FilletRadius (opt)
 fn extract_i_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let w = doc.get_float(profile, 1)?;  // OverallWidth
-    let h = doc.get_float(profile, 2)?;  // OverallDepth
+    let w = doc.get_float(profile, 1)?; // OverallWidth
+    let h = doc.get_float(profile, 2)?; // OverallDepth
     let tw = doc.get_float(profile, 3)?; // WebThickness
     let tf = doc.get_float(profile, 4)?; // FlangeThickness
 
@@ -221,15 +249,27 @@ fn extract_i_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
         c::Point2D { x: ww, y: hw - tf },
         // Right web (top to bottom)
         c::Point2D { x: tw2, y: hw - tf },
-        c::Point2D { x: tw2, y: -hw + tf },
+        c::Point2D {
+            x: tw2,
+            y: -hw + tf,
+        },
         // Bottom flange (right to left, top to bottom)
         c::Point2D { x: ww, y: -hw + tf },
         c::Point2D { x: ww, y: -hw },
         c::Point2D { x: -ww, y: -hw },
-        c::Point2D { x: -ww, y: -hw + tf },
+        c::Point2D {
+            x: -ww,
+            y: -hw + tf,
+        },
         // Left web (bottom to top)
-        c::Point2D { x: -tw2, y: -hw + tf },
-        c::Point2D { x: -tw2, y: hw - tf },
+        c::Point2D {
+            x: -tw2,
+            y: -hw + tf,
+        },
+        c::Point2D {
+            x: -tw2,
+            y: hw - tf,
+        },
         c::Point2D { x: -ww, y: hw - tf },
     ];
     Some(pts)
@@ -239,9 +279,9 @@ fn extract_i_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
 ///
 /// 参数顺序: Depth, Width, Thickness, FilletRadius (opt), EdgeRadius (opt), LegSlope (opt)
 fn extract_l_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let depth = doc.get_float(profile, 1)?;  // vertical leg
-    let width = doc.get_float(profile, 2)?;  // horizontal leg
-    let thick = doc.get_float(profile, 3)?;  // thickness
+    let depth = doc.get_float(profile, 1)?; // vertical leg
+    let width = doc.get_float(profile, 2)?; // horizontal leg
+    let thick = doc.get_float(profile, 3)?; // thickness
 
     // L-angle profile (counterclockwise, standing)
     let pts = vec![
@@ -259,10 +299,10 @@ fn extract_l_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
 ///
 /// 参数顺序: Depth, Width, WebThickness, FlangeThickness, FilletRadius (opt), FlangeEdgeRadius (opt), WebEdgeRadius (opt)
 fn extract_t_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let depth = doc.get_float(profile, 1)?;   // Depth (web height + flange)
-    let width = doc.get_float(profile, 2)?;   // Flange width
-    let tw = doc.get_float(profile, 3)?;      // WebThickness
-    let tf = doc.get_float(profile, 4)?;      // FlangeThickness
+    let depth = doc.get_float(profile, 1)?; // Depth (web height + flange)
+    let width = doc.get_float(profile, 2)?; // Flange width
+    let tw = doc.get_float(profile, 3)?; // WebThickness
+    let tf = doc.get_float(profile, 4)?; // FlangeThickness
 
     let ww = width / 2.0;
     let tw2 = tw / 2.0;
@@ -285,10 +325,10 @@ fn extract_t_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
 ///
 /// 参数顺序: Depth, FlangeWidth, WebThickness, FlangeThickness, FilletRadius (opt), EdgeRadius (opt), FlangeSlope (opt)
 fn extract_u_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let depth = doc.get_float(profile, 1)?;      // Overall depth
-    let fw = doc.get_float(profile, 2)?;          // Flange width
-    let tw = doc.get_float(profile, 3)?;          // Web thickness
-    let tf = doc.get_float(profile, 4)?;          // Flange thickness
+    let depth = doc.get_float(profile, 1)?; // Overall depth
+    let fw = doc.get_float(profile, 2)?; // Flange width
+    let tw = doc.get_float(profile, 3)?; // Web thickness
+    let tf = doc.get_float(profile, 4)?; // Flange thickness
 
     let hw = depth / 2.0;
 
@@ -310,10 +350,10 @@ fn extract_u_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
 ///
 /// 参数顺序: Depth, Width, WebThickness, FlangeThickness, FilletRadius (opt), EdgeRadius (opt)
 fn extract_z_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let depth = doc.get_float(profile, 1)?;  // Overall depth
-    let width = doc.get_float(profile, 2)?;  // Flange width
-    let tw = doc.get_float(profile, 3)?;    // Web thickness
-    let tf = doc.get_float(profile, 4)?;    // Flange thickness
+    let depth = doc.get_float(profile, 1)?; // Overall depth
+    let width = doc.get_float(profile, 2)?; // Flange width
+    let tw = doc.get_float(profile, 3)?; // Web thickness
+    let tf = doc.get_float(profile, 4)?; // Flange thickness
 
     let hw = depth / 2.0;
 
@@ -323,14 +363,26 @@ fn extract_z_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
         c::Point2D { x: 0.0, y: hw },
         c::Point2D { x: 0.0, y: hw - tf },
         c::Point2D { x: -tw, y: hw - tf },
-        c::Point2D { x: -tw, y: -hw + tf },
-        c::Point2D { x: 0.0, y: -hw + tf },
+        c::Point2D {
+            x: -tw,
+            y: -hw + tf,
+        },
+        c::Point2D {
+            x: 0.0,
+            y: -hw + tf,
+        },
         c::Point2D { x: 0.0, y: -hw },
         c::Point2D { x: width, y: -hw },
-        c::Point2D { x: width, y: -hw + tf },
+        c::Point2D {
+            x: width,
+            y: -hw + tf,
+        },
         c::Point2D { x: tw, y: -hw + tf },
         c::Point2D { x: tw, y: hw - tf },
-        c::Point2D { x: -width, y: hw - tf },
+        c::Point2D {
+            x: -width,
+            y: hw - tf,
+        },
     ];
     Some(pts)
 }
@@ -339,9 +391,9 @@ fn extract_z_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Po
 ///
 /// 参数顺序: BottomXDim, TopXDim, YDim, TopXOffset (default 0)
 fn extract_trapezium_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec<c::Point2D>> {
-    let bx = doc.get_float(profile, 1)?;    // Bottom width
-    let tx = doc.get_float(profile, 2)?;    // Top width
-    let y = doc.get_float(profile, 3)?;     // Height
+    let bx = doc.get_float(profile, 1)?; // Bottom width
+    let tx = doc.get_float(profile, 2)?; // Top width
+    let y = doc.get_float(profile, 3)?; // Height
     let off = doc.get_float(profile, 4).unwrap_or(0.0); // Top offset
 
     let bx2 = bx / 2.0;
@@ -351,8 +403,14 @@ fn extract_trapezium_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<V
     Some(vec![
         c::Point2D { x: -bx2, y: -hy },
         c::Point2D { x: bx2, y: -hy },
-        c::Point2D { x: tx2 + off, y: hy },
-        c::Point2D { x: -tx2 + off, y: hy },
+        c::Point2D {
+            x: tx2 + off,
+            y: hy,
+        },
+        c::Point2D {
+            x: -tx2 + off,
+            y: hy,
+        },
     ])
 }
 
@@ -366,7 +424,10 @@ fn extract_ellipse_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<Vec
     let mut pts = Vec::new();
     for i in 0..segs {
         let ang = 2.0 * std::f64::consts::PI * i as f64 / segs as f64;
-        pts.push(c::Point2D { x: a * ang.cos(), y: b * ang.sin() });
+        pts.push(c::Point2D {
+            x: a * ang.cos(),
+            y: b * ang.sin(),
+        });
     }
     Some(pts)
 }
@@ -490,7 +551,11 @@ fn convert_extruded_area_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c:
             let dx = crate::coord_to_f64(coords.get(0))?;
             let dy = crate::coord_to_f64(coords.get(1))?;
             let dz = crate::coord_to_f64(coords.get(2))?;
-            c::Vector3D { x: dx, y: dy, z: dz }
+            c::Vector3D {
+                x: dx,
+                y: dy,
+                z: dz,
+            }
         }
         _ => return None,
     };
@@ -537,7 +602,15 @@ fn extract_profile_with_position(
     if ox.abs() < 1e-10 && oy.abs() < 1e-10 {
         Some(profile_pts)
     } else {
-        Some(profile_pts.iter().map(|p| c::Point2D { x: p.x + ox, y: p.y + oy }).collect())
+        Some(
+            profile_pts
+                .iter()
+                .map(|p| c::Point2D {
+                    x: p.x + ox,
+                    y: p.y + oy,
+                })
+                .collect(),
+        )
     }
 }
 
@@ -605,14 +678,25 @@ fn convert_revolved_area_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c:
 
     let positioned_pts: Vec<c::Point2D> = profile_pts
         .iter()
-        .map(|p| c::Point2D { x: p.x + ox, y: p.y + oy })
+        .map(|p| c::Point2D {
+            x: p.x + ox,
+            y: p.y + oy,
+        })
         .collect();
 
     let revolve = c::Revolve {
         profile: positioned_pts,
         angle,
-        axis_origin: Some(c::Point3D { x: ax, y: ay, z: az }),
-        axis_direction: Some(c::Vector3D { x: adx, y: ady, z: adz }),
+        axis_origin: Some(c::Point3D {
+            x: ax,
+            y: ay,
+            z: az,
+        }),
+        axis_direction: Some(c::Vector3D {
+            x: adx,
+            y: ady,
+            z: adz,
+        }),
     };
 
     let pg = c::ParametricGeometry {
@@ -679,13 +763,17 @@ fn convert_mapped_item(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometr
 }
 
 /// 应用 IFCMAPPEDITEM 的 MappingTarget 变换
-fn apply_mapping_transform(doc: &IfcDocument, item: &IfcEntity, geom: c::Geometry) -> Option<c::Geometry> {
+fn apply_mapping_transform(
+    doc: &IfcDocument,
+    item: &IfcEntity,
+    geom: c::Geometry,
+) -> Option<c::Geometry> {
     let target_ref = doc.get_ref(item, 1)?;
     let target = doc.get(target_ref)?;
 
     match target.entity_type.as_str() {
-        "IFCCARTESIANTRANSFORMATIONOPERATOR3D" |
-        "IFCCARTESIANTRANSFORMATIONOPERATOR3DNONUNIFORM" => {
+        "IFCCARTESIANTRANSFORMATIONOPERATOR3D"
+        | "IFCCARTESIANTRANSFORMATIONOPERATOR3DNONUNIFORM" => {
             // arg[0] = Axis1 (X direction, optional)
             // arg[1] = Axis2 (Y direction, optional)
             // arg[2] = LocalOrigin
@@ -709,9 +797,17 @@ fn apply_mapping_transform(doc: &IfcDocument, item: &IfcEntity, geom: c::Geometr
             if let Some(mesh) = omnim_model::geometry::geometry_to_mesh(&geom) {
                 let t = c::Transform {
                     matrix: vec![],
-                    translation: Some(c::Point3D { x: ox, y: oy, z: oz }),
+                    translation: Some(c::Point3D {
+                        x: ox,
+                        y: oy,
+                        z: oz,
+                    }),
                     rotation: None,
-                    scale: Some(c::Vector3D { x: scale, y: scale, z: scale }),
+                    scale: Some(c::Vector3D {
+                        x: scale,
+                        y: scale,
+                        z: scale,
+                    }),
                 };
                 let transformed = omnim_model::geometry::transform_mesh(&mesh, &t);
                 let bbox = omnim_model::geometry::compute_bbox(&transformed);
@@ -763,7 +859,11 @@ fn convert_faceted_brep(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geomet
         )
     }
 
-    fn add_vertex(v: &mut Vec<c::Point3D>, vm: &mut HashMap<(i64, i64, i64), i32>, p: c::Point3D) -> i32 {
+    fn add_vertex(
+        v: &mut Vec<c::Point3D>,
+        vm: &mut HashMap<(i64, i64, i64), i32>,
+        p: c::Point3D,
+    ) -> i32 {
         let k = key_from_pt(&p);
         if let Some(&idx) = vm.get(&k) {
             idx
@@ -836,10 +936,19 @@ fn convert_faceted_brep(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geomet
 
     // Compute face normals
     for _ in 0..vertices.len() {
-        normals.push(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+        normals.push(c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        });
     }
 
-    let mesh = c::MeshGeometry { vertices, normals, uvs: vec![], faces };
+    let mesh = c::MeshGeometry {
+        vertices,
+        normals,
+        uvs: vec![],
+        faces,
+    };
     let bbox = omnim_model::geometry::compute_bbox(&mesh);
     Some(c::Geometry {
         id: String::new(),
@@ -957,7 +1066,9 @@ fn convert_boolean_result(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geom
                     continue;
                 }
                 // 计算三角形质心
-                let mut cx = 0.0_f64; let mut cy = 0.0_f64; let mut cz = 0.0_f64;
+                let mut cx = 0.0_f64;
+                let mut cy = 0.0_f64;
+                let mut cz = 0.0_f64;
                 let n = face.vertex_indices.len() as f64;
                 for vi in &face.vertex_indices {
                     let idx = *vi as usize;
@@ -967,12 +1078,17 @@ fn convert_boolean_result(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geom
                         cz += first_mesh.vertices[idx].z;
                     }
                 }
-                cx /= n; cy /= n; cz /= n;
+                cx /= n;
+                cy /= n;
+                cz /= n;
 
                 // 质心在 second_mesh AABB 内则保留
-                if cx >= min2.x - tol && cx <= max2.x + tol
-                    && cy >= min2.y - tol && cy <= max2.y + tol
-                    && cz >= min2.z - tol && cz <= max2.z + tol
+                if cx >= min2.x - tol
+                    && cx <= max2.x + tol
+                    && cy >= min2.y - tol
+                    && cy <= max2.y + tol
+                    && cz >= min2.z - tol
+                    && cz <= max2.z + tol
                 {
                     let base = vertices.len() as i32;
                     for vi in &face.vertex_indices {
@@ -982,17 +1098,28 @@ fn convert_boolean_result(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geom
                             if idx < first_mesh.normals.len() {
                                 normals.push(first_mesh.normals[idx].clone());
                             } else {
-                                normals.push(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+                                normals.push(c::Vector3D {
+                                    x: 0.0,
+                                    y: 0.0,
+                                    z: 1.0,
+                                });
                             }
                         }
                     }
                     faces.push(c::FaceIndices {
-                        vertex_indices: (0..face.vertex_indices.len() as i32).map(|i| base + i).collect(),
+                        vertex_indices: (0..face.vertex_indices.len() as i32)
+                            .map(|i| base + i)
+                            .collect(),
                     });
                 }
             }
 
-            let result = c::MeshGeometry { vertices, normals, uvs: vec![], faces };
+            let result = c::MeshGeometry {
+                vertices,
+                normals,
+                uvs: vec![],
+                faces,
+            };
             let bbox = omnim_model::geometry::compute_bbox(&result);
             Some(c::Geometry {
                 id: String::new(),
@@ -1060,9 +1187,17 @@ fn convert_swept_disk_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Ge
 
         // Build a local coordinate system
         let up = if dz.abs() < 0.9 {
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            }
         } else {
-            c::Vector3D { x: 1.0, y: 0.0, z: 0.0 }
+            c::Vector3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            }
         };
 
         let right = c::Vector3D {
@@ -1121,7 +1256,12 @@ fn convert_swept_disk_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Ge
         return None;
     }
 
-    let mesh = c::MeshGeometry { vertices, normals, uvs: vec![], faces };
+    let mesh = c::MeshGeometry {
+        vertices,
+        normals,
+        uvs: vec![],
+        faces,
+    };
     let bbox = omnim_model::geometry::compute_bbox(&mesh);
     Some(c::Geometry {
         id: String::new(),
@@ -1180,7 +1320,10 @@ fn convert_csg_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometry>
 
 /// 增强的放置解析：支持完整变换矩阵 + 层级链
 #[allow(dead_code)]
-pub(crate) fn extract_placement_enhanced(doc: &IfcDocument, entity: &IfcEntity) -> Option<c::Transform> {
+pub(crate) fn extract_placement_enhanced(
+    doc: &IfcDocument,
+    entity: &IfcEntity,
+) -> Option<c::Transform> {
     let placement_ref = doc.get_ref(entity, 5)?;
     build_placement_chain(doc, placement_ref)
 }
@@ -1211,11 +1354,23 @@ fn build_placement_chain(doc: &IfcDocument, placement_id: u64) -> Option<c::Tran
             let combined = c::Transform {
                 matrix: vec![],
                 translation: Some(c::Point3D {
-                    x: local_transform.translation.as_ref().map(|t| t.x).unwrap_or(0.0)
+                    x: local_transform
+                        .translation
+                        .as_ref()
+                        .map(|t| t.x)
+                        .unwrap_or(0.0)
                         + parent.translation.as_ref().map(|t| t.x).unwrap_or(0.0),
-                    y: local_transform.translation.as_ref().map(|t| t.y).unwrap_or(0.0)
+                    y: local_transform
+                        .translation
+                        .as_ref()
+                        .map(|t| t.y)
+                        .unwrap_or(0.0)
                         + parent.translation.as_ref().map(|t| t.y).unwrap_or(0.0),
-                    z: local_transform.translation.as_ref().map(|t| t.z).unwrap_or(0.0)
+                    z: local_transform
+                        .translation
+                        .as_ref()
+                        .map(|t| t.z)
+                        .unwrap_or(0.0)
                         + parent.translation.as_ref().map(|t| t.z).unwrap_or(0.0),
                 }),
                 rotation: local_transform.rotation.or(parent.rotation),
@@ -1302,8 +1457,17 @@ fn extract_axis2_placement_3d(doc: &IfcDocument, placement: &IfcEntity) -> Optio
 
     Some(c::Transform {
         matrix: vec![],
-        translation: Some(c::Point3D { x: lx, y: ly, z: lz }),
-        rotation: Some(c::Rotation { x: qx, y: qy, z: qz, w: qw }),
+        translation: Some(c::Point3D {
+            x: lx,
+            y: ly,
+            z: lz,
+        }),
+        rotation: Some(c::Rotation {
+            x: qx,
+            y: qy,
+            z: qz,
+            w: qw,
+        }),
         scale: None,
     })
 }

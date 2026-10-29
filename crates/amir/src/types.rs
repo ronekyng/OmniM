@@ -210,12 +210,8 @@ fn detect_domain(intent: &Intent) -> Domain {
         Intent::CreateObject { object_type, .. } => match object_type.to_lowercase().as_str() {
             "wall" | "beam" | "column" | "slab" | "door" | "window" | "stair" | "roof"
             | "floor" | "building" | "storey" | "space" | "site" => Domain::Building,
-            "road" | "bridge" | "tunnel" | "dam" | "culvert" | "retaining_wall" => {
-                Domain::Civil
-            }
-            "tank" | "pump" | "valve" | "heat_exchanger" | "reactor" | "pipe" => {
-                Domain::Plant
-            }
+            "road" | "bridge" | "tunnel" | "dam" | "culvert" | "retaining_wall" => Domain::Civil,
+            "tank" | "pump" | "valve" | "heat_exchanger" | "reactor" | "pipe" => Domain::Plant,
             "part" | "assembly" | "gear" | "shaft" | "bearing" | "motor" | "fastener" => {
                 Domain::Mechanical
             }
@@ -447,35 +443,53 @@ mod tests {
 
     #[test]
     fn test_domain_detect_building() {
-        let intent = Intent::CreateObject { object_type: "wall".into(), name: None, parameters: HashMap::new() };
+        let intent = Intent::CreateObject {
+            object_type: "wall".into(),
+            name: None,
+            parameters: HashMap::new(),
+        };
         let domain = detect_domain(&intent);
         assert_eq!(domain, Domain::Building);
     }
 
     #[test]
     fn test_domain_detect_civil() {
-        let intent = Intent::CreateObject { object_type: "road".into(), name: None, parameters: HashMap::new() };
+        let intent = Intent::CreateObject {
+            object_type: "road".into(),
+            name: None,
+            parameters: HashMap::new(),
+        };
         let domain = detect_domain(&intent);
         assert_eq!(domain, Domain::Civil);
     }
 
     #[test]
     fn test_domain_detect_plant() {
-        let intent = Intent::CreateObject { object_type: "pipe".into(), name: None, parameters: HashMap::new() };
+        let intent = Intent::CreateObject {
+            object_type: "pipe".into(),
+            name: None,
+            parameters: HashMap::new(),
+        };
         let domain = detect_domain(&intent);
         assert_eq!(domain, Domain::Plant);
     }
 
     #[test]
     fn test_domain_detect_mechanical() {
-        let intent = Intent::CreateObject { object_type: "gear".into(), name: None, parameters: HashMap::new() };
+        let intent = Intent::CreateObject {
+            object_type: "gear".into(),
+            name: None,
+            parameters: HashMap::new(),
+        };
         let domain = detect_domain(&intent);
         assert_eq!(domain, Domain::Mechanical);
     }
 
     #[test]
     fn test_domain_detect_general_for_delete() {
-        let intent = Intent::DeleteObject { target_ref: "obj-1".into() };
+        let intent = Intent::DeleteObject {
+            target_ref: "obj-1".into(),
+        };
         let domain = detect_domain(&intent);
         assert_eq!(domain, Domain::General);
     }

@@ -9,21 +9,21 @@
 //!   Assembly       — 多图元组合装配（设备总成）
 //!   BooleanSubtract — 布尔差集（开孔/剪切，Door/Window）
 
-pub mod layer_extrusion;
-pub mod linear_component;
 pub mod assembly;
 pub mod boolean_subtract;
+pub mod layer_extrusion;
+pub mod linear_component;
+pub mod matrix;
 pub mod path_geom;
 pub mod path_sweep;
-pub mod matrix;
 
-use omnim_core as c;
 use c::{MeshGeometry, ParametricGeometry};
+use omnim_core as c;
 
-pub use layer_extrusion::LayerExtrusionInput;
-pub use linear_component::LinearComponentInput;
 pub use assembly::AssemblyInput;
 pub use boolean_subtract::BooleanSubtractInput;
+pub use layer_extrusion::LayerExtrusionInput;
+pub use linear_component::LinearComponentInput;
 
 /// 几何生成规则枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,11 +57,19 @@ pub struct GenRuleOutput {
 
 impl GenRuleOutput {
     pub fn from_parametric(pg: ParametricGeometry) -> Self {
-        Self { parametric: pg, mesh: None }
+        Self {
+            parametric: pg,
+            mesh: None,
+        }
     }
 
     pub fn from_mesh(mesh: MeshGeometry) -> Self {
-        Self { parametric: ParametricGeometry { operations: Vec::new() }, mesh: Some(mesh) }
+        Self {
+            parametric: ParametricGeometry {
+                operations: Vec::new(),
+            },
+            mesh: Some(mesh),
+        }
     }
 }
 
@@ -72,9 +80,10 @@ pub fn primary_gen_rule(object_type: ObjectType) -> GenRuleHint {
     match object_type {
         ObjectType::Unspecified | ObjectType::Generic => GenRuleHint::Primitive,
 
-        ObjectType::Site | ObjectType::Building | ObjectType::BuildingStorey | ObjectType::Space => {
-            GenRuleHint::Primitive
-        }
+        ObjectType::Site
+        | ObjectType::Building
+        | ObjectType::BuildingStorey
+        | ObjectType::Space => GenRuleHint::Primitive,
 
         ObjectType::Wall | ObjectType::Slab | ObjectType::Floor | ObjectType::Roof => {
             GenRuleHint::LayerExtrusion
@@ -83,9 +92,10 @@ pub fn primary_gen_rule(object_type: ObjectType) -> GenRuleHint {
         ObjectType::Beam | ObjectType::Column => GenRuleHint::LinearComponent,
         ObjectType::Door | ObjectType::Window => GenRuleHint::BooleanSubtract,
 
-        ObjectType::Duct | ObjectType::CableTray | ObjectType::PipePlant | ObjectType::PipeCivil => {
-            GenRuleHint::LinearComponent
-        }
+        ObjectType::Duct
+        | ObjectType::CableTray
+        | ObjectType::PipePlant
+        | ObjectType::PipeCivil => GenRuleHint::LinearComponent,
         ObjectType::AirTerminal | ObjectType::Luminaire => GenRuleHint::Primitive,
         ObjectType::Ahu | ObjectType::Chiller | ObjectType::Transformer => GenRuleHint::Assembly,
 
@@ -103,10 +113,14 @@ pub fn primary_gen_rule(object_type: ObjectType) -> GenRuleHint {
         ObjectType::Compressor | ObjectType::Instrument => GenRuleHint::Primitive,
         ObjectType::Reactor => GenRuleHint::Assembly,
 
-        ObjectType::Part | ObjectType::Fastener | ObjectType::Gear | ObjectType::Shaft
-        | ObjectType::Bearing | ObjectType::Motor | ObjectType::Spring | ObjectType::Seal => {
-            GenRuleHint::Primitive
-        }
+        ObjectType::Part
+        | ObjectType::Fastener
+        | ObjectType::Gear
+        | ObjectType::Shaft
+        | ObjectType::Bearing
+        | ObjectType::Motor
+        | ObjectType::Spring
+        | ObjectType::Seal => GenRuleHint::Primitive,
         ObjectType::Assembly => GenRuleHint::Assembly,
         ObjectType::Component => GenRuleHint::Primitive,
         ObjectType::FeatureLine | ObjectType::ContourLine => GenRuleHint::LinearComponent,
@@ -181,11 +195,16 @@ pub fn default_catalog_component(object_type: ObjectType) -> Option<&'static str
 /// component selection. This provides the fallback series per domain.
 pub fn default_series_for_type(object_type: ObjectType) -> Option<&'static str> {
     match object_type {
-        ObjectType::Wall | ObjectType::Slab | ObjectType::Floor | ObjectType::Roof
-        | ObjectType::Beam | ObjectType::Column => Some("Concrete-C30"),
+        ObjectType::Wall
+        | ObjectType::Slab
+        | ObjectType::Floor
+        | ObjectType::Roof
+        | ObjectType::Beam
+        | ObjectType::Column => Some("Concrete-C30"),
         ObjectType::StructuralSteel => Some("Steel-Q355"),
-        ObjectType::PipePlant | ObjectType::PipeCivil
-        | ObjectType::Fitting | ObjectType::Valve => Some("CS150"),
+        ObjectType::PipePlant | ObjectType::PipeCivil | ObjectType::Fitting | ObjectType::Valve => {
+            Some("CS150")
+        }
         ObjectType::Road => Some("Highway-GB"),
         _ => None,
     }
@@ -210,31 +229,30 @@ pub fn generate_geometry(object_type: ObjectType, _tags: &[String]) -> GenRuleOu
     let output = match hint {
         GenRuleHint::LayerExtrusion => {
             // 默认生成一个 5x3x0.2 的简单墙体
-            GenRuleOutput::from_mesh(
-                layer_extrusion::build_wall(5.0, 3.0, 0.2, 0.02)
-            )
+            GenRuleOutput::from_mesh(layer_extrusion::build_wall(5.0, 3.0, 0.2, 0.02))
         }
         GenRuleHint::LinearComponent => {
             // 默认生成一段 5m 长、0.3m 半径的管道
-            GenRuleOutput::from_mesh(
-                linear_component::build_pipe(5.0, 0.3, 10)
-            )
+            GenRuleOutput::from_mesh(linear_component::build_pipe(5.0, 0.3, 10))
         }
         GenRuleHint::Assembly => {
             // 默认生成一个简单的设备基座
-            GenRuleOutput::from_mesh(
-                assembly::build_assembly(vec![])
-            )
+            GenRuleOutput::from_mesh(assembly::build_assembly(vec![]))
         }
         GenRuleHint::BooleanSubtract => {
             // BooleanSubtract 需要有宿主，默认返回空
             GenRuleOutput::from_mesh(MeshGeometry {
-                vertices: Vec::new(), normals: Vec::new(), uvs: Vec::new(), faces: Vec::new(),
+                vertices: Vec::new(),
+                normals: Vec::new(),
+                uvs: Vec::new(),
+                faces: Vec::new(),
             })
         }
         GenRuleHint::Primitive => {
             // Primitive 返回空 Parametric，由调用方自行填充
-            GenRuleOutput::from_parametric(ParametricGeometry { operations: Vec::new() })
+            GenRuleOutput::from_parametric(ParametricGeometry {
+                operations: Vec::new(),
+            })
         }
     };
     output
@@ -272,20 +290,57 @@ mod tests {
     #[test]
     fn test_all_types_have_mapping() {
         let all_types = [
-            ObjectType::Wall, ObjectType::Beam, ObjectType::Column, ObjectType::Slab,
-            ObjectType::Door, ObjectType::Window, ObjectType::Stair, ObjectType::Roof,
-            ObjectType::Floor, ObjectType::Duct, ObjectType::CableTray, ObjectType::AirTerminal,
-            ObjectType::Ahu, ObjectType::Chiller, ObjectType::Transformer, ObjectType::Luminaire,
-            ObjectType::Road, ObjectType::Bridge, ObjectType::Tunnel, ObjectType::Dam,
-            ObjectType::Culvert, ObjectType::RetainingWall, ObjectType::PipeCivil,
-            ObjectType::Pier, ObjectType::Manhole, ObjectType::Abutment,
-            ObjectType::Tank, ObjectType::Pump, ObjectType::Valve, ObjectType::HeatExchanger,
-            ObjectType::Reactor, ObjectType::PipePlant, ObjectType::StructuralSteel,
-            ObjectType::Fitting, ObjectType::Compressor, ObjectType::Instrument,
-            ObjectType::Part, ObjectType::Assembly, ObjectType::Fastener, ObjectType::Gear,
-            ObjectType::Shaft, ObjectType::Bearing, ObjectType::Motor, ObjectType::Spring,
-            ObjectType::Seal, ObjectType::Site, ObjectType::Building, ObjectType::BuildingStorey,
-            ObjectType::Space, ObjectType::Unspecified, ObjectType::Generic,
+            ObjectType::Wall,
+            ObjectType::Beam,
+            ObjectType::Column,
+            ObjectType::Slab,
+            ObjectType::Door,
+            ObjectType::Window,
+            ObjectType::Stair,
+            ObjectType::Roof,
+            ObjectType::Floor,
+            ObjectType::Duct,
+            ObjectType::CableTray,
+            ObjectType::AirTerminal,
+            ObjectType::Ahu,
+            ObjectType::Chiller,
+            ObjectType::Transformer,
+            ObjectType::Luminaire,
+            ObjectType::Road,
+            ObjectType::Bridge,
+            ObjectType::Tunnel,
+            ObjectType::Dam,
+            ObjectType::Culvert,
+            ObjectType::RetainingWall,
+            ObjectType::PipeCivil,
+            ObjectType::Pier,
+            ObjectType::Manhole,
+            ObjectType::Abutment,
+            ObjectType::Tank,
+            ObjectType::Pump,
+            ObjectType::Valve,
+            ObjectType::HeatExchanger,
+            ObjectType::Reactor,
+            ObjectType::PipePlant,
+            ObjectType::StructuralSteel,
+            ObjectType::Fitting,
+            ObjectType::Compressor,
+            ObjectType::Instrument,
+            ObjectType::Part,
+            ObjectType::Assembly,
+            ObjectType::Fastener,
+            ObjectType::Gear,
+            ObjectType::Shaft,
+            ObjectType::Bearing,
+            ObjectType::Motor,
+            ObjectType::Spring,
+            ObjectType::Seal,
+            ObjectType::Site,
+            ObjectType::Building,
+            ObjectType::BuildingStorey,
+            ObjectType::Space,
+            ObjectType::Unspecified,
+            ObjectType::Generic,
         ];
         for t in &all_types {
             let _ = suggest(*t, &[]);
@@ -294,22 +349,34 @@ mod tests {
 
     #[test]
     fn test_default_catalog_component_wall() {
-        assert_eq!(default_catalog_component(ObjectType::Wall), Some("Concrete-Wall"));
+        assert_eq!(
+            default_catalog_component(ObjectType::Wall),
+            Some("Concrete-Wall")
+        );
     }
 
     #[test]
     fn test_default_catalog_component_beam() {
-        assert_eq!(default_catalog_component(ObjectType::Beam), Some("Concrete-Beam-Rect"));
+        assert_eq!(
+            default_catalog_component(ObjectType::Beam),
+            Some("Concrete-Beam-Rect")
+        );
     }
 
     #[test]
     fn test_default_catalog_component_pipe() {
-        assert_eq!(default_catalog_component(ObjectType::PipePlant), Some("Pipe-CS"));
+        assert_eq!(
+            default_catalog_component(ObjectType::PipePlant),
+            Some("Pipe-CS")
+        );
     }
 
     #[test]
     fn test_default_catalog_component_road() {
-        assert_eq!(default_catalog_component(ObjectType::Road), Some("Road-Asphalt"));
+        assert_eq!(
+            default_catalog_component(ObjectType::Road),
+            Some("Road-Asphalt")
+        );
     }
 
     #[test]
@@ -321,16 +388,25 @@ mod tests {
 
     #[test]
     fn test_default_series_for_wall() {
-        assert_eq!(default_series_for_type(ObjectType::Wall), Some("Concrete-C30"));
+        assert_eq!(
+            default_series_for_type(ObjectType::Wall),
+            Some("Concrete-C30")
+        );
     }
 
     #[test]
     fn test_default_series_for_pipe() {
-        assert_eq!(default_series_for_type(ObjectType::PipePlant), Some("CS150"));
+        assert_eq!(
+            default_series_for_type(ObjectType::PipePlant),
+            Some("CS150")
+        );
     }
 
     #[test]
     fn test_default_series_for_road() {
-        assert_eq!(default_series_for_type(ObjectType::Road), Some("Highway-GB"));
+        assert_eq!(
+            default_series_for_type(ObjectType::Road),
+            Some("Highway-GB")
+        );
     }
 }

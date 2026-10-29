@@ -10,9 +10,7 @@ pub struct PromptParser {
 
 impl PromptParser {
     pub fn new(provider: Arc<dyn LlmProvider>) -> Self {
-        Self {
-            provider,
-        }
+        Self { provider }
     }
 
     /// 解析自然语言输入，返回结构化的 LLM 响应
@@ -27,22 +25,23 @@ impl PromptParser {
 
         let response_value = self
             .provider
-            .structured_completion(
-                templates::INTENT_CLASSIFICATION_SYSTEM,
-                &user_prompt,
-            )
+            .structured_completion(templates::INTENT_CLASSIFICATION_SYSTEM, &user_prompt)
             .await?;
 
-        let response: LlmIntentResponse = serde_json::from_value(response_value)
-            .map_err(|e| AmirError::ParseError(format!(
-                "Failed to parse intent response: {}", e
-            )))?;
+        let response: LlmIntentResponse = serde_json::from_value(response_value).map_err(|e| {
+            AmirError::ParseError(format!("Failed to parse intent response: {}", e))
+        })?;
 
         Ok(response)
     }
 
     /// 构建用户 prompt，注入项目上下文 + 选中对象等信息
-    fn build_user_prompt(&self, text: &str, selected_ids: &[String], project_context: Option<&str>) -> String {
+    fn build_user_prompt(
+        &self,
+        text: &str,
+        selected_ids: &[String],
+        project_context: Option<&str>,
+    ) -> String {
         let mut prompt = String::new();
 
         // 注入项目上下文（模型统计、当前状态等）
@@ -102,7 +101,13 @@ mod tests {
     async fn test_parse_with_project_context() {
         let parser = PromptParser::new(mock_provider());
 
-        let result = parser.parse("how many objects", &[], Some("Project 'Office' has 15 objects, 3 materials.")).await;
+        let result = parser
+            .parse(
+                "how many objects",
+                &[],
+                Some("Project 'Office' has 15 objects, 3 materials."),
+            )
+            .await;
         assert!(result.is_ok(), "Parse failed: {:?}", result.err());
         let response = result.unwrap();
         assert_eq!(response.intent, "query_model");

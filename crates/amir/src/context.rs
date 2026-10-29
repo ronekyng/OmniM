@@ -58,7 +58,10 @@ impl SessionManager {
 
     pub fn build_context(&self, session_id: &str) -> String {
         let sessions = self.sessions.lock().unwrap();
-        sessions.get(session_id).map(|s| s.build_context()).unwrap_or_default()
+        sessions
+            .get(session_id)
+            .map(|s| s.build_context())
+            .unwrap_or_default()
     }
 }
 

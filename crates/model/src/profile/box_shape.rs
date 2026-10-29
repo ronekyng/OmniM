@@ -7,18 +7,66 @@ pub fn box_section(width: f64, height: f64, thickness: f64) -> ProfilePoints {
     let hh = height / 2.0;
     let t = thickness;
     vec![
-        c::Point3D { x: -hw, y:  hh, z: 0.0 },
-        c::Point3D { x:  hw, y:  hh, z: 0.0 },
-        c::Point3D { x:  hw, y:  hh - t, z: 0.0 },
-        c::Point3D { x:  hw - t, y:  hh - t, z: 0.0 },
-        c::Point3D { x:  hw - t, y: -hh + t, z: 0.0 },
-        c::Point3D { x:  hw, y: -hh + t, z: 0.0 },
-        c::Point3D { x:  hw, y: -hh, z: 0.0 },
-        c::Point3D { x: -hw, y: -hh, z: 0.0 },
-        c::Point3D { x: -hw, y: -hh + t, z: 0.0 },
-        c::Point3D { x: -hw + t, y: -hh + t, z: 0.0 },
-        c::Point3D { x: -hw + t, y:  hh - t, z: 0.0 },
-        c::Point3D { x: -hw, y:  hh - t, z: 0.0 },
+        c::Point3D {
+            x: -hw,
+            y: hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: hh - t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw - t,
+            y: hh - t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw - t,
+            y: -hh + t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: -hh + t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: -hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: -hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: -hh + t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw + t,
+            y: -hh + t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw + t,
+            y: hh - t,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: hh - t,
+            z: 0.0,
+        },
     ]
 }
 
@@ -27,10 +75,26 @@ pub fn rectangle(width: f64, height: f64) -> ProfilePoints {
     let hw = width / 2.0;
     let hh = height / 2.0;
     vec![
-        c::Point3D { x: -hw, y: -hh, z: 0.0 },
-        c::Point3D { x:  hw, y: -hh, z: 0.0 },
-        c::Point3D { x:  hw, y:  hh, z: 0.0 },
-        c::Point3D { x: -hw, y:  hh, z: 0.0 },
+        c::Point3D {
+            x: -hw,
+            y: -hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: -hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: hh,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: hh,
+            z: 0.0,
+        },
     ]
 }
 
@@ -38,12 +102,32 @@ pub fn rectangle(width: f64, height: f64) -> ProfilePoints {
 pub fn l_section(leg1: f64, leg2: f64, thickness: f64) -> ProfilePoints {
     let t = thickness;
     vec![
-        c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-        c::Point3D { x: leg1, y: 0.0, z: 0.0 },
-        c::Point3D { x: leg1, y: t, z: 0.0 },
+        c::Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: leg1,
+            y: 0.0,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: leg1,
+            y: t,
+            z: 0.0,
+        },
         c::Point3D { x: t, y: t, z: 0.0 },
-        c::Point3D { x: t, y: leg2, z: 0.0 },
-        c::Point3D { x: 0.0, y: leg2, z: 0.0 },
+        c::Point3D {
+            x: t,
+            y: leg2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: 0.0,
+            y: leg2,
+            z: 0.0,
+        },
     ]
 }
 

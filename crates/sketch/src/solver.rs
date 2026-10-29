@@ -1,6 +1,5 @@
 use crate::{
-    Sketch, SketchConstraint, SketchConstraintType, SketchEntity, SketchEntityType,
-    SketchPointRef,
+    Sketch, SketchConstraint, SketchConstraintType, SketchEntity, SketchEntityType, SketchPointRef,
 };
 use omnim_core as c;
 
@@ -79,15 +78,21 @@ pub fn solve(sketch: &mut Sketch) -> SolveResult {
     let group = system.add_group();
 
     let workplane = if !sketch.is_3d() {
-        let origin_pt = system.sketch(slvs::entity::Point::new_in_3d(
-            group,
-            [sketch.origin.x, sketch.origin.y, sketch.origin.z],
-        )).unwrap();
-        let quat = normal_to_quaternion(
-            sketch.normal.x, sketch.normal.y, sketch.normal.z,
-        );
-        let normal = system.sketch(slvs::entity::Normal::new_in_3d(group, quat)).unwrap();
-        Some(system.sketch(slvs::entity::Workplane::new(group, origin_pt, normal)).unwrap())
+        let origin_pt = system
+            .sketch(slvs::entity::Point::new_in_3d(
+                group,
+                [sketch.origin.x, sketch.origin.y, sketch.origin.z],
+            ))
+            .unwrap();
+        let quat = normal_to_quaternion(sketch.normal.x, sketch.normal.y, sketch.normal.z);
+        let normal = system
+            .sketch(slvs::entity::Normal::new_in_3d(group, quat))
+            .unwrap();
+        Some(
+            system
+                .sketch(slvs::entity::Workplane::new(group, origin_pt, normal))
+                .unwrap(),
+        )
     } else {
         None
     };
@@ -115,14 +120,22 @@ pub fn solve(sketch: &mut Sketch) -> SolveResult {
                         sketch.set_solved_point(
                             entity_idx,
                             pt_idx,
-                            c::Point3D { x: coords[0], y: coords[1], z: coords[2] },
+                            c::Point3D {
+                                x: coords[0],
+                                y: coords[1],
+                                z: coords[2],
+                            },
                         );
                     }
                     slvs::entity::Point::OnWorkplane { coords, .. } => {
                         sketch.set_solved_point(
                             entity_idx,
                             pt_idx,
-                            c::Point3D { x: coords[0], y: coords[1], z: 0.0 },
+                            c::Point3D {
+                                x: coords[0],
+                                y: coords[1],
+                                z: 0.0,
+                            },
                         );
                     }
                 }
@@ -134,9 +147,11 @@ pub fn solve(sketch: &mut Sketch) -> SolveResult {
 
     let (dof, failed) = match &result {
         slvs::system::SolveResult::Ok { dof, .. } => (*dof, Vec::new()),
-        slvs::system::SolveResult::Fail { dof, failed_constraints, .. } => {
-            (*dof, (0..failed_constraints.len()).collect())
-        }
+        slvs::system::SolveResult::Fail {
+            dof,
+            failed_constraints,
+            ..
+        } => (*dof, (0..failed_constraints.len()).collect()),
     };
 
     SolveResult {
@@ -159,12 +174,16 @@ fn make_point(
     workplane: Option<SlvsWorkplane>,
 ) -> SlvsPoint {
     match workplane {
-        Some(wp) => system.sketch(slvs::entity::Point::new_on_workplane(
-            group, wp, [pt.x, pt.y],
-        )).unwrap(),
-        None => system.sketch(slvs::entity::Point::new_in_3d(
-            group, [pt.x, pt.y, pt.z],
-        )).unwrap(),
+        Some(wp) => system
+            .sketch(slvs::entity::Point::new_on_workplane(
+                group,
+                wp,
+                [pt.x, pt.y],
+            ))
+            .unwrap(),
+        None => system
+            .sketch(slvs::entity::Point::new_in_3d(group, [pt.x, pt.y, pt.z]))
+            .unwrap(),
     }
 }
 
@@ -176,20 +195,45 @@ fn build_entity(
 ) -> BuiltEntity {
     match entity.entity_type {
         SketchEntityType::Point => {
-            let pt = entity.points.first().cloned().unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
+            let pt = entity.points.first().cloned().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
             let h = make_point(system, group, pt, workplane);
-            BuiltEntity { points: vec![h], ..Default::default() }
+            BuiltEntity {
+                points: vec![h],
+                ..Default::default()
+            }
         }
         SketchEntityType::Line => {
-            let start = entity.points.get(0).cloned().unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-            let end = entity.points.get(1).cloned().unwrap_or(c::Point3D { x: 1.0, y: 0.0, z: 0.0 });
+            let start = entity.points.get(0).cloned().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
+            let end = entity.points.get(1).cloned().unwrap_or(c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            });
             let h0 = make_point(system, group, start, workplane);
             let h1 = make_point(system, group, end, workplane);
-            let line = system.sketch(slvs::entity::LineSegment::new(group, h0, h1)).unwrap();
-            BuiltEntity { points: vec![h0, h1], line: Some(line), ..Default::default() }
+            let line = system
+                .sketch(slvs::entity::LineSegment::new(group, h0, h1))
+                .unwrap();
+            BuiltEntity {
+                points: vec![h0, h1],
+                line: Some(line),
+                ..Default::default()
+            }
         }
         SketchEntityType::Circle => {
-            let center = entity.points.first().cloned().unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
+            let center = entity.points.first().cloned().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
             let hc = make_point(system, group, center, workplane);
             let normal_entity = match workplane {
                 Some(wp) => slvs::entity::Normal::new_on_workplane(group, wp),
@@ -200,29 +244,67 @@ fn build_entity(
             };
             let hn = system.sketch(normal_entity).unwrap();
             let radius = entity.radius.max(0.001);
-            let hr = system.sketch(slvs::entity::Distance::new(group, radius)).unwrap();
-            let circle = system.sketch(slvs::entity::Circle::new(group, hn, hc, hr)).unwrap();
-            BuiltEntity { points: vec![hc], circle: Some(circle), normal: Some(hn), _distance: Some(hr), ..Default::default() }
+            let hr = system
+                .sketch(slvs::entity::Distance::new(group, radius))
+                .unwrap();
+            let circle = system
+                .sketch(slvs::entity::Circle::new(group, hn, hc, hr))
+                .unwrap();
+            BuiltEntity {
+                points: vec![hc],
+                circle: Some(circle),
+                normal: Some(hn),
+                _distance: Some(hr),
+                ..Default::default()
+            }
         }
         SketchEntityType::Arc => {
             let wp = match workplane {
                 Some(w) => w,
                 None => {
-                    let origin_pt = system.sketch(slvs::entity::Point::new_in_3d(group, [0.0, 0.0, 0.0])).unwrap();
-                    let normal = system.sketch(slvs::entity::Normal::new_in_3d(group, [1.0, 0.0, 0.0, 0.0])).unwrap();
-                    system.sketch(slvs::entity::Workplane::new(group, origin_pt, normal)).unwrap()
+                    let origin_pt = system
+                        .sketch(slvs::entity::Point::new_in_3d(group, [0.0, 0.0, 0.0]))
+                        .unwrap();
+                    let normal = system
+                        .sketch(slvs::entity::Normal::new_in_3d(group, [1.0, 0.0, 0.0, 0.0]))
+                        .unwrap();
+                    system
+                        .sketch(slvs::entity::Workplane::new(group, origin_pt, normal))
+                        .unwrap()
                 }
             };
-            let center = entity.points.get(0).cloned().unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-            let start = entity.points.get(1).cloned().unwrap_or(c::Point3D { x: 1.0, y: 0.0, z: 0.0 });
-            let end = entity.points.get(2).cloned().unwrap_or(c::Point3D { x: 0.0, y: 1.0, z: 0.0 });
+            let center = entity.points.get(0).cloned().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
+            let start = entity.points.get(1).cloned().unwrap_or(c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            });
+            let end = entity.points.get(2).cloned().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            });
             let hc = make_point(system, group, center, workplane);
             let hs = make_point(system, group, start, workplane);
             let he = make_point(system, group, end, workplane);
-            let arc = system.sketch(slvs::entity::ArcOfCircle::new(group, wp, hc, hs, he)).unwrap();
-            BuiltEntity { points: vec![hc, hs, he], arc: Some(arc), ..Default::default() }
+            let arc = system
+                .sketch(slvs::entity::ArcOfCircle::new(group, wp, hc, hs, he))
+                .unwrap();
+            BuiltEntity {
+                points: vec![hc, hs, he],
+                arc: Some(arc),
+                ..Default::default()
+            }
         }
-        SketchEntityType::Rectangle | SketchEntityType::Polygon | SketchEntityType::Ellipse | SketchEntityType::Spline | SketchEntityType::Polyline => {
+        SketchEntityType::Rectangle
+        | SketchEntityType::Polygon
+        | SketchEntityType::Ellipse
+        | SketchEntityType::Spline
+        | SketchEntityType::Polyline => {
             let mut handles = Vec::new();
             for pt in &entity.points {
                 let h = make_point(system, group, *pt, workplane);
@@ -231,11 +313,16 @@ fn build_entity(
             if handles.len() >= 2 {
                 let mut prev = handles[0];
                 for &h in &handles[1..] {
-                    let _line = system.sketch(slvs::entity::LineSegment::new(group, prev, h)).unwrap();
+                    let _line = system
+                        .sketch(slvs::entity::LineSegment::new(group, prev, h))
+                        .unwrap();
                     prev = h;
                 }
             }
-            BuiltEntity { points: handles, ..Default::default() }
+            BuiltEntity {
+                points: handles,
+                ..Default::default()
+            }
         }
     }
 }
@@ -248,8 +335,10 @@ fn build_constraint(
     workplane: Option<SlvsWorkplane>,
 ) {
     let resolve_point = |r#ref: &SketchPointRef| -> Option<SlvsPoint> {
-        built_entities.get(r#ref.entity_index)?
-            .points.get(r#ref.point_index)
+        built_entities
+            .get(r#ref.entity_index)?
+            .points
+            .get(r#ref.point_index)
             .copied()
     };
 
@@ -261,9 +350,8 @@ fn build_constraint(
         built_entities.get(r#ref.entity_index)?.circle
     };
 
-    let resolve_arc = |r#ref: &SketchPointRef| -> Option<SlvsArc> {
-        built_entities.get(r#ref.entity_index)?.arc
-    };
+    let resolve_arc =
+        |r#ref: &SketchPointRef| -> Option<SlvsArc> { built_entities.get(r#ref.entity_index)?.arc };
 
     match constraint.constraint_type {
         SketchConstraintType::Fixed => {
@@ -279,7 +367,9 @@ fn build_constraint(
                     resolve_point(&constraint.entity_refs[0]),
                     resolve_point(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::PointsCoincident::new(group, pt_a, pt_b, None));
+                    let _ = system.constrain(slvs::constraint::PointsCoincident::new(
+                        group, pt_a, pt_b, None,
+                    ));
                 }
             }
         }
@@ -290,7 +380,11 @@ fn build_constraint(
                     resolve_point(&constraint.entity_refs[1]),
                 ) {
                     let _ = system.constrain(slvs::constraint::PtPtDistance::new(
-                        group, pt_a, pt_b, constraint.value, None,
+                        group,
+                        pt_a,
+                        pt_b,
+                        constraint.value,
+                        None,
                     ));
                 }
             }
@@ -302,7 +396,9 @@ fn build_constraint(
                 constraint.entity_refs.get(1),
             ) {
                 if let (Some(pt_a), Some(pt_b)) = (resolve_point(r#ref_a), resolve_point(r#ref_b)) {
-                    let _ = system.constrain(slvs::constraint::Horizontal::from_points(group, wp, pt_a, pt_b));
+                    let _ = system.constrain(slvs::constraint::Horizontal::from_points(
+                        group, wp, pt_a, pt_b,
+                    ));
                 }
             }
         }
@@ -313,7 +409,9 @@ fn build_constraint(
                 constraint.entity_refs.get(1),
             ) {
                 if let (Some(pt_a), Some(pt_b)) = (resolve_point(r#ref_a), resolve_point(r#ref_b)) {
-                    let _ = system.constrain(slvs::constraint::Vertical::from_points(group, wp, pt_a, pt_b));
+                    let _ = system.constrain(slvs::constraint::Vertical::from_points(
+                        group, wp, pt_a, pt_b,
+                    ));
                 }
             }
         }
@@ -323,7 +421,8 @@ fn build_constraint(
                     resolve_line(&constraint.entity_refs[0]),
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::Parallel::new(group, line_a, line_b, None));
+                    let _ = system
+                        .constrain(slvs::constraint::Parallel::new(group, line_a, line_b, None));
                 }
             }
         }
@@ -333,7 +432,9 @@ fn build_constraint(
                     resolve_line(&constraint.entity_refs[0]),
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::Perpendicular::new(group, line_a, line_b, None));
+                    let _ = system.constrain(slvs::constraint::Perpendicular::new(
+                        group, line_a, line_b, None,
+                    ));
                 }
             }
         }
@@ -344,7 +445,12 @@ fn build_constraint(
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
                     let _ = system.constrain(slvs::constraint::Angle::new(
-                        group, line_a, line_b, constraint.value, workplane, false,
+                        group,
+                        line_a,
+                        line_b,
+                        constraint.value,
+                        workplane,
+                        false,
                     ));
                 }
             }
@@ -352,9 +458,17 @@ fn build_constraint(
         SketchConstraintType::Diameter => {
             if let Some(r#ref) = constraint.entity_refs.first() {
                 if let Some(circle) = resolve_circle(r#ref) {
-                    let _ = system.constrain(slvs::constraint::Diameter::new(group, circle, constraint.value));
+                    let _ = system.constrain(slvs::constraint::Diameter::new(
+                        group,
+                        circle,
+                        constraint.value,
+                    ));
                 } else if let Some(arc) = resolve_arc(r#ref) {
-                    let _ = system.constrain(slvs::constraint::Diameter::new(group, arc, constraint.value));
+                    let _ = system.constrain(slvs::constraint::Diameter::new(
+                        group,
+                        arc,
+                        constraint.value,
+                    ));
                 }
             }
         }
@@ -362,7 +476,8 @@ fn build_constraint(
             if let Some(r#ref) = constraint.entity_refs.first() {
                 let diameter = constraint.value * 2.0;
                 if let Some(circle) = resolve_circle(r#ref) {
-                    let _ = system.constrain(slvs::constraint::Diameter::new(group, circle, diameter));
+                    let _ =
+                        system.constrain(slvs::constraint::Diameter::new(group, circle, diameter));
                 } else if let Some(arc) = resolve_arc(r#ref) {
                     let _ = system.constrain(slvs::constraint::Diameter::new(group, arc, diameter));
                 }
@@ -388,7 +503,8 @@ fn build_constraint(
                     resolve_point(&constraint.entity_refs[0]),
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::AtMidpoint::new(group, pt, line, None));
+                    let _ =
+                        system.constrain(slvs::constraint::AtMidpoint::new(group, pt, line, None));
                 }
             }
         }
@@ -398,7 +514,9 @@ fn build_constraint(
                     resolve_line(&constraint.entity_refs[0]),
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::EqualLengthLines::new(group, line_a, line_b, None));
+                    let _ = system.constrain(slvs::constraint::EqualLengthLines::new(
+                        group, line_a, line_b, None,
+                    ));
                 }
             }
         }
@@ -408,12 +526,14 @@ fn build_constraint(
                     resolve_circle(&constraint.entity_refs[0]),
                     resolve_circle(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::EqualRadius::new(group, circ_a, circ_b));
+                    let _ =
+                        system.constrain(slvs::constraint::EqualRadius::new(group, circ_a, circ_b));
                 } else if let (Some(arc_a), Some(arc_b)) = (
                     resolve_arc(&constraint.entity_refs[0]),
                     resolve_arc(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::EqualRadius::new(group, arc_a, arc_b));
+                    let _ =
+                        system.constrain(slvs::constraint::EqualRadius::new(group, arc_a, arc_b));
                 }
             }
         }
@@ -423,7 +543,8 @@ fn build_constraint(
                     resolve_point(&constraint.entity_refs[0]),
                     resolve_line(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::PtOnLine::new(group, pt, line, None));
+                    let _ =
+                        system.constrain(slvs::constraint::PtOnLine::new(group, pt, line, None));
                 }
             }
         }
@@ -449,15 +570,19 @@ fn build_constraint(
                     resolve_point(&constraint.entity_refs[0]),
                     resolve_point(&constraint.entity_refs[1]),
                 ) {
-                    let _ = system.constrain(slvs::constraint::Symmetric::new(group, pt_a, pt_b, wp, None));
+                    let _ = system.constrain(slvs::constraint::Symmetric::new(
+                        group, pt_a, pt_b, wp, None,
+                    ));
                 }
             }
         }
         SketchConstraintType::SameOrientation => {
             if constraint.entity_refs.len() >= 2 {
-                let normal_a = built_entities.get(constraint.entity_refs[0].entity_index)
+                let normal_a = built_entities
+                    .get(constraint.entity_refs[0].entity_index)
                     .and_then(|e| e.normal);
-                let normal_b = built_entities.get(constraint.entity_refs[1].entity_index)
+                let normal_b = built_entities
+                    .get(constraint.entity_refs[1].entity_index)
                     .and_then(|e| e.normal);
                 if let (Some(na), Some(nb)) = (normal_a, normal_b) {
                     let _ = system.constrain(slvs::constraint::SameOrientation::new(group, na, nb));
@@ -484,14 +609,21 @@ mod tests {
     }
 
     fn normal_2d() -> c::Vector3D {
-        c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+        c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        }
     }
 
     fn fix_point(sketch: &mut Sketch, entity_index: usize, point_index: usize) {
         sketch.add_constraint(SketchConstraint {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Fixed,
-            entity_refs: vec![SketchPointRef { entity_index, point_index }],
+            entity_refs: vec![SketchPointRef {
+                entity_index,
+                point_index,
+            }],
             value: 0.0,
         });
     }
@@ -534,8 +666,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Coincident,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 1, point_index: 0 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 1,
+                    point_index: 0,
+                },
             ],
             value: 0.0,
         });
@@ -556,8 +694,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Distance,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 0, point_index: 1 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 1,
+                },
             ],
             value: 10.0,
         });
@@ -604,8 +748,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Horizontal,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 0, point_index: 1 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 1,
+                },
             ],
             value: 0.0,
         });
@@ -625,8 +775,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Vertical,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 0, point_index: 1 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 1,
+                },
             ],
             value: 0.0,
         });
@@ -648,8 +804,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Parallel,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 1, point_index: 0 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 1,
+                    point_index: 0,
+                },
             ],
             value: 0.0,
         });
@@ -667,8 +829,14 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Perpendicular,
             entity_refs: vec![
-                SketchPointRef { entity_index: 0, point_index: 0 },
-                SketchPointRef { entity_index: 1, point_index: 0 },
+                SketchPointRef {
+                    entity_index: 0,
+                    point_index: 0,
+                },
+                SketchPointRef {
+                    entity_index: 1,
+                    point_index: 0,
+                },
             ],
             value: 0.0,
         });
@@ -684,7 +852,10 @@ mod tests {
         sketch.add_constraint(SketchConstraint {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Diameter,
-            entity_refs: vec![SketchPointRef { entity_index: 0, point_index: 0 }],
+            entity_refs: vec![SketchPointRef {
+                entity_index: 0,
+                point_index: 0,
+            }],
             value: 20.0,
         });
         let result = solve(&mut sketch);
@@ -699,7 +870,10 @@ mod tests {
         sketch.add_constraint(SketchConstraint {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Radius,
-            entity_refs: vec![SketchPointRef { entity_index: 0, point_index: 0 }],
+            entity_refs: vec![SketchPointRef {
+                entity_index: 0,
+                point_index: 0,
+            }],
             value: 7.5,
         });
         let result = solve(&mut sketch);

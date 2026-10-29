@@ -1,5 +1,5 @@
-use omnim_core as c;
 use c::{FaceIndices, MeshGeometry, Point3D, Vector3D};
+use omnim_core as c;
 use std::f64::consts::PI;
 use std::ops::Bound;
 
@@ -17,7 +17,11 @@ fn to_tv(v: &Vector3D) -> TVector3 {
 }
 
 fn vec_diff(a: &Point3D, b: &Point3D) -> Vector3D {
-    Vector3D { x: a.x - b.x, y: a.y - b.y, z: a.z - b.z }
+    Vector3D {
+        x: a.x - b.x,
+        y: a.y - b.y,
+        z: a.z - b.z,
+    }
 }
 
 /// Default tessellation tolerance (LOD).
@@ -44,9 +48,7 @@ fn profile_to_wire(points: &[Point3D]) -> Option<Wire> {
     if points.len() < 3 {
         return None;
     }
-    let verts: Vec<_> = points.iter()
-        .map(|p| builder::vertex(to_tp(p)))
-        .collect();
+    let verts: Vec<_> = points.iter().map(|p| builder::vertex(to_tp(p))).collect();
     let mut edges = Vec::with_capacity(verts.len());
     for i in 0..verts.len() {
         let j = (i + 1) % verts.len();
@@ -75,10 +77,18 @@ fn solid_to_mesh(solid: &Solid, tolerance: f64) -> MeshGeometry {
         let normals = poly.normals();
 
         for pos in positions {
-            all_verts.push(Point3D { x: pos.x, y: pos.y, z: pos.z });
+            all_verts.push(Point3D {
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+            });
         }
         for norm in normals {
-            all_normals.push(Vector3D { x: norm.x, y: norm.y, z: norm.z });
+            all_normals.push(Vector3D {
+                x: norm.x,
+                y: norm.y,
+                z: norm.z,
+            });
         }
 
         let faces = poly.faces();
@@ -126,10 +136,18 @@ fn shell_to_mesh(shell: &Shell, tolerance: f64) -> MeshGeometry {
         let normals = poly.normals();
 
         for pos in positions {
-            all_verts.push(Point3D { x: pos.x, y: pos.y, z: pos.z });
+            all_verts.push(Point3D {
+                x: pos.x,
+                y: pos.y,
+                z: pos.z,
+            });
         }
         for norm in normals {
-            all_normals.push(Vector3D { x: norm.x, y: norm.y, z: norm.z });
+            all_normals.push(Vector3D {
+                x: norm.x,
+                y: norm.y,
+                z: norm.z,
+            });
         }
 
         let faces = poly.faces();
@@ -194,7 +212,11 @@ pub fn revolve_brep(
     let face = builder::try_attach_plane(&[wire]).ok()?;
     let axis = to_tv(&axis_direction).normalize();
     let origin = to_tp(&axis_origin);
-    let total_angle = if angle.abs() < 1e-10 { 2.0 * PI } else { angle.abs() };
+    let total_angle = if angle.abs() < 1e-10 {
+        2.0 * PI
+    } else {
+        angle.abs()
+    };
     let rad = truck_base::cgmath64::Rad(total_angle);
     let solid: Solid = builder::rsweep(&face, origin, axis, rad);
     Some(solid_to_mesh(&solid, tolerance))
@@ -205,11 +227,7 @@ pub fn revolve_brep(
 /// `profile` - closed polygon points (at least 3), placed at the start of the path
 /// `path` - ordered path points (at least 2)
 /// `tolerance` - tessellation tolerance (lower = finer mesh)
-pub fn sweep_brep(
-    profile: &[Point3D],
-    path: &[Point3D],
-    tolerance: f64,
-) -> Option<MeshGeometry> {
+pub fn sweep_brep(profile: &[Point3D], path: &[Point3D], tolerance: f64) -> Option<MeshGeometry> {
     if path.len() < 2 {
         return None;
     }
@@ -278,25 +296,62 @@ mod tests {
 
     fn rect_profile() -> Vec<Point3D> {
         vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 2.0, y: 0.0, z: 0.0 },
-            Point3D { x: 2.0, y: 1.0, z: 0.0 },
-            Point3D { x: 0.0, y: 1.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
         ]
     }
 
     fn triangle_profile() -> Vec<Point3D> {
         vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 1.0, y: 0.0, z: 0.0 },
-            Point3D { x: 0.5, y: 0.866, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 0.5,
+                y: 0.866,
+                z: 0.0,
+            },
         ]
     }
 
     #[test]
     fn test_extrude_brep_rectangle() {
         let profile = rect_profile();
-        let mesh = extrude_brep(&profile, 3.0, Vector3D { x: 0.0, y: 0.0, z: 1.0 }, DEFAULT_TOLERANCE);
+        let mesh = extrude_brep(
+            &profile,
+            3.0,
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+            DEFAULT_TOLERANCE,
+        );
         assert!(mesh.is_some());
         let m = mesh.unwrap();
         assert!(m.vertices.len() >= 8);
@@ -307,7 +362,16 @@ mod tests {
     #[test]
     fn test_extrude_brep_triangle() {
         let profile = triangle_profile();
-        let mesh = extrude_brep(&profile, 2.0, Vector3D { x: 0.0, y: 0.0, z: 1.0 }, DEFAULT_TOLERANCE);
+        let mesh = extrude_brep(
+            &profile,
+            2.0,
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+            DEFAULT_TOLERANCE,
+        );
         assert!(mesh.is_some());
         let m = mesh.unwrap();
         assert!(m.vertices.len() >= 6);
@@ -320,8 +384,16 @@ mod tests {
         let mesh = revolve_brep(
             &profile,
             PI,
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             DEFAULT_TOLERANCE,
         );
         assert!(mesh.is_some());
@@ -333,16 +405,40 @@ mod tests {
     #[test]
     fn test_revolve_brep_full_circle() {
         let profile = vec![
-            Point3D { x: 3.0, y: 0.0, z: 0.0 },
-            Point3D { x: 4.0, y: 0.0, z: 0.0 },
-            Point3D { x: 4.0, y: 1.0, z: 0.0 },
-            Point3D { x: 3.0, y: 1.0, z: 0.0 },
+            Point3D {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 4.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 4.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 3.0,
+                y: 1.0,
+                z: 0.0,
+            },
         ];
         let mesh = revolve_brep(
             &profile,
             0.0,
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
             DEFAULT_TOLERANCE,
         );
         assert!(mesh.is_some());
@@ -354,8 +450,16 @@ mod tests {
     fn test_sweep_brep_straight() {
         let profile = rect_profile();
         let path = vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 0.0, y: 0.0, z: 5.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 5.0,
+            },
         ];
         let mesh = sweep_brep(&profile, &path, DEFAULT_TOLERANCE);
         assert!(mesh.is_some());
@@ -367,10 +471,26 @@ mod tests {
     fn test_loft_brep_same_shape() {
         let profile0 = rect_profile();
         let profile1 = vec![
-            Point3D { x: 0.0, y: 0.0, z: 3.0 },
-            Point3D { x: 2.0, y: 0.0, z: 3.0 },
-            Point3D { x: 2.0, y: 1.0, z: 3.0 },
-            Point3D { x: 0.0, y: 1.0, z: 3.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 3.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 3.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 3.0,
+            },
+            Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 3.0,
+            },
         ];
         let mesh = loft_brep(&profile0, &profile1, DEFAULT_TOLERANCE);
         assert!(mesh.is_some());
@@ -382,16 +502,38 @@ mod tests {
     #[test]
     fn test_profile_too_small_returns_none() {
         let profile = vec![
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 1.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ];
-        assert!(extrude_brep(&profile, 1.0, Vector3D { x: 0.0, y: 0.0, z: 1.0 }, DEFAULT_TOLERANCE).is_none());
+        assert!(extrude_brep(
+            &profile,
+            1.0,
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0
+            },
+            DEFAULT_TOLERANCE
+        )
+        .is_none());
     }
 
     #[test]
     fn test_sweep_insufficient_path_returns_none() {
         let profile = rect_profile();
-        let path = vec![Point3D { x: 0.0, y: 0.0, z: 0.0 }];
+        let path = vec![Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }];
         assert!(sweep_brep(&profile, &path, DEFAULT_TOLERANCE).is_none());
     }
 }

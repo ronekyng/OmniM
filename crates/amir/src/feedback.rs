@@ -13,7 +13,8 @@ pub fn translate_error(error: &str, _context: &str) -> String {
     } else if lower.contains("empty") && lower.contains("name") {
         "对象名称不能为空，请指定一个名称。".to_string()
     } else if lower.contains("invalid") && lower.contains("type") {
-        "不支持的对象类型，请检查类型名称是否正确。支持的包括：墙、梁、柱、板、门、窗等。".to_string()
+        "不支持的对象类型，请检查类型名称是否正确。支持的包括：墙、梁、柱、板、门、窗等。"
+            .to_string()
     } else if lower.contains("unknown action") {
         "不支持的操作类型。".to_string()
     } else if lower.contains("parent") && lower.contains("not found") {
@@ -27,8 +28,12 @@ pub fn translate_error(error: &str, _context: &str) -> String {
     } else if lower.contains("asset") && lower.contains("not found") {
         "找不到指定的资产对象。".to_string()
     } else if lower.contains("spatial conflict") || lower.contains("intersect") {
-        "新对象与现有对象存在空间冲突，但工程中重叠是常见的（如管道穿墙），已记录为警告。".to_string()
-    } else if lower.contains("permission") || lower.contains("denied") || lower.contains("forbidden") {
+        "新对象与现有对象存在空间冲突，但工程中重叠是常见的（如管道穿墙），已记录为警告。"
+            .to_string()
+    } else if lower.contains("permission")
+        || lower.contains("denied")
+        || lower.contains("forbidden")
+    {
         "没有权限执行此操作。".to_string()
     } else if lower.contains("transaction") && lower.contains("already") {
         "事务已在进行中，无法开始新事务。".to_string()

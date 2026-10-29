@@ -2,8 +2,8 @@ use omnim_core as c;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub mod solver;
 pub mod profile;
+pub mod solver;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct SketchPointRef {
@@ -182,7 +182,14 @@ impl Sketch {
     pub fn set_solved_point(&mut self, entity_index: usize, point_index: usize, point: c::Point3D) {
         let idx = entity_index * 3 + point_index;
         if idx >= self.solved_points.len() {
-            self.solved_points.resize(idx + 1, c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
+            self.solved_points.resize(
+                idx + 1,
+                c::Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            );
         }
         self.solved_points[idx] = point;
     }
@@ -253,11 +260,17 @@ impl SketchStore {
     }
 
     pub fn find_by_component(&self, component_id: &str) -> Vec<&Sketch> {
-        self.sketches.values().filter(|s| s.component_id.as_deref() == Some(component_id)).collect()
+        self.sketches
+            .values()
+            .filter(|s| s.component_id.as_deref() == Some(component_id))
+            .collect()
     }
 
     pub fn find_by_component_mut(&mut self, component_id: &str) -> Vec<&mut Sketch> {
-        self.sketches.values_mut().filter(|s| s.component_id.as_deref() == Some(component_id)).collect()
+        self.sketches
+            .values_mut()
+            .filter(|s| s.component_id.as_deref() == Some(component_id))
+            .collect()
     }
 }
 
@@ -266,11 +279,19 @@ mod tests {
     use super::*;
 
     fn origin() -> c::Point3D {
-        c::Point3D { x: 0.0, y: 0.0, z: 0.0 }
+        c::Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 
     fn normal_2d() -> c::Vector3D {
-        c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+        c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        }
     }
 
     #[test]
@@ -284,7 +305,15 @@ mod tests {
 
     #[test]
     fn test_sketch_3d_mode() {
-        let s = Sketch::new("s3d", origin(), c::Vector3D { x: 0.0, y: 0.0, z: 0.0 });
+        let s = Sketch::new(
+            "s3d",
+            origin(),
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
         assert!(s.is_3d());
     }
 
@@ -292,8 +321,16 @@ mod tests {
     fn test_add_entity() {
         let mut s = Sketch::new("s", origin(), normal_2d());
         let e = SketchEntity::line(
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 10.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 10.0,
+                y: 0.0,
+                z: 0.0,
+            },
         );
         let idx = s.add_entity(e);
         assert_eq!(idx, 0);
@@ -307,7 +344,10 @@ mod tests {
         let c = SketchConstraint {
             id: uuid::Uuid::new_v4().to_string(),
             constraint_type: SketchConstraintType::Horizontal,
-            entity_refs: vec![SketchPointRef { entity_index: 0, point_index: 0 }],
+            entity_refs: vec![SketchPointRef {
+                entity_index: 0,
+                point_index: 0,
+            }],
             value: 0.0,
         };
         let idx = s.add_constraint(c);
@@ -342,22 +382,48 @@ mod tests {
         assert_eq!(SketchEntity::point(0.0, 0.0, 0.0).point_count(), 1);
         assert_eq!(SketchEntity::line(origin(), origin()).point_count(), 2);
         assert_eq!(SketchEntity::circle(origin(), 1.0).point_count(), 1);
-        assert_eq!(SketchEntity::arc(origin(), origin(), origin()).point_count(), 3);
+        assert_eq!(
+            SketchEntity::arc(origin(), origin(), origin()).point_count(),
+            3
+        );
     }
 
     #[test]
     fn test_get_point_ref() {
         let mut s = Sketch::new("s", origin(), normal_2d());
         let e = SketchEntity::line(
-            c::Point3D { x: 1.0, y: 2.0, z: 0.0 },
-            c::Point3D { x: 3.0, y: 4.0, z: 0.0 },
+            c::Point3D {
+                x: 1.0,
+                y: 2.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 3.0,
+                y: 4.0,
+                z: 0.0,
+            },
         );
         s.add_entity(e);
-        let pt = s.get_point(&SketchPointRef { entity_index: 0, point_index: 0 }).unwrap();
+        let pt = s
+            .get_point(&SketchPointRef {
+                entity_index: 0,
+                point_index: 0,
+            })
+            .unwrap();
         assert_eq!(pt.x, 1.0);
         assert_eq!(pt.y, 2.0);
-        let pt2 = s.get_point(&SketchPointRef { entity_index: 0, point_index: 1 }).unwrap();
+        let pt2 = s
+            .get_point(&SketchPointRef {
+                entity_index: 0,
+                point_index: 1,
+            })
+            .unwrap();
         assert_eq!(pt2.x, 3.0);
-        assert!(s.get_point(&SketchPointRef { entity_index: 0, point_index: 2 }).is_none());
+        assert!(s
+            .get_point(&SketchPointRef {
+                entity_index: 0,
+                point_index: 2
+            })
+            .is_none());
     }
 }

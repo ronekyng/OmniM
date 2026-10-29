@@ -47,14 +47,22 @@ async fn mutation_persists_and_round_trips() {
         .send()
         .await
         .unwrap();
-    assert_eq!(resp.status(), 200, "create failed: {}", resp.text().await.unwrap());
+    assert_eq!(
+        resp.status(),
+        200,
+        "create failed: {}",
+        resp.text().await.unwrap()
+    );
     let obj: serde_json::Value = resp.json().await.unwrap();
     let id = obj["id"].as_str().unwrap().to_string();
 
     // The default save path must have been written by the mutate path.
     assert!(path.exists(), "project file was not persisted after create");
     let saved = Project::load(path.to_str().unwrap()).expect("saved project should load");
-    assert!(saved.objects.get(&id).is_some(), "created object missing from saved file");
+    assert!(
+        saved.objects.get(&id).is_some(),
+        "created object missing from saved file"
+    );
     assert_eq!(saved.objects.get(&id).unwrap().name, "W-01");
 
     // In-memory state matches the on-disk state.
@@ -77,7 +85,12 @@ async fn explicit_save_endpoint_writes_file() {
         .send()
         .await
         .unwrap();
-    assert_eq!(resp.status(), 200, "save failed: {}", resp.text().await.unwrap());
+    assert_eq!(
+        resp.status(),
+        200,
+        "save failed: {}",
+        resp.text().await.unwrap()
+    );
     let body: serde_json::Value = resp.json().await.unwrap();
     assert_eq!(body["success"], true);
     assert!(path.exists());
@@ -116,7 +129,8 @@ async fn no_save_path_means_no_file() {
 
 // Small helper so tests don't need an extra dev-dependency.
 fn tempfile_dir(tag: &str) -> std::path::PathBuf {
-    let dir = std::env::temp_dir().join(format!("omnim-test-persist-{}-{}", tag, std::process::id()));
+    let dir =
+        std::env::temp_dir().join(format!("omnim-test-persist-{}-{}", tag, std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }

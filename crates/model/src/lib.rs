@@ -14,8 +14,8 @@ pub mod measurement;
 pub mod mesh_gen;
 pub mod object;
 pub mod profile;
-pub mod property_def;
 pub mod project;
+pub mod property_def;
 pub mod relation;
 pub mod seed_catalog;
 pub mod seed_materials;
@@ -25,22 +25,26 @@ pub mod tags;
 
 pub use administrative::{AdministrativeDivision, AdministrativeStore, GeoBoundary};
 pub use breakdown::{BreakdownNode, BreakdownStore};
-pub use catalog::{CatalogStore, CatalogRef, ComponentDef, ParamDef, ConnectorDef};
-pub use series_store::{
-    Series, Selector, Answer, AnswerOutcome, SpecComponent, ParamConstraint,
-    SeriesStore, SelectionEngine, SelectionResult,
+pub use catalog::{CatalogRef, CatalogStore, ComponentDef, ConnectorDef, ParamDef};
+pub use component_store::ComponentStore;
+pub use feature::{BooleanOp, Feature, FeatureType};
+pub use feature_template::{
+    instantiate_template, FeatureTemplateStep, FeatureTreeRegistry, FeatureTreeTemplate,
 };
-pub use feature::{Feature, FeatureType, BooleanOp};
-pub use feature_template::{FeatureTreeTemplate, FeatureTemplateStep, FeatureTreeRegistry, instantiate_template};
-pub use profile::ProfileType;
-pub use object::OmniObject;
-pub use store::ObjectStore;
+pub use library::Library;
+pub use lifecycle::LifecycleStore;
 pub use material::MaterialStore;
 pub use measurement::{Measurement, MeasurementStore, Point3D};
-pub use lifecycle::LifecycleStore;
-pub use relation::RelationStore;
-pub use component_store::ComponentStore;
-pub use project::{Project, ProjectStats, SeriesRef, LIBRARY};
-pub use property_def::{ObjectPropertyDef, PropertyKind, property_defs_for_type, params_to_property_defs, merge_defs};
-pub use library::Library;
+pub use object::OmniObject;
 pub use omnim_sketch;
+pub use profile::ProfileType;
+pub use project::{Project, ProjectStats, SeriesRef, LIBRARY};
+pub use property_def::{
+    merge_defs, params_to_property_defs, property_defs_for_type, ObjectPropertyDef, PropertyKind,
+};
+pub use relation::RelationStore;
+pub use series_store::{
+    Answer, AnswerOutcome, ParamConstraint, SelectionEngine, SelectionResult, Selector, Series,
+    SeriesStore, SpecComponent,
+};
+pub use store::ObjectStore;

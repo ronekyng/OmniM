@@ -51,7 +51,9 @@ pub struct MeasurementStore {
 
 impl MeasurementStore {
     pub fn new() -> Self {
-        Self { measurements: Vec::new() }
+        Self {
+            measurements: Vec::new(),
+        }
     }
 
     pub fn all(&self) -> &[Measurement] {
@@ -77,7 +79,18 @@ mod tests {
         let mut store = MeasurementStore::new();
         let m = Measurement::new(
             "distance",
-            vec![Point3D { x: 0.0, y: 0.0, z: 0.0 }, Point3D { x: 3.0, y: 4.0, z: 0.0 }],
+            vec![
+                Point3D {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Point3D {
+                    x: 3.0,
+                    y: 4.0,
+                    z: 0.0,
+                },
+            ],
             5.0,
             "#44ff88",
         );

@@ -43,20 +43,20 @@ pub struct CreationForm {
 /// Rows (kind, form) → class. Keep the table sorted by kind for review.
 const AUTHORIZED: &[(&str, &str, GenesisClass)] = &[
     // Surface family — LayerExtrusion (module: layer_extrusion.rs)
-    ("wall", "panel", GenesisClass::Surface),   // centerline + layered thickness (default)
-    ("wall", "region", GenesisClass::Surface),  // closed boundary: face-based wall pieces
-    ("slab", "region", GenesisClass::Surface),  // closed footprint (default)
+    ("wall", "panel", GenesisClass::Surface), // centerline + layered thickness (default)
+    ("wall", "region", GenesisClass::Surface), // closed boundary: face-based wall pieces
+    ("slab", "region", GenesisClass::Surface), // closed footprint (default)
     ("floor", "region", GenesisClass::Surface), // closed footprint (default)
-    ("roof", "region", GenesisClass::Surface),  // footprint roof (default)
-    ("roof", "panel", GenesisClass::Surface),   // 2-point extrusion-profile roof
+    ("roof", "region", GenesisClass::Surface), // footprint roof (default)
+    ("roof", "panel", GenesisClass::Surface), // 2-point extrusion-profile roof
     // Linear family — LinearComponent (module: linear_component.rs)
-    ("road", "linear", GenesisClass::Linear),   // alignment + section, segmented mesh
+    ("road", "linear", GenesisClass::Linear), // alignment + section, segmented mesh
     // Point family — transitional guide-line tube (linear_component::build_guide_line)
-    ("line", "point", GenesisClass::Point),     // featureLine / contourLine guide tube
-    // Planned, NOT authorized yet (see ROADMAP "Accepted Designs"):
-    // ("wall", "linear") → retaining wall: needs terrain target (DATA_MODEL §6.4)
-    // ("wall", "body")   → sculpted curtain wall: needs boolean/freeform pipeline
-    // ("beam", "linear") → catalog-driven beams land via catalog/series, not genrule
+    ("line", "point", GenesisClass::Point), // featureLine / contourLine guide tube
+                                            // Planned, NOT authorized yet (see ROADMAP "Accepted Designs"):
+                                            // ("wall", "linear") → retaining wall: needs terrain target (DATA_MODEL §6.4)
+                                            // ("wall", "body")   → sculpted curtain wall: needs boolean/freeform pipeline
+                                            // ("beam", "linear") → catalog-driven beams land via catalog/series, not genrule
 ];
 
 /// Check `(kind, form)` against the matrix.

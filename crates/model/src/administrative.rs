@@ -24,7 +24,11 @@ pub struct AdministrativeDivision {
 }
 
 impl AdministrativeDivision {
-    pub fn new(level: c::AdministrativeLevel, name: impl Into<String>, code: impl Into<String>) -> Self {
+    pub fn new(
+        level: c::AdministrativeLevel,
+        name: impl Into<String>,
+        code: impl Into<String>,
+    ) -> Self {
         Self {
             id: Uuid::new_v4().to_string(),
             level: level as i32,

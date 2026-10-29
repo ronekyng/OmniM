@@ -5,7 +5,12 @@ use omnim_core as c;
 ///
 /// Returns a closed polygon in the XY plane (z=0) tracing the perimeter
 /// of a T-shaped cross-section (typically for T-bars).
-pub fn t_section(height: f64, width: f64, web_thickness: f64, flange_thickness: f64) -> ProfilePoints {
+pub fn t_section(
+    height: f64,
+    width: f64,
+    web_thickness: f64,
+    flange_thickness: f64,
+) -> ProfilePoints {
     let hh = height / 2.0;
     let hw = width / 2.0;
     let tw2 = web_thickness / 2.0;
@@ -14,14 +19,46 @@ pub fn t_section(height: f64, width: f64, web_thickness: f64, flange_thickness: 
     let y2 = hh - tf;
     let y3 = -hh;
     vec![
-        c::Point3D { x: -hw, y: y1, z: 0.0 },
-        c::Point3D { x:  hw, y: y1, z: 0.0 },
-        c::Point3D { x:  hw, y: y2, z: 0.0 },
-        c::Point3D { x:  tw2, y: y2, z: 0.0 },
-        c::Point3D { x:  tw2, y: y3, z: 0.0 },
-        c::Point3D { x: -tw2, y: y3, z: 0.0 },
-        c::Point3D { x: -tw2, y: y2, z: 0.0 },
-        c::Point3D { x: -hw, y: y2, z: 0.0 },
+        c::Point3D {
+            x: -hw,
+            y: y1,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y1,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: hw,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: tw2,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: tw2,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -tw2,
+            y: y3,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -tw2,
+            y: y2,
+            z: 0.0,
+        },
+        c::Point3D {
+            x: -hw,
+            y: y2,
+            z: 0.0,
+        },
     ]
 }
 

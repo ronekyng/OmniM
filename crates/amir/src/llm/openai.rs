@@ -66,15 +66,12 @@ impl OpenAiProvider {
             )));
         }
 
-        let json: serde_json::Value =
-            serde_json::from_str(&text)
-                .map_err(|e| AmirError::ParseError(format!("Invalid JSON response: {}", e)))?;
+        let json: serde_json::Value = serde_json::from_str(&text)
+            .map_err(|e| AmirError::ParseError(format!("Invalid JSON response: {}", e)))?;
 
         let content = json["choices"][0]["message"]["content"]
             .as_str()
-            .ok_or_else(|| {
-                AmirError::ParseError("No content in OpenAI response".into())
-            })?;
+            .ok_or_else(|| AmirError::ParseError("No content in OpenAI response".into()))?;
 
         Ok(content.to_string())
     }

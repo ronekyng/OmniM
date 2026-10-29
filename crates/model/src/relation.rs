@@ -78,7 +78,11 @@ impl RelationStore {
         Ok(idx)
     }
 
-    pub fn remove_containment(&mut self, parent_id: &str, child_id: &str) -> Option<c::Containment> {
+    pub fn remove_containment(
+        &mut self,
+        parent_id: &str,
+        child_id: &str,
+    ) -> Option<c::Containment> {
         let idx = *self.cont_by_child.get(child_id)?;
         let cont = self.containments[idx].clone();
         if cont.parent_id != parent_id {
@@ -131,7 +135,8 @@ mod tests {
             parent_id: "site-1".into(),
             child_id: "bldg-1".into(),
             r#type: c::ContainmentType::Spatial as i32,
-        }).unwrap();
+        })
+        .unwrap();
 
         assert!(rs.parent_of("bldg-1").is_some());
         assert_eq!(rs.children_of("site-1").len(), 1);

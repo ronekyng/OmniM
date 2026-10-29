@@ -96,7 +96,10 @@ fn get_solved_point(
 ) -> Option<c::Point2D> {
     let entity_idx = sketch.entities.iter().position(|e| e.id == entity.id)?;
     let pt3d = sketch.get_solved_point(entity_idx, point_index)?;
-    Some(c::Point2D { x: pt3d.x, y: pt3d.y })
+    Some(c::Point2D {
+        x: pt3d.x,
+        y: pt3d.y,
+    })
 }
 
 /// Tessellate a circle or arc into line segments.
@@ -170,20 +173,31 @@ fn deduplicate_consecutive(points: Vec<c::Point2D>) -> Vec<c::Point2D> {
 
 /// Convert a 2D profile to a3D profile with a given z coordinate.
 pub fn profile_to_3d(profile2d: &[c::Point2D], z: f64) -> Vec<c::Point3D> {
-    profile2d.iter().map(|p| c::Point3D { x: p.x, y: p.y, z }).collect()
+    profile2d
+        .iter()
+        .map(|p| c::Point3D { x: p.x, y: p.y, z })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{SketchEntity, Sketch};
+    use crate::{Sketch, SketchEntity};
 
     fn origin() -> c::Point3D {
-        c::Point3D { x: 0.0, y: 0.0, z: 0.0 }
+        c::Point3D {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
 
     fn normal_2d() -> c::Vector3D {
-        c::Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+        c::Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        }
     }
 
     #[test]
@@ -196,8 +210,16 @@ mod tests {
     fn test_profile_unsolved_sketch() {
         let mut sketch = Sketch::new("s", origin(), normal_2d());
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 1.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
         assert!(sketch_to_profile_2d(&sketch).is_none());
     }
@@ -207,26 +229,98 @@ mod tests {
         let mut sketch = Sketch::new("tri", origin(), normal_2d());
         // Triangle: (0,0) → (1,0) → (0,1) → (0,0)
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 1.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 1.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 0.0, y: 1.0, z: 0.0 },
+            c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 0.0, y: 1.0, z: 0.0 },
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
 
         // Mark as solved (manually set solved_points)
         sketch.solved = true;
-        sketch.set_solved_point(0, 0, c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(0, 1, c::Point3D { x: 1.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 0, c::Point3D { x: 1.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 1, c::Point3D { x: 0.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 0, c::Point3D { x: 0.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 1, c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
+        sketch.set_solved_point(
+            0,
+            0,
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            0,
+            1,
+            c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            0,
+            c::Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            1,
+            c::Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            0,
+            c::Point3D {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            1,
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
 
         let profile = sketch_to_profile_2d(&sketch).unwrap();
         assert_eq!(profile.len(), 3);
@@ -243,31 +337,127 @@ mod tests {
     fn test_profile_square() {
         let mut sketch = Sketch::new("sq", origin(), normal_2d());
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 2.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 2.0, y: 0.0, z: 0.0 },
-            c::Point3D { x: 2.0, y: 2.0, z: 0.0 },
+            c::Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 2.0,
+                y: 2.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 2.0, y: 2.0, z: 0.0 },
-            c::Point3D { x: 0.0, y: 2.0, z: 0.0 },
+            c::Point3D {
+                x: 2.0,
+                y: 2.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(SketchEntity::line(
-            c::Point3D { x: 0.0, y: 2.0, z: 0.0 },
-            c::Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            c::Point3D {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
 
         sketch.solved = true;
-        sketch.set_solved_point(0, 0, c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(0, 1, c::Point3D { x: 2.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 0, c::Point3D { x: 2.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 1, c::Point3D { x: 2.0, y: 2.0, z: 0.0 });
-        sketch.set_solved_point(2, 0, c::Point3D { x: 2.0, y: 2.0, z: 0.0 });
-        sketch.set_solved_point(2, 1, c::Point3D { x: 0.0, y: 2.0, z: 0.0 });
-        sketch.set_solved_point(3, 0, c::Point3D { x: 0.0, y: 2.0, z: 0.0 });
-        sketch.set_solved_point(3, 1, c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
+        sketch.set_solved_point(
+            0,
+            0,
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            0,
+            1,
+            c::Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            0,
+            c::Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            1,
+            c::Point3D {
+                x: 2.0,
+                y: 2.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            0,
+            c::Point3D {
+                x: 2.0,
+                y: 2.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            1,
+            c::Point3D {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            3,
+            0,
+            c::Point3D {
+                x: 0.0,
+                y: 2.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            3,
+            1,
+            c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
 
         let profile = sketch_to_profile_2d(&sketch).unwrap();
         assert_eq!(profile.len(), 4);

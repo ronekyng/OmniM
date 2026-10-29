@@ -1,10 +1,12 @@
-use omnim_core as c;
 use c::{FaceIndices, Point3D, Vector3D};
+use omnim_core as c;
 
 type MeshData = (Vec<Point3D>, Vec<Vector3D>, Vec<FaceIndices>);
 
 fn tri(a: i32, b: i32, c: i32) -> FaceIndices {
-    FaceIndices { vertex_indices: vec![a, b, c] }
+    FaceIndices {
+        vertex_indices: vec![a, b, c],
+    }
 }
 
 pub fn box_mesh(b: &c::Box) -> MeshData {
@@ -19,28 +21,64 @@ pub fn box_mesh(b: &c::Box) -> MeshData {
     //              v0.x, v0.y, v0.z, v1.x, v1.y, v1.z,
     //              v2.x, v2.y, v2.z, v3.x, v3.y, v3.z)
     // Vertex order within each face is CCW from the outside.
-    let faces: [(f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64, f64); 6] = [
+    let faces: [(
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+        f64,
+    ); 6] = [
         // back  face: z = -h, normal ( 0,  0, -1)
-        (0.0, 0.0, -1.0,  -l, -w, -h,   l, -w, -h,   l,  w, -h,  -l,  w, -h),
+        (0.0, 0.0, -1.0, -l, -w, -h, l, -w, -h, l, w, -h, -l, w, -h),
         // front face: z =  h, normal ( 0,  0,  1)
-        (0.0, 0.0,  1.0,  -l, -w,  h,   l, -w,  h,   l,  w,  h,  -l,  w,  h),
+        (0.0, 0.0, 1.0, -l, -w, h, l, -w, h, l, w, h, -l, w, h),
         // bottom face: y = -w, normal ( 0, -1,  0)
-        (0.0, -1.0, 0.0,  -l, -w, -h,   l, -w, -h,   l, -w,  h,  -l, -w,  h),
+        (0.0, -1.0, 0.0, -l, -w, -h, l, -w, -h, l, -w, h, -l, -w, h),
         // right face: x =  l, normal ( 1,  0,  0)
-        (1.0, 0.0, 0.0,    l, -w, -h,   l,  w, -h,   l,  w,  h,   l, -w,  h),
+        (1.0, 0.0, 0.0, l, -w, -h, l, w, -h, l, w, h, l, -w, h),
         // top face: y =  w, normal ( 0,  1,  0)
-        (0.0, 1.0, 0.0,   -l,  w, -h,   l,  w, -h,   l,  w,  h,  -l,  w,  h),
+        (0.0, 1.0, 0.0, -l, w, -h, l, w, -h, l, w, h, -l, w, h),
         // left face: x = -l, normal (-1,  0,  0)
-        (-1.0, 0.0, 0.0,  -l, -w, -h,  -l,  w, -h,  -l,  w,  h,  -l, -w,  h),
+        (-1.0, 0.0, 0.0, -l, -w, -h, -l, w, -h, -l, w, h, -l, -w, h),
     ];
 
     let mut base: i32 = 0;
     for (nx, ny, nz, x0, y0, z0, x1, y1, z1, x2, y2, z2, x3, y3, z3) in faces {
-        v.push(Point3D { x: x0, y: y0, z: z0 });
-        v.push(Point3D { x: x1, y: y1, z: z1 });
-        v.push(Point3D { x: x2, y: y2, z: z2 });
-        v.push(Point3D { x: x3, y: y3, z: z3 });
-        let normal = Vector3D { x: nx, y: ny, z: nz };
+        v.push(Point3D {
+            x: x0,
+            y: y0,
+            z: z0,
+        });
+        v.push(Point3D {
+            x: x1,
+            y: y1,
+            z: z1,
+        });
+        v.push(Point3D {
+            x: x2,
+            y: y2,
+            z: z2,
+        });
+        v.push(Point3D {
+            x: x3,
+            y: y3,
+            z: z3,
+        });
+        let normal = Vector3D {
+            x: nx,
+            y: ny,
+            z: nz,
+        };
         n.push(normal.clone());
         n.push(normal.clone());
         n.push(normal.clone());
@@ -55,7 +93,11 @@ pub fn box_mesh(b: &c::Box) -> MeshData {
 }
 
 pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
-    let segs = if c.segments > 3 { c.segments as usize } else { 16 };
+    let segs = if c.segments > 3 {
+        c.segments as usize
+    } else {
+        16
+    };
     let (r, h) = (c.radius, c.height / 2.0);
     let mut v = Vec::new();
     let mut n = Vec::new();
@@ -63,9 +105,21 @@ pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
     for i in 0..segs {
         let a = 2.0 * std::f64::consts::PI * i as f64 / segs as f64;
         let (ca, sa) = (a.cos(), a.sin());
-        v.push(Point3D { x: r * ca, y: r * sa, z: -h });
-        v.push(Point3D { x: r * ca, y: r * sa, z: h });
-        let normal = Vector3D { x: ca, y: sa, z: 0.0 };
+        v.push(Point3D {
+            x: r * ca,
+            y: r * sa,
+            z: -h,
+        });
+        v.push(Point3D {
+            x: r * ca,
+            y: r * sa,
+            z: h,
+        });
+        let normal = Vector3D {
+            x: ca,
+            y: sa,
+            z: 0.0,
+        };
         n.push(normal.clone());
         n.push(normal);
     }
@@ -77,11 +131,27 @@ pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
         f.push(tri(b, ci, d));
     }
     let cb = v.len() as i32;
-    v.push(Point3D { x: 0.0, y: 0.0, z: -h });
-    n.push(Vector3D { x: 0.0, y: 0.0, z: -1.0 });
+    v.push(Point3D {
+        x: 0.0,
+        y: 0.0,
+        z: -h,
+    });
+    n.push(Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: -1.0,
+    });
     let ct = v.len() as i32;
-    v.push(Point3D { x: 0.0, y: 0.0, z: h });
-    n.push(Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+    v.push(Point3D {
+        x: 0.0,
+        y: 0.0,
+        z: h,
+    });
+    n.push(Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    });
     for i in 0..segs {
         let nxt = (i + 1) % segs;
         // Bottom cap: center → current → next (CCW when viewed from below, matching (0,0,-1) normal)
@@ -93,7 +163,11 @@ pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
 }
 
 pub fn sphere_mesh(s: &c::Sphere) -> MeshData {
-    let segs = if s.segments > 3 { s.segments as usize } else { 16 };
+    let segs = if s.segments > 3 {
+        s.segments as usize
+    } else {
+        16
+    };
     let rings = segs / 2 + 1;
     let r = s.radius;
     let mut v = Vec::new();
@@ -103,16 +177,27 @@ pub fn sphere_mesh(s: &c::Sphere) -> MeshData {
         let phi = std::f64::consts::PI * ring as f64 / rings as f64;
         for seg in 0..segs {
             let theta = 2.0 * std::f64::consts::PI * seg as f64 / segs as f64;
-            let (x, y, z) = (r * phi.sin() * theta.cos(), r * phi.sin() * theta.sin(), r * phi.cos());
+            let (x, y, z) = (
+                r * phi.sin() * theta.cos(),
+                r * phi.sin() * theta.sin(),
+                r * phi.cos(),
+            );
             v.push(Point3D { x, y, z });
-            n.push(Vector3D { x: x / r, y: y / r, z: z / r });
+            n.push(Vector3D {
+                x: x / r,
+                y: y / r,
+                z: z / r,
+            });
         }
     }
     for ring in 0..rings {
         for seg in 0..segs {
             let ns = (seg + 1) % segs;
             let (a, b) = ((ring * segs + seg) as i32, (ring * segs + ns) as i32);
-            let (ci, d) = (((ring + 1) * segs + seg) as i32, ((ring + 1) * segs + ns) as i32);
+            let (ci, d) = (
+                ((ring + 1) * segs + seg) as i32,
+                ((ring + 1) * segs + ns) as i32,
+            );
             f.push(tri(a, ci, b));
             f.push(tri(b, ci, d));
         }
@@ -121,7 +206,11 @@ pub fn sphere_mesh(s: &c::Sphere) -> MeshData {
 }
 
 pub fn cone_mesh(cone: &c::Cone) -> MeshData {
-    let segs = if cone.segments > 3 { cone.segments as usize } else { 16 };
+    let segs = if cone.segments > 3 {
+        cone.segments as usize
+    } else {
+        16
+    };
     let (rb, rt, h) = (cone.radius_bottom, cone.radius_top, cone.height / 2.0);
     // Side normal: for a cone frustum, the outward normal has a vertical component.
     // When rb != rt, the side surface slants: compute the slant angle.
@@ -138,8 +227,16 @@ pub fn cone_mesh(cone: &c::Cone) -> MeshData {
     for i in 0..segs {
         let a = 2.0 * std::f64::consts::PI * i as f64 / segs as f64;
         let (ca, sa) = (a.cos(), a.sin());
-        v.push(Point3D { x: rb * ca, y: rb * sa, z: -h });
-        v.push(Point3D { x: rt * ca, y: rt * sa, z: h });
+        v.push(Point3D {
+            x: rb * ca,
+            y: rb * sa,
+            z: -h,
+        });
+        v.push(Point3D {
+            x: rt * ca,
+            y: rt * sa,
+            z: h,
+        });
         // Correct outward normal for a slanted cone side surface
         let normal = Vector3D {
             x: ca * slant_cos,
@@ -157,11 +254,27 @@ pub fn cone_mesh(cone: &c::Cone) -> MeshData {
         f.push(tri(b, ci, d));
     }
     let cb = v.len() as i32;
-    v.push(Point3D { x: 0.0, y: 0.0, z: -h });
-    n.push(Vector3D { x: 0.0, y: 0.0, z: -1.0 });
+    v.push(Point3D {
+        x: 0.0,
+        y: 0.0,
+        z: -h,
+    });
+    n.push(Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: -1.0,
+    });
     let ct = v.len() as i32;
-    v.push(Point3D { x: 0.0, y: 0.0, z: h });
-    n.push(Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+    v.push(Point3D {
+        x: 0.0,
+        y: 0.0,
+        z: h,
+    });
+    n.push(Vector3D {
+        x: 0.0,
+        y: 0.0,
+        z: 1.0,
+    });
     for i in 0..segs {
         let nxt = (i + 1) % segs;
         // Bottom cap: center → current → next (CCW from below)
@@ -175,7 +288,11 @@ pub fn cone_mesh(cone: &c::Cone) -> MeshData {
 }
 
 pub fn torus_mesh(t: &c::Torus) -> MeshData {
-    let segs = if t.segments > 3 { t.segments as usize } else { 24 };
+    let segs = if t.segments > 3 {
+        t.segments as usize
+    } else {
+        24
+    };
     let rings = if t.rings > 3 { t.rings as usize } else { 12 };
     let (major, minor) = (t.major_radius, t.minor_radius);
     let mut v = Vec::new();
@@ -192,7 +309,11 @@ pub fn torus_mesh(t: &c::Torus) -> MeshData {
             let y = r * st;
             let z = minor * sp;
             v.push(Point3D { x, y, z });
-            n.push(Vector3D { x: ct * cp, y: st * cp, z: sp });
+            n.push(Vector3D {
+                x: ct * cp,
+                y: st * cp,
+                z: sp,
+            });
         }
     }
     for ring in 0..rings {
@@ -211,7 +332,11 @@ pub fn torus_mesh(t: &c::Torus) -> MeshData {
 }
 
 pub fn dish_mesh(d: &c::Dish) -> MeshData {
-    let segs = if d.segments > 3 { d.segments as usize } else { 24 };
+    let segs = if d.segments > 3 {
+        d.segments as usize
+    } else {
+        24
+    };
     let (crown, knuckle, diameter) = (d.crown_radius, d.knuckle_radius, d.diameter);
     let a = diameter / 2.0;
     if crown <= knuckle || a <= knuckle {
@@ -226,7 +351,7 @@ pub fn dish_mesh(d: &c::Dish) -> MeshData {
     // Meridian sampling: from pole (phi=0) through crown to tangency, then knuckle to rim.
     let merid = (segs / 2).max(8) + 1;
     let mut profile: Vec<(f64, f64, f64, f64)> = Vec::new(); // (x, z, nx_merid, nz_merid)
-    // Crown arc: angle phi from 0 to phi_m, outward normal = (sin phi, cos phi)
+                                                             // Crown arc: angle phi from 0 to phi_m, outward normal = (sin phi, cos phi)
     for i in 0..merid {
         let t = i as f64 / (merid - 1) as f64;
         let phi = phi_m * t;
@@ -256,8 +381,16 @@ pub fn dish_mesh(d: &c::Dish) -> MeshData {
         for s in 0..segs {
             let theta = 2.0 * std::f64::consts::PI * s as f64 / segs as f64;
             let (ct, st) = (theta.cos(), theta.sin());
-            v.push(Point3D { x: px * ct, y: px * st, z: _pz });
-            n.push(Vector3D { x: nx_m * ct, y: nx_m * st, z: nz_m });
+            v.push(Point3D {
+                x: px * ct,
+                y: px * st,
+                z: _pz,
+            });
+            n.push(Vector3D {
+                x: nx_m * ct,
+                y: nx_m * st,
+                z: nz_m,
+            });
         }
     }
     for r in 0..rows - 1 {
@@ -318,7 +451,11 @@ pub fn rebar_cage_mesh(
                 y: cy + r * ct * sa,
                 z: length + st * r,
             });
-            let nrm = Vector3D { x: ct * ca, y: ct * sa, z: 0.0 };
+            let nrm = Vector3D {
+                x: ct * ca,
+                y: ct * sa,
+                z: 0.0,
+            };
             n.push(nrm.clone());
             n.push(nrm);
         }
@@ -353,7 +490,11 @@ pub fn rebar_cage_mesh(
                         y: (stirrup_radius + r * ct) * sa,
                         z: r * st,
                     });
-                    n.push(Vector3D { x: ct * ca, y: ct * sa, z: st });
+                    n.push(Vector3D {
+                        x: ct * ca,
+                        y: ct * sa,
+                        z: st,
+                    });
                 }
             }
             for s in 0..ring_segs {
@@ -388,14 +529,27 @@ pub fn extrude_sketch(
     if profile2d.len() < 3 {
         return None;
     }
-    let profile3d: Vec<Point3D> = profile2d.iter()
-        .map(|p| Point3D { x: p.x, y: p.y, z: 0.0 })
+    let profile3d: Vec<Point3D> = profile2d
+        .iter()
+        .map(|p| Point3D {
+            x: p.x,
+            y: p.y,
+            z: 0.0,
+        })
         .collect();
     let dir = if direction.x == 0.0 && direction.y == 0.0 && direction.z == 0.0 {
-        Vector3D { x: 0.0, y: 0.0, z: 1.0 }
+        Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        }
     } else {
         let len = (direction.x.powi(2) + direction.y.powi(2) + direction.z.powi(2)).sqrt();
-        Vector3D { x: direction.x / len, y: direction.y / len, z: direction.z / len }
+        Vector3D {
+            x: direction.x / len,
+            y: direction.y / len,
+            z: direction.z / len,
+        }
     };
     crate::brep::extrude_brep(&profile3d, depth, dir, crate::brep::DEFAULT_TOLERANCE)
         .map(|mesh| (mesh.vertices, mesh.normals, mesh.faces))
@@ -418,9 +572,14 @@ pub fn revolve_sketch(
         return None;
     }
 
-    let len = (axis_direction.x.powi(2) + axis_direction.y.powi(2) + axis_direction.z.powi(2)).sqrt();
+    let len =
+        (axis_direction.x.powi(2) + axis_direction.y.powi(2) + axis_direction.z.powi(2)).sqrt();
     let (ndx, ndy, ndz) = if len > 1e-10 {
-        (axis_direction.x / len, axis_direction.y / len, axis_direction.z / len)
+        (
+            axis_direction.x / len,
+            axis_direction.y / len,
+            axis_direction.z / len,
+        )
     } else {
         (0.0, 0.0, 1.0)
     };
@@ -443,14 +602,23 @@ pub fn revolve_sketch(
         ux * ndy - uy * ndx,
     );
 
-    let profile3d: Vec<Point3D> = profile2d.iter().map(|p| Point3D {
-        x: axis_origin.x + p.x * ux + p.y * vx,
-        y: axis_origin.y + p.x * uy + p.y * vy,
-        z: axis_origin.z + p.x * uz + p.y * vz,
-    }).collect();
+    let profile3d: Vec<Point3D> = profile2d
+        .iter()
+        .map(|p| Point3D {
+            x: axis_origin.x + p.x * ux + p.y * vx,
+            y: axis_origin.y + p.x * uy + p.y * vy,
+            z: axis_origin.z + p.x * uz + p.y * vz,
+        })
+        .collect();
 
-    crate::brep::revolve_brep(&profile3d, angle, axis_origin, axis_direction, crate::brep::DEFAULT_TOLERANCE)
-        .map(|mesh| (mesh.vertices, mesh.normals, mesh.faces))
+    crate::brep::revolve_brep(
+        &profile3d,
+        angle,
+        axis_origin,
+        axis_direction,
+        crate::brep::DEFAULT_TOLERANCE,
+    )
+    .map(|mesh| (mesh.vertices, mesh.normals, mesh.faces))
 }
 
 #[cfg(test)]
@@ -471,12 +639,28 @@ mod tests {
     fn test_extrude_sketch_empty() {
         let sketch = omnim_sketch::Sketch::new(
             "empty",
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         );
-        let result = extrude_sketch(&sketch, 1.0, Vector3D { x: 0.0, y: 0.0, z: 1.0 });
+        let result = extrude_sketch(
+            &sketch,
+            1.0,
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        );
         assert!(result.is_none());
-}
+    }
 
     #[test]
     fn test_torus_mesh_basic() {
@@ -513,7 +697,7 @@ mod tests {
     #[test]
     fn test_dish_mesh_invalid_params() {
         let dish = c::Dish {
-            crown_radius: 5.0,  // crown < knuckle → invalid
+            crown_radius: 5.0, // crown < knuckle → invalid
             knuckle_radius: 10.0,
             diameter: 100.0,
             segments: 24,
@@ -528,31 +712,120 @@ mod tests {
     fn test_extrude_sketch_triangle() {
         let mut sketch = omnim_sketch::Sketch::new(
             "tri",
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         );
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Point3D { x: 1.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 1.0, y: 0.0, z: 0.0 },
-            Point3D { x: 0.5, y: 1.0, z: 0.0 },
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 0.5,
+                y: 1.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 0.5, y: 1.0, z: 0.0 },
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 0.5,
+                y: 1.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
 
         sketch.solved = true;
-        sketch.set_solved_point(0, 0, Point3D { x: 0.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(0, 1, Point3D { x: 1.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 0, Point3D { x: 1.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 1, Point3D { x: 0.5, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 0, Point3D { x: 0.5, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 1, Point3D { x: 0.0, y: 0.0, z: 0.0 });
+        sketch.set_solved_point(
+            0,
+            0,
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            0,
+            1,
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            0,
+            Point3D {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            1,
+            Point3D {
+                x: 0.5,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            0,
+            Point3D {
+                x: 0.5,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            1,
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
 
-        let (v, n, f) = extrude_sketch(&sketch, 2.0, Vector3D { x: 0.0, y: 0.0, z: 1.0 }).unwrap();
+        let (v, n, f) = extrude_sketch(
+            &sketch,
+            2.0,
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+        )
+        .unwrap();
         assert!(!v.is_empty());
         assert!(!n.is_empty());
         assert!(!f.is_empty());
@@ -562,19 +835,19 @@ mod tests {
         let geom = mesh_to_geometry(&mg);
         match &geom.representation {
             Some(c::geometry::Representation::Mesh(m)) => assert_eq!(m.vertices.len(), v.len()),
-            _ => {},
+            _ => {}
         }
     }
 
     #[test]
     fn test_rebar_cage_mesh() {
         let (v, n, f) = rebar_cage_mesh(
-            200.0,   // bar ring radius
-            8,       // main bars
-            3000.0,  // length
-            16.0,    // bar diameter
-            200.0,   // stirrup spacing
-            190.0,   // stirrup radius
+            200.0,  // bar ring radius
+            8,      // main bars
+            3000.0, // length
+            16.0,   // bar diameter
+            200.0,  // stirrup spacing
+            190.0,  // stirrup radius
         );
         assert!(!v.is_empty());
         assert!(!n.is_empty());
@@ -594,42 +867,154 @@ mod tests {
     fn test_revolve_sketch_rectangle() {
         let mut sketch = omnim_sketch::Sketch::new(
             "rect",
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         );
         // Closed rectangle profile: 4 edges
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 2.0, y: 0.0, z: 0.0 },
-            Point3D { x: 3.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 3.0, y: 0.0, z: 0.0 },
-            Point3D { x: 3.0, y: 1.0, z: 0.0 },
+            Point3D {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 3.0,
+                y: 1.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 3.0, y: 1.0, z: 0.0 },
-            Point3D { x: 2.0, y: 1.0, z: 0.0 },
+            Point3D {
+                x: 3.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 0.0,
+            },
         ));
         sketch.add_entity(omnim_sketch::SketchEntity::line(
-            Point3D { x: 2.0, y: 1.0, z: 0.0 },
-            Point3D { x: 2.0, y: 0.0, z: 0.0 },
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
         ));
 
         sketch.solved = true;
-        sketch.set_solved_point(0, 0, Point3D { x: 2.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(0, 1, Point3D { x: 3.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 0, Point3D { x: 3.0, y: 0.0, z: 0.0 });
-        sketch.set_solved_point(1, 1, Point3D { x: 3.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 0, Point3D { x: 3.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(2, 1, Point3D { x: 2.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(3, 0, Point3D { x: 2.0, y: 1.0, z: 0.0 });
-        sketch.set_solved_point(3, 1, Point3D { x: 2.0, y: 0.0, z: 0.0 });
+        sketch.set_solved_point(
+            0,
+            0,
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            0,
+            1,
+            Point3D {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            0,
+            Point3D {
+                x: 3.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            1,
+            1,
+            Point3D {
+                x: 3.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            0,
+            Point3D {
+                x: 3.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            2,
+            1,
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            3,
+            0,
+            Point3D {
+                x: 2.0,
+                y: 1.0,
+                z: 0.0,
+            },
+        );
+        sketch.set_solved_point(
+            3,
+            1,
+            Point3D {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+        );
 
         let result = revolve_sketch(
             &sketch,
             0.0,
-            Point3D { x: 0.0, y: 0.0, z: 0.0 },
-            Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         );
         assert!(result.is_some());
         let (v, _n, f) = result.unwrap();

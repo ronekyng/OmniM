@@ -110,8 +110,14 @@ impl SpecComponent {
         }
     }
 
-    pub fn material(mut self, m: impl Into<String>) -> Self { self.material = m.into(); self }
-    pub fn connection_type_code(mut self, c: impl Into<String>) -> Self { self.connection_type_code = c.into(); self }
+    pub fn material(mut self, m: impl Into<String>) -> Self {
+        self.material = m.into();
+        self
+    }
+    pub fn connection_type_code(mut self, c: impl Into<String>) -> Self {
+        self.connection_type_code = c.into();
+        self
+    }
 }
 
 // ============================================================
@@ -140,10 +146,23 @@ impl ParamConstraint {
         }
     }
 
-    pub fn with_default(mut self, v: f64) -> Self { self.default_value = v; self }
-    pub fn with_range(mut self, min: f64, max: f64) -> Self { self.min_value = min; self.max_value = max; self }
-    pub fn with_step(mut self, s: f64) -> Self { self.step = s; self }
-    pub fn with_fixed(mut self, f: impl Into<String>) -> Self { self.fixed_value = f.into(); self }
+    pub fn with_default(mut self, v: f64) -> Self {
+        self.default_value = v;
+        self
+    }
+    pub fn with_range(mut self, min: f64, max: f64) -> Self {
+        self.min_value = min;
+        self.max_value = max;
+        self
+    }
+    pub fn with_step(mut self, s: f64) -> Self {
+        self.step = s;
+        self
+    }
+    pub fn with_fixed(mut self, f: impl Into<String>) -> Self {
+        self.fixed_value = f.into();
+        self
+    }
 }
 
 // ============================================================
@@ -228,7 +247,10 @@ impl SeriesStore {
     }
 
     pub fn list_by_domain(&self, domain: &str) -> Vec<&Series> {
-        self.series.values().filter(|s| s.domain == domain).collect()
+        self.series
+            .values()
+            .filter(|s| s.domain == domain)
+            .collect()
     }
 
     pub fn len(&self) -> usize {
@@ -293,7 +315,9 @@ impl SeriesStore {
     ) -> Result<(), String> {
         // Backfill defaults first so validation sees the effective values.
         for c in constraints {
-            merged.entry(c.param_name.clone()).or_insert(c.default_value);
+            merged
+                .entry(c.param_name.clone())
+                .or_insert(c.default_value);
         }
         for c in constraints {
             let value = match merged.get(&c.param_name) {
@@ -343,16 +367,17 @@ impl SeriesStore {
         // We can't resolve names to IDs here without the catalog, so we
         // rely on the caller passing whichever identifier matches.
         // As a fallback, check if any reachable string matches case-insensitively.
-        reachable.iter().any(|r| r.eq_ignore_ascii_case(component_def_id_or_name))
+        reachable
+            .iter()
+            .any(|r| r.eq_ignore_ascii_case(component_def_id_or_name))
     }
 
     /// Load a SeriesStore from a `.omnimseries` file (JSONC/JSON5 format).
     /// All loaded series are marked with `source: "external"`.
     pub fn load_from_file(path: &str) -> Result<Self, String> {
-        let content = std::fs::read_to_string(path)
-            .map_err(|e| format!("read {}: {}", path, e))?;
-        let mut store: SeriesStore = json5::from_str(&content)
-            .map_err(|e| format!("parse {}: {}", path, e))?;
+        let content = std::fs::read_to_string(path).map_err(|e| format!("read {}: {}", path, e))?;
+        let mut store: SeriesStore =
+            json5::from_str(&content).map_err(|e| format!("parse {}: {}", path, e))?;
         // Mark all externally-loaded series as "external" source
         for s in store.series.values_mut() {
             s.source = "external".to_string();
@@ -362,10 +387,8 @@ impl SeriesStore {
 
     /// Save the SeriesStore to a `.omnimseries` file (pretty JSON).
     pub fn save_to_file(&self, path: &str) -> Result<(), String> {
-        let json = serde_json::to_string_pretty(self)
-            .map_err(|e| format!("serialize: {}", e))?;
-        std::fs::write(path, json)
-            .map_err(|e| format!("write {}: {}", path, e))?;
+        let json = serde_json::to_string_pretty(self).map_err(|e| format!("serialize: {}", e))?;
+        std::fs::write(path, json).map_err(|e| format!("write {}: {}", path, e))?;
         Ok(())
     }
 }
@@ -396,10 +419,7 @@ fn find_spec_in_selector(
     None
 }
 
-fn walk_selector_for_components(
-    sel: &Selector,
-    set: &mut std::collections::HashSet<String>,
-) {
+fn walk_selector_for_components(sel: &Selector, set: &mut std::collections::HashSet<String>) {
     for ans in &sel.answers {
         match &ans.outcome {
             AnswerOutcome::NextSelector(next) => {
@@ -434,7 +454,9 @@ impl SelectionEngine {
     /// `answers` is a list of answer values to match at each selector level.
     /// Returns the SpecComponent found, or an error.
     pub fn select(series: &Series, answers: &[&str]) -> Result<SelectionResult, String> {
-        let root = series.root_selector.as_ref()
+        let root = series
+            .root_selector
+            .as_ref()
             .ok_or_else(|| format!("series '{}' has no root selector", series.name))?;
 
         let mut selector_path = Vec::new();
@@ -444,26 +466,32 @@ impl SelectionEngine {
         loop {
             selector_path.push(current_selector.id.clone());
 
-            let answer_value = answers.get(answer_idx)
-                .ok_or_else(|| format!(
+            let answer_value = answers.get(answer_idx).ok_or_else(|| {
+                format!(
                     "not enough answers for selector '{}' (question: '{}')",
                     current_selector.id, current_selector.question
-                ))?;
+                )
+            })?;
 
-            let matched_answer = current_selector.answers.iter()
+            let matched_answer = current_selector
+                .answers
+                .iter()
                 .find(|a| {
                     if a.is_numeric_range {
-                        answer_value.parse::<f64>()
+                        answer_value
+                            .parse::<f64>()
                             .map(|v| v >= a.range_min && v <= a.range_max)
                             .unwrap_or(false)
                     } else {
                         a.value.eq_ignore_ascii_case(answer_value)
                     }
                 })
-                .ok_or_else(|| format!(
-                    "no answer matches '{}' for selector '{}' (question: '{}')",
-                    answer_value, current_selector.id, current_selector.question
-                ))?;
+                .ok_or_else(|| {
+                    format!(
+                        "no answer matches '{}' for selector '{}' (question: '{}')",
+                        answer_value, current_selector.id, current_selector.question
+                    )
+                })?;
 
             match &matched_answer.outcome {
                 AnswerOutcome::NextSelector(next) => {

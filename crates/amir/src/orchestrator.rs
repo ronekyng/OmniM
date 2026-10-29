@@ -115,7 +115,10 @@ impl Orchestrator {
                     create_targets.entry(n.clone()).or_default().push(i);
                 }
                 Intent::DeleteObject { target_ref } => {
-                    delete_targets.entry(target_ref.clone()).or_default().push(i);
+                    delete_targets
+                        .entry(target_ref.clone())
+                        .or_default()
+                        .push(i);
                 }
                 _ => {}
             }

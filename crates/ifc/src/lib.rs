@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use omnim_core as c;
 use omnim_model::Project;
+use std::collections::HashMap;
 
 // IFC entity representation
 #[derive(Debug, Clone)]
@@ -33,8 +33,7 @@ impl IfcDocument {
         let mut project_name = String::from("IFC Import");
 
         // Parse header
-        let data_start = content.find("DATA;")
-            .ok_or("IFC: no DATA section")?;
+        let data_start = content.find("DATA;").ok_or("IFC: no DATA section")?;
         let data_section = &content[data_start + 5..];
 
         // Parse each line
@@ -57,7 +56,10 @@ impl IfcDocument {
             }
         }
 
-        Ok(IfcDocument { entities, project_name })
+        Ok(IfcDocument {
+            entities,
+            project_name,
+        })
     }
 
     fn get(&self, id: u64) -> Option<&IfcEntity> {
@@ -89,7 +91,9 @@ impl IfcDocument {
 
 fn parse_entity_line(line: &str) -> Option<IfcEntity> {
     let line = line.trim();
-    if !line.starts_with('#') { return None; }
+    if !line.starts_with('#') {
+        return None;
+    }
 
     // Extract #ID = TYPE(...)
     let eq_pos = line.find('=')?;
@@ -103,14 +107,20 @@ fn parse_entity_line(line: &str) -> Option<IfcEntity> {
 
     // Parse arguments
     let args = parse_args(args_str);
-    Some(IfcEntity { id, entity_type, args })
+    Some(IfcEntity {
+        id,
+        entity_type,
+        args,
+    })
 }
 
 fn parse_args(input: &str) -> Vec<IfcValue> {
     let mut values = Vec::new();
     let mut s = input;
     // Remove trailing )
-    if s.ends_with(')') { s = &s[..s.len()-1]; }
+    if s.ends_with(')') {
+        s = &s[..s.len() - 1];
+    }
 
     let tokens = tokenize(s);
     let mut pos = 0;
@@ -119,7 +129,9 @@ fn parse_args(input: &str) -> Vec<IfcValue> {
         values.push(val);
         pos = next;
         // Skip comma
-        while pos < tokens.len() && tokens[pos] == "," { pos += 1; }
+        while pos < tokens.len() && tokens[pos] == "," {
+            pos += 1;
+        }
     }
     values
 }
@@ -130,7 +142,10 @@ fn tokenize(s: &str) -> Vec<String> {
     let mut i = 0;
     while i < chars.len() {
         match chars[i] {
-            ' ' | '\t' | '\n' | '\r' => { i += 1; continue; }
+            ' ' | '\t' | '\n' | '\r' => {
+                i += 1;
+                continue;
+            }
             ',' | '(' | ')' => {
                 tokens.push(chars[i].to_string());
                 i += 1;
@@ -140,7 +155,7 @@ fn tokenize(s: &str) -> Vec<String> {
                 i += 1;
                 let mut s = String::new();
                 while i < chars.len() && chars[i] != '\'' {
-                    if chars[i] == '\'' && i + 1 < chars.len() && chars[i+1] == '\'' {
+                    if chars[i] == '\'' && i + 1 < chars.len() && chars[i + 1] == '\'' {
                         s.push('\'');
                         i += 2;
                     } else {
@@ -154,16 +169,23 @@ fn tokenize(s: &str) -> Vec<String> {
             '.' => {
                 // Check if previous token looks like an integer number (decimal point)
                 if let Some(last) = tokens.last() {
-                    if last.parse::<f64>().is_ok() || last == "$" || last == ")" || last == "," || last == "(" {
+                    if last.parse::<f64>().is_ok()
+                        || last == "$"
+                        || last == ")"
+                        || last == ","
+                        || last == "("
+                    {
                         // Could be enum like .NOTDEFINED. or decimal .5
-                        if i + 1 < chars.len() && chars[i+1].is_ascii_alphabetic() {
+                        if i + 1 < chars.len() && chars[i + 1].is_ascii_alphabetic() {
                             i += 1;
                             let mut s = String::new();
                             while i < chars.len() && chars[i] != '.' {
                                 s.push(chars[i]);
                                 i += 1;
                             }
-                            if i < chars.len() { i += 1; }
+                            if i < chars.len() {
+                                i += 1;
+                            }
                             tokens.push(format!(".{}", s));
                             continue;
                         }
@@ -202,18 +224,20 @@ fn tokenize(s: &str) -> Vec<String> {
 }
 
 fn parse_value(tokens: &[String], pos: usize) -> (IfcValue, usize) {
-    if pos >= tokens.len() { return (IfcValue::Null, pos); }
+    if pos >= tokens.len() {
+        return (IfcValue::Null, pos);
+    }
 
     let token = &tokens[pos];
 
     if token == "$" {
         (IfcValue::Null, pos + 1)
     } else if token.starts_with('\'') && token.len() >= 2 {
-        let s = &token[1..token.len()-1];
+        let s = &token[1..token.len() - 1];
         (IfcValue::String(s.to_string()), pos + 1)
     } else if token.starts_with('.') && token.len() >= 3 {
         // Enum literal .WORD.
-        let s = &token[1..token.len()-1];
+        let s = &token[1..token.len() - 1];
         (IfcValue::Enum(s.to_string()), pos + 1)
     } else if token == "." {
         // Decimal point separator (handled in number parsing)
@@ -229,9 +253,13 @@ fn parse_value(tokens: &[String], pos: usize) -> (IfcValue, usize) {
             let (val, next) = parse_value(tokens, p);
             list.push(val);
             p = next;
-            if p < tokens.len() && tokens[p] == "," { p += 1; }
+            if p < tokens.len() && tokens[p] == "," {
+                p += 1;
+            }
         }
-        if p < tokens.len() { p += 1; } // skip )
+        if p < tokens.len() {
+            p += 1;
+        } // skip )
         (IfcValue::List(list), p)
     } else {
         // Try integer first, then float, then keyword
@@ -261,7 +289,9 @@ pub struct ImportOptions {
 
 impl Default for ImportOptions {
     fn default() -> Self {
-        Self { normalize_to_origin: true }
+        Self {
+            normalize_to_origin: true,
+        }
     }
 }
 
@@ -300,7 +330,8 @@ pub fn import_ifc_with_options(content: &str, options: ImportOptions) -> Result<
             _ => continue,
         };
 
-        let name = doc.get_string(entity, 2)
+        let name = doc
+            .get_string(entity, 2)
             .or_else(|| doc.get_string(entity, 0))
             .unwrap_or_else(|| format!("{}_{}", entity.entity_type, entity.id));
         let obj_id = proj.create_object(obj_type, &name).id.clone();
@@ -379,7 +410,13 @@ fn ifc_value_to_string(value: &IfcValue) -> Option<String> {
         IfcValue::Float(f) => Some(f.to_string()),
         IfcValue::Ref(id) => Some(format!("#{}", id)),
         IfcValue::Null => None,
-        IfcValue::List(values) => Some(values.iter().filter_map(ifc_value_to_string).collect::<Vec<_>>().join(",")),
+        IfcValue::List(values) => Some(
+            values
+                .iter()
+                .filter_map(ifc_value_to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        ),
     }
 }
 
@@ -404,29 +441,52 @@ fn translate_geometry(geom: &mut c::Geometry, translation: &c::Point3D) {
 }
 
 fn normalize_project_to_origin(proj: &mut Project) {
-    let mut min = c::Point3D { x: f64::INFINITY, y: f64::INFINITY, z: f64::INFINITY };
-    let mut max = c::Point3D { x: f64::NEG_INFINITY, y: f64::NEG_INFINITY, z: f64::NEG_INFINITY };
+    let mut min = c::Point3D {
+        x: f64::INFINITY,
+        y: f64::INFINITY,
+        z: f64::INFINITY,
+    };
+    let mut max = c::Point3D {
+        x: f64::NEG_INFINITY,
+        y: f64::NEG_INFINITY,
+        z: f64::NEG_INFINITY,
+    };
     let mut has_bbox = false;
 
     for obj in proj.objects.list() {
         if let Some(bbox) = obj.bbox() {
             if let (Some(bmin), Some(bmax)) = (&bbox.min, &bbox.max) {
-                min.x = min.x.min(bmin.x); min.y = min.y.min(bmin.y); min.z = min.z.min(bmin.z);
-                max.x = max.x.max(bmax.x); max.y = max.y.max(bmax.y); max.z = max.z.max(bmax.z);
+                min.x = min.x.min(bmin.x);
+                min.y = min.y.min(bmin.y);
+                min.z = min.z.min(bmin.z);
+                max.x = max.x.max(bmax.x);
+                max.y = max.y.max(bmax.y);
+                max.z = max.z.max(bmax.z);
                 has_bbox = true;
             }
         }
     }
 
-    if !has_bbox { return; }
+    if !has_bbox {
+        return;
+    }
     let center = c::Point3D {
         x: (min.x + max.x) / 2.0,
         y: (min.y + max.y) / 2.0,
         z: (min.z + max.z) / 2.0,
     };
-    let translation = c::Point3D { x: -center.x, y: -center.y, z: -center.z };
+    let translation = c::Point3D {
+        x: -center.x,
+        y: -center.y,
+        z: -center.z,
+    };
 
-    let ids: Vec<String> = proj.objects.list().into_iter().map(|o| o.id.clone()).collect();
+    let ids: Vec<String> = proj
+        .objects
+        .list()
+        .into_iter()
+        .map(|o| o.id.clone())
+        .collect();
     for id in ids {
         if let Some(obj) = proj.objects.get_mut(&id) {
             if let Some(ref mut geom) = obj.geometry {
@@ -439,10 +499,20 @@ fn normalize_project_to_origin(proj: &mut Project) {
     }
 }
 
-fn apply_ifc_hierarchy(doc: &IfcDocument, proj: &mut Project, entity_to_object: &HashMap<u64, String>) {
-    for rel in doc.entities.values().filter(|e| e.entity_type == "IFCRELAGGREGATES" || e.entity_type == "IFCRELCONTAINEDINSPATIALSTRUCTURE") {
+fn apply_ifc_hierarchy(
+    doc: &IfcDocument,
+    proj: &mut Project,
+    entity_to_object: &HashMap<u64, String>,
+) {
+    for rel in doc.entities.values().filter(|e| {
+        e.entity_type == "IFCRELAGGREGATES" || e.entity_type == "IFCRELCONTAINEDINSPATIALSTRUCTURE"
+    }) {
         if rel.entity_type == "IFCRELAGGREGATES" {
-            let parent_id = match doc.get_ref(rel, 4).and_then(|id| entity_to_object.get(&id)).cloned() {
+            let parent_id = match doc
+                .get_ref(rel, 4)
+                .and_then(|id| entity_to_object.get(&id))
+                .cloned()
+            {
                 Some(id) => id,
                 None => continue,
             };
@@ -456,7 +526,11 @@ fn apply_ifc_hierarchy(doc: &IfcDocument, proj: &mut Project, entity_to_object: 
                 }
             }
         } else {
-            let parent_id = match doc.get_ref(rel, 5).and_then(|id| entity_to_object.get(&id)).cloned() {
+            let parent_id = match doc
+                .get_ref(rel, 5)
+                .and_then(|id| entity_to_object.get(&id))
+                .cloned()
+            {
                 Some(id) => id,
                 None => continue,
             };
@@ -473,8 +547,16 @@ fn apply_ifc_hierarchy(doc: &IfcDocument, proj: &mut Project, entity_to_object: 
     }
 }
 
-fn apply_ifc_property_sets(doc: &IfcDocument, proj: &mut Project, entity_to_object: &HashMap<u64, String>) {
-    for rel in doc.entities.values().filter(|e| e.entity_type == "IFCRELDEFINESBYPROPERTIES") {
+fn apply_ifc_property_sets(
+    doc: &IfcDocument,
+    proj: &mut Project,
+    entity_to_object: &HashMap<u64, String>,
+) {
+    for rel in doc
+        .entities
+        .values()
+        .filter(|e| e.entity_type == "IFCRELDEFINESBYPROPERTIES")
+    {
         let pset_ref = match doc.get_ref(rel, 5) {
             Some(id) => id,
             None => continue,
@@ -483,7 +565,9 @@ fn apply_ifc_property_sets(doc: &IfcDocument, proj: &mut Project, entity_to_obje
             Some(pset) if pset.entity_type == "IFCPROPERTYSET" => pset,
             _ => continue,
         };
-        let pset_name = doc.get_string(pset, 2).unwrap_or_else(|| format!("Pset_{}", pset.id));
+        let pset_name = doc
+            .get_string(pset, 2)
+            .unwrap_or_else(|| format!("Pset_{}", pset.id));
         let properties = extract_property_set(doc, pset);
 
         if let Some(IfcValue::List(related)) = rel.args.get(4) {
@@ -514,8 +598,14 @@ fn extract_property_set(doc: &IfcDocument, pset: &IfcEntity) -> Vec<c::Property>
             };
             if let Some(prop) = prop {
                 if prop.entity_type == "IFCPROPERTYSINGLEVALUE" {
-                    let name = doc.get_string(prop, 0).unwrap_or_else(|| format!("Property_{}", prop.id));
-                    let value = prop.args.get(2).and_then(ifc_value_to_string).unwrap_or_default();
+                    let name = doc
+                        .get_string(prop, 0)
+                        .unwrap_or_else(|| format!("Property_{}", prop.id));
+                    let value = prop
+                        .args
+                        .get(2)
+                        .and_then(ifc_value_to_string)
+                        .unwrap_or_default();
                     props.push(c::Property {
                         name,
                         value: Some(string_value(value)),
@@ -555,7 +645,9 @@ fn extract_placement(doc: &IfcDocument, entity: &IfcEntity) -> Option<c::Point3D
 
 fn extract_ifc_geometry(doc: &IfcDocument, entity: &IfcEntity) -> Option<c::Geometry> {
     // IfcProduct: Representation at arg index 6
-    if entity.args.len() < 7 { return None; }
+    if entity.args.len() < 7 {
+        return None;
+    }
 
     let rep_ref = match &entity.args[6] {
         IfcValue::Ref(id) => *id,
@@ -611,8 +703,13 @@ pub mod geometry;
 pub fn export_ifc(project: &Project) -> String {
     let mut out = String::new();
     out.push_str("ISO-10303-21;\nHEADER;\n");
-    out.push_str(&format!("FILE_DESCRIPTION(('OmniM export: {}'),'2;1');\n", escape_ifc_string(&project.name)));
-    out.push_str("FILE_NAME('project.ifc','2024-01-01T00:00:00',('OmniM'),('OmniM'),'OmniM','OmniM','');\n");
+    out.push_str(&format!(
+        "FILE_DESCRIPTION(('OmniM export: {}'),'2;1');\n",
+        escape_ifc_string(&project.name)
+    ));
+    out.push_str(
+        "FILE_NAME('project.ifc','2024-01-01T00:00:00',('OmniM'),('OmniM'),'OmniM','OmniM','');\n",
+    );
     out.push_str("FILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\n");
 
     let mut next_id = 1u64;
@@ -623,24 +720,34 @@ pub fn export_ifc(project: &Project) -> String {
         next_id += 1;
         obj_to_ifc.insert(obj.id.clone(), ifc_id);
         let class = export_ifc_class(obj);
-        let global_id = obj.get_property("IfcGlobalId")
+        let global_id = obj
+            .get_property("IfcGlobalId")
             .and_then(|p| p.value.as_ref())
             .and_then(property_value_as_string)
             .unwrap_or_else(|| compress_id(&obj.id));
         let name = escape_ifc_string(&obj.name);
-        let description = if obj.description.is_empty() { "$".to_string() } else { format!("'{}'", escape_ifc_string(&obj.description)) };
+        let description = if obj.description.is_empty() {
+            "$".to_string()
+        } else {
+            format!("'{}'", escape_ifc_string(&obj.description))
+        };
 
         let obj_placement = if obj.geometry.is_some() {
             export_placement(&mut out, &mut next_id, obj)
         } else {
             None
         };
-        let obj_shape = obj_placement.and_then(|_| {
-            export_solid_geometry(&mut out, &mut next_id, obj)
-        });
+        let obj_shape =
+            obj_placement.and_then(|_| export_solid_geometry(&mut out, &mut next_id, obj));
 
-        let placement_str = match obj_placement { Some(id) => format!("#{}", id), None => "$".to_string() };
-        let shape_str = match obj_shape { Some(id) => format!("#{}", id), None => "$".to_string() };
+        let placement_str = match obj_placement {
+            Some(id) => format!("#{}", id),
+            None => "$".to_string(),
+        };
+        let shape_str = match obj_shape {
+            Some(id) => format!("#{}", id),
+            None => "$".to_string(),
+        };
 
         out.push_str(&format!(
             "#{}={}('{}',$,{},'{}',$,{},{});
@@ -650,31 +757,65 @@ pub fn export_ifc(project: &Project) -> String {
     }
 
     for cont in project.relations.containments() {
-        if let (Some(parent), Some(child)) = (obj_to_ifc.get(&cont.parent_id), obj_to_ifc.get(&cont.child_id)) {
+        if let (Some(parent), Some(child)) = (
+            obj_to_ifc.get(&cont.parent_id),
+            obj_to_ifc.get(&cont.child_id),
+        ) {
             let rel_id = next_id;
             next_id += 1;
-            out.push_str(&format!("#{}=IFCRELAGGREGATES('{}',$,$,$,#{},(#{}));\n", rel_id, compress_id(&format!("{}-{}", cont.parent_id, cont.child_id)), parent, child));
+            out.push_str(&format!(
+                "#{}=IFCRELAGGREGATES('{}',$,$,$,#{},(#{}));\n",
+                rel_id,
+                compress_id(&format!("{}-{}", cont.parent_id, cont.child_id)),
+                parent,
+                child
+            ));
         }
     }
 
     for obj in project.objects.list() {
-        if obj.property_sets.is_empty() { continue; }
-        let Some(obj_ifc_id) = obj_to_ifc.get(&obj.id) else { continue; };
+        if obj.property_sets.is_empty() {
+            continue;
+        }
+        let Some(obj_ifc_id) = obj_to_ifc.get(&obj.id) else {
+            continue;
+        };
         for pset in &obj.property_sets {
             let mut prop_ids = Vec::new();
             for prop in &pset.properties {
                 let prop_id = next_id;
                 next_id += 1;
-                let value = prop.value.as_ref().and_then(property_value_as_string).unwrap_or_default();
-                out.push_str(&format!("#{}=IFCPROPERTYSINGLEVALUE('{}',$,IFCTEXT('{}'),$);\n", prop_id, escape_ifc_string(&prop.name), escape_ifc_string(&value)));
+                let value = prop
+                    .value
+                    .as_ref()
+                    .and_then(property_value_as_string)
+                    .unwrap_or_default();
+                out.push_str(&format!(
+                    "#{}=IFCPROPERTYSINGLEVALUE('{}',$,IFCTEXT('{}'),$);\n",
+                    prop_id,
+                    escape_ifc_string(&prop.name),
+                    escape_ifc_string(&value)
+                ));
                 prop_ids.push(format!("#{}", prop_id));
             }
             let pset_id = next_id;
             next_id += 1;
-            out.push_str(&format!("#{}=IFCPROPERTYSET('{}',$,'{}',$,({}));\n", pset_id, compress_id(&format!("{}-{}", obj.id, pset.name)), escape_ifc_string(&pset.name), prop_ids.join(",")));
+            out.push_str(&format!(
+                "#{}=IFCPROPERTYSET('{}',$,'{}',$,({}));\n",
+                pset_id,
+                compress_id(&format!("{}-{}", obj.id, pset.name)),
+                escape_ifc_string(&pset.name),
+                prop_ids.join(",")
+            ));
             let rel_id = next_id;
             next_id += 1;
-            out.push_str(&format!("#{}=IFCRELDEFINESBYPROPERTIES('{}',$,$,$,(#{}),#{});\n", rel_id, compress_id(&format!("rel-{}-{}", obj.id, pset.name)), obj_ifc_id, pset_id));
+            out.push_str(&format!(
+                "#{}=IFCRELDEFINESBYPROPERTIES('{}',$,$,$,(#{}),#{});\n",
+                rel_id,
+                compress_id(&format!("rel-{}-{}", obj.id, pset.name)),
+                obj_ifc_id,
+                pset_id
+            ));
         }
     }
 
@@ -682,25 +823,54 @@ pub fn export_ifc(project: &Project) -> String {
     out
 }
 
-fn export_placement(out: &mut String, next_id: &mut u64, obj: &omnim_model::OmniObject) -> Option<u64> {
+fn export_placement(
+    out: &mut String,
+    next_id: &mut u64,
+    obj: &omnim_model::OmniObject,
+) -> Option<u64> {
     let (px, py, pz) = (
-        obj.get_property("IfcPlacementX").and_then(|p| p.value.as_ref()).and_then(property_value_as_f64).unwrap_or(0.0),
-        obj.get_property("IfcPlacementY").and_then(|p| p.value.as_ref()).and_then(property_value_as_f64).unwrap_or(0.0),
-        obj.get_property("IfcPlacementZ").and_then(|p| p.value.as_ref()).and_then(property_value_as_f64).unwrap_or(0.0),
+        obj.get_property("IfcPlacementX")
+            .and_then(|p| p.value.as_ref())
+            .and_then(property_value_as_f64)
+            .unwrap_or(0.0),
+        obj.get_property("IfcPlacementY")
+            .and_then(|p| p.value.as_ref())
+            .and_then(property_value_as_f64)
+            .unwrap_or(0.0),
+        obj.get_property("IfcPlacementZ")
+            .and_then(|p| p.value.as_ref())
+            .and_then(property_value_as_f64)
+            .unwrap_or(0.0),
     );
 
-    let pt_id = *next_id; *next_id += 1;
-    out.push_str(&format!("#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n", pt_id, px, py, pz));
+    let pt_id = *next_id;
+    *next_id += 1;
+    out.push_str(&format!(
+        "#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n",
+        pt_id, px, py, pz
+    ));
 
-    let axis2_id = *next_id; *next_id += 1;
-    out.push_str(&format!("#{}=IFCAXIS2PLACEMENT3D(#{},$,);\n", axis2_id, pt_id));
+    let axis2_id = *next_id;
+    *next_id += 1;
+    out.push_str(&format!(
+        "#{}=IFCAXIS2PLACEMENT3D(#{},$,);\n",
+        axis2_id, pt_id
+    ));
 
-    let placement_id = *next_id; *next_id += 1;
-    out.push_str(&format!("#{}=IFCLOCALPLACEMENT($,#{});\n", placement_id, axis2_id));
+    let placement_id = *next_id;
+    *next_id += 1;
+    out.push_str(&format!(
+        "#{}=IFCLOCALPLACEMENT($,#{});\n",
+        placement_id, axis2_id
+    ));
     Some(placement_id)
 }
 
-fn export_solid_geometry(out: &mut String, next_id: &mut u64, obj: &omnim_model::OmniObject) -> Option<u64> {
+fn export_solid_geometry(
+    out: &mut String,
+    next_id: &mut u64,
+    obj: &omnim_model::OmniObject,
+) -> Option<u64> {
     let geom = obj.geometry.as_ref()?;
     match &geom.representation {
         Some(c::geometry::Representation::Parametric(pg)) => {
@@ -712,54 +882,104 @@ fn export_solid_geometry(out: &mut String, next_id: &mut u64, obj: &omnim_model:
                     }
                 }
             }
-            if ids.is_empty() { None } else { Some(ids[0]) }
+            if ids.is_empty() {
+                None
+            } else {
+                Some(ids[0])
+            }
         }
-        Some(c::geometry::Representation::Mesh(mesh)) => {
-            export_mesh_brep(out, next_id, mesh)
-        }
+        Some(c::geometry::Representation::Mesh(mesh)) => export_mesh_brep(out, next_id, mesh),
         _ => None,
     }
 }
 
-fn export_parametric_operation(out: &mut String, next_id: &mut u64, op: &c::parametric_operation::Operation) -> Option<u64> {
+fn export_parametric_operation(
+    out: &mut String,
+    next_id: &mut u64,
+    op: &c::parametric_operation::Operation,
+) -> Option<u64> {
     use c::parametric_operation::Operation::*;
     match op {
         Extrusion(ext) => {
             let profile_id = export_profile(out, next_id, &ext.profile);
-            let dir_id = *next_id; *next_id += 1;
-            let (dx, dy, dz) = ext.direction.as_ref()
+            let dir_id = *next_id;
+            *next_id += 1;
+            let (dx, dy, dz) = ext
+                .direction
+                .as_ref()
                 .map(|d| (d.x, d.y, d.z))
                 .unwrap_or((0.0, 0.0, 1.0));
-            let len = (dx*dx + dy*dy + dz*dz).sqrt();
-            let (ndx, ndy, ndz) = if len > 1e-10 { (dx/len, dy/len, dz/len) } else { (0.0, 0.0, 1.0) };
-            out.push_str(&format!("#{}=IFCDIRECTION(({:.6},{:.6},{:.6}));\n", dir_id, ndx, ndy, ndz));
+            let len = (dx * dx + dy * dy + dz * dz).sqrt();
+            let (ndx, ndy, ndz) = if len > 1e-10 {
+                (dx / len, dy / len, dz / len)
+            } else {
+                (0.0, 0.0, 1.0)
+            };
+            out.push_str(&format!(
+                "#{}=IFCDIRECTION(({:.6},{:.6},{:.6}));\n",
+                dir_id, ndx, ndy, ndz
+            ));
 
-            let pos_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCAXIS2PLACEMENT3D(#{},$,);\n", pos_id, dir_id));
+            let pos_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCAXIS2PLACEMENT3D(#{},$,);\n",
+                pos_id, dir_id
+            ));
 
-            let solid_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCEXTRUDEDAREASOLID(#{},#{},#{},{:.6});\n",
-                solid_id, profile_id, pos_id, dir_id, ext.depth));
+            let solid_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCEXTRUDEDAREASOLID(#{},#{},#{},{:.6});\n",
+                solid_id, profile_id, pos_id, dir_id, ext.depth
+            ));
             Some(solid_id)
         }
         Revolve(rev) => {
             let profile_id = export_profile(out, next_id, &rev.profile);
-            let origin = rev.axis_origin.clone().unwrap_or(c::Point3D { x: 0.0, y: 0.0, z: 0.0 });
-            let dir = rev.axis_direction.clone().unwrap_or(c::Vector3D { x: 0.0, y: 0.0, z: 1.0 });
-            let len = (dir.x*dir.x + dir.y*dir.y + dir.z*dir.z).sqrt();
-            let (ndx, ndy, ndz) = if len > 1e-10 { (dir.x/len, dir.y/len, dir.z/len) } else { (0.0, 0.0, 1.0) };
+            let origin = rev.axis_origin.clone().unwrap_or(c::Point3D {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            });
+            let dir = rev.axis_direction.clone().unwrap_or(c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            });
+            let len = (dir.x * dir.x + dir.y * dir.y + dir.z * dir.z).sqrt();
+            let (ndx, ndy, ndz) = if len > 1e-10 {
+                (dir.x / len, dir.y / len, dir.z / len)
+            } else {
+                (0.0, 0.0, 1.0)
+            };
 
-            let axis_pt_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n", axis_pt_id, origin.x, origin.y, origin.z));
-            let axis_dir_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCDIRECTION(({:.6},{:.6},{:.6}));\n", axis_dir_id, ndx, ndy, ndz));
-            let axis1_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCAXIS1PLACEMENT(#{},#{});\n", axis1_id, axis_pt_id, axis_dir_id));
+            let axis_pt_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n",
+                axis_pt_id, origin.x, origin.y, origin.z
+            ));
+            let axis_dir_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCDIRECTION(({:.6},{:.6},{:.6}));\n",
+                axis_dir_id, ndx, ndy, ndz
+            ));
+            let axis1_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCAXIS1PLACEMENT(#{},#{});\n",
+                axis1_id, axis_pt_id, axis_dir_id
+            ));
 
-            let solid_id = *next_id; *next_id += 1;
+            let solid_id = *next_id;
+            *next_id += 1;
             let angle_deg = rev.angle * 180.0 / std::f64::consts::PI;
-            out.push_str(&format!("#{}=IFCREVOLVEDAREASOLID(#{},#{},$,{:.6});\n",
-                solid_id, profile_id, axis1_id, angle_deg));
+            out.push_str(&format!(
+                "#{}=IFCREVOLVEDAREASOLID(#{},#{},$,{:.6});\n",
+                solid_id, profile_id, axis1_id, angle_deg
+            ));
             Some(solid_id)
         }
         _ => None,
@@ -768,7 +988,8 @@ fn export_parametric_operation(out: &mut String, next_id: &mut u64, op: &c::para
 
 fn export_profile(out: &mut String, next_id: &mut u64, profile: &[c::Point2D]) -> u64 {
     let is_rect = profile.len() == 4
-        && (profile[0].x - 0.0).abs() < 1e-6 && (profile[0].y - 0.0).abs() < 1e-6
+        && (profile[0].x - 0.0).abs() < 1e-6
+        && (profile[0].y - 0.0).abs() < 1e-6
         && (profile[1].x - profile[2].x).abs() < 1e-6
         && (profile[3].y - profile[2].y).abs() < 1e-6;
     let is_circle = false;
@@ -776,37 +997,67 @@ fn export_profile(out: &mut String, next_id: &mut u64, profile: &[c::Point2D]) -
     if is_rect {
         let w = profile[1].x - profile[0].x;
         let h = profile[3].y - profile[0].y;
-        let id = *next_id; *next_id += 1;
-        out.push_str(&format!("#{}=IFCRECTANGLEPROFILEDEF(.AREA.,$,{:.6},{:.6});\n", id, w.abs(), h.abs()));
+        let id = *next_id;
+        *next_id += 1;
+        out.push_str(&format!(
+            "#{}=IFCRECTANGLEPROFILEDEF(.AREA.,$,{:.6},{:.6});\n",
+            id,
+            w.abs(),
+            h.abs()
+        ));
         id
     } else if is_circle {
-        let r = ((profile[0].x - profile[1].x).powi(2) + (profile[0].y - profile[1].y).powi(2)).sqrt();
-        let id = *next_id; *next_id += 1;
-        out.push_str(&format!("#{}=IFCCIRCLEPROFILEDEF(.AREA.,$,{:.6});\n", id, r));
+        let r =
+            ((profile[0].x - profile[1].x).powi(2) + (profile[0].y - profile[1].y).powi(2)).sqrt();
+        let id = *next_id;
+        *next_id += 1;
+        out.push_str(&format!(
+            "#{}=IFCCIRCLEPROFILEDEF(.AREA.,$,{:.6});\n",
+            id, r
+        ));
         id
     } else {
         let mut pt_ids = Vec::new();
         for p in profile {
-            let pt_id = *next_id; *next_id += 1;
-            out.push_str(&format!("#{}=IFCCARTESIANPOINT(({:.6},{:.6}));\n", pt_id, p.x, p.y));
+            let pt_id = *next_id;
+            *next_id += 1;
+            out.push_str(&format!(
+                "#{}=IFCCARTESIANPOINT(({:.6},{:.6}));\n",
+                pt_id, p.x, p.y
+            ));
             pt_ids.push(pt_id);
         }
-        let polyline_id = *next_id; *next_id += 1;
-        let pts_str = pt_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
+        let polyline_id = *next_id;
+        *next_id += 1;
+        let pts_str = pt_ids
+            .iter()
+            .map(|id| format!("#{}", id))
+            .collect::<Vec<_>>()
+            .join(",");
         out.push_str(&format!("#{}=IFCPOLYLINE(({}));\n", polyline_id, pts_str));
-        let id = *next_id; *next_id += 1;
-        out.push_str(&format!("#{}=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#{});\n", id, polyline_id));
+        let id = *next_id;
+        *next_id += 1;
+        out.push_str(&format!(
+            "#{}=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#{});\n",
+            id, polyline_id
+        ));
         id
     }
 }
 
 fn export_mesh_brep(out: &mut String, next_id: &mut u64, mesh: &c::MeshGeometry) -> Option<u64> {
-    if mesh.vertices.is_empty() || mesh.faces.is_empty() { return None; }
+    if mesh.vertices.is_empty() || mesh.faces.is_empty() {
+        return None;
+    }
 
     let mut vert_ids = Vec::new();
     for v in &mesh.vertices {
-        let id = *next_id; *next_id += 1;
-        out.push_str(&format!("#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n", id, v.x, v.y, v.z));
+        let id = *next_id;
+        *next_id += 1;
+        out.push_str(&format!(
+            "#{}=IFCCARTESIANPOINT(({:.6},{:.6},{:.6}));\n",
+            id, v.x, v.y, v.z
+        ));
         vert_ids.push(id);
     }
 
@@ -819,26 +1070,52 @@ fn export_mesh_brep(out: &mut String, next_id: &mut u64, mesh: &c::MeshGeometry)
                 loop_pt_ids.push(vert_ids[idx as usize]);
             }
         }
-        if loop_pt_ids.len() < 3 { continue; }
-        let poly_loop_id = *next_id; *next_id += 1;
-        let pts_str = loop_pt_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
+        if loop_pt_ids.len() < 3 {
+            continue;
+        }
+        let poly_loop_id = *next_id;
+        *next_id += 1;
+        let pts_str = loop_pt_ids
+            .iter()
+            .map(|id| format!("#{}", id))
+            .collect::<Vec<_>>()
+            .join(",");
         out.push_str(&format!("#{}=IFCPOLYLOOP(({}));\n", poly_loop_id, pts_str));
 
-        let face_bound_id = *next_id; *next_id += 1;
-        out.push_str(&format!("#{}=IFCFACEBOUND(#{},.T);\n", face_bound_id, poly_loop_id));
+        let face_bound_id = *next_id;
+        *next_id += 1;
+        out.push_str(&format!(
+            "#{}=IFCFACEBOUND(#{},.T);\n",
+            face_bound_id, poly_loop_id
+        ));
 
-        let face_id = *next_id; *next_id += 1;
+        let face_id = *next_id;
+        *next_id += 1;
         out.push_str(&format!("#{}=IFCFACE((#{}));\n", face_id, face_bound_id));
         face_ids.push(face_id);
     }
 
-    if face_ids.is_empty() { return None; }
-    let faces_str = face_ids.iter().map(|id| format!("#{}", id)).collect::<Vec<_>>().join(",");
-    let closed_shell_id = *next_id; *next_id += 1;
-    out.push_str(&format!("#{}=IFCCLOSEDSHELL(({}));\n", closed_shell_id, faces_str));
+    if face_ids.is_empty() {
+        return None;
+    }
+    let faces_str = face_ids
+        .iter()
+        .map(|id| format!("#{}", id))
+        .collect::<Vec<_>>()
+        .join(",");
+    let closed_shell_id = *next_id;
+    *next_id += 1;
+    out.push_str(&format!(
+        "#{}=IFCCLOSEDSHELL(({}));\n",
+        closed_shell_id, faces_str
+    ));
 
-    let brep_id = *next_id; *next_id += 1;
-    out.push_str(&format!("#{}=IFCFACETEDBREP(#{});\n", brep_id, closed_shell_id));
+    let brep_id = *next_id;
+    *next_id += 1;
+    out.push_str(&format!(
+        "#{}=IFCFACETEDBREP(#{});\n",
+        brep_id, closed_shell_id
+    ));
     Some(brep_id)
 }
 
@@ -896,6 +1173,14 @@ fn escape_ifc_string(value: &str) -> String {
 }
 
 fn compress_id(value: &str) -> String {
-    let compact: String = value.chars().filter(|c| c.is_ascii_alphanumeric()).take(22).collect();
-    if compact.is_empty() { "0".into() } else { compact }
+    let compact: String = value
+        .chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .take(22)
+        .collect();
+    if compact.is_empty() {
+        "0".into()
+    } else {
+        compact
+    }
 }

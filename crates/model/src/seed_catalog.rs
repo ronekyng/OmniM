@@ -1,7 +1,7 @@
 use crate::catalog::{ComponentDef, ConnectorDef, ParamDef};
-use crate::series_store::{Answer, AnswerOutcome, Selector, Series, SeriesStore, SpecComponent};
-use crate::feature_template::{FeatureTemplateStep, FeatureTreeTemplate, FeatureTreeRegistry};
+use crate::feature_template::{FeatureTemplateStep, FeatureTreeRegistry, FeatureTreeTemplate};
 use crate::profile::ProfileType;
+use crate::series_store::{Answer, AnswerOutcome, Selector, Series, SeriesStore, SpecComponent};
 use omnim_core as c;
 
 /// Populate the catalog store with built-in structural and piping component families.
@@ -84,13 +84,15 @@ pub fn seed_feature_trees(registry: &mut FeatureTreeRegistry) -> Vec<(String, St
     // These ComponentDefs are instantiated by the genrule layered family and
     // produce domain-typed objects (Wall/Slab/Floor/Roof), not Component.
     let wall_path_id = register_path_sweep_template(
-        registry, "wall-path-sweep",
+        registry,
+        "wall-path-sweep",
         crate::gen_rule::path_sweep::SectionOrientation::Vertical,
     );
     links.push(("Wall-Path".into(), wall_path_id));
 
     let slab_path_id = register_path_sweep_template(
-        registry, "slab-path-sweep",
+        registry,
+        "slab-path-sweep",
         crate::gen_rule::path_sweep::SectionOrientation::Horizontal,
     );
     links.push(("Slab-Path".into(), slab_path_id.clone()));
@@ -177,9 +179,18 @@ fn register_ipe_beam_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::IShape { height: 240.0, width: 120.0, web_thickness: 6.2, flange_thickness: 9.8 },
+            ProfileType::IShape {
+                height: 240.0,
+                width: 120.0,
+                web_thickness: 6.2,
+                flange_thickness: 9.8,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -193,9 +204,18 @@ fn register_hea_column_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("flange_thickness", "flange_thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::IShape { height: 300.0, width: 300.0, web_thickness: 8.0, flange_thickness: 14.0 },
+            ProfileType::IShape {
+                height: 300.0,
+                width: 300.0,
+                web_thickness: 8.0,
+                flange_thickness: 14.0,
+            },
             "column_height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -209,7 +229,11 @@ fn register_pipe_template(registry: &mut FeatureTreeRegistry) -> String {
             "main",
             ProfileType::PipeSchedule { segments: 32 },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -220,9 +244,16 @@ fn register_elbow_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("angle", "angle")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Circle { radius: 50.0, segments: 32 },
+            ProfileType::Circle {
+                radius: 50.0,
+                segments: 32,
+            },
             "DN",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -234,9 +265,16 @@ fn register_concrete_beam_template(registry: &mut FeatureTreeRegistry) -> String
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 300.0, height: 500.0 },
+            ProfileType::Rectangle {
+                width: 300.0,
+                height: 500.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -248,9 +286,16 @@ fn register_concrete_column_template(registry: &mut FeatureTreeRegistry) -> Stri
         .bind("column_height", "column_height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 300.0, height: 300.0 },
+            ProfileType::Rectangle {
+                width: 300.0,
+                height: 300.0,
+            },
             "column_height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -261,9 +306,16 @@ fn register_concrete_circular_column_template(registry: &mut FeatureTreeRegistry
         .bind("column_height", "column_height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Circle { radius: 200.0, segments: 32 },
+            ProfileType::Circle {
+                radius: 200.0,
+                segments: 32,
+            },
             "column_height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -275,9 +327,16 @@ fn register_concrete_block_template(registry: &mut FeatureTreeRegistry) -> Strin
         .bind("thickness", "thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 1500.0, height: 1500.0 },
+            ProfileType::Rectangle {
+                width: 1500.0,
+                height: 1500.0,
+            },
             "thickness",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -289,9 +348,16 @@ fn register_concrete_strip_template(registry: &mut FeatureTreeRegistry) -> Strin
         .bind("thickness", "thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 600.0, height: 300.0 },
+            ProfileType::Rectangle {
+                width: 600.0,
+                height: 300.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -303,9 +369,17 @@ fn register_chs_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Annulus { outer_radius: 57.15, inner_radius: 52.15, segments: 32 },
+            ProfileType::Annulus {
+                outer_radius: 57.15,
+                inner_radius: 52.15,
+                segments: 32,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -317,9 +391,17 @@ fn register_shs_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::BoxShape { width: 100.0, height: 100.0, thickness: 5.0 },
+            ProfileType::BoxShape {
+                width: 100.0,
+                height: 100.0,
+                thickness: 5.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -332,9 +414,17 @@ fn register_angle_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::LShape { leg1: 50.0, leg2: 50.0, thickness: 5.0 },
+            ProfileType::LShape {
+                leg1: 50.0,
+                leg2: 50.0,
+                thickness: 5.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -348,9 +438,18 @@ fn register_heb_column_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("column_height", "column_height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::IShape { height: 300.0, width: 300.0, web_thickness: 11.0, flange_thickness: 19.0 },
+            ProfileType::IShape {
+                height: 300.0,
+                width: 300.0,
+                web_thickness: 11.0,
+                flange_thickness: 19.0,
+            },
             "column_height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -364,9 +463,18 @@ fn register_hem_column_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("column_height", "column_height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::IShape { height: 340.0, width: 340.0, web_thickness: 21.0, flange_thickness: 35.0 },
+            ProfileType::IShape {
+                height: 340.0,
+                width: 340.0,
+                web_thickness: 21.0,
+                flange_thickness: 35.0,
+            },
             "column_height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -380,9 +488,18 @@ fn register_upe_channel_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::UShape { height: 300.0, width: 100.0, web_thickness: 10.0, flange_thickness: 16.0 },
+            ProfileType::UShape {
+                height: 300.0,
+                width: 100.0,
+                web_thickness: 10.0,
+                flange_thickness: 16.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -396,9 +513,18 @@ fn register_upn_channel_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::UShape { height: 300.0, width: 100.0, web_thickness: 10.0, flange_thickness: 16.0 },
+            ProfileType::UShape {
+                height: 300.0,
+                width: 100.0,
+                web_thickness: 10.0,
+                flange_thickness: 16.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -412,9 +538,18 @@ fn register_t_section_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::TShape { height: 100.0, width: 100.0, web_thickness: 10.0, flange_thickness: 14.0 },
+            ProfileType::TShape {
+                height: 100.0,
+                width: 100.0,
+                web_thickness: 10.0,
+                flange_thickness: 14.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -426,8 +561,10 @@ fn register_path_sweep_template(
     name: &str,
     orientation: crate::gen_rule::path_sweep::SectionOrientation,
 ) -> String {
-    let template = FeatureTreeTemplate::new(name)
-        .step(FeatureTemplateStep::layered_path_sweep("layer-stack", orientation));
+    let template = FeatureTreeTemplate::new(name).step(FeatureTemplateStep::layered_path_sweep(
+        "layer-stack",
+        orientation,
+    ));
     registry.register(template)
 }
 
@@ -438,9 +575,16 @@ fn register_concrete_wall_template(registry: &mut FeatureTreeRegistry) -> String
         .bind("height", "height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::ParametricRect { width_param: "length".into(), height_param: "thickness".into() },
+            ProfileType::ParametricRect {
+                width_param: "length".into(),
+                height_param: "thickness".into(),
+            },
             "height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -452,9 +596,16 @@ fn register_concrete_slab_template(registry: &mut FeatureTreeRegistry) -> String
         .bind("thickness", "thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 6000.0, height: 4000.0 },
+            ProfileType::Rectangle {
+                width: 6000.0,
+                height: 4000.0,
+            },
             "thickness",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -466,9 +617,16 @@ fn register_door_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("frame_depth", "frame_depth")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 900.0, height: 2100.0 },
+            ProfileType::Rectangle {
+                width: 900.0,
+                height: 2100.0,
+            },
             "frame_depth",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -480,9 +638,16 @@ fn register_window_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("frame_depth", "frame_depth")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 1200.0, height: 1500.0 },
+            ProfileType::Rectangle {
+                width: 1200.0,
+                height: 1500.0,
+            },
             "frame_depth",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -494,9 +659,16 @@ fn register_road_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("thickness", "thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 3500.0, height: 150.0 },
+            ProfileType::Rectangle {
+                width: 3500.0,
+                height: 150.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -508,9 +680,17 @@ fn register_tank_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("wall_thickness", "wall_thickness")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Annulus { outer_radius: 1500.0, inner_radius: 1492.0, segments: 48 },
+            ProfileType::Annulus {
+                outer_radius: 1500.0,
+                inner_radius: 1492.0,
+                segments: 48,
+            },
             "height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -525,9 +705,18 @@ fn register_equal_tee_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("schedule", "schedule")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::TShape { height: 200.0, width: 200.0, web_thickness: 20.0, flange_thickness: 20.0 },
+            ProfileType::TShape {
+                height: 200.0,
+                width: 200.0,
+                web_thickness: 20.0,
+                flange_thickness: 20.0,
+            },
             "DN",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -539,8 +728,14 @@ fn register_reducer_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::loft(
             "main",
-            ProfileType::Circle { radius: 75.0, segments: 32 },
-            ProfileType::Circle { radius: 50.0, segments: 32 },
+            ProfileType::Circle {
+                radius: 75.0,
+                segments: 32,
+            },
+            ProfileType::Circle {
+                radius: 50.0,
+                segments: 32,
+            },
         ));
     registry.register(template)
 }
@@ -551,7 +746,11 @@ fn register_flange_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("pressure_class", "pressure_class")
         .step(FeatureTemplateStep::revolve(
             "main",
-            ProfileType::LShape { leg1: 100.0, leg2: 20.0, thickness: 15.0 },
+            ProfileType::LShape {
+                leg1: 100.0,
+                leg2: 20.0,
+                thickness: 15.0,
+            },
             "360",
         ));
     registry.register(template)
@@ -563,9 +762,16 @@ fn register_gate_valve_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("pressure_class", "pressure_class")
         .step(FeatureTemplateStep::extrude(
             "body",
-            ProfileType::Rectangle { width: 200.0, height: 300.0 },
+            ProfileType::Rectangle {
+                width: 200.0,
+                height: 300.0,
+            },
             "DN",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -577,9 +783,16 @@ fn register_centrifugal_pump_template(registry: &mut FeatureTreeRegistry) -> Str
         .bind("width", "width")
         .step(FeatureTemplateStep::extrude(
             "body",
-            ProfileType::Rectangle { width: 400.0, height: 500.0 },
+            ProfileType::Rectangle {
+                width: 400.0,
+                height: 500.0,
+            },
             "height",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -594,9 +807,17 @@ fn register_rebar_cage_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Annulus { outer_radius: 208.0, inner_radius: 192.0, segments: 24 },
+            ProfileType::Annulus {
+                outer_radius: 208.0,
+                inner_radius: 192.0,
+                segments: 24,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -610,9 +831,16 @@ fn register_duct_rect_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 500.0, height: 250.0 },
+            ProfileType::Rectangle {
+                width: 500.0,
+                height: 250.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -625,9 +853,18 @@ fn register_cable_tray_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("length", "length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::UShape { height: 100.0, width: 300.0, web_thickness: 3.0, flange_thickness: 3.0 },
+            ProfileType::UShape {
+                height: 100.0,
+                width: 300.0,
+                web_thickness: 3.0,
+                flange_thickness: 3.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -638,9 +875,16 @@ fn register_heat_exchanger_template(registry: &mut FeatureTreeRegistry) -> Strin
         .bind("shell_length", "shell_length")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Circle { radius: 250.0, segments: 32 },
+            ProfileType::Circle {
+                radius: 250.0,
+                segments: 32,
+            },
             "shell_length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -652,9 +896,16 @@ fn register_compressor_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("height", "height")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Rectangle { width: 1200.0, height: 800.0 },
+            ProfileType::Rectangle {
+                width: 1200.0,
+                height: 800.0,
+            },
             "length",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -665,9 +916,16 @@ fn register_manhole_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("depth", "depth")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Circle { radius: 600.0, segments: 32 },
+            ProfileType::Circle {
+                radius: 600.0,
+                segments: 32,
+            },
             "depth",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -679,9 +937,16 @@ fn register_gear_template(registry: &mut FeatureTreeRegistry) -> String {
         .bind("width", "width")
         .step(FeatureTemplateStep::extrude(
             "main",
-            ProfileType::Circle { radius: 100.0, segments: 48 },
+            ProfileType::Circle {
+                radius: 100.0,
+                segments: 48,
+            },
             "width",
-            c::Vector3D { x: 0.0, y: 0.0, z: 1.0 },
+            c::Vector3D {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
         ));
     registry.register(template)
 }
@@ -708,21 +973,55 @@ fn seed_structural_beam_family(catalog: &mut crate::catalog::CatalogStore) {
     comp.default_material = "S355".into();
     comp.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into(), "S460".into()];
 
-    comp.params.push(ParamDef::new("height", 2).with_default(240.0).with_range(80.0, 600.0).with_step(10.0).with_unit("mm"));
-    comp.params.push(ParamDef::new("width", 2).with_default(120.0).with_range(46.0, 215.0).with_step(1.0).with_unit("mm"));
-    comp.params.push(ParamDef::new("web_thickness", 2).with_default(6.2).with_range(1.9, 12.0).with_step(0.1).with_unit("mm"));
-    comp.params.push(ParamDef::new("flange_thickness", 2).with_default(9.8).with_range(3.8, 19.0).with_step(0.1).with_unit("mm"));
-    comp.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    comp.params.push(
+        ParamDef::new("height", 2)
+            .with_default(240.0)
+            .with_range(80.0, 600.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("width", 2)
+            .with_default(120.0)
+            .with_range(46.0, 215.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(6.2)
+            .with_range(1.9, 12.0)
+            .with_step(0.1)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(9.8)
+            .with_range(3.8, 19.0)
+            .with_step(0.1)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    comp.connectors.push(ConnectorDef::new("start", "Start End")
-        .with_position("0", "0", "0")
-        .with_direction("0", "0", "1")
-        .with_role(1));
+    comp.connectors.push(
+        ConnectorDef::new("start", "Start End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
 
-    comp.connectors.push(ConnectorDef::new("end", "End End")
-        .with_position("0", "0", "length")
-        .with_direction("0", "0", "1")
-        .with_role(2));
+    comp.connectors.push(
+        ConnectorDef::new("end", "End End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     comp.published = true;
     catalog.insert(comp);
@@ -734,9 +1033,23 @@ fn seed_structural_beam_family(catalog: &mut crate::catalog::CatalogStore) {
     ipe240.domain = "structural".into();
     ipe240.tags = vec!["steel".into(), "ipe240".into()];
     ipe240.default_material = "S355".into();
-    ipe240.params.push(ParamDef::new("height", 2).with_default(240.0).with_unit("mm"));
-    ipe240.params.push(ParamDef::new("width", 2).with_default(120.0).with_unit("mm"));
-    ipe240.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    ipe240.params.push(
+        ParamDef::new("height", 2)
+            .with_default(240.0)
+            .with_unit("mm"),
+    );
+    ipe240.params.push(
+        ParamDef::new("width", 2)
+            .with_default(120.0)
+            .with_unit("mm"),
+    );
+    ipe240.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
     ipe240.published = true;
     catalog.insert(ipe240);
 }
@@ -754,16 +1067,54 @@ fn seed_structural_column_family(catalog: &mut crate::catalog::CatalogStore) {
     comp.tags = vec!["steel".into(), "column".into(), "hea".into()];
     comp.default_material = "S355".into();
 
-    comp.params.push(ParamDef::new("height", 2).with_default(300.0).with_range(100.0, 1100.0).with_step(10.0).with_unit("mm"));
-    comp.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(96.0, 400.0).with_step(1.0).with_unit("mm"));
-    comp.params.push(ParamDef::new("web_thickness", 2).with_default(8.0).with_range(4.0, 20.0).with_step(0.5).with_unit("mm"));
-    comp.params.push(ParamDef::new("flange_thickness", 2).with_default(14.0).with_range(6.0, 30.0).with_step(0.5).with_unit("mm"));
-    comp.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+    comp.params.push(
+        ParamDef::new("height", 2)
+            .with_default(300.0)
+            .with_range(100.0, 1100.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("width", 2)
+            .with_default(300.0)
+            .with_range(96.0, 400.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(8.0)
+            .with_range(4.0, 20.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(14.0)
+            .with_range(6.0, 30.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    comp.params.push(
+        ParamDef::new("column_height", 2)
+            .with_default(4200.0)
+            .with_range(1000.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    comp.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    comp.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "column_height").with_direction("0", "0", "1").with_role(2));
+    comp.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    comp.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "column_height")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     comp.published = true;
     catalog.insert(comp);
@@ -779,16 +1130,54 @@ fn seed_heb_hem_family(catalog: &mut crate::catalog::CatalogStore) {
     heb.default_material = "S355".into();
     heb.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into(), "S460".into()];
 
-    heb.params.push(ParamDef::new("height", 2).with_default(300.0).with_range(100.0, 1100.0).with_step(10.0).with_unit("mm"));
-    heb.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(100.0, 400.0).with_step(1.0).with_unit("mm"));
-    heb.params.push(ParamDef::new("web_thickness", 2).with_default(11.0).with_range(4.0, 25.0).with_step(0.5).with_unit("mm"));
-    heb.params.push(ParamDef::new("flange_thickness", 2).with_default(19.0).with_range(7.0, 40.0).with_step(0.5).with_unit("mm"));
-    heb.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+    heb.params.push(
+        ParamDef::new("height", 2)
+            .with_default(300.0)
+            .with_range(100.0, 1100.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    heb.params.push(
+        ParamDef::new("width", 2)
+            .with_default(300.0)
+            .with_range(100.0, 400.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    heb.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(11.0)
+            .with_range(4.0, 25.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    heb.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(19.0)
+            .with_range(7.0, 40.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    heb.params.push(
+        ParamDef::new("column_height", 2)
+            .with_default(4200.0)
+            .with_range(1000.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    heb.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    heb.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "column_height").with_direction("0", "0", "1").with_role(2));
+    heb.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    heb.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "column_height")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     heb.published = true;
     catalog.insert(heb);
@@ -802,16 +1191,54 @@ fn seed_heb_hem_family(catalog: &mut crate::catalog::CatalogStore) {
     hem.default_material = "S355".into();
     hem.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into(), "S460".into()];
 
-    hem.params.push(ParamDef::new("height", 2).with_default(340.0).with_range(120.0, 1100.0).with_step(10.0).with_unit("mm"));
-    hem.params.push(ParamDef::new("width", 2).with_default(340.0).with_range(120.0, 400.0).with_step(1.0).with_unit("mm"));
-    hem.params.push(ParamDef::new("web_thickness", 2).with_default(21.0).with_range(6.0, 30.0).with_step(0.5).with_unit("mm"));
-    hem.params.push(ParamDef::new("flange_thickness", 2).with_default(35.0).with_range(9.0, 45.0).with_step(0.5).with_unit("mm"));
-    hem.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+    hem.params.push(
+        ParamDef::new("height", 2)
+            .with_default(340.0)
+            .with_range(120.0, 1100.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    hem.params.push(
+        ParamDef::new("width", 2)
+            .with_default(340.0)
+            .with_range(120.0, 400.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    hem.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(21.0)
+            .with_range(6.0, 30.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    hem.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(35.0)
+            .with_range(9.0, 45.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    hem.params.push(
+        ParamDef::new("column_height", 2)
+            .with_default(4200.0)
+            .with_range(1000.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    hem.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    hem.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "column_height").with_direction("0", "0", "1").with_role(2));
+    hem.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    hem.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "column_height")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     hem.published = true;
     catalog.insert(hem);
@@ -827,16 +1254,54 @@ fn seed_channel_family(catalog: &mut crate::catalog::CatalogStore) {
     upe.default_material = "S355".into();
     upe.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    upe.params.push(ParamDef::new("height", 2).with_default(300.0).with_range(80.0, 400.0).with_step(10.0).with_unit("mm"));
-    upe.params.push(ParamDef::new("width", 2).with_default(100.0).with_range(46.0, 115.0).with_step(1.0).with_unit("mm"));
-    upe.params.push(ParamDef::new("web_thickness", 2).with_default(10.0).with_range(3.0, 14.0).with_step(0.5).with_unit("mm"));
-    upe.params.push(ParamDef::new("flange_thickness", 2).with_default(16.0).with_range(5.0, 19.0).with_step(0.5).with_unit("mm"));
-    upe.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    upe.params.push(
+        ParamDef::new("height", 2)
+            .with_default(300.0)
+            .with_range(80.0, 400.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    upe.params.push(
+        ParamDef::new("width", 2)
+            .with_default(100.0)
+            .with_range(46.0, 115.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    upe.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(10.0)
+            .with_range(3.0, 14.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    upe.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(16.0)
+            .with_range(5.0, 19.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    upe.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    upe.connectors.push(ConnectorDef::new("start", "Start End")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    upe.connectors.push(ConnectorDef::new("end", "End End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    upe.connectors.push(
+        ConnectorDef::new("start", "Start End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    upe.connectors.push(
+        ConnectorDef::new("end", "End End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     upe.published = true;
     catalog.insert(upe);
@@ -850,16 +1315,54 @@ fn seed_channel_family(catalog: &mut crate::catalog::CatalogStore) {
     upn.default_material = "S355".into();
     upn.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    upn.params.push(ParamDef::new("height", 2).with_default(300.0).with_range(80.0, 400.0).with_step(10.0).with_unit("mm"));
-    upn.params.push(ParamDef::new("width", 2).with_default(100.0).with_range(45.0, 110.0).with_step(1.0).with_unit("mm"));
-    upn.params.push(ParamDef::new("web_thickness", 2).with_default(10.0).with_range(3.0, 14.0).with_step(0.5).with_unit("mm"));
-    upn.params.push(ParamDef::new("flange_thickness", 2).with_default(16.0).with_range(5.0, 19.0).with_step(0.5).with_unit("mm"));
-    upn.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    upn.params.push(
+        ParamDef::new("height", 2)
+            .with_default(300.0)
+            .with_range(80.0, 400.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    upn.params.push(
+        ParamDef::new("width", 2)
+            .with_default(100.0)
+            .with_range(45.0, 110.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    upn.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(10.0)
+            .with_range(3.0, 14.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    upn.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(16.0)
+            .with_range(5.0, 19.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    upn.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    upn.connectors.push(ConnectorDef::new("start", "Start End")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    upn.connectors.push(ConnectorDef::new("end", "End End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    upn.connectors.push(
+        ConnectorDef::new("start", "Start End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    upn.connectors.push(
+        ConnectorDef::new("end", "End End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     upn.published = true;
     catalog.insert(upn);
@@ -875,16 +1378,54 @@ fn seed_t_section_family(catalog: &mut crate::catalog::CatalogStore) {
     t_sec.default_material = "S355".into();
     t_sec.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    t_sec.params.push(ParamDef::new("height", 2).with_default(100.0).with_range(50.0, 200.0).with_step(5.0).with_unit("mm"));
-    t_sec.params.push(ParamDef::new("width", 2).with_default(100.0).with_range(50.0, 200.0).with_step(5.0).with_unit("mm"));
-    t_sec.params.push(ParamDef::new("web_thickness", 2).with_default(10.0).with_range(4.0, 20.0).with_step(0.5).with_unit("mm"));
-    t_sec.params.push(ParamDef::new("flange_thickness", 2).with_default(14.0).with_range(5.0, 25.0).with_step(0.5).with_unit("mm"));
-    t_sec.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    t_sec.params.push(
+        ParamDef::new("height", 2)
+            .with_default(100.0)
+            .with_range(50.0, 200.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    t_sec.params.push(
+        ParamDef::new("width", 2)
+            .with_default(100.0)
+            .with_range(50.0, 200.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    t_sec.params.push(
+        ParamDef::new("web_thickness", 2)
+            .with_default(10.0)
+            .with_range(4.0, 20.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    t_sec.params.push(
+        ParamDef::new("flange_thickness", 2)
+            .with_default(14.0)
+            .with_range(5.0, 25.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    t_sec.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    t_sec.connectors.push(ConnectorDef::new("start", "Start End")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    t_sec.connectors.push(ConnectorDef::new("end", "End End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    t_sec.connectors.push(
+        ConnectorDef::new("start", "Start End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    t_sec.connectors.push(
+        ConnectorDef::new("end", "End End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     t_sec.published = true;
     catalog.insert(t_sec);
@@ -903,14 +1444,45 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     pipe.tags = vec!["pipe".into(), "carbon-steel".into()];
     pipe.default_material = "A106-B".into();
 
-    pipe.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    pipe.params.push(ParamDef::new("schedule", 4).with_default(0.0).with_unit("").with_choices(vec!["5S".into(), "10S".into(), "40".into(), "80".into(), "160".into()]));
-    pipe.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(100.0, 12000.0).with_step(100.0).with_unit("mm"));
+    pipe.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    pipe.params.push(
+        ParamDef::new("schedule", 4)
+            .with_default(0.0)
+            .with_unit("")
+            .with_choices(vec![
+                "5S".into(),
+                "10S".into(),
+                "40".into(),
+                "80".into(),
+                "160".into(),
+            ]),
+    );
+    pipe.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(100.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    pipe.connectors.push(ConnectorDef::new("end1", "End 1")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    pipe.connectors.push(ConnectorDef::new("end2", "End 2")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(0));
+    pipe.connectors.push(
+        ConnectorDef::new("end1", "End 1")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    pipe.connectors.push(
+        ConnectorDef::new("end2", "End 2")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
 
     pipe.published = true;
     catalog.insert(pipe);
@@ -923,14 +1495,38 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     elbow.domain = "piping".into();
     elbow.tags = vec!["elbow".into(), "long-radius".into()];
 
-    elbow.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    elbow.params.push(ParamDef::new("schedule", 4).with_default(0.0).with_choices(vec!["40".into(), "80".into()]));
-    elbow.params.push(ParamDef::new("angle", 2).with_default(90.0).with_range(1.0, 180.0).with_step(1.0).with_unit("deg"));
+    elbow.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    elbow.params.push(
+        ParamDef::new("schedule", 4)
+            .with_default(0.0)
+            .with_choices(vec!["40".into(), "80".into()]),
+    );
+    elbow.params.push(
+        ParamDef::new("angle", 2)
+            .with_default(90.0)
+            .with_range(1.0, 180.0)
+            .with_step(1.0)
+            .with_unit("deg"),
+    );
 
-    elbow.connectors.push(ConnectorDef::new("end1", "End 1")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    elbow.connectors.push(ConnectorDef::new("end2", "End 2")
-        .with_position("1.5*DN", "0", "0").with_direction("1", "0", "0").with_role(0));
+    elbow.connectors.push(
+        ConnectorDef::new("end1", "End 1")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    elbow.connectors.push(
+        ConnectorDef::new("end2", "End 2")
+            .with_position("1.5*DN", "0", "0")
+            .with_direction("1", "0", "0")
+            .with_role(0),
+    );
 
     elbow.published = true;
     catalog.insert(elbow);
@@ -943,15 +1539,37 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     tee.domain = "piping".into();
     tee.tags = vec!["tee".into(), "equal".into()];
 
-    tee.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    tee.params.push(ParamDef::new("schedule", 4).with_default(0.0).with_choices(vec!["40".into(), "80".into()]));
+    tee.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    tee.params.push(
+        ParamDef::new("schedule", 4)
+            .with_default(0.0)
+            .with_choices(vec!["40".into(), "80".into()]),
+    );
 
-    tee.connectors.push(ConnectorDef::new("run1", "Run End 1")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    tee.connectors.push(ConnectorDef::new("run2", "Run End 2")
-        .with_position("200", "0", "0").with_direction("1", "0", "0").with_role(0));
-    tee.connectors.push(ConnectorDef::new("branch", "Branch End")
-        .with_position("100", "100", "0").with_direction("0", "1", "0").with_role(0));
+    tee.connectors.push(
+        ConnectorDef::new("run1", "Run End 1")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    tee.connectors.push(
+        ConnectorDef::new("run2", "Run End 2")
+            .with_position("200", "0", "0")
+            .with_direction("1", "0", "0")
+            .with_role(0),
+    );
+    tee.connectors.push(
+        ConnectorDef::new("branch", "Branch End")
+            .with_position("100", "100", "0")
+            .with_direction("0", "1", "0")
+            .with_role(0),
+    );
 
     tee.published = true;
     catalog.insert(tee);
@@ -964,14 +1582,40 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     reducer.domain = "piping".into();
     reducer.tags = vec!["reducer".into(), "concentric".into()];
 
-    reducer.params.push(ParamDef::new("DN_large", 3).with_default(150.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    reducer.params.push(ParamDef::new("DN_small", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    reducer.params.push(ParamDef::new("length", 2).with_default(200.0).with_range(50.0, 600.0).with_step(10.0).with_unit("mm"));
+    reducer.params.push(
+        ParamDef::new("DN_large", 3)
+            .with_default(150.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    reducer.params.push(
+        ParamDef::new("DN_small", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    reducer.params.push(
+        ParamDef::new("length", 2)
+            .with_default(200.0)
+            .with_range(50.0, 600.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
-    reducer.connectors.push(ConnectorDef::new("large_end", "Large End")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    reducer.connectors.push(ConnectorDef::new("small_end", "Small End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(0));
+    reducer.connectors.push(
+        ConnectorDef::new("large_end", "Large End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    reducer.connectors.push(
+        ConnectorDef::new("small_end", "Small End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
 
     reducer.published = true;
     catalog.insert(reducer);
@@ -984,13 +1628,31 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     flange.domain = "piping".into();
     flange.tags = vec!["flange".into(), "weld-neck".into()];
 
-    flange.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    flange.params.push(ParamDef::new("pressure_class", 4).with_default(0.0).with_choices(vec!["150".into(), "300".into(), "600".into(), "900".into()]));
+    flange.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    flange.params.push(
+        ParamDef::new("pressure_class", 4)
+            .with_default(0.0)
+            .with_choices(vec!["150".into(), "300".into(), "600".into(), "900".into()]),
+    );
 
-    flange.connectors.push(ConnectorDef::new("pipe_end", "Pipe End")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    flange.connectors.push(ConnectorDef::new("face", "Flange Face")
-        .with_position("0", "0", "50").with_direction("0", "0", "1").with_role(0));
+    flange.connectors.push(
+        ConnectorDef::new("pipe_end", "Pipe End")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    flange.connectors.push(
+        ConnectorDef::new("face", "Flange Face")
+            .with_position("0", "0", "50")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
 
     flange.published = true;
     catalog.insert(flange);
@@ -1003,15 +1665,37 @@ fn seed_piping_components(catalog: &mut crate::catalog::CatalogStore) {
     valve.domain = "piping".into();
     valve.tags = vec!["valve".into(), "gate".into()];
 
-    valve.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(15.0, 600.0).with_step(1.0).with_unit("mm"));
-    valve.params.push(ParamDef::new("pressure_class", 4).with_default(0.0).with_choices(vec!["150".into(), "300".into(), "600".into()]));
+    valve.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(15.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    valve.params.push(
+        ParamDef::new("pressure_class", 4)
+            .with_default(0.0)
+            .with_choices(vec!["150".into(), "300".into(), "600".into()]),
+    );
 
-    valve.connectors.push(ConnectorDef::new("run_in", "Run In")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    valve.connectors.push(ConnectorDef::new("run_out", "Run Out")
-        .with_position("300", "0", "0").with_direction("1", "0", "0").with_role(0));
-    valve.connectors.push(ConnectorDef::new("stem_top", "Stem Top")
-        .with_position("150", "200", "0").with_direction("0", "1", "0").with_role(2));
+    valve.connectors.push(
+        ConnectorDef::new("run_in", "Run In")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    valve.connectors.push(
+        ConnectorDef::new("run_out", "Run Out")
+            .with_position("300", "0", "0")
+            .with_direction("1", "0", "0")
+            .with_role(0),
+    );
+    valve.connectors.push(
+        ConnectorDef::new("stem_top", "Stem Top")
+            .with_position("150", "200", "0")
+            .with_direction("0", "1", "0")
+            .with_role(2),
+    );
 
     valve.published = true;
     catalog.insert(valve);
@@ -1028,16 +1712,47 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     beam.domain = "building".into();
     beam.tags = vec!["concrete".into(), "beam".into()];
     beam.default_material = "C30/37".into();
-    beam.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into(), "C35/45".into()];
+    beam.allowed_materials = vec![
+        "C20/25".into(),
+        "C25/30".into(),
+        "C30/37".into(),
+        "C35/45".into(),
+    ];
 
-    beam.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(150.0, 600.0).with_step(50.0).with_unit("mm"));
-    beam.params.push(ParamDef::new("depth", 2).with_default(500.0).with_range(200.0, 1000.0).with_step(50.0).with_unit("mm"));
-    beam.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    beam.params.push(
+        ParamDef::new("width", 2)
+            .with_default(300.0)
+            .with_range(150.0, 600.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    beam.params.push(
+        ParamDef::new("depth", 2)
+            .with_default(500.0)
+            .with_range(200.0, 1000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    beam.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    beam.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    beam.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    beam.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    beam.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     beam.published = true;
     catalog.insert(beam);
@@ -1049,18 +1764,43 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     column.tags = vec!["concrete".into(), "column".into()];
     column.default_material = "C30/37".into();
 
-    column.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(150.0, 600.0).with_step(50.0).with_unit("mm"));
-    column.params.push(ParamDef::new("depth", 2).with_default(300.0).with_range(150.0, 600.0).with_step(50.0).with_unit("mm"));
-    column.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+    column.params.push(
+        ParamDef::new("width", 2)
+            .with_default(300.0)
+            .with_range(150.0, 600.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    column.params.push(
+        ParamDef::new("depth", 2)
+            .with_default(300.0)
+            .with_range(150.0, 600.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    column.params.push(
+        ParamDef::new("column_height", 2)
+            .with_default(4200.0)
+            .with_range(1000.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
     // ── Wave 3: path-driven building shells (domain-typed instances) ──
     let mut wall_path = ComponentDef::new("Wall-Path", "Building/Shell/Wall");
-    wall_path.description = "Path-driven layered wall (LayerEditor; created as Wall, not Component)".into();
+    wall_path.description =
+        "Path-driven layered wall (LayerEditor; created as Wall, not Component)".into();
     wall_path.ifc_class = "IfcWall".into();
     wall_path.domain = "building".into();
     wall_path.tags = vec!["concrete".into(), "wall".into(), "path-sweep".into()];
     wall_path.default_material = "C30/37".into();
-    wall_path.params.push(ParamDef::new("height", 2).with_default(3000.0).with_range(500.0, 10000.0).with_step(100.0).with_unit("mm"));
+    wall_path.params.push(
+        ParamDef::new("height", 2)
+            .with_default(3000.0)
+            .with_range(500.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
     wall_path.published = true;
     catalog.insert(wall_path);
 
@@ -1091,10 +1831,18 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     roof_path.published = true;
     catalog.insert(roof_path);
 
-    column.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    column.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "column_height").with_direction("0", "0", "1").with_role(2));
+    column.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    column.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "column_height")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     column.published = true;
     catalog.insert(column);
@@ -1106,21 +1854,47 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     col_circ.domain = "building".into();
     col_circ.tags = vec!["concrete".into(), "column".into(), "circular".into()];
     col_circ.default_material = "C30/37".into();
-    col_circ.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into(), "C35/45".into()];
+    col_circ.allowed_materials = vec![
+        "C20/25".into(),
+        "C25/30".into(),
+        "C30/37".into(),
+        "C35/45".into(),
+    ];
 
-    col_circ.params.push(ParamDef::new("diameter", 2).with_default(400.0).with_range(200.0, 1200.0).with_step(50.0).with_unit("mm"));
-    col_circ.params.push(ParamDef::new("column_height", 2).with_default(4200.0).with_range(1000.0, 10000.0).with_step(100.0).with_unit("mm"));
+    col_circ.params.push(
+        ParamDef::new("diameter", 2)
+            .with_default(400.0)
+            .with_range(200.0, 1200.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    col_circ.params.push(
+        ParamDef::new("column_height", 2)
+            .with_default(4200.0)
+            .with_range(1000.0, 10000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    col_circ.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    col_circ.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "column_height").with_direction("0", "0", "1").with_role(2));
+    col_circ.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    col_circ.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "column_height")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     col_circ.published = true;
     catalog.insert(col_circ);
 
     // Isolated footing
-    let mut footing = ComponentDef::new("Concrete-Footing-Isolated", "Building/Concrete/Foundation");
+    let mut footing =
+        ComponentDef::new("Concrete-Footing-Isolated", "Building/Concrete/Foundation");
     footing.description = "Isolated rectangular spread footing".into();
     footing.ifc_class = "IfcFooting".into();
     footing.domain = "building".into();
@@ -1128,14 +1902,40 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     footing.default_material = "C25/30".into();
     footing.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into()];
 
-    footing.params.push(ParamDef::new("width", 2).with_default(1500.0).with_range(800.0, 4000.0).with_step(100.0).with_unit("mm"));
-    footing.params.push(ParamDef::new("depth", 2).with_default(1500.0).with_range(800.0, 4000.0).with_step(100.0).with_unit("mm"));
-    footing.params.push(ParamDef::new("thickness", 2).with_default(400.0).with_range(200.0, 1000.0).with_step(50.0).with_unit("mm"));
+    footing.params.push(
+        ParamDef::new("width", 2)
+            .with_default(1500.0)
+            .with_range(800.0, 4000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    footing.params.push(
+        ParamDef::new("depth", 2)
+            .with_default(1500.0)
+            .with_range(800.0, 4000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    footing.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(400.0)
+            .with_range(200.0, 1000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
 
-    footing.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    footing.connectors.push(ConnectorDef::new("bottom", "Bottom")
-        .with_position("0", "0", "thickness").with_direction("0", "0", "-1").with_role(2));
+    footing.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    footing.connectors.push(
+        ConnectorDef::new("bottom", "Bottom")
+            .with_position("0", "0", "thickness")
+            .with_direction("0", "0", "-1")
+            .with_role(2),
+    );
 
     footing.published = true;
     catalog.insert(footing);
@@ -1149,14 +1949,40 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     strip.default_material = "C25/30".into();
     strip.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into()];
 
-    strip.params.push(ParamDef::new("length", 2).with_default(5000.0).with_range(1000.0, 50000.0).with_step(100.0).with_unit("mm"));
-    strip.params.push(ParamDef::new("width", 2).with_default(600.0).with_range(300.0, 2000.0).with_step(50.0).with_unit("mm"));
-    strip.params.push(ParamDef::new("thickness", 2).with_default(300.0).with_range(150.0, 800.0).with_step(50.0).with_unit("mm"));
+    strip.params.push(
+        ParamDef::new("length", 2)
+            .with_default(5000.0)
+            .with_range(1000.0, 50000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    strip.params.push(
+        ParamDef::new("width", 2)
+            .with_default(600.0)
+            .with_range(300.0, 2000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    strip.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(300.0)
+            .with_range(150.0, 800.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
 
-    strip.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    strip.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("length", "0", "0").with_direction("1", "0", "0").with_role(2));
+    strip.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    strip.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("length", "0", "0")
+            .with_direction("1", "0", "0")
+            .with_role(2),
+    );
 
     strip.published = true;
     catalog.insert(strip);
@@ -1170,12 +1996,34 @@ fn seed_concrete_components(catalog: &mut crate::catalog::CatalogStore) {
     raft.default_material = "C30/37".into();
     raft.allowed_materials = vec!["C25/30".into(), "C30/37".into(), "C35/45".into()];
 
-    raft.params.push(ParamDef::new("length", 2).with_default(10000.0).with_range(3000.0, 50000.0).with_step(500.0).with_unit("mm"));
-    raft.params.push(ParamDef::new("width", 2).with_default(8000.0).with_range(3000.0, 40000.0).with_step(500.0).with_unit("mm"));
-    raft.params.push(ParamDef::new("thickness", 2).with_default(600.0).with_range(300.0, 1500.0).with_step(50.0).with_unit("mm"));
+    raft.params.push(
+        ParamDef::new("length", 2)
+            .with_default(10000.0)
+            .with_range(3000.0, 50000.0)
+            .with_step(500.0)
+            .with_unit("mm"),
+    );
+    raft.params.push(
+        ParamDef::new("width", 2)
+            .with_default(8000.0)
+            .with_range(3000.0, 40000.0)
+            .with_step(500.0)
+            .with_unit("mm"),
+    );
+    raft.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(600.0)
+            .with_range(300.0, 1500.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
 
-    raft.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
+    raft.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
 
     raft.published = true;
     catalog.insert(raft);
@@ -1195,14 +2043,40 @@ fn seed_hollow_section_family(catalog: &mut crate::catalog::CatalogStore) {
     chs.default_material = "S355".into();
     chs.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    chs.params.push(ParamDef::new("diameter", 2).with_default(114.3).with_range(21.3, 508.0).with_step(1.0).with_unit("mm"));
-    chs.params.push(ParamDef::new("thickness", 2).with_default(5.0).with_range(2.0, 20.0).with_step(0.5).with_unit("mm"));
-    chs.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    chs.params.push(
+        ParamDef::new("diameter", 2)
+            .with_default(114.3)
+            .with_range(21.3, 508.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    chs.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(5.0)
+            .with_range(2.0, 20.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    chs.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    chs.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    chs.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    chs.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    chs.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     chs.published = true;
     catalog.insert(chs);
@@ -1216,14 +2090,40 @@ fn seed_hollow_section_family(catalog: &mut crate::catalog::CatalogStore) {
     shs.default_material = "S355".into();
     shs.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    shs.params.push(ParamDef::new("width", 2).with_default(100.0).with_range(40.0, 400.0).with_step(5.0).with_unit("mm"));
-    shs.params.push(ParamDef::new("thickness", 2).with_default(5.0).with_range(2.0, 16.0).with_step(0.5).with_unit("mm"));
-    shs.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    shs.params.push(
+        ParamDef::new("width", 2)
+            .with_default(100.0)
+            .with_range(40.0, 400.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    shs.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(5.0)
+            .with_range(2.0, 16.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    shs.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    shs.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    shs.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    shs.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    shs.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     shs.published = true;
     catalog.insert(shs);
@@ -1243,15 +2143,47 @@ fn seed_angle_section_family(catalog: &mut crate::catalog::CatalogStore) {
     angle.default_material = "S355".into();
     angle.allowed_materials = vec!["S235".into(), "S275".into(), "S355".into()];
 
-    angle.params.push(ParamDef::new("leg1", 2).with_default(50.0).with_range(20.0, 200.0).with_step(5.0).with_unit("mm"));
-    angle.params.push(ParamDef::new("leg2", 2).with_default(50.0).with_range(20.0, 200.0).with_step(5.0).with_unit("mm"));
-    angle.params.push(ParamDef::new("thickness", 2).with_default(5.0).with_range(3.0, 20.0).with_step(0.5).with_unit("mm"));
-    angle.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(1000.0, 12000.0).with_step(100.0).with_unit("mm"));
+    angle.params.push(
+        ParamDef::new("leg1", 2)
+            .with_default(50.0)
+            .with_range(20.0, 200.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    angle.params.push(
+        ParamDef::new("leg2", 2)
+            .with_default(50.0)
+            .with_range(20.0, 200.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    angle.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(5.0)
+            .with_range(3.0, 20.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    angle.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    angle.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    angle.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    angle.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    angle.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     angle.published = true;
     catalog.insert(angle);
@@ -1268,16 +2200,47 @@ fn seed_building_components(catalog: &mut crate::catalog::CatalogStore) {
     wall.domain = "building".into();
     wall.tags = vec!["concrete".into(), "wall".into()];
     wall.default_material = "C30/37".into();
-    wall.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into(), "C35/45".into()];
+    wall.allowed_materials = vec![
+        "C20/25".into(),
+        "C25/30".into(),
+        "C30/37".into(),
+        "C35/45".into(),
+    ];
 
-    wall.params.push(ParamDef::new("length", 2).with_default(5000.0).with_range(500.0, 30000.0).with_step(100.0).with_unit("mm"));
-    wall.params.push(ParamDef::new("thickness", 2).with_default(200.0).with_range(100.0, 500.0).with_step(10.0).with_unit("mm"));
-    wall.params.push(ParamDef::new("height", 2).with_default(3000.0).with_range(1000.0, 6000.0).with_step(100.0).with_unit("mm"));
+    wall.params.push(
+        ParamDef::new("length", 2)
+            .with_default(5000.0)
+            .with_range(500.0, 30000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    wall.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(200.0)
+            .with_range(100.0, 500.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    wall.params.push(
+        ParamDef::new("height", 2)
+            .with_default(3000.0)
+            .with_range(1000.0, 6000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    wall.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    wall.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("length", "0", "0").with_direction("1", "0", "0").with_role(2));
+    wall.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    wall.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("length", "0", "0")
+            .with_direction("1", "0", "0")
+            .with_role(2),
+    );
 
     wall.published = true;
     catalog.insert(wall);
@@ -1288,11 +2251,34 @@ fn seed_building_components(catalog: &mut crate::catalog::CatalogStore) {
     slab.domain = "building".into();
     slab.tags = vec!["concrete".into(), "slab".into()];
     slab.default_material = "C30/37".into();
-    slab.allowed_materials = vec!["C20/25".into(), "C25/30".into(), "C30/37".into(), "C35/45".into()];
+    slab.allowed_materials = vec![
+        "C20/25".into(),
+        "C25/30".into(),
+        "C30/37".into(),
+        "C35/45".into(),
+    ];
 
-    slab.params.push(ParamDef::new("length", 2).with_default(6000.0).with_range(500.0, 30000.0).with_step(100.0).with_unit("mm"));
-    slab.params.push(ParamDef::new("width", 2).with_default(4000.0).with_range(500.0, 30000.0).with_step(100.0).with_unit("mm"));
-    slab.params.push(ParamDef::new("thickness", 2).with_default(150.0).with_range(80.0, 500.0).with_step(10.0).with_unit("mm"));
+    slab.params.push(
+        ParamDef::new("length", 2)
+            .with_default(6000.0)
+            .with_range(500.0, 30000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    slab.params.push(
+        ParamDef::new("width", 2)
+            .with_default(4000.0)
+            .with_range(500.0, 30000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    slab.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(150.0)
+            .with_range(80.0, 500.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
     slab.published = true;
     catalog.insert(slab);
@@ -1304,9 +2290,27 @@ fn seed_building_components(catalog: &mut crate::catalog::CatalogStore) {
     door.tags = vec!["door".into(), "single".into()];
     door.default_material = "Timber".into();
 
-    door.params.push(ParamDef::new("width", 2).with_default(900.0).with_range(600.0, 1200.0).with_step(50.0).with_unit("mm"));
-    door.params.push(ParamDef::new("height", 2).with_default(2100.0).with_range(1800.0, 2400.0).with_step(50.0).with_unit("mm"));
-    door.params.push(ParamDef::new("frame_depth", 2).with_default(100.0).with_range(50.0, 200.0).with_step(10.0).with_unit("mm"));
+    door.params.push(
+        ParamDef::new("width", 2)
+            .with_default(900.0)
+            .with_range(600.0, 1200.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    door.params.push(
+        ParamDef::new("height", 2)
+            .with_default(2100.0)
+            .with_range(1800.0, 2400.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    door.params.push(
+        ParamDef::new("frame_depth", 2)
+            .with_default(100.0)
+            .with_range(50.0, 200.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
     door.published = true;
     catalog.insert(door);
@@ -1318,9 +2322,27 @@ fn seed_building_components(catalog: &mut crate::catalog::CatalogStore) {
     window.tags = vec!["window".into(), "fixed".into()];
     window.default_material = "Glass".into();
 
-    window.params.push(ParamDef::new("width", 2).with_default(1200.0).with_range(400.0, 3000.0).with_step(50.0).with_unit("mm"));
-    window.params.push(ParamDef::new("height", 2).with_default(1500.0).with_range(400.0, 3000.0).with_step(50.0).with_unit("mm"));
-    window.params.push(ParamDef::new("frame_depth", 2).with_default(80.0).with_range(50.0, 200.0).with_step(10.0).with_unit("mm"));
+    window.params.push(
+        ParamDef::new("width", 2)
+            .with_default(1200.0)
+            .with_range(400.0, 3000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    window.params.push(
+        ParamDef::new("height", 2)
+            .with_default(1500.0)
+            .with_range(400.0, 3000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    window.params.push(
+        ParamDef::new("frame_depth", 2)
+            .with_default(80.0)
+            .with_range(50.0, 200.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
     window.published = true;
     catalog.insert(window);
@@ -1339,9 +2361,27 @@ fn seed_road_components(catalog: &mut crate::catalog::CatalogStore) {
     road.tags = vec!["road".into(), "asphalt".into()];
     road.default_material = "Asphalt".into();
 
-    road.params.push(ParamDef::new("length", 2).with_default(10000.0).with_range(1000.0, 100000.0).with_step(100.0).with_unit("mm"));
-    road.params.push(ParamDef::new("width", 2).with_default(3500.0).with_range(2500.0, 15000.0).with_step(100.0).with_unit("mm"));
-    road.params.push(ParamDef::new("thickness", 2).with_default(150.0).with_range(50.0, 500.0).with_step(10.0).with_unit("mm"));
+    road.params.push(
+        ParamDef::new("length", 2)
+            .with_default(10000.0)
+            .with_range(1000.0, 100000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    road.params.push(
+        ParamDef::new("width", 2)
+            .with_default(3500.0)
+            .with_range(2500.0, 15000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    road.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(150.0)
+            .with_range(50.0, 500.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
     road.published = true;
     catalog.insert(road);
@@ -1354,9 +2394,27 @@ fn seed_road_components(catalog: &mut crate::catalog::CatalogStore) {
     road_conc.tags = vec!["road".into(), "concrete".into()];
     road_conc.default_material = "C40/50".into();
 
-    road_conc.params.push(ParamDef::new("length", 2).with_default(10000.0).with_range(1000.0, 100000.0).with_step(100.0).with_unit("mm"));
-    road_conc.params.push(ParamDef::new("width", 2).with_default(3500.0).with_range(2500.0, 15000.0).with_step(100.0).with_unit("mm"));
-    road_conc.params.push(ParamDef::new("thickness", 2).with_default(240.0).with_range(100.0, 500.0).with_step(10.0).with_unit("mm"));
+    road_conc.params.push(
+        ParamDef::new("length", 2)
+            .with_default(10000.0)
+            .with_range(1000.0, 100000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    road_conc.params.push(
+        ParamDef::new("width", 2)
+            .with_default(3500.0)
+            .with_range(2500.0, 15000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    road_conc.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(240.0)
+            .with_range(100.0, 500.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
 
     road_conc.published = true;
     catalog.insert(road_conc);
@@ -1374,9 +2432,27 @@ fn seed_equipment_stubs(catalog: &mut crate::catalog::CatalogStore) {
     tank.tags = vec!["tank".into(), "vertical".into()];
     tank.default_material = "A516-70".into();
 
-    tank.params.push(ParamDef::new("diameter", 2).with_default(3000.0).with_range(500.0, 20000.0).with_step(100.0).with_unit("mm"));
-    tank.params.push(ParamDef::new("height", 2).with_default(5000.0).with_range(1000.0, 30000.0).with_step(100.0).with_unit("mm"));
-    tank.params.push(ParamDef::new("wall_thickness", 2).with_default(8.0).with_range(3.0, 50.0).with_step(0.5).with_unit("mm"));
+    tank.params.push(
+        ParamDef::new("diameter", 2)
+            .with_default(3000.0)
+            .with_range(500.0, 20000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    tank.params.push(
+        ParamDef::new("height", 2)
+            .with_default(5000.0)
+            .with_range(1000.0, 30000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    tank.params.push(
+        ParamDef::new("wall_thickness", 2)
+            .with_default(8.0)
+            .with_range(3.0, 50.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
 
     tank.published = true;
     catalog.insert(tank);
@@ -1388,14 +2464,40 @@ fn seed_equipment_stubs(catalog: &mut crate::catalog::CatalogStore) {
     pump.tags = vec!["pump".into(), "centrifugal".into()];
     pump.default_material = "CastIron".into();
 
-    pump.params.push(ParamDef::new("DN", 3).with_default(100.0).with_range(25.0, 600.0).with_step(1.0).with_unit("mm"));
-    pump.params.push(ParamDef::new("height", 2).with_default(600.0).with_range(200.0, 2000.0).with_step(50.0).with_unit("mm"));
-    pump.params.push(ParamDef::new("width", 2).with_default(400.0).with_range(200.0, 1500.0).with_step(50.0).with_unit("mm"));
+    pump.params.push(
+        ParamDef::new("DN", 3)
+            .with_default(100.0)
+            .with_range(25.0, 600.0)
+            .with_step(1.0)
+            .with_unit("mm"),
+    );
+    pump.params.push(
+        ParamDef::new("height", 2)
+            .with_default(600.0)
+            .with_range(200.0, 2000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    pump.params.push(
+        ParamDef::new("width", 2)
+            .with_default(400.0)
+            .with_range(200.0, 1500.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
 
-    pump.connectors.push(ConnectorDef::new("suction", "Suction")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    pump.connectors.push(ConnectorDef::new("discharge", "Discharge")
-        .with_position("0", "0", "height").with_direction("0", "0", "1").with_role(0));
+    pump.connectors.push(
+        ConnectorDef::new("suction", "Suction")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    pump.connectors.push(
+        ConnectorDef::new("discharge", "Discharge")
+            .with_position("0", "0", "height")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
 
     pump.published = true;
     catalog.insert(pump);
@@ -1410,21 +2512,70 @@ fn seed_rebar_components(catalog: &mut crate::catalog::CatalogStore) {
     cage.description = "Cylindrical rebar cage for concrete columns, piles and beams".into();
     cage.ifc_class = "IfcReinforcingBar".into();
     cage.domain = "building".into();
-    cage.tags = vec!["rebar".into(), "cage".into(), "reinforcement".into(), "concrete".into()];
+    cage.tags = vec![
+        "rebar".into(),
+        "cage".into(),
+        "reinforcement".into(),
+        "concrete".into(),
+    ];
     cage.default_material = "B500B".into();
     cage.allowed_materials = vec!["B400".into(), "B500B".into(), "HRB400".into()];
 
-    cage.params.push(ParamDef::new("bar_ring_radius", 2).with_default(200.0).with_range(50.0, 1000.0).with_step(5.0).with_unit("mm"));
-    cage.params.push(ParamDef::new("main_bars", 1).with_default(8.0).with_range(4.0, 24.0).with_step(1.0).with_unit("个"));
-    cage.params.push(ParamDef::new("length", 2).with_default(3000.0).with_range(500.0, 12000.0).with_step(100.0).with_unit("mm"));
-    cage.params.push(ParamDef::new("diameter", 2).with_default(16.0).with_range(6.0, 40.0).with_step(2.0).with_unit("mm"));
-    cage.params.push(ParamDef::new("stirrup_spacing", 2).with_default(200.0).with_range(50.0, 500.0).with_step(10.0).with_unit("mm"));
-    cage.params.push(ParamDef::new("stirrup_radius", 2).with_default(192.0).with_range(40.0, 990.0).with_step(5.0).with_unit("mm"));
+    cage.params.push(
+        ParamDef::new("bar_ring_radius", 2)
+            .with_default(200.0)
+            .with_range(50.0, 1000.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
+    cage.params.push(
+        ParamDef::new("main_bars", 1)
+            .with_default(8.0)
+            .with_range(4.0, 24.0)
+            .with_step(1.0)
+            .with_unit("个"),
+    );
+    cage.params.push(
+        ParamDef::new("length", 2)
+            .with_default(3000.0)
+            .with_range(500.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    cage.params.push(
+        ParamDef::new("diameter", 2)
+            .with_default(16.0)
+            .with_range(6.0, 40.0)
+            .with_step(2.0)
+            .with_unit("mm"),
+    );
+    cage.params.push(
+        ParamDef::new("stirrup_spacing", 2)
+            .with_default(200.0)
+            .with_range(50.0, 500.0)
+            .with_step(10.0)
+            .with_unit("mm"),
+    );
+    cage.params.push(
+        ParamDef::new("stirrup_radius", 2)
+            .with_default(192.0)
+            .with_range(40.0, 990.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
 
-    cage.connectors.push(ConnectorDef::new("base", "Base")
-        .with_position("0", "0", "0").with_direction("0", "0", "-1").with_role(1));
-    cage.connectors.push(ConnectorDef::new("top", "Top")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    cage.connectors.push(
+        ConnectorDef::new("base", "Base")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "-1")
+            .with_role(1),
+    );
+    cage.connectors.push(
+        ConnectorDef::new("top", "Top")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     cage.published = true;
     catalog.insert(cage);
@@ -1443,16 +2594,46 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     duct.domain = "building".into();
     duct.tags = vec!["mep".into(), "duct".into(), "hvac".into()];
     duct.default_material = "GalvanizedSteel".into();
-    duct.allowed_materials = vec!["GalvanizedSteel".into(), "StainlessSteel".into(), "Aluminum".into()];
+    duct.allowed_materials = vec![
+        "GalvanizedSteel".into(),
+        "StainlessSteel".into(),
+        "Aluminum".into(),
+    ];
 
-    duct.params.push(ParamDef::new("width", 2).with_default(500.0).with_range(100.0, 3000.0).with_step(50.0).with_unit("mm"));
-    duct.params.push(ParamDef::new("height", 2).with_default(250.0).with_range(100.0, 1500.0).with_step(50.0).with_unit("mm"));
-    duct.params.push(ParamDef::new("length", 2).with_default(3000.0).with_range(500.0, 12000.0).with_step(100.0).with_unit("mm"));
+    duct.params.push(
+        ParamDef::new("width", 2)
+            .with_default(500.0)
+            .with_range(100.0, 3000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    duct.params.push(
+        ParamDef::new("height", 2)
+            .with_default(250.0)
+            .with_range(100.0, 1500.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    duct.params.push(
+        ParamDef::new("length", 2)
+            .with_default(3000.0)
+            .with_range(500.0, 12000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    duct.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    duct.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    duct.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    duct.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     duct.published = true;
     catalog.insert(duct);
@@ -1465,15 +2646,47 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     tray.default_material = "GalvanizedSteel".into();
     tray.allowed_materials = vec!["GalvanizedSteel".into(), "StainlessSteel".into()];
 
-    tray.params.push(ParamDef::new("width", 2).with_default(300.0).with_range(50.0, 1200.0).with_step(50.0).with_unit("mm"));
-    tray.params.push(ParamDef::new("height", 2).with_default(100.0).with_range(25.0, 300.0).with_step(25.0).with_unit("mm"));
-    tray.params.push(ParamDef::new("thickness", 2).with_default(3.0).with_range(1.0, 6.0).with_step(0.5).with_unit("mm"));
-    tray.params.push(ParamDef::new("length", 2).with_default(3000.0).with_range(500.0, 6000.0).with_step(100.0).with_unit("mm"));
+    tray.params.push(
+        ParamDef::new("width", 2)
+            .with_default(300.0)
+            .with_range(50.0, 1200.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    tray.params.push(
+        ParamDef::new("height", 2)
+            .with_default(100.0)
+            .with_range(25.0, 300.0)
+            .with_step(25.0)
+            .with_unit("mm"),
+    );
+    tray.params.push(
+        ParamDef::new("thickness", 2)
+            .with_default(3.0)
+            .with_range(1.0, 6.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    tray.params.push(
+        ParamDef::new("length", 2)
+            .with_default(3000.0)
+            .with_range(500.0, 6000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    tray.connectors.push(ConnectorDef::new("start", "Start")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(1));
-    tray.connectors.push(ConnectorDef::new("end", "End")
-        .with_position("0", "0", "length").with_direction("0", "0", "1").with_role(2));
+    tray.connectors.push(
+        ConnectorDef::new("start", "Start")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(1),
+    );
+    tray.connectors.push(
+        ConnectorDef::new("end", "End")
+            .with_position("0", "0", "length")
+            .with_direction("0", "0", "1")
+            .with_role(2),
+    );
 
     tray.published = true;
     catalog.insert(tray);
@@ -1487,13 +2700,33 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     hex.default_material = "A516-70".into();
     hex.allowed_materials = vec!["A516-70".into(), "SA240-316L".into()];
 
-    hex.params.push(ParamDef::new("shell_diameter", 2).with_default(500.0).with_range(100.0, 3000.0).with_step(50.0).with_unit("mm"));
-    hex.params.push(ParamDef::new("shell_length", 2).with_default(6000.0).with_range(1000.0, 15000.0).with_step(100.0).with_unit("mm"));
+    hex.params.push(
+        ParamDef::new("shell_diameter", 2)
+            .with_default(500.0)
+            .with_range(100.0, 3000.0)
+            .with_step(50.0)
+            .with_unit("mm"),
+    );
+    hex.params.push(
+        ParamDef::new("shell_length", 2)
+            .with_default(6000.0)
+            .with_range(1000.0, 15000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
-    hex.connectors.push(ConnectorDef::new("shell_in", "Shell Inlet")
-        .with_position("0", "0", "0").with_direction("0", "0", "1").with_role(0));
-    hex.connectors.push(ConnectorDef::new("shell_out", "Shell Outlet")
-        .with_position("0", "0", "shell_length").with_direction("0", "0", "1").with_role(0));
+    hex.connectors.push(
+        ConnectorDef::new("shell_in", "Shell Inlet")
+            .with_position("0", "0", "0")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
+    hex.connectors.push(
+        ConnectorDef::new("shell_out", "Shell Outlet")
+            .with_position("0", "0", "shell_length")
+            .with_direction("0", "0", "1")
+            .with_role(0),
+    );
 
     hex.published = true;
     catalog.insert(hex);
@@ -1505,9 +2738,27 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     compressor.tags = vec!["compressor".into(), "process".into()];
     compressor.default_material = "CastIron".into();
 
-    compressor.params.push(ParamDef::new("length", 2).with_default(2000.0).with_range(500.0, 8000.0).with_step(100.0).with_unit("mm"));
-    compressor.params.push(ParamDef::new("width", 2).with_default(1200.0).with_range(300.0, 4000.0).with_step(100.0).with_unit("mm"));
-    compressor.params.push(ParamDef::new("height", 2).with_default(1200.0).with_range(300.0, 4000.0).with_step(100.0).with_unit("mm"));
+    compressor.params.push(
+        ParamDef::new("length", 2)
+            .with_default(2000.0)
+            .with_range(500.0, 8000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    compressor.params.push(
+        ParamDef::new("width", 2)
+            .with_default(1200.0)
+            .with_range(300.0, 4000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    compressor.params.push(
+        ParamDef::new("height", 2)
+            .with_default(1200.0)
+            .with_range(300.0, 4000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
     compressor.published = true;
     catalog.insert(compressor);
@@ -1521,8 +2772,20 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     manhole.default_material = "C30/37".into();
     manhole.allowed_materials = vec!["C25/30".into(), "C30/37".into()];
 
-    manhole.params.push(ParamDef::new("diameter", 2).with_default(1200.0).with_range(500.0, 3000.0).with_step(100.0).with_unit("mm"));
-    manhole.params.push(ParamDef::new("depth", 2).with_default(2500.0).with_range(500.0, 8000.0).with_step(100.0).with_unit("mm"));
+    manhole.params.push(
+        ParamDef::new("diameter", 2)
+            .with_default(1200.0)
+            .with_range(500.0, 3000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
+    manhole.params.push(
+        ParamDef::new("depth", 2)
+            .with_default(2500.0)
+            .with_range(500.0, 8000.0)
+            .with_step(100.0)
+            .with_unit("mm"),
+    );
 
     manhole.published = true;
     catalog.insert(manhole);
@@ -1536,9 +2799,27 @@ fn seed_domain_extension_components(catalog: &mut crate::catalog::CatalogStore) 
     gear.default_material = "S355".into();
     gear.allowed_materials = vec!["S355".into(), "EN8".into(), "20CrMnTi".into()];
 
-    gear.params.push(ParamDef::new("module", 2).with_default(4.0).with_range(0.5, 50.0).with_step(0.5).with_unit("mm"));
-    gear.params.push(ParamDef::new("teeth", 1).with_default(20.0).with_range(6.0, 200.0).with_step(1.0).with_unit("个"));
-    gear.params.push(ParamDef::new("width", 2).with_default(40.0).with_range(10.0, 500.0).with_step(5.0).with_unit("mm"));
+    gear.params.push(
+        ParamDef::new("module", 2)
+            .with_default(4.0)
+            .with_range(0.5, 50.0)
+            .with_step(0.5)
+            .with_unit("mm"),
+    );
+    gear.params.push(
+        ParamDef::new("teeth", 1)
+            .with_default(20.0)
+            .with_range(6.0, 200.0)
+            .with_step(1.0)
+            .with_unit("个"),
+    );
+    gear.params.push(
+        ParamDef::new("width", 2)
+            .with_default(40.0)
+            .with_range(10.0, 500.0)
+            .with_step(5.0)
+            .with_unit("mm"),
+    );
 
     gear.published = true;
     catalog.insert(gear);
@@ -1556,8 +2837,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
 
     let mut root = Selector::new("elem_sel", "What structural element?");
 
-    let beam_spec = SpecComponent::new("Steel-Beam-IPE")
-        .material("S355");
+    let beam_spec = SpecComponent::new("Steel-Beam-IPE").material("S355");
     root.answers.push(Answer {
         id: "beam".into(),
         value: "beam".into(),
@@ -1567,8 +2847,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(beam_spec),
     });
 
-    let col_spec = SpecComponent::new("Steel-Column-HEA")
-        .material("S355");
+    let col_spec = SpecComponent::new("Steel-Column-HEA").material("S355");
     root.answers.push(Answer {
         id: "col".into(),
         value: "column".into(),
@@ -1589,8 +2868,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
 
     let mut concrete_root = Selector::new("concrete_elem", "What concrete element?");
 
-    let conc_beam = SpecComponent::new("Concrete-Beam-Rect")
-        .material("C30/37");
+    let conc_beam = SpecComponent::new("Concrete-Beam-Rect").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "cbeam".into(),
         value: "beam".into(),
@@ -1600,8 +2878,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(conc_beam),
     });
 
-    let conc_col = SpecComponent::new("Concrete-Column-Rect")
-        .material("C30/37");
+    let conc_col = SpecComponent::new("Concrete-Column-Rect").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "ccol".into(),
         value: "column".into(),
@@ -1611,8 +2888,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(conc_col),
     });
 
-    let conc_wall = SpecComponent::new("Concrete-Wall")
-        .material("C30/37");
+    let conc_wall = SpecComponent::new("Concrete-Wall").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "cwall".into(),
         value: "wall".into(),
@@ -1622,8 +2898,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(conc_wall),
     });
 
-    let conc_slab = SpecComponent::new("Concrete-Slab")
-        .material("C30/37");
+    let conc_slab = SpecComponent::new("Concrete-Slab").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "cslab".into(),
         value: "slab".into(),
@@ -1633,8 +2908,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(conc_slab),
     });
 
-    let door_spec = SpecComponent::new("Door-Single")
-        .material("C30/37");
+    let door_spec = SpecComponent::new("Door-Single").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "cdoor".into(),
         value: "door".into(),
@@ -1644,8 +2918,7 @@ fn seed_structural_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(door_spec),
     });
 
-    let window_spec = SpecComponent::new("Window-Fixed")
-        .material("C30/37");
+    let window_spec = SpecComponent::new("Window-Fixed").material("C30/37");
     concrete_root.answers.push(Answer {
         id: "cwindow".into(),
         value: "window".into(),
@@ -1671,8 +2944,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
 
     let mut root = Selector::new("gen_type", "What generic type?");
 
-    let pipe_spec = SpecComponent::new("Pipe-CS")
-        .material("A106-B");
+    let pipe_spec = SpecComponent::new("Pipe-CS").material("A106-B");
     root.answers.push(Answer {
         id: "pipe".into(),
         value: "PIPE".into(),
@@ -1682,8 +2954,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(pipe_spec),
     });
 
-    let elbow_spec = SpecComponent::new("Elbow-LR-CS")
-        .material("A234-WPB");
+    let elbow_spec = SpecComponent::new("Elbow-LR-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "elbo".into(),
         value: "ELBO".into(),
@@ -1694,8 +2965,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
     });
 
     // Tee
-    let tee_spec = SpecComponent::new("EqualTee-CS")
-        .material("A234-WPB");
+    let tee_spec = SpecComponent::new("EqualTee-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "tee".into(),
         value: "TEE".into(),
@@ -1706,8 +2976,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
     });
 
     // Reducer
-    let reducer_spec = SpecComponent::new("Reducer-Conc-CS")
-        .material("A234-WPB");
+    let reducer_spec = SpecComponent::new("Reducer-Conc-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "red".into(),
         value: "REDUCER".into(),
@@ -1718,8 +2987,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
     });
 
     // Flange
-    let flange_spec = SpecComponent::new("Flange-WN-CS")
-        .material("A105");
+    let flange_spec = SpecComponent::new("Flange-WN-CS").material("A105");
     root.answers.push(Answer {
         id: "flg".into(),
         value: "FLANGE".into(),
@@ -1730,8 +2998,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
     });
 
     // Valve
-    let valve_spec = SpecComponent::new("GateValve-CS")
-        .material("A216-WCB");
+    let valve_spec = SpecComponent::new("GateValve-CS").material("A216-WCB");
     root.answers.push(Answer {
         id: "valve".into(),
         value: "VALVE".into(),
@@ -1752,8 +3019,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
 
     let mut ss_root = Selector::new("ss_gen_type", "What generic type?");
 
-    let ss_pipe = SpecComponent::new("Pipe-CS")
-        .material("A312-TP304");
+    let ss_pipe = SpecComponent::new("Pipe-CS").material("A312-TP304");
     ss_root.answers.push(Answer {
         id: "ss_pipe".into(),
         value: "PIPE".into(),
@@ -1763,8 +3029,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(ss_pipe),
     });
 
-    let ss_elbow = SpecComponent::new("Elbow-LR-CS")
-        .material("A403-WP304");
+    let ss_elbow = SpecComponent::new("Elbow-LR-CS").material("A403-WP304");
     ss_root.answers.push(Answer {
         id: "ss_elbo".into(),
         value: "ELBO".into(),
@@ -1774,8 +3039,7 @@ fn seed_cs150_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(ss_elbow),
     });
 
-    let ss_flange = SpecComponent::new("Flange-WN-CS")
-        .material("A182-F304");
+    let ss_flange = SpecComponent::new("Flange-WN-CS").material("A182-F304");
     ss_root.answers.push(Answer {
         id: "ss_flg".into(),
         value: "FLANGE".into(),
@@ -1801,8 +3065,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
 
     let mut root = Selector::new("cs300_gen_type", "What generic type?");
 
-    let pipe_spec = SpecComponent::new("Pipe-CS")
-        .material("A106-B");
+    let pipe_spec = SpecComponent::new("Pipe-CS").material("A106-B");
     root.answers.push(Answer {
         id: "cs300_pipe".into(),
         value: "PIPE".into(),
@@ -1812,8 +3075,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(pipe_spec),
     });
 
-    let elbow_spec = SpecComponent::new("Elbow-LR-CS")
-        .material("A234-WPB");
+    let elbow_spec = SpecComponent::new("Elbow-LR-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "cs300_elbo".into(),
         value: "ELBO".into(),
@@ -1823,8 +3085,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(elbow_spec),
     });
 
-    let tee_spec = SpecComponent::new("EqualTee-CS")
-        .material("A234-WPB");
+    let tee_spec = SpecComponent::new("EqualTee-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "cs300_tee".into(),
         value: "TEE".into(),
@@ -1834,8 +3095,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(tee_spec),
     });
 
-    let reducer_spec = SpecComponent::new("Reducer-Conc-CS")
-        .material("A234-WPB");
+    let reducer_spec = SpecComponent::new("Reducer-Conc-CS").material("A234-WPB");
     root.answers.push(Answer {
         id: "cs300_red".into(),
         value: "REDUCER".into(),
@@ -1845,8 +3105,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(reducer_spec),
     });
 
-    let flange_spec = SpecComponent::new("Flange-WN-CS")
-        .material("A105");
+    let flange_spec = SpecComponent::new("Flange-WN-CS").material("A105");
     root.answers.push(Answer {
         id: "cs300_flg".into(),
         value: "FLANGE".into(),
@@ -1856,8 +3115,7 @@ fn seed_cs300_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(flange_spec),
     });
 
-    let valve_spec = SpecComponent::new("GateValve-CS")
-        .material("A216-WCB");
+    let valve_spec = SpecComponent::new("GateValve-CS").material("A216-WCB");
     root.answers.push(Answer {
         id: "cs300_valve".into(),
         value: "VALVE".into(),
@@ -1883,8 +3141,7 @@ fn seed_highway_gb_series(series_store: &mut SeriesStore) {
 
     let mut root = Selector::new("pavement_type", "What pavement type?");
 
-    let asphalt_spec = SpecComponent::new("Road-Asphalt")
-        .material("Asphalt");
+    let asphalt_spec = SpecComponent::new("Road-Asphalt").material("Asphalt");
     root.answers.push(Answer {
         id: "asphalt".into(),
         value: "ASPHALT".into(),
@@ -1894,8 +3151,7 @@ fn seed_highway_gb_series(series_store: &mut SeriesStore) {
         outcome: AnswerOutcome::Component(asphalt_spec),
     });
 
-    let concrete_spec = SpecComponent::new("Road-Concrete")
-        .material("C40/50");
+    let concrete_spec = SpecComponent::new("Road-Concrete").material("C40/50");
     root.answers.push(Answer {
         id: "concrete".into(),
         value: "CONCRETE".into(),
@@ -1997,7 +3253,9 @@ mod tests {
         let tray = catalog.find_by_name("CableTray").expect("CableTray");
         assert_eq!(tray.domain, "building");
 
-        let hex = catalog.find_by_name("HeatExchanger").expect("HeatExchanger");
+        let hex = catalog
+            .find_by_name("HeatExchanger")
+            .expect("HeatExchanger");
         assert_eq!(hex.domain, "plant");
 
         let compressor = catalog.find_by_name("Compressor").expect("Compressor");
@@ -2013,11 +3271,26 @@ mod tests {
     #[test]
     fn test_domain_extension_default_templates() {
         use crate::gen_rule::default_catalog_component;
-        assert_eq!(default_catalog_component(c::ObjectType::Duct), Some("Duct-Rect"));
-        assert_eq!(default_catalog_component(c::ObjectType::CableTray), Some("CableTray"));
-        assert_eq!(default_catalog_component(c::ObjectType::HeatExchanger), Some("HeatExchanger"));
-        assert_eq!(default_catalog_component(c::ObjectType::Compressor), Some("Compressor"));
-        assert_eq!(default_catalog_component(c::ObjectType::Manhole), Some("Manhole"));
+        assert_eq!(
+            default_catalog_component(c::ObjectType::Duct),
+            Some("Duct-Rect")
+        );
+        assert_eq!(
+            default_catalog_component(c::ObjectType::CableTray),
+            Some("CableTray")
+        );
+        assert_eq!(
+            default_catalog_component(c::ObjectType::HeatExchanger),
+            Some("HeatExchanger")
+        );
+        assert_eq!(
+            default_catalog_component(c::ObjectType::Compressor),
+            Some("Compressor")
+        );
+        assert_eq!(
+            default_catalog_component(c::ObjectType::Manhole),
+            Some("Manhole")
+        );
         assert_eq!(default_catalog_component(c::ObjectType::Gear), Some("Gear"));
     }
 
@@ -2082,8 +3355,14 @@ mod tests {
     fn test_seed_catalog_has_hollow_sections() {
         let mut catalog = crate::catalog::CatalogStore::new();
         seed_catalog(&mut catalog);
-        assert!(catalog.find_by_name("Steel-CHS").is_some(), "Should have Steel-CHS");
-        assert!(catalog.find_by_name("Steel-SHS").is_some(), "Should have Steel-SHS");
+        assert!(
+            catalog.find_by_name("Steel-CHS").is_some(),
+            "Should have Steel-CHS"
+        );
+        assert!(
+            catalog.find_by_name("Steel-SHS").is_some(),
+            "Should have Steel-SHS"
+        );
         let chs = catalog.find_by_name("Steel-CHS").unwrap();
         assert!(chs.params.iter().any(|p| p.name == "diameter"));
         assert!(chs.params.iter().any(|p| p.name == "thickness"));
@@ -2107,15 +3386,24 @@ mod tests {
         let w = catalog.find_by_name("Concrete-Wall");
         assert!(w.is_some(), "Should have Concrete-Wall");
         assert_eq!(w.unwrap().ifc_class, "IfcWall");
-        assert!(catalog.find_by_name("Concrete-Slab").is_some(), "Should have Concrete-Slab");
+        assert!(
+            catalog.find_by_name("Concrete-Slab").is_some(),
+            "Should have Concrete-Slab"
+        );
     }
 
     #[test]
     fn test_seed_catalog_has_door_window() {
         let mut catalog = crate::catalog::CatalogStore::new();
         seed_catalog(&mut catalog);
-        assert!(catalog.find_by_name("Door-Single").is_some(), "Should have Door-Single");
-        assert!(catalog.find_by_name("Window-Fixed").is_some(), "Should have Window-Fixed");
+        assert!(
+            catalog.find_by_name("Door-Single").is_some(),
+            "Should have Door-Single"
+        );
+        assert!(
+            catalog.find_by_name("Window-Fixed").is_some(),
+            "Should have Window-Fixed"
+        );
     }
 
     #[test]
@@ -2161,7 +3449,8 @@ mod tests {
                 assert!(
                     registry.get(&comp.feature_tree_id).is_some(),
                     "component '{}' references unknown feature tree '{}'",
-                    comp.name, comp.feature_tree_id
+                    comp.name,
+                    comp.feature_tree_id
                 );
             }
         }
@@ -2199,7 +3488,8 @@ mod tests {
             }
 
             // Use component default parameter values.
-            let mut params: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
+            let mut params: std::collections::HashMap<String, f64> =
+                std::collections::HashMap::new();
             for p in &comp.params {
                 params.insert(p.name.clone(), p.default_value);
             }
@@ -2239,7 +3529,10 @@ mod tests {
             }
 
             if !valid {
-                failures.push(format!("{}: no valid geometry (v={}, f={})", comp.name, vertex_count, face_count));
+                failures.push(format!(
+                    "{}: no valid geometry (v={}, f={})",
+                    comp.name, vertex_count, face_count
+                ));
             } else {
                 validated += 1;
             }
@@ -2302,6 +3595,9 @@ mod tests {
             missing.len(),
             missing.join("\n")
         );
-        assert!(checked > 0, "expected at least one series answer to be checked");
+        assert!(
+            checked > 0,
+            "expected at least one series answer to be checked"
+        );
     }
 }
