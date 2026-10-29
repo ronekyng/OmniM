@@ -688,6 +688,10 @@ message AddConnectorOperation {
   string bore_expr = 10;
   string connection_type_code = 11;
   ConnectorRole role = 12;
+  // 2026-10-28 Wave 4: flange orientation (expression-resolved).
+  string up_x_expr = 13;
+  string up_y_expr = 14;
+  string up_z_expr = 15;
 }
 
 message PublishComponentOperation {

@@ -74,6 +74,9 @@ pub fn seed_default_materials(store: &mut MaterialStore) {
         ("S460", "高强钢 S460", 7850.0, 2.1e11, 0.3, 4.6e8, 5.5e8, 50.0, (0.48, 0.51, 0.55)),
         ("A106-B", "无缝碳钢管 A106 B", 7850.0, 2.0e11, 0.3, 2.4e8, 4.1e8, 54.0, (0.56, 0.55, 0.52)),
         ("A516-70", "压力容器钢板 A516-70", 7850.0, 2.0e11, 0.3, 2.6e8, 4.8e8, 50.0, (0.53, 0.52, 0.50)),
+        // Stainless grades referenced by the seeded piping specs (SS300 → A312-TP304)
+        ("A312-TP304", "不锈钢管 A312 TP304", 8000.0, 1.93e11, 0.29, 2.1e8, 5.2e8, 16.3, (0.62, 0.63, 0.65)),
+        ("A312-TP316", "不锈钢管 A312 TP316", 8000.0, 1.95e11, 0.29, 2.4e8, 5.3e8, 16.3, (0.60, 0.62, 0.64)),
     ];
     for (id, name, d, e, nu, y, u, k, col) in steels {
         store.insert(mat(
@@ -226,7 +229,7 @@ pub fn seed_default_materials(store: &mut MaterialStore) {
 
 /// Number of default materials seeded by [`seed_default_materials`].
 pub fn seed_default_materials_len() -> usize {
-    21
+    23
 }
 
 #[cfg(test)]

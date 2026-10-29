@@ -256,6 +256,80 @@ impl SeriesStore {
         set
     }
 
+    /// Find the `SpecComponent` leaf whose `component_def_id` (or name) matches,
+    /// across all loaded series. Returns `(series_id, series_name, spec)`.
+    ///
+    /// Precondition of the series gate: a reachable component always originates
+    /// from a `Component(spec)` leaf, so a reachable-but-no-spec result means
+    /// the caller mixed id/name resolution — reported as an error by the gate.
+    pub fn find_spec_for_component(
+        &self,
+        component_def_id: &str,
+        component_name: &str,
+    ) -> Option<(String, String, SpecComponent)> {
+        for series in self.series.values() {
+            if let Some(root) = &series.root_selector {
+                if let Some(spec) = find_spec_in_selector(root, component_def_id, component_name) {
+                    return Some((series.id.clone(), series.name.clone(), spec));
+                }
+            }
+        }
+        None
+    }
+
+    /// Enforce a spec's parameter constraints over a merged parameter set.
+    ///
+    /// Semantics (CATALOG_SERIES §2.4, Wave 4):
+    /// - `fixed_value` (numeric) — the merged value must equal it;
+    /// - `min_value`/`max_value` (non-zero bounds) — the merged value must lie
+    ///   inside the range;
+    /// - parameters absent from the merged set fall back to `default_value`.
+    ///
+    /// Violations return `Err` with the contract reason text (callers map it
+    /// to a 400).
+    pub fn enforce_param_constraints(
+        constraints: &[ParamConstraint],
+        merged: &mut std::collections::HashMap<String, f64>,
+    ) -> Result<(), String> {
+        // Backfill defaults first so validation sees the effective values.
+        for c in constraints {
+            merged.entry(c.param_name.clone()).or_insert(c.default_value);
+        }
+        for c in constraints {
+            let value = match merged.get(&c.param_name) {
+                Some(v) => *v,
+                None => continue,
+            };
+            if !c.fixed_value.is_empty() {
+                let fixed: f64 = c.fixed_value.trim().parse().map_err(|_| {
+                    format!(
+                        "param '{}': fixed value '{}' is not numeric",
+                        c.param_name, c.fixed_value
+                    )
+                })?;
+                if (value - fixed).abs() > f64::EPSILON.max(fixed.abs() * 1e-9) {
+                    return Err(format!(
+                        "param '{}' is fixed to {} by the series spec, but {} was requested",
+                        c.param_name, fixed, value
+                    ));
+                }
+            }
+            if c.min_value != 0.0 && value < c.min_value {
+                return Err(format!(
+                    "param '{}' = {} is below the series minimum {}",
+                    c.param_name, value, c.min_value
+                ));
+            }
+            if c.max_value != 0.0 && value > c.max_value {
+                return Err(format!(
+                    "param '{}' = {} exceeds the series maximum {}",
+                    c.param_name, value, c.max_value
+                ));
+            }
+        }
+        Ok(())
+    }
+
     /// Check if a specific component_def_id or name is reachable from any
     /// loaded series in this store. The SpecComponent stores the component
     /// identifier which may be either a UUID or a name, so we check both.
@@ -298,6 +372,30 @@ impl SeriesStore {
 
 /// Recursively walk a selector tree, collecting all component_def_ids
 /// found at the leaf nodes (AnswerOutcome::Component).
+fn find_spec_in_selector(
+    sel: &Selector,
+    component_def_id: &str,
+    component_name: &str,
+) -> Option<SpecComponent> {
+    for ans in &sel.answers {
+        match &ans.outcome {
+            AnswerOutcome::NextSelector(next) => {
+                if let Some(spec) = find_spec_in_selector(next, component_def_id, component_name) {
+                    return Some(spec);
+                }
+            }
+            AnswerOutcome::Component(spec) => {
+                if spec.component_def_id == component_def_id
+                    || spec.component_def_id.eq_ignore_ascii_case(component_name)
+                {
+                    return Some(spec.clone());
+                }
+            }
+        }
+    }
+    None
+}
+
 fn walk_selector_for_components(
     sel: &Selector,
     set: &mut std::collections::HashSet<String>,

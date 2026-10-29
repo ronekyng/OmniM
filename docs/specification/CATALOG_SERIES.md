@@ -145,17 +145,15 @@ pub struct CatalogRef {
    which preserves traceability (which series approved it, which branch was taken, which
    values were used) and supports regeneration when the definition or series changes.
 
-> **Current limitation (🔀)**: `instantiate_from_series()` fills only
-> `ParamConstraint.default_value`; it does **not** enforce `min/max/fixed` and does **not**
-> apply `SpecComponent.material` to the created instance. `instantiate_from_catalog()`
-> creates an `ObjectType::Component` feature-tree instance, while the transitional
-> `/api/genrule` rect quick-forms still build hard-coded meshes. **Wave 3 (2026-10-28):
-> the genrule layered family is converged** — path-driven wall/slab/floor/roof creation
-> instantiates path-driven templates (`Wall-Path`, `Slab-Path`, `Floor-Path`, `Roof-Path`)
-> and produces the **domain object type** with `catalog_ref`/`param_values`, sharing the
-> `gen_rule::path_sweep` kernel with the legacy builders (exact-mesh parity tests).
-> `ObjectType::Component` remains reserved for assembly instances (catalog placements of
-> non-path defs). See `docs/status/CODE_DEVIATIONS.md` §6.3 for the remaining splits.
+> **Enforcement (✅ Wave 4, 2026-10-28)**: the series gate now does more than
+> reachability. When any series is loaded and the component is reachable, the located
+> `SpecComponent` enforces its `ParamConstraint`s (`fixed` must match; `min`/`max`
+> bounds reject with 400 and the reason) and applies `SpecComponent.material` to the
+> instance (resolved by material id, then case-insensitive name; an unresolvable
+> material is a 400). `ObjectType::Component` remains the type of catalog placements of
+> non-path defs; the genrule layered family produces the domain type (Wave 3).
+> **Remaining (🔀)**: connector face orientation (`up_*_expr` fields exist; resolved-value
+> checks at connect time are a later slice), and `step` is not enforced.
 
 ### 2.5 Built-in library (seeds)
 

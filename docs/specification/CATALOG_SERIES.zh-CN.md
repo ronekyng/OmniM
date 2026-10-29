@@ -130,15 +130,13 @@ pub struct CatalogRef {
    保留溯源（由哪个系列确认、走了哪条分支、用了哪些值），并在定义或系列变更时支持
    再生（regeneration）。
 
-> **当前限制（🔀）**：`instantiate_from_series()` 只填 `ParamConstraint.default_value`；
-> **不**强制 `min/max/fixed`，也**不**把 `SpecComponent.material` 应用到创建的实例。
-> `instantiate_from_catalog()` 创建的是 `ObjectType::Component` 特征树实例，而过渡期的
-> `/api/genrule` 矩形快速创建仍生成硬编码网格。**Wave 3（2026-10-28）：genrule 的
-> layered 族已收敛**——路径驱动的 wall/slab/floor/roof 创建实例化路径驱动模板
-> （`Wall-Path`、`Slab-Path`、`Floor-Path`、`Roof-Path`），产出**领域对象类型**并携带
-> `catalog_ref`/`param_values`，与遗留构建器共享 `gen_rule::path_sweep` 内核（逐位
-> parity 测试）。`ObjectType::Component` 保留给装配实例（非路径定义的目录放置）。
-> 剩余分裂见 `docs/status/CODE_DEVIATIONS.zh-CN.md` §6.3。
+> **强制执行（✅ Wave 4，2026-10-28）**：系列门禁不再只是可达性。当任一系列已加载
+> 且构件可达时，定位到的 `SpecComponent` 会强制其 `ParamConstraint`（`fixed` 必须相等；
+> `min`/`max` 越界返回 400 及理由），并把 `SpecComponent.material` 应用到实例
+> （先按材质 id、再按名称忽略大小写解析；解析失败返回 400）。`ObjectType::Component`
+> 仍是非路径定义目录放置的类型；genrule layered 族产出领域类型（Wave 3）。
+> **剩余（🔀）**：连接器面朝向（`up_*_expr` 字段已存在；连接时的解析值校验留待后续
+> 切片），`step` 不强制。
 
 ### 2.5 内置库（种子数据）
 

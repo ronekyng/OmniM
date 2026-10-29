@@ -164,6 +164,18 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 
 **Documented**: series gates enforce approved components, materials, and connection compatibility.
 
+> **Update 2026-10-28 (Wave 4) — mostly fixed.** The series gate now locates the
+> reachable component's `SpecComponent` and enforces its `ParamConstraint`s
+> (`fixed` equality, `min`/`max` bounds → 400 with the reason) and applies
+> `SpecComponent.material` (id → case-insensitive name; unresolvable → 400).
+> `connect()` rejects self-connections, duplicate pairs and unknown connection
+> types, accepts `?connection_type=`, and checks connector `connection_type_code`
+> compatibility for catalog instances. `ConnectorDef` gained `up_x/y/z_expr`
+> (flange orientation). **Remaining**: resolved-value orientation checks at
+> connect time, `step` enforcement, and `from_point`/`to_point` population.
+> The lines below are the pre-fix snapshot.
+
+
 **Code status:**
 
 - `check_series_gate()` only checks whether a component is reachable from a series (`crates/model/src/project.rs:88-103`); it does not validate material, parameter ranges, or connection rating.

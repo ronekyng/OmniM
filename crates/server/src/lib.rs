@@ -508,26 +508,99 @@ async fn set_parent(
     Ok(())
 }
 
+#[derive(Deserialize)]
+struct ConnectQuery {
+    /// Connection type name (structural | mechanical | electrical | hydraulic |
+    /// spatial_adjacent). Defaults to structural — the historical behavior.
+    #[serde(default)]
+    connection_type: Option<String>,
+}
+
+/// Connection-type codes advertised by an object's ComponentDef connectors
+/// (empty when the object is not a catalog instance or has no typed
+/// connectors). Used by the connector-compatibility check.
+fn connector_type_codes(project: &Project, object_id: &str) -> Option<Vec<String>> {
+    let obj = project.objects.get(object_id)?;
+    let def_id = obj.catalog_ref.as_ref()?.component_def_id.clone();
+    let library = LIBRARY.read().unwrap();
+    let library = library.as_ref()?;
+    let def = library.catalog.get(&def_id)
+        .or_else(|| library.catalog.find_by_name(&def_id))?;
+    let codes: Vec<String> = def
+        .connectors
+        .iter()
+        .map(|c| c.connection_type_code.trim().to_lowercase())
+        .filter(|c| !c.is_empty())
+        .collect();
+    if codes.is_empty() { None } else { Some(codes) }
+}
+
+fn parse_connection_type(name: &str) -> Result<omnim_core::ConnectionType, String> {
+    match name.trim().to_lowercase().as_str() {
+        "" | "structural" => Ok(omnim_core::ConnectionType::Structural),
+        "mechanical" => Ok(omnim_core::ConnectionType::Mechanical),
+        "electrical" => Ok(omnim_core::ConnectionType::Electrical),
+        "hydraulic" => Ok(omnim_core::ConnectionType::Hydraulic),
+        "spatial" | "spatial_adjacent" => Ok(omnim_core::ConnectionType::SpatialAdjacent),
+        other => Err(format!(
+            "unknown connection type '{}' (structural | mechanical | electrical | hydraulic | spatial_adjacent)",
+            other
+        )),
+    }
+}
+
 async fn connect(
     State(state): State<SharedState>,
     Path((from, to)): Path<(String, String)>,
+    Query(query): Query<ConnectQuery>,
 ) -> Result<(), ApiError> {
-    // Old behavior: Project::connect validated both endpoints exist and used a
-    // Structural connection — preserved via the AddConnection command.
-    let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(c::Connection {
-        from_object_id: from.clone(),
-        to_object_id: to.clone(),
-        r#type: omnim_core::ConnectionType::Structural as i32,
-        from_point: None,
-        to_point: None,
-        connection_detail: String::new(),
-    }))];
+    // Enforcement added in Wave 4 (audit P0-5: "connect() validates nothing"):
+    // no self-connection, no duplicate pair, known connection type, and
+    // connector type-code compatibility for catalog instances.
+    if from == to {
+        return Err(ApiError::bad_request("cannot connect an object to itself"));
+    }
     if !state.project.read().await.objects.contains(&from) {
         return Err(ApiError::not_found(format!("object '{}' not found", from)));
     }
     if !state.project.read().await.objects.contains(&to) {
         return Err(ApiError::not_found(format!("object '{}' not found", to)));
     }
+    let conn_type = match &query.connection_type {
+        Some(name) => parse_connection_type(name).map_err(ApiError::bad_request)?,
+        None => omnim_core::ConnectionType::Structural,
+    };
+    {
+        let p = state.project.read().await;
+        let duplicate = p.relations.connections().iter().any(|c| {
+            (c.from_object_id == from && c.to_object_id == to)
+                || (c.from_object_id == to && c.to_object_id == from)
+        });
+        if duplicate {
+            return Err(ApiError::bad_request(format!(
+                "objects '{}' and '{}' are already connected",
+                from, to
+            )));
+        }
+        let codes_from = connector_type_codes(&p, &from);
+        let codes_to = connector_type_codes(&p, &to);
+        if let (Some(cf), Some(ct)) = (&codes_from, &codes_to) {
+            if cf.iter().all(|c| !ct.contains(c)) {
+                return Err(ApiError::bad_request(format!(
+                    "connector type codes are incompatible: {} advertises {:?}, {} advertises {:?}",
+                    from, cf, to, ct
+                )));
+            }
+        }
+    }
+    let ops = vec![mutation::op_relationship(c::operation::Op::AddConnection(c::Connection {
+        from_object_id: from.clone(),
+        to_object_id: to.clone(),
+        r#type: conn_type as i32,
+        from_point: None,
+        to_point: None,
+        connection_detail: String::new(),
+    }))];
     let result = mutation::apply(&state, c::Action::AddConnection, ops).await?;
     mutation::require_success(result)?;
     Ok(())
@@ -3362,6 +3435,12 @@ struct AddConnectorRequest {
     connection_type_code: String,
     #[serde(default)]
     role: i32,
+    #[serde(default)]
+    up_x_expr: String,
+    #[serde(default)]
+    up_y_expr: String,
+    #[serde(default)]
+    up_z_expr: String,
 }
 
 fn default_dir_z() -> String { "1".into() }
@@ -3387,6 +3466,9 @@ async fn add_connector(
         bore_expr: req.bore_expr,
         connection_type_code: req.connection_type_code,
         role: req.role,
+        up_x_expr: req.up_x_expr,
+        up_y_expr: req.up_y_expr,
+        up_z_expr: req.up_z_expr,
     });
     let result = mutation::apply(&state, c::Action::AddConnector, vec![mutation::op(op)]).await.map_err(|e| e.status)?;
     if !result.success {

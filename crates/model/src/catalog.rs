@@ -146,6 +146,14 @@ pub struct ConnectorDef {
     pub bore_expr: String,
     pub connection_type_code: String,
     pub role: i32,
+    /// Flange orientation: the connector face's up axis, resolved like the
+    /// other expressions (Wave 4 — P0-5 "ConnectorDef lacks up/axis").
+    #[serde(default)]
+    pub up_x_expr: String,
+    #[serde(default)]
+    pub up_y_expr: String,
+    #[serde(default)]
+    pub up_z_expr: String,
 }
 
 impl ConnectorDef {
@@ -161,6 +169,9 @@ impl ConnectorDef {
             direction_z_expr: "1".into(),
             bore_expr: String::new(),
             connection_type_code: String::new(),
+            up_x_expr: String::new(),
+            up_y_expr: String::new(),
+            up_z_expr: String::new(),
             role: c::ConnectorRole::Bidirectional as i32,
         }
     }
@@ -181,6 +192,9 @@ impl ConnectorDef {
 
     pub fn with_bore(mut self, bore: impl Into<String>) -> Self { self.bore_expr = bore.into(); self }
     pub fn with_type_code(mut self, code: impl Into<String>) -> Self { self.connection_type_code = code.into(); self }
+    pub fn with_up(mut self, x: impl Into<String>, y: impl Into<String>, z: impl Into<String>) -> Self {
+        self.up_x_expr = x.into(); self.up_y_expr = y.into(); self.up_z_expr = z.into(); self
+    }
     pub fn with_role(mut self, role: i32) -> Self { self.role = role; self }
 }
 
@@ -197,6 +211,9 @@ impl From<&c::ConnectorDef> for ConnectorDef {
             direction_z_expr: p.direction_z_expr.clone(),
             bore_expr: p.bore_expr.clone(),
             connection_type_code: p.connection_type_code.clone(),
+            up_x_expr: p.up_x_expr.clone(),
+            up_y_expr: p.up_y_expr.clone(),
+            up_z_expr: p.up_z_expr.clone(),
             role: p.role,
         }
     }

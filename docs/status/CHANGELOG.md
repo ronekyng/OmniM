@@ -22,6 +22,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-28] — Series & connection enforcement (Wave 4)
+
+### Added
+- **Series gate enforces specs** (audit P0-5): when a series is loaded and the component is reachable, the located `SpecComponent` enforces `ParamConstraint` (`fixed` equality, `min`/`max` bounds → 400 with the reason) and applies `SpecComponent.material` to the instance (id → case-insensitive name; unresolvable → 400 listing available materials).
+- **`connect()` hardening**: rejects self-connections and duplicate pairs, accepts `?connection_type=` (structural default), and checks connector `connection_type_code` compatibility between catalog instances.
+- **`ConnectorDef.up_x/y/z_expr`** (proto + model + `/api/catalog/{id}/connectors`): flange orientation fields, expression-resolved like position/direction.
+
+### Fixed
+- Seeded materials now include the stainless grades the seeded piping specs reference (`A312-TP304/TP316`) — the enforcement turned a latent seed gap into a hard failure, so the gap is fixed at the source.
+
+### Still open
+- Resolved-value orientation checks at connect time, `step` enforcement, `from_point`/`to_point` population (CODE_DEVIATIONS §6.4).
+
 ## [2026-10-28] — Geometry-path convergence (Wave 3, layered family)
 
 ### Added

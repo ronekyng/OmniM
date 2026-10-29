@@ -1879,6 +1879,7 @@ impl Executor {
                                 .with_direction(&acn.direction_x_expr, &acn.direction_y_expr, &acn.direction_z_expr)
                                 .with_bore(&acn.bore_expr)
                                 .with_type_code(&acn.connection_type_code)
+                                .with_up(&acn.up_x_expr, &acn.up_y_expr, &acn.up_z_expr)
                                 .with_role(acn.role as i32);
                             comp.connectors.push(conn);
                             commands.push(Command::AddConnector {

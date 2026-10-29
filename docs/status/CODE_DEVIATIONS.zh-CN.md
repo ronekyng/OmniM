@@ -169,6 +169,15 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 
 **文档模型**：系列门禁强制使用批准构件、材质与连接兼容性。
 
+> **2026-10-28 更新（Wave 4）——大部分已修复。** 系列门禁现在会定位可达构件的
+> `SpecComponent`，强制其 `ParamConstraint`（`fixed` 相等、`min`/`max` 边界 → 400 含理由），
+> 并应用 `SpecComponent.material`（id → 名称忽略大小写；解析失败 → 400）。
+> `connect()` 拒绝自连、重复连接与未知连接类型，支持 `?connection_type=`，并对目录
+> 实例检查连接器 `connection_type_code` 兼容性。`ConnectorDef` 新增 `up_x/y/z_expr`
+> （法兰朝向）。**剩余**：连接时的解析值朝向校验、`step` 强制、`from_point`/`to_point`
+> 填充。下方为修复前快照。
+
+
 **代码现状：**
 
 - `check_series_gate()` 只检查构件是否可从某个系列可达（`crates/model/src/project.rs:88-103`），不校验材质、参数范围或连接等级。

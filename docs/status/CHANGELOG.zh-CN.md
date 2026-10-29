@@ -22,6 +22,19 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-28] — 系列与连接强制性（Wave 4）
+
+### 新增（Added）
+- **系列门禁强制规格**（审计 P0-5）：系列已加载且构件可达时，定位 `SpecComponent` 强制 `ParamConstraint`（`fixed` 相等、`min`/`max` 边界 → 400 含理由），并把 `SpecComponent.material` 应用到实例（id → 名称忽略大小写；解析失败 → 400 并列出可用材质）。
+- **`connect()` 加固**：拒绝自连与重复连接，支持 `?connection_type=`（默认 structural），并检查目录实例间连接器 `connection_type_code` 兼容性。
+- **`ConnectorDef.up_x/y/z_expr`**（proto + model + `/api/catalog/{id}/connectors`）：法兰朝向字段，与 position/direction 一样按表达式解析。
+
+### 修复（Fixed）
+- 种子材质补齐管道规格引用的不锈钢牌号（`A312-TP304/TP316`）——强制执行把潜在的种子缺口变成了硬失败，故从源头修复。
+
+### 仍未关闭
+- 连接时的解析值朝向校验、`step` 强制、`from_point`/`to_point` 填充（CODE_DEVIATIONS §6.4）。
+
 ## [2026-10-28] — 几何路径收敛（Wave 3，layered 族）
 
 ### 新增（Added）

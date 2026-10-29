@@ -515,6 +515,11 @@ message ConnectorDef {
   string bore_expr = 16;
   string connection_type_code = 17;
   ConnectorRole role = 18;
+  // 2026-10-28 Wave 4: flange orientation (the "up" axis of the connector
+  // face, perpendicular to `direction`). Expression-resolved like the others.
+  string up_x_expr = 19;
+  string up_y_expr = 20;
+  string up_z_expr = 21;
 }
 
 enum ConnectorRole {

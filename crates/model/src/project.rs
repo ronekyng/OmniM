@@ -227,9 +227,41 @@ impl Project {
             .ok_or_else(|| format!("component def '{}' not found in catalog", component_def_id))?
             .clone();
 
-        // Series Gate: check reachability
+        // Series Gate: reachability + spec enforcement (Wave 4).
+        // A reachable component always originates from a Component(spec) leaf,
+        // so the gate can locate the SpecComponent and apply its parameter
+        // constraints and material — that is what "series-approved" means.
+        let mut gate_params: Option<std::collections::HashMap<String, f64>> = None;
+        let mut series_material: Option<String> = None;
         if check_gate {
             self.check_series_gate(&comp_def.id, &comp_def.name)?;
+            // Enforcement only applies when a series is actually loaded —
+            // def defaults stay unenforced otherwise (legacy behavior).
+            if self.series.is_any_series_loaded() {
+                let mut params_view = param_overrides.clone();
+                // Resolve the spec through the loaded series (id-or-name match).
+                let found = {
+                    let store = &self.series;
+                    store.find_spec_for_component(&comp_def.id, &comp_def.name)
+                };
+                let (series_id, _series_name, spec) = found.ok_or_else(|| {
+                    format!(
+                        "series gate: component '{}' ({}) is reachable but no SpecComponent matched; the series store may mix ids and names",
+                        comp_def.name, comp_def.id
+                    )
+                })?;
+                let mut merged = params_view.clone();
+                crate::series_store::SeriesStore::enforce_param_constraints(
+                    &spec.param_constraints,
+                    &mut merged,
+                )?;
+                params_view = merged;
+                gate_params = Some(params_view);
+                if !spec.material.is_empty() {
+                    series_material = Some(spec.material.clone());
+                }
+                let _ = series_id;
+            }
         }
 
         let tree_id = comp_def.feature_tree_id.clone();
@@ -240,12 +272,15 @@ impl Project {
             .ok_or_else(|| format!("feature tree template '{}' not found", tree_id))?
             .clone();
 
-        // Resolve full parameter set: use defaults from ComponentDef, overridden by provided values
+        // Resolve full parameter set: defaults from ComponentDef, then the
+        // gate-enforced spec-merged overrides (constraints may replace
+        // defaults), then any remaining provided values.
         let mut params: std::collections::HashMap<String, f64> = std::collections::HashMap::new();
         for p in &comp_def.params {
             params.insert(p.name.clone(), p.default_value);
         }
-        for (k, v) in param_overrides {
+        let effective_overrides = if check_gate { gate_params.take().unwrap_or_else(|| param_overrides.clone()) } else { param_overrides.clone() };
+        for (k, v) in &effective_overrides {
             params.insert(k.clone(), *v);
         }
 
@@ -290,6 +325,37 @@ impl Project {
             selector_path: Vec::new(),
             param_values: params.clone(),
         });
+        // Series material (Wave 4): resolve by id first, then by name
+        // (case-insensitive). Unknown material names are an error — silently
+        // dropping the spec's material would be the P0-5 deviation again.
+        if let Some(material_ref) = &series_material {
+            let resolved = if self.materials.get(material_ref).is_some() {
+                Some(material_ref.clone())
+            } else {
+                self.materials
+                    .list()
+                    .iter()
+                    .find(|m| m.name.eq_ignore_ascii_case(material_ref))
+                    .map(|m| m.id.clone())
+            };
+            match resolved {
+                Some(id) => obj.material_id = Some(id),
+                None => {
+                    let available: Vec<String> = self
+                        .materials
+                        .list()
+                        .iter()
+                        .take(5)
+                        .map(|m| m.name.clone())
+                        .collect();
+                    return Err(format!(
+                        "series material '{}' not found in project materials (available: {})",
+                        material_ref,
+                        available.join(", ")
+                    ));
+                }
+            }
+        }
         self.objects.insert(obj);
 
         // Instantiate the feature tree
