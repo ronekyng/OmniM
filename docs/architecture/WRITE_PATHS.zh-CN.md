@@ -83,9 +83,14 @@ handler 不允许手写这对锁。
   内存变更与撤销条目此时已经成立。
 - **显式保存**：`POST /api/project/save` 按需落盘并返回路径；持久化被禁用时返回 400。
 - **对象基准字段（P8-S1）**：`elevation`/`level_id` 走常规创建/更新对象命令；
-  `ModifyObject` 的撤销快照现覆盖**全部**可修改字段（这同时关闭了 Wave 1 的缺口——
+  `ModifyObject` 的撤销快照覆盖**全部**可修改字段（关闭了 Wave 1 的缺口——
   `ifc_class`/`tags` 编辑此前不在还原范围），redo 重放 after 镜像。`POST /api/objects`
   校验失败返回 **400 与校验理由**（此前是无提示的 500）。
+- **标高驱动竖向范围级联（P8-S2）**：修改楼层 `elevation` 会重新解析所有受约束对象，
+  受影响对象的 before/after 镜像存放在同一条 `Command::ModifyObject`（`cascade`）内——
+  **一次请求、一步撤销**，redo 对称。`DELETE /api/objects/{id}` 拒绝删除仍被
+  `level_id`/`bottom_level_id`/`top_level_id` 引用的楼层（400）。`layered` genrule 在
+  **创建前**校验标高组合，非法组合不会留下孤儿对象。
 
 ## 验证
 

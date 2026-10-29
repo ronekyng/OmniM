@@ -33,6 +33,15 @@ pub struct Project {
     pub grids: crate::grid::GridStore,
 }
 
+/// One object changed by a storey-elevation cascade (P8-S2). Carried inside a
+/// single `Command::ModifyObject` so the whole cascade is one undo step.
+#[derive(Clone)]
+pub struct LevelExtentChange {
+    pub object_id: String,
+    pub before: OmniObject,
+    pub after: OmniObject,
+}
+
 /// Reference to an external series (file or Library-provided).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeriesRef {
@@ -1042,6 +1051,210 @@ impl Project {
             .get(component_id)
             .ok_or_else(|| format!("component '{}' not found", component_id))?;
         Ok(&obj.features)
+    }
+
+    // ── Building datum: level-driven vertical extent (P8-S2) ─────────────
+
+    /// Validate a bottom/top level pair without needing an object (P8-S2).
+    ///
+    /// Both-or-neither, each reference must be an existing `BuildingStorey`,
+    /// the two ids must differ, and top's elevation must be above bottom's
+    /// (a storey without an explicit elevation counts as 0.0 m).
+    pub fn validate_level_extent_refs(
+        &self,
+        bottom: Option<&str>,
+        top: Option<&str>,
+    ) -> Result<(), String> {
+        let b = bottom.filter(|s| !s.is_empty());
+        let t = top.filter(|s| !s.is_empty());
+        match (b, t) {
+            (None, None) => Ok(()),
+            (Some(_), None) | (None, Some(_)) => {
+                Err("bottom_level_id and top_level_id must be set together".into())
+            }
+            (Some(b), Some(t)) => {
+                if b == t {
+                    return Err(format!("bottom and top levels must be different ('{}')", b));
+                }
+                let elevation = |id: &str| -> Result<f64, String> {
+                    let level = self
+                        .objects
+                        .get(id)
+                        .ok_or_else(|| format!("level '{}' not found", id))?;
+                    if level.object_type != c::ObjectType::BuildingStorey as i32 {
+                        return Err(format!(
+                            "level_id '{}' is not a BuildingStorey (type {})",
+                            id, level.object_type
+                        ));
+                    }
+                    Ok(level.elevation.unwrap_or(0.0))
+                };
+                let (bottom_elev, top_elev) = (elevation(b)?, elevation(t)?);
+                if top_elev <= bottom_elev {
+                    return Err(format!(
+                        "top level elevation ({}) must be above bottom level elevation ({})",
+                        top_elev, bottom_elev
+                    ));
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Resolve `bottom_level_id` / `top_level_id` into the object's datum.
+    ///
+    /// Contract (DATA_MODEL §5.8):
+    /// - refs are **both-or-neither** and must target `BuildingStorey` objects;
+    /// - `top.elevation > bottom.elevation` (a storey without an explicit
+    ///   elevation counts as 0.0 m);
+    /// - `elevation` becomes bottom's elevation (base datum);
+    /// - for features carrying `PathSweepParams` geometry (the formal Wave-3
+    ///   building path), the path's lowest z shifts to the base and the sweep
+    ///   height becomes `top − bottom`. Feature caches are rebuilt.
+    ///
+    /// Plain-geometry objects (no PathSweep feature) receive the `elevation`
+    /// datum only — their mesh is not rewritten (recorded as 🔀 in the matrix).
+    ///
+    /// Returns `Ok(true)` when the object changed.
+    pub fn resolve_level_extent(&mut self, object_id: &str) -> Result<bool, String> {
+        let (bottom_id, top_id) = {
+            let obj = self
+                .objects
+                .get(object_id)
+                .ok_or_else(|| format!("object '{}' not found", object_id))?;
+            (
+                obj.bottom_level_id.clone().filter(|s| !s.is_empty()),
+                obj.top_level_id.clone().filter(|s| !s.is_empty()),
+            )
+        };
+        if bottom_id.is_none() && top_id.is_none() {
+            return Ok(false);
+        }
+        // Single source of truth for the pair contract (also used by the
+        // omcom validator and the genrule handler's pre-check).
+        self.validate_level_extent_refs(bottom_id.as_deref(), top_id.as_deref())
+            .map_err(|e| format!("object '{}': {}", object_id, e))?;
+        let bottom_id = bottom_id.expect("validated both-or-neither");
+        let top_id = top_id.expect("validated both-or-neither");
+        let elevation_of = |project: &Self, id: &str| -> f64 {
+            project
+                .objects
+                .get(id)
+                .and_then(|l| l.elevation)
+                .unwrap_or(0.0)
+        };
+        let bottom_elev = elevation_of(self, &bottom_id);
+        let top_elev = elevation_of(self, &top_id);
+        let target_height = top_elev - bottom_elev;
+
+        // Collect PathSweep feature indices and their current base z.
+        let sweep_indices: Vec<usize> = {
+            let obj = self.objects.get(object_id).unwrap();
+            obj.features
+                .iter()
+                .enumerate()
+                .filter(|(_, f)| {
+                    f.feature_type == crate::FeatureType::PathSweep && f.path_sweep.is_some()
+                })
+                .map(|(i, _)| i)
+                .collect()
+        };
+
+        let mut changed = false;
+        {
+            let obj = self.objects.get_mut(object_id).unwrap();
+            let elevation_needs_update = match obj.elevation {
+                Some(current) => (current - bottom_elev).abs() > 1e-9,
+                None => true,
+            };
+            if elevation_needs_update {
+                obj.elevation = Some(bottom_elev);
+                changed = true;
+            }
+            for &idx in &sweep_indices {
+                if let Some(params) = obj.features[idx].path_sweep.as_mut() {
+                    let current_base = params
+                        .points
+                        .iter()
+                        .map(|p| p[2])
+                        .fold(f64::INFINITY, f64::min);
+                    if current_base.is_finite() {
+                        let shift = bottom_elev - current_base;
+                        if shift.abs() > 1e-9 {
+                            for p in params.points.iter_mut() {
+                                p[2] += shift;
+                            }
+                            changed = true;
+                        }
+                    }
+                    if (params.height - target_height).abs() > 1e-9 {
+                        params.height = target_height;
+                        changed = true;
+                    }
+                }
+            }
+        }
+
+        if changed {
+            // Rebuild the sweeps so cached geometry reflects the new extent.
+            for idx in sweep_indices {
+                self.rebuild_feature(object_id, idx).map_err(|e| {
+                    format!(
+                        "object '{}': extent resolved but sweep rebuild failed: {}",
+                        object_id, e
+                    )
+                })?;
+            }
+        }
+        Ok(changed)
+    }
+
+    /// Re-resolve every object constrained to `level_id` after that storey's
+    /// elevation changed. Returns the before/after pairs for a single undo
+    /// entry (P8-S2 cascade).
+    pub fn cascade_level_extents(&mut self, level_id: &str) -> Vec<LevelExtentChange> {
+        let affected: Vec<String> = self
+            .objects
+            .list()
+            .iter()
+            .filter(|o| {
+                o.bottom_level_id.as_deref() == Some(level_id)
+                    || o.top_level_id.as_deref() == Some(level_id)
+            })
+            .map(|o| o.id.clone())
+            .collect();
+        let mut changes = Vec::new();
+        for id in affected {
+            let before = match self.objects.get(&id) {
+                Some(o) => o.clone(),
+                None => continue,
+            };
+            match self.resolve_level_extent(&id) {
+                Ok(true) => {
+                    if let Some(after) = self.objects.get(&id).cloned() {
+                        changes.push(LevelExtentChange {
+                            object_id: id,
+                            before,
+                            after,
+                        });
+                    }
+                }
+                Ok(false) => {}
+                Err(e) => eprintln!("[WARN] level cascade skipped object {}: {}", id, e),
+            }
+        }
+        changes
+    }
+
+    /// True when the object has both vertical-extent constraints set.
+    pub fn has_level_extent(&self, object_id: &str) -> bool {
+        self.objects
+            .get(object_id)
+            .map(|o| {
+                o.bottom_level_id.as_deref().is_some_and(|s| !s.is_empty())
+                    && o.top_level_id.as_deref().is_some_and(|s| !s.is_empty())
+            })
+            .unwrap_or(false)
     }
 
     pub fn rebuild_feature(

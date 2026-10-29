@@ -35,6 +35,13 @@ pub struct OmniObject {
     /// Optional attachment to a storey datum: id of a `BuildingStorey` object.
     #[serde(default)]
     pub level_id: Option<String>,
+    /// Vertical-extent constraints (P8-S2, both-or-neither): the object's base
+    /// resolves to the bottom storey's elevation.
+    #[serde(default)]
+    pub bottom_level_id: Option<String>,
+    /// Vertical-extent constraints: the object's top resolves to this storey.
+    #[serde(default)]
+    pub top_level_id: Option<String>,
 }
 
 impl OmniObject {
@@ -58,6 +65,8 @@ impl OmniObject {
             catalog_ref: None,
             elevation: None,
             level_id: None,
+            bottom_level_id: None,
+            top_level_id: None,
         }
     }
 

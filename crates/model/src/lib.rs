@@ -39,7 +39,7 @@ pub use measurement::{Measurement, MeasurementStore, Point3D};
 pub use object::OmniObject;
 pub use omnim_sketch;
 pub use profile::ProfileType;
-pub use project::{Project, ProjectStats, SeriesRef, LIBRARY};
+pub use project::{LevelExtentChange, Project, ProjectStats, SeriesRef, LIBRARY};
 pub use property_def::{
     merge_defs, params_to_property_defs, property_defs_for_type, ObjectPropertyDef, PropertyKind,
 };

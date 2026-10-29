@@ -98,6 +98,7 @@ async fn storey_elevation_is_editable_and_undoable() {
         }),
     )
     .await;
+    assert_eq!(status, 200, "{}", body);
     let id = json_of(&body)["id"].as_str().unwrap().to_string();
 
     let client = reqwest::Client::new();
@@ -131,6 +132,7 @@ async fn object_can_attach_to_a_storey_level() {
         }),
     )
     .await;
+    assert_eq!(status, 200, "{}", body);
     let level_id = json_of(&body)["id"].as_str().unwrap().to_string();
 
     let (status, body) = create_object(
@@ -173,6 +175,7 @@ async fn level_id_must_reference_a_building_storey() {
         }),
     )
     .await;
+    assert_eq!(status, 200, "{}", body);
     let building_id = json_of(&body)["id"].as_str().unwrap().to_string();
 
     let (status, body) = create_object(

@@ -307,6 +307,11 @@ message CreateObjectOperation {
   // to a storey element (must reference an existing BuildingStorey).
   optional double elevation = 7;
   optional string level_id = 8;
+  // 2026-10-29 P8-S2: vertical extent constraints (both-or-neither).
+  // The object's base resolves to bottom's elevation and, for PathSweep
+  // geometry, its height to top − bottom.
+  optional string bottom_level_id = 9;
+  optional string top_level_id = 10;
 }
 
 message ModifyObjectOperation {
@@ -320,6 +325,9 @@ message ModifyObjectOperation {
   // 2026-10-29 P8-S1: datum edits (Some("") clears level_id)
   optional double new_elevation = 7;
   optional string new_level_id = 8;
+  // 2026-10-29 P8-S2: extent constraints (Some("") clears; both-or-neither)
+  optional string new_bottom_level_id = 9;
+  optional string new_top_level_id = 10;
 }
 
 // Wrapper so optional repeated tags are distinguishable from "untouched".

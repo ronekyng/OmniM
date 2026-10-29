@@ -178,6 +178,8 @@ impl OmcomGenerator {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         };
 
@@ -313,6 +315,8 @@ impl OmcomGenerator {
                 new_geometry: None,
                 new_elevation: None,
                 new_level_id: None,
+                new_bottom_level_id: None,
+                new_top_level_id: None,
             })),
         };
         cmd.operations.push(op);

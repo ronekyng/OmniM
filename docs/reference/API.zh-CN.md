@@ -115,7 +115,9 @@ curl -sS "$BASE/api/stats"
   `object_type`（大小写不敏感）接受：`wall`、`slab`、`roof`、`floor`、`beam`、`column`、`door`、`window`、`road`、`pipe`、`duct`、`cabletray`、`tank`、`pump`、`valve`、`gear`、`part`、`assembly`、`component`。未知名称会导致 Omcom 创建操作记录未指定类型——请使用上面列出的名称。请求内部包装为一个 Omcom `CreateObject` 命令（会记入撤销历史），然后追加 `ifc_class`、`tags` 与 `parent_id`。`elevation` 为基准标高（米，对 `storey` 有意义，对应 IfcBuildingStorey.Elevation）；`level_id` 把对象挂到既有 `BuildingStorey`，服务端校验（id 不存在或目标非楼层 → `400` 并给出理由）。响应：创建的 `OmniObject`；校验失败 `400` 并附校验理由，仅内部错误才 `500`。
 
 - `OmniObject` JSON 结构（protobuf 派生）：`{ id, name, description, object_type（整数枚举）, status（整数）, properties[], property_sets[], geometry（Geometry 或 null）, material_id, parent_id, tags[], ifc_class, features[], sketch_ids[], dirty, catalog_ref, elevation（数值或 null，P8-S1）, level_id（字符串或 null，P8-S1） }`。
-- `PUT /api/objects/{id}` 请求体：`{ name?, description?, ifc_class?, tags?, elevation?, level_id? }`（`level_id: ""` 表示清除挂接）→ 成功返回空响应，找不到为 `404`。所有字段均可撤销/重做（P8-S1 把 `ModifyObject` 快照扩展到全部可修改字段）。
+- `PUT /api/objects/{id}` 请求体：`{ name?, description?, ifc_class?, tags?, elevation?, level_id?, bottom_level_id?, top_level_id? }`（`""` 清除挂接；范围引用必须成对设置）→ 成功返回空响应，找不到为 `404`。所有字段均可撤销/重做（P8-S1 把 `ModifyObject` 快照扩展到全部可修改字段）。
+
+- **标高驱动竖向范围（P8-S2）**：对象可携带 `bottom_level_id` + `top_level_id`（`POST`/`PUT /api/objects` 与 `layered` genrule 变体）。必须成对设置；均须引用 `BuildingStorey`；顶部标高须高于底部（无标高的楼层按 0 m 计）。解析结果：`elevation` 取底部楼层标高；对路径驱动（`PathSweep`）几何——即 Wave-3 建筑族——路径基高平移到该标高、扫掠高度置为 `top − bottom`；普通盒体几何仅获得 `elevation` 基准。修改楼层 `elevation` 会把所有受约束对象作为**一步撤销**重新解析。删除仍被对象引用的楼层返回 `400`（请先解除挂接）。
 - `PUT /api/objects/{id}/prop` 请求体：`{ "name": "FireRating", "value": "2h" }` — 值以字符串 `PropertyValue` 存储。成功返回空响应，`404`。
 - `PUT /api/objects/{id}/properties` 请求体：类似 `PUT /api/objects/{id}`，外加 `"properties": { "k": "v", ... }`（字符串映射）。适合编辑器一次性同步。成功返回空响应。
 - `GET /api/object-types/{type}/properties` → `Vec<ObjectPropertyDef>`（例如 "wall" 的属性定义）；未知类型返回空列表。
@@ -520,7 +522,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
-  | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path` / `boundary`（见下方路径契约）, `start_*`/`end_*`, `parent_id?`, `series_id?` |
+  | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path` / `boundary`（见下方路径契约）, `start_*`/`end_*`, `parent_id?`, `series_id?`, `bottom_level_id?`/`top_level_id?`（P8-S2 竖向范围——**创建前**校验，非法组合不会留下孤儿对象；该族 `series_id` 仅作元数据） |
   | `line` | `name`, `path` / `alignment`（见下方路径契约，≥ 2 点）, `diameter`, `parent_id?` — 生成细引导管线（`FeatureLine`） |
 
   **路径契约（2026-10-28，DATA_MODEL §1）。** 路径形输入接受契约形态

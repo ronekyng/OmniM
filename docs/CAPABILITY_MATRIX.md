@@ -29,7 +29,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 
 | Object type | Genesis | Create via UI | Parameters / series | Move / transform | Host / openings | Connect | Measure | Section | Clash | Quantity | Drawing | IFC in / out | Proto |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **Wall** | Surface (panel; region/Body/Linear by matrix) | ✅ Create panel or 建筑 → 墙体; Path open, ≥2 picks, Enter | ✅ LayerEditor layers in mm; series optional | ✅* | ✅ hosts door/window | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcWall) | ✅ |
+| **Wall** | Surface (panel; region/Body/Linear by matrix) | ✅ Create panel or 建筑 → 墙体; Path open, ≥2 picks, Enter | ✅ LayerEditor layers in mm; series optional; vertical extent via `bottom/top_level_id` (API, P8-S2 cascade) | ✅* | ✅ hosts door/window | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcWall) | ✅ |
 | **Slab** | Surface (region) | ✅ 建筑 → 楼板; Path closed, ≥3 picks | ✅ LayerEditor layers in mm; series optional | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSlab) | ✅ |
 | **Roof** | Surface (footprint region or 2-point profile) | ✅ 建筑 → 屋顶; 轮廓 or 坡屋面 modes | ✅ LayerEditor layers in mm | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / 🔀 (exports proxy) | ✅ |
 | **Floor** | Surface (region) | ❌ no menu entry; `/api/genrule` `mode:"floor"` only | ✅ layers in mm via API | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
@@ -100,7 +100,7 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **Site** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSite) | ✅ |
 | **Building** | — (container) | ✅ Create panel object-type list | 🔀 name/IFC class only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuilding) | ✅ |
-| **BuildingStorey** | — (container) | ✅ Create panel ("storey"); elevation input (P8-S1) | ✅ datum `elevation` (m, IfcBuildingStorey.Elevation); 🔀 `level_id` attachment is API-only (`POST/PUT /api/objects`); height auto-adjust (`top/bottom_level_id`) 🗓 planned | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuildingStorey, elevation value not yet exported) | ✅ |
+| **BuildingStorey** | — (container) | ✅ Create panel ("storey"); elevation input (P8-S1) | ✅ datum `elevation` (m, IfcBuildingStorey.Elevation); 🔀 `level_id` attachment is API-only (`POST/PUT /api/objects`); vertical extent via `bottom_level_id`/`top_level_id` ✅ for path-driven objects (single-step cascade, P8-S2), 🔀 plain geometry gets the datum only | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBuildingStorey, elevation value not yet exported) | ✅ |
 | **轴网 Grid (datum)** | — (datum annotation, not an object) | ❌ API only (`/api/grids`) | ✅ label/axis/coordinate CRUD, per-family unique labels, undoable | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓 (IfcGrid planned) | ✅ |
 | **Space** | — (container; primitive box) | ✅ Create panel | 🔀 primitive dimensions | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSpace) | ✅ |
 | **Zone** | — (planned) | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |

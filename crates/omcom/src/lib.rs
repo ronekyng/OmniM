@@ -40,6 +40,27 @@ impl Validator {
                 if let Some(target_id) = target_object_id(instr) {
                     if !project.objects.contains(&target_id) {
                         errors.push(format!("target object '{}' not found", target_id));
+                    } else if action == c::Action::DeleteObject {
+                        // P8-S2: a storey that still anchors objects must not
+                        // be deleted (would leave dangling datum references).
+                        let referenced = project
+                            .objects
+                            .list()
+                            .iter()
+                            .filter(|o| {
+                                o.id != target_id
+                                    && (o.level_id.as_deref() == Some(target_id.as_str())
+                                        || o.bottom_level_id.as_deref()
+                                            == Some(target_id.as_str())
+                                        || o.top_level_id.as_deref() == Some(target_id.as_str()))
+                            })
+                            .count();
+                        if referenced > 0 {
+                            errors.push(format!(
+                                "object '{}' is a level referenced by {} object(s); detach them first",
+                                target_id, referenced
+                            ));
+                        }
                     }
                 }
             }
@@ -383,6 +404,14 @@ impl Validator {
                                 }
                             }
                         }
+                        // P8-S2: vertical-extent constraints (both-or-neither)
+                        validate_level_extent(
+                            project,
+                            &format!("object '{}'", co.name),
+                            co.bottom_level_id.as_deref(),
+                            co.top_level_id.as_deref(),
+                            &mut errors,
+                        );
                         // Spatial conflict detection: log as warning, not blocking error
                         // (overlaps are common in multi-discipline engineering: pipes through walls, columns in walls, etc.)
                         if let Some(pg) = &co.geometry {
@@ -422,6 +451,24 @@ impl Validator {
                                     _ => {}
                                 }
                             }
+                        }
+                        // P8-S2: validate the effective extent pair (None = untouched)
+                        if let Some(obj) = project.objects.get(&mo.object_id) {
+                            let eff_bottom = mo
+                                .new_bottom_level_id
+                                .clone()
+                                .unwrap_or_else(|| obj.bottom_level_id.clone().unwrap_or_default());
+                            let eff_top = mo
+                                .new_top_level_id
+                                .clone()
+                                .unwrap_or_else(|| obj.top_level_id.clone().unwrap_or_default());
+                            validate_level_extent(
+                                project,
+                                &format!("object '{}'", obj.name),
+                                Some(eff_bottom.as_str()),
+                                Some(eff_top.as_str()),
+                                &mut errors,
+                            );
                         }
                     }
                     // 2026-10-29 P8-S1: grid datum validation
@@ -757,6 +804,19 @@ pub struct ObjectSnapshot {
     pub old_geometry: Option<c::Geometry>,
 }
 
+/// P8-S2: prefix the model's level-extent validation with the object subject.
+fn validate_level_extent(
+    project: &Project,
+    subject: &str,
+    bottom: Option<&str>,
+    top: Option<&str>,
+    errors: &mut Vec<String>,
+) {
+    if let Err(e) = project.validate_level_extent_refs(bottom, top) {
+        errors.push(format!("{}: {}", subject, e));
+    }
+}
+
 /// 可逆命令 — 记录操作的反向数据
 #[derive(Clone)]
 pub enum Command {
@@ -775,6 +835,9 @@ pub enum Command {
         object_id: String,
         snapshot: ObjectSnapshot,
         after: OmniObject,
+        /// P8-S2: objects re-resolved because a storey's elevation changed —
+        /// carried here so the whole cascade is one undo step.
+        cascade: Vec<omnim_model::LevelExtentChange>,
     },
     /// 设置属性 — undo 时恢复或删除
     SetProperty {
@@ -1189,6 +1252,17 @@ impl Executor {
                             Some(lid) if !lid.is_empty() => Some(lid.clone()),
                             _ => None,
                         };
+                        // P8-S2: vertical-extent constraints (resolved below,
+                        // after the object exists in the store)
+                        obj.bottom_level_id = match &co.bottom_level_id {
+                            Some(lid) if !lid.is_empty() => Some(lid.clone()),
+                            _ => None,
+                        };
+                        obj.top_level_id = match &co.top_level_id {
+                            Some(lid) if !lid.is_empty() => Some(lid.clone()),
+                            _ => None,
+                        };
+                        let object_id = obj.id.clone();
                         for prop in &co.properties {
                             obj.properties.push(prop.clone());
                         }
@@ -1196,19 +1270,33 @@ impl Executor {
                             let geom = omnim_model::geometry::create_geometry(pg.clone());
                             obj.geometry = Some(geom);
                         }
-                        created_ids.push(obj.id.clone());
-                        project.objects.insert(obj.clone());
-                        commands.push(Command::CreateObject {
-                            snapshot: ObjectSnapshot {
-                                object: obj,
-                                removed_properties: Vec::new(),
-                                old_material_id: None,
-                                old_geometry: None,
-                            },
-                        });
+                        created_ids.push(object_id.clone());
+                        project.objects.insert(obj);
+                        // P8-S2: resolve the level-driven extent; the undo
+                        // snapshot records the resolved object, so undo removes
+                        // it wholesale and redo restores it resolved.
+                        if project.has_level_extent(&object_id) {
+                            if let Err(e) = project.resolve_level_extent(&object_id) {
+                                eprintln!(
+                                    "[WARN] create: level extent unresolved for {}: {}",
+                                    object_id, e
+                                );
+                            }
+                        }
+                        if let Some(resolved) = project.objects.get(&object_id).cloned() {
+                            commands.push(Command::CreateObject {
+                                snapshot: ObjectSnapshot {
+                                    object: resolved,
+                                    removed_properties: Vec::new(),
+                                    old_material_id: None,
+                                    old_geometry: None,
+                                },
+                            });
+                        }
                     }
 
                     c::operation::Op::ModifyObject(mo) => {
+                        let mut captured: Option<(ObjectSnapshot, OmniObject)> = None;
                         if let Some(obj) = project.objects.get_mut(&mo.object_id) {
                             let snapshot = ObjectSnapshot {
                                 object: obj.clone(),
@@ -1243,11 +1331,51 @@ impl Executor {
                                     Some(nl.clone())
                                 };
                             }
-                            let after = obj.clone();
+                            // P8-S2: extent refs (Some("") clears)
+                            if let Some(nb) = &mo.new_bottom_level_id {
+                                obj.bottom_level_id = if nb.is_empty() {
+                                    None
+                                } else {
+                                    Some(nb.clone())
+                                };
+                            }
+                            if let Some(nt) = &mo.new_top_level_id {
+                                obj.top_level_id = if nt.is_empty() {
+                                    None
+                                } else {
+                                    Some(nt.clone())
+                                };
+                            }
+                            captured = Some((snapshot, obj.clone()));
+                        }
+                        if let Some((snapshot, mut after)) = captured {
+                            // P8-S2: a storey that moved drags every object
+                            // constrained to it — one command, one undo step.
+                            let is_storey =
+                                after.object_type == c::ObjectType::BuildingStorey as i32;
+                            let elevation_changed =
+                                is_storey && after.elevation != snapshot.object.elevation;
+                            let mut cascade = Vec::new();
+                            if elevation_changed {
+                                cascade = project.cascade_level_extents(&after.id);
+                            } else if after.bottom_level_id.is_some()
+                                && after.top_level_id.is_some()
+                            {
+                                if let Err(e) = project.resolve_level_extent(&after.id) {
+                                    eprintln!(
+                                        "[WARN] modify: level extent unresolved for {}: {}",
+                                        after.id, e
+                                    );
+                                }
+                                if let Some(refreshed) = project.objects.get(&after.id) {
+                                    after = refreshed.clone();
+                                }
+                            }
                             commands.push(Command::ModifyObject {
                                 object_id: mo.object_id.clone(),
                                 snapshot,
                                 after,
+                                cascade,
                             });
                         }
                     }
@@ -2025,6 +2153,8 @@ impl Executor {
                                         catalog_ref: None,
                                         elevation: None,
                                         level_id: None,
+                                        bottom_level_id: None,
+                                        top_level_id: None,
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -2125,6 +2255,8 @@ impl Executor {
                                         catalog_ref: None,
                                         elevation: None,
                                         level_id: None,
+                                        bottom_level_id: None,
+                                        top_level_id: None,
                                     };
                                     created_ids.push(object_id.clone());
                                     project.objects.insert(obj.clone());
@@ -3692,6 +3824,7 @@ impl Executor {
             Command::ModifyObject {
                 object_id,
                 snapshot,
+                cascade,
                 ..
             } => {
                 if let Some(obj) = project.objects.get_mut(object_id) {
@@ -3703,6 +3836,12 @@ impl Executor {
                     obj.tags = snapshot.object.tags.clone();
                     obj.elevation = snapshot.object.elevation;
                     obj.level_id = snapshot.object.level_id.clone();
+                    obj.bottom_level_id = snapshot.object.bottom_level_id.clone();
+                    obj.top_level_id = snapshot.object.top_level_id.clone();
+                }
+                // P8-S2: restore every cascaded object from its before-image.
+                for change in cascade {
+                    project.objects.insert(change.before.clone());
                 }
                 format!("undo: restored object {}", &object_id[..8])
             }
@@ -4490,7 +4629,10 @@ impl Executor {
                 format!("redo: deleted object {}", &snapshot.object.id[..8])
             }
             Command::ModifyObject {
-                object_id, after, ..
+                object_id,
+                after,
+                cascade,
+                ..
             } => {
                 if let Some(obj) = project.objects.get_mut(object_id) {
                     obj.name = after.name.clone();
@@ -4501,6 +4643,12 @@ impl Executor {
                     obj.tags = after.tags.clone();
                     obj.elevation = after.elevation;
                     obj.level_id = after.level_id.clone();
+                    obj.bottom_level_id = after.bottom_level_id.clone();
+                    obj.top_level_id = after.top_level_id.clone();
+                }
+                // P8-S2: replay the cascaded after-images.
+                for change in cascade {
+                    project.objects.insert(change.after.clone());
                 }
                 format!("redo: modify object {}", &object_id[..8])
             }
@@ -5621,6 +5769,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         };
 
@@ -5738,6 +5888,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
 
@@ -5910,6 +6062,8 @@ mod tests {
                     parent_id: String::new(),
                     elevation: None,
                     level_id: None,
+                    bottom_level_id: None,
+                    top_level_id: None,
                 })),
             });
             exe.execute(&instr, &mut proj);
@@ -5949,6 +6103,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
         exe.execute(&instr, &mut proj);
@@ -5988,6 +6144,8 @@ mod tests {
                     parent_id: String::new(),
                     elevation: None,
                     level_id: None,
+                    bottom_level_id: None,
+                    top_level_id: None,
                 })),
             });
             exe.execute(&instr, &mut proj);
@@ -6018,6 +6176,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         };
         // Attach geometry directly after creation via ModifyObject
@@ -6043,6 +6203,8 @@ mod tests {
                 new_description: None,
                 new_elevation: None,
                 new_level_id: None,
+                new_bottom_level_id: None,
+                new_top_level_id: None,
                 new_geometry: Some(c::ParametricGeometry {
                     operations: vec![
                         c::ParametricOperation {
@@ -6090,6 +6252,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
 
@@ -6120,6 +6284,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
         let r = exe.execute(&instr, &mut proj);
@@ -6137,6 +6303,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
         let r = exe.execute(&instr, &mut proj);
@@ -6162,6 +6330,8 @@ mod tests {
                 parent_id: String::new(),
                 elevation: None,
                 level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
             })),
         });
         exe.execute(&instr, &mut proj);

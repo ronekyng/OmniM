@@ -22,6 +22,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Level-driven vertical extent (P8-S2)
+
+### Added
+- **`bottom_level_id` / `top_level_id`** on `OmniObject` (both-or-neither): the base resolves to the bottom storey's elevation and, for path-driven (`PathSweep`) geometry, the path base shifts onto that level and the sweep height becomes `top − bottom`. Top must be above bottom; a storey without an elevation counts as 0 m.
+- **Storey-elevation cascade**: changing a storey's `elevation` re-resolves every constrained object inside **one undo step** (`Command::ModifyObject.cascade` carries before/after images; redo is symmetric).
+- API: `POST`/`PUT /api/objects` accept the extent refs; the `layered` genrule variant validates them **before** instantiating (no orphan objects on rejection).
+- Deleting a storey still referenced by `level_id`/`bottom_level_id`/`top_level_id` is rejected with **400** ("detach them first").
+
+### Fixed
+- **Layered genrule + selected series** no longer 400s with "series not supported for this type": the layered family always takes the path-driven template route and carries the series id as metadata.
+
+### Still open
+- Plain-geometry objects receive the `elevation` datum only (mesh not rewritten); catalog `Component` (Extrude-feature) placements are not re-evaluated from level constraints yet. IFC export of the elevation value remains planned.
+
 ## [2026-10-29] — Building datum: storey elevation & grid (P8-S1)
 
 ### Added

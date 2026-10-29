@@ -88,10 +88,17 @@ All of these are undoable and persist by default.
 - **Explicit save**: `POST /api/project/save` flushes on demand and returns the
   path; it responds 400 when persistence is disabled.
 - **Object datum fields (P8-S1)**: `elevation`/`level_id` ride the normal
-  create/update object commands; the `ModifyObject` undo snapshot now covers
-  **every** modifiable field (this closed a Wave 1 gap where `ifc_class`/`tags`
+  create/update object commands; the `ModifyObject` undo snapshot covers
+  **every** modifiable field (closing a Wave 1 gap where `ifc_class`/`tags`
   edits were not restored) and redo replays the after-image. `POST /api/objects`
   returns **400 with the validator's reason** (previously a bare 500).
+- **Level-driven extent cascade (P8-S2)**: changing a storey's `elevation`
+  re-resolves every object constrained to it and stores the affected before/after
+  images inside the same `Command::ModifyObject` (`cascade`) — **one request, one
+  undo step**, redo symmetric. `DELETE /api/objects/{id}` rejects deleting a
+  storey still referenced by `level_id`/`bottom_level_id`/`top_level_id` (400).
+  The `layered` genrule validates the level pair **before** instantiating, so a
+  rejected pair cannot leave an orphan object.
 
 ## Verification
 

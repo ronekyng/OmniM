@@ -29,7 +29,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 
 | 对象类型 | 创成分类 | UI 可创建？ | 参数/系列 | 移动/变换 | 宿主/洞口 | 连接 | 测量 | 剖切 | 碰撞 | 工程量 | 出图 | IFC 导入/导出 | Proto 状态 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **墙体 Wall** | 面（panel；按矩阵可授权 region/体/线） | ✅ 创建面板或 建筑 → 墙体；Path 开放，≥2 点，回车 | ✅ LayerEditor 图层按 mm；系列可选 | ✅* | ✅ 可宿主门/窗 | 🔀 仅 API | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcWall） | ✅ |
+| **墙体 Wall** | 面（panel；按矩阵可授权 region/体/线） | ✅ 创建面板或 建筑 → 墙体；Path 开放，≥2 点，回车 | ✅ LayerEditor 图层按 mm；系列可选；竖向范围经 `bottom/top_level_id`（API，P8-S2 级联） | ✅* | ✅ 可宿主门/窗 | 🔀 仅 API | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcWall） | ✅ |
 | **楼板 Slab** | 面（region） | ✅ 建筑 → 楼板；Path 闭合，≥3 点 | ✅ LayerEditor 图层按 mm；系列可选 | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcSlab） | ✅ |
 | **屋顶 Roof** | 面（足迹 region 或两点剖面） | ✅ 建筑 → 屋顶；轮廓 / 坡屋面两种模式 | ✅ LayerEditor 图层按 mm | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / 🔀（导出为 proxy） | ✅ |
 | **楼面 Floor** | 面（region） | ❌ 菜单无入口；仅 `/api/genrule` 的 `mode:"floor"` | ✅ 通过 API 使用 mm 图层 | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ❌ / 🔀（导出为 proxy） | ✅ |
@@ -100,7 +100,7 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | **场地 Site** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSite） | ✅ |
 | **建筑 Building** | —（容器） | ✅ 创建面板对象类型列表 | 🔀 仅名称/IFC 类 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuilding） | ✅ |
-| **楼层 BuildingStorey** | —（容器） | ✅ 创建面板（"storey"）；标高输入（P8-S1） | ✅ 基准标高 `elevation`（米，IfcBuildingStorey.Elevation）；🔀 `level_id` 挂接仅 API（`POST/PUT /api/objects`）；高度自动调整（`top/bottom_level_id`）🗓 计划中 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuildingStorey，标高值尚未导出） | ✅ |
+| **楼层 BuildingStorey** | —（容器） | ✅ 创建面板（"storey"）；标高输入（P8-S1） | ✅ 基准标高 `elevation`（米，IfcBuildingStorey.Elevation）；🔀 `level_id` 挂接仅 API（`POST/PUT /api/objects`）；竖向范围经 `bottom_level_id`/`top_level_id` ✅ 对路径驱动对象生效（单步级联，P8-S2），🔀 普通几何仅获得基准 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcBuildingStorey，标高值尚未导出） | ✅ |
 | **轴网 Grid（基准）** | —（基准注记，非对象） | ❌ 仅 API（`/api/grids`） | ✅ 标签/轴向/坐标 CRUD，同轴族标签唯一，可撤销 | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / 🗓（IfcGrid 计划中） | ✅ |
 | **空间 Space** | —（容器；基本体盒） | ✅ 创建面板 | 🔀 基本体尺寸 | — | — | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcSpace） | ✅ |
 | **分区 Zone** | —（计划中） | 🗓 | — | — | — | — | — | — | ❌ | ❌ | ❌ | ❌ / ❌ | 🗓 |

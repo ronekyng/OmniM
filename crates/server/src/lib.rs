@@ -339,6 +339,11 @@ struct CreateObjectRequest {
     /// Attach to a `BuildingStorey` datum (P8-S1).
     #[serde(default)]
     level_id: Option<String>,
+    /// Vertical-extent constraints (P8-S2, both-or-neither).
+    #[serde(default)]
+    bottom_level_id: Option<String>,
+    #[serde(default)]
+    top_level_id: Option<String>,
 }
 
 async fn create_object(
@@ -371,6 +376,8 @@ async fn create_object(
                 parent_id,
                 elevation: req.elevation,
                 level_id: req.level_id,
+                bottom_level_id: req.bottom_level_id,
+                top_level_id: req.top_level_id,
             })),
         }],
         validation: None,
@@ -439,6 +446,11 @@ struct UpdateObjectRequest {
     /// New level attachment; `""` clears it (P8-S1).
     #[serde(default)]
     level_id: Option<String>,
+    /// Vertical-extent constraints; `""` clears (P8-S2).
+    #[serde(default)]
+    bottom_level_id: Option<String>,
+    #[serde(default)]
+    top_level_id: Option<String>,
 }
 
 async fn update_object(
@@ -460,6 +472,8 @@ async fn update_object(
             req.tags,
             req.elevation,
             req.level_id,
+            req.bottom_level_id,
+            req.top_level_id,
         )],
     )
     .await?;
@@ -492,6 +506,8 @@ async fn update_properties(
         req.tags,
         None,
         None,
+        None,
+        None,
     )];
     if let Some(properties) = req.properties {
         for (name, value) in properties {
@@ -506,10 +522,32 @@ async fn update_properties(
 async fn delete_object(
     State(state): State<SharedState>,
     Path(id): Path<String>,
-) -> Result<(), StatusCode> {
+) -> Result<(), ApiError> {
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
-    let obj = p.objects.remove(&id).ok_or(StatusCode::NOT_FOUND)?;
+    if !p.objects.contains(&id) {
+        return Err(ApiError::not_found(format!("object '{}' not found", id)));
+    }
+    // P8-S2: deleting a storey that still anchors objects would leave
+    // dangling datum references — reject and ask the caller to detach them.
+    let referenced = p
+        .objects
+        .list()
+        .iter()
+        .filter(|o| {
+            o.id != id
+                && (o.level_id.as_deref() == Some(id.as_str())
+                    || o.bottom_level_id.as_deref() == Some(id.as_str())
+                    || o.top_level_id.as_deref() == Some(id.as_str()))
+        })
+        .count();
+    if referenced > 0 {
+        return Err(ApiError::bad_request(format!(
+            "object '{}' is a level referenced by {} object(s); detach them first",
+            id, referenced
+        )));
+    }
+    let obj = p.objects.remove(&id).expect("presence checked above");
     exe.record_delete(&obj);
     mutation::persist(&state.save_path, &p);
     Ok(())
@@ -1683,6 +1721,12 @@ enum GenRuleRequest {
         end_y: f64,
         #[serde(default)]
         end_z: f64,
+        /// P8-S2: level-driven vertical extent (both-or-neither). The object's
+        /// base resolves to the bottom storey, its sweep height to top − bottom.
+        #[serde(default)]
+        bottom_level_id: Option<String>,
+        #[serde(default)]
+        top_level_id: Option<String>,
     },
     /// Feature line (feature_line) / contour line (contour_line): a thin guide
     /// tube along an N-point alignment. Uses the LinearComponent engine.
@@ -1816,12 +1860,17 @@ async fn genrule_create(
         GenRuleRequest::Layered { series_id, .. } => series_id.as_deref(),
         _ => None,
     };
-    // If a series is explicitly selected, use the catalog/series path
-    if let Some(sid) = series_id {
-        if !sid.is_empty() {
-            let obj = genrule_create_catalog(&mut p, &req, sid, parent_id)?;
-            exe.record_create(&obj);
-            return Ok(Json(obj));
+    // If a series is explicitly selected, use the catalog/series path. The
+    // layered family is excluded: it has no series-catalog route (it always
+    // instantiates the path-driven feature-tree templates) and carries the
+    // series id as metadata only.
+    if !matches!(req, GenRuleRequest::Layered { .. }) {
+        if let Some(sid) = series_id {
+            if !sid.is_empty() {
+                let obj = genrule_create_catalog(&mut p, &req, sid, parent_id)?;
+                exe.record_create(&obj);
+                return Ok(Json(obj));
+            }
         }
     }
 
@@ -2126,6 +2175,8 @@ async fn genrule_create(
             end_x,
             end_y,
             end_z,
+            bottom_level_id,
+            top_level_id,
             ..
         } => {
             use omnim_model::gen_rule::layer_extrusion::{
@@ -2277,6 +2328,11 @@ async fn genrule_create(
                 return Ok(Json(obj.clone()));
             }
 
+            // P8-S2: validate the extent pair *before* instantiating so a bad
+            // reference cannot leave an orphan object behind.
+            p.validate_level_extent_refs(bottom_level_id.as_deref(), top_level_id.as_deref())
+                .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+
             // Path points (world metres, z preserved — B1 convention).
             let spec = open
                 .clone()
@@ -2301,25 +2357,45 @@ async fn genrule_create(
                     spec.closed,
                     layer_defs.clone(),
                     height_m,
-                    None,
+                    series_id,
                 )
                 .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-            let obj = p
-                .objects
-                .get_mut(&component_id)
-                .expect("domain object was just created");
-            if let Some(f) = form {
-                let cf =
-                    omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
-                obj.set_property("genesis_class", str_prop(cf.class.as_str()));
-                obj.set_property("genesis_form", str_prop(cf.form));
-            }
-            if let Some(pid) = parent_id {
-                if !pid.is_empty() {
-                    obj.parent_id = Some(pid.to_string());
+            {
+                let obj = p
+                    .objects
+                    .get_mut(&component_id)
+                    .expect("domain object was just created");
+                if let Some(f) = form {
+                    let cf = omnim_model::gen_rule::matrix::authorize(kind, f)
+                        .expect("authorized above");
+                    obj.set_property("genesis_class", str_prop(cf.class.as_str()));
+                    obj.set_property("genesis_form", str_prop(cf.form));
+                }
+                if let Some(pid) = parent_id {
+                    if !pid.is_empty() {
+                        obj.parent_id = Some(pid.to_string());
+                    }
+                }
+                // P8-S2: datum attachment + vertical-extent constraints
+                if let Some(b) = bottom_level_id {
+                    if !b.is_empty() {
+                        obj.bottom_level_id = Some(b.clone());
+                    }
+                }
+                if let Some(t) = top_level_id {
+                    if !t.is_empty() {
+                        obj.top_level_id = Some(t.clone());
+                    }
                 }
             }
-            obj.clone()
+            if p.has_level_extent(&component_id) {
+                p.resolve_level_extent(&component_id)
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+            p.objects
+                .get(&component_id)
+                .expect("domain object was just created")
+                .clone()
         }
         GenRuleRequest::Line {
             name,

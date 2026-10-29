@@ -22,6 +22,20 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 标高驱动竖向范围（P8-S2）
+
+### 新增（Added）
+- **`bottom_level_id` / `top_level_id`**（`OmniObject`，成对设置）：基高解析为底部楼层标高，并对路径驱动（`PathSweep`）几何把路径基高平移到该标高、扫掠高度置为 `top − bottom`；顶部须高于底部；无标高的楼层按 0 m 计。
+- **楼层标高级联**：修改楼层 `elevation` 会在**一步撤销**内重新解析所有受约束对象（`Command::ModifyObject.cascade` 携带 before/after 镜像；redo 对称）。
+- API：`POST`/`PUT /api/objects` 接受范围引用；`layered` genrule 变体在**创建前**校验（拒绝时不留孤儿对象）。
+- 删除仍被 `level_id`/`bottom_level_id`/`top_level_id` 引用的楼层返回 **400**（"先解除挂接"）。
+
+### 修复（Fixed）
+- **layered genrule + 选中系列**不再报 "series not supported for this type"：该族始终走路径驱动模板路径，系列 id 仅作元数据。
+
+### 仍未关闭
+- 普通几何对象仅获得 `elevation` 基准（网格不重写）；目录 `Component`（Extrude 特征）放置尚未按标高约束重新求值；IFC 导出标高值仍为计划项。
+
 ## [2026-10-29] — 建筑基准：楼层标高与轴网（P8-S1）
 
 ### 新增（Added）

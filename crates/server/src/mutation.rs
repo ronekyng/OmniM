@@ -177,6 +177,8 @@ pub fn op_modify_object(
     tags: Option<Vec<String>>,
     elevation: Option<f64>,
     level_id: Option<String>,
+    bottom_level_id: Option<String>,
+    top_level_id: Option<String>,
 ) -> c::Operation {
     c::Operation {
         op: Some(c::operation::Op::ModifyObject(c::ModifyObjectOperation {
@@ -188,6 +190,8 @@ pub fn op_modify_object(
             new_tags: tags.map(|tags| c::TagList { values: tags }),
             new_elevation: elevation,
             new_level_id: level_id,
+            new_bottom_level_id: bottom_level_id,
+            new_top_level_id: top_level_id,
         })),
     }
 }

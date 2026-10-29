@@ -115,7 +115,7 @@ curl -sS "$BASE/api/stats"
   `object_type` accepts (case-insensitive): `wall`, `slab`, `roof`, `floor`, `beam`, `column`, `door`, `window`, `road`, `pipe`, `duct`, `cabletray`, `tank`, `pump`, `valve`, `gear`, `part`, `assembly`, `component`. Unknown names cause the Omcom creation op to record an unspecified type — prefer a listed value. The request is routed through an internal Omcom `CreateObject` command (recorded for undo), then `ifc_class`, `tags`, and `parent_id` are applied afterwards. `elevation` is the datum height in metres (meaningful on `storey`, IfcBuildingStorey.Elevation); `level_id` attaches the object to an existing `BuildingStorey` and is validated (unknown id or non-storey target → `400` with the reason). Response: the created `OmniObject`; `400` with the validator's reason on validation failure, `500` only for internal errors.
 
 - `OmniObject` JSON shape (protobuf-derived): `{ id, name, description, object_type (int enum), status (int), properties[], property_sets[], geometry (Geometry or null), material_id, parent_id, tags[], ifc_class, features[], sketch_ids[], dirty, catalog_ref, elevation (number or null, P8-S1), level_id (string or null, P8-S1) }`.
-- `PUT /api/objects/{id}` body: `{ name?, description?, ifc_class?, tags?, elevation?, level_id? }` (`level_id: ""` clears the attachment) → empty success, `404` if not found. All fields are undo/redo covered (P8-S1 extended the `ModifyObject` snapshot to every modifiable field).
+- `PUT /api/objects/{id}` body: `{ name?, description?, ifc_class?, tags?, elevation?, level_id?, bottom_level_id?, top_level_id? }` (`""` clears an attachment; extent refs are both-or-neither) → empty success, `404` if not found. All fields are undo/redo covered (P8-S1 extended the `ModifyObject` snapshot to every modifiable field).
 - `PUT /api/objects/{id}/prop` body: `{ "name": "FireRating", "value": "2h" }` — values are stored as string `PropertyValue`s. → empty success, `404`.
 - `PUT /api/objects/{id}/properties` body: the `PUT /api/objects/{id}` shape plus `"properties": { "k": "v", ... }` (string→string map). Useful for one-shot sync from editors. → empty success.
 - `GET /api/object-types/{type}/properties` → `Vec<ObjectPropertyDef>`; unknown type → empty list.
@@ -200,6 +200,8 @@ curl -sS -X PUT "$BASE/api/objects/obj-1/material" -H 'Content-Type: application
   ```
 
   `type` is a free string (commonly `distance`, `area`, `angle`, `volume`); `color` defaults to `#44ff88`. Response: the created `Measurement` (`{ id, type, points, value, color, label }`). `DELETE` → empty success, `404` unknown id.
+
+- **Level-driven vertical extent (P8-S2).** Objects can carry `bottom_level_id` + `top_level_id` (`POST`/`PUT /api/objects`, and the `layered` genrule variant). Both-or-neither; each must reference a `BuildingStorey`; top’s elevation must be above bottom’s (a storey without elevation counts as 0 m). Resolution sets `elevation` to the bottom level and — for path-driven (`PathSweep`) geometry, the Wave-3 building family — shifts the path base and sets the sweep height to `top − bottom`. Plain box geometry receives the `elevation` datum only. Changing a storey’s `elevation` re-resolves every constrained object as **one undo step**. Deleting a storey still referenced by objects is rejected with `400` (detach first).
 
 ## Grid Datum
 
@@ -520,7 +522,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` (parented to the wall; boolean-subtracted opening from the wall bbox) |
   | `assembly` | `name`, `components[]` of `{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`, `parent_id?` |
-  | `layered` | `name`, `mode` (`wall\|slab\|roof\|floor`), `length`, `width`, `height`, `layers[]` of `{ name, thickness, material_id, function }`, `path` / `boundary` (see the path contract below), `start_*`/`end_*`, `parent_id?`, `series_id?` |
+  | `layered` | `name`, `mode` (`wall\|slab\|roof\|floor`), `length`, `width`, `height`, `layers[]` of `{ name, thickness, material_id, function }`, `path` / `boundary` (see the path contract below), `start_*`/`end_*`, `parent_id?`, `series_id?`, `bottom_level_id?`/`top_level_id?` (P8-S2 vertical extent — validated **before** creation, so an invalid pair cannot leave an orphan object; `series_id` is metadata only on this family) |
   | `line` | `name`, `path` / `alignment` (see the path contract below, ≥ 2 points), `diameter`, `parent_id?` — generates a thin guide tube (`FeatureLine`) |
 
   **Path contract (2026-10-28, DATA_MODEL §1).** Path-shaped inputs accept the
