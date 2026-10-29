@@ -226,6 +226,8 @@ Object
 
 - [Documentation Portal](docs/README.md) - Full documentation index by role ([中文](docs/README.zh-CN.md))
 - [Platform Architecture](docs/architecture/PLATFORM_ARCH.md) - Current implementation ([中文](docs/architecture/PLATFORM_ARCH.zh-CN.md))
+- [Frontend PRD & UI Contracts](docs/product/PRD_FRONTEND.md) - 96 requirements, shell, design system, interaction, data integrity ([中文](docs/product/PRD_FRONTEND.zh-CN.md))
+- [Frontend Maturity](docs/status/FRONTEND_MATURITY.md) - ISO/IEC 25010 scorecard and the honest distance to commercial ([中文](docs/status/FRONTEND_MATURITY.zh-CN.md))
 - [Data Flow](docs/architecture/DATA_FLOW.md) - End-to-end flows ([中文](docs/architecture/DATA_FLOW.zh-CN.md))
 - [Write Paths](docs/architecture/WRITE_PATHS.md) - Per-endpoint save/undo snapshot ([中文](docs/architecture/WRITE_PATHS.zh-CN.md))
 - [Decision Records](docs/architecture/DECISIONS.md) - Architecture decision log ([中文](docs/architecture/DECISIONS.zh-CN.md))

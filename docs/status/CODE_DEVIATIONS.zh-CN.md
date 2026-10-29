@@ -1,9 +1,9 @@
 ---
 title: "代码与文档模型的偏差（Code-Level Deviations）"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
-evidence: "audited against code 2026-10-27"
+evidence: "2026-10-27 对照代码审计；§7 于 2026-10-29 审计"
 ---
 # 代码与文档模型的偏差（Code-Level Deviations）
 
@@ -13,7 +13,7 @@ evidence: "audited against code 2026-10-27"
 
 ## 1. 4 类构件分类（面 / 线 / 点 / 体）— **RESOLVED**（2026-08-11）
 
-**文档模型**（见 `DATA_MODEL.md §1`、`GLOSSARY.md §17`、`DOMAINS.md §7.1`、`PLATFORM_ARCH.md §3.1`）：
+**文档模型**（见 `DATA_MODEL.md §1`、`GLOSSARY.md §17`、`DOMAINS.md §7.1`、`PLATFORM_ARCH.md §3`）：
 
 | 类别 | 对象 | GenRule |
 |-------|---------|---------|
@@ -188,3 +188,27 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 - `ConnectorDef` 只有 `direction`，没有 `up`/基准轴，无法确定法兰螺栓孔或阀杆朝向（`proto/omnim.proto:506-518`）。
 
 ---
+
+## 7. 前端界面偏差 — **已知**（2026-10-29）
+
+2026-10-29 对照 `web/src` 审计。以下是 [`specification/ui/`](../specification/ui/IA_SHELL.zh-CN.md)
+中的界面契约与当前代码之间的差距。需求 ID 追溯到
+[REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md)。
+
+| # | 契约 / 预期 | 实际 | 证据 | 需求 |
+|---|---|---|---|---|
+| 7.1 | 属性面板停靠右侧 | 默认是覆盖视口的居中浮层 | `web/src/app/store/appStore.ts:89`（`panelMode: 'floating'`）、`styles.css` 的 `.floating-panel-overlay` | UI-SHL-03 |
+| 7.2 | 应用从项目首页启动，绝不隐式加载项目 | 工作区是唯一主路由；服务端会加载工作目录下的 `project.omnim` | `web/src/app/App.tsx` 路由、`crates/server/src/main.rs:50` | UI-DAT-01 |
+| 7.3 | 有显式保存（`Ctrl/Cmd+S`） | 没有保存控件，客户端对 `POST /api/project/save` 的调用为零 | `web/src/shared/api.ts`、工具栏 | UI-DAT-02 |
+| 7.4 | 每个面板都有加载/空/错误三态 | 多数面板只实现加载；错误以原始字符串呈现 | `web/src/app/panels/*` | UI-FBK-01 |
+| 7.5 | 破坏性操作使用共享弹窗族 | 五处 `window.confirm/alert/prompt` | `App.tsx`、`MainToolbar.tsx`、`ObjectTree.tsx` | UI-FBK-05 |
+| 7.6 | 面板失败被隔离 | 全仓无错误边界；一次渲染异常导致整页白屏 | `ErrorBoundary` / `componentDidCatch` 为零 | UI-FBK-06 |
+| 7.7 | 对象命名为 `Type-nnn` | 使用时间戳命名（`wall-${Date.now()}`）；52 处 `Date.now()` 调用，多数用于构造对象名 | `MainToolbar.tsx`、`DomainPanels.tsx` | UI-INT-09 |
+| 7.8 | 界面样式只用语义令牌 | `styles.css` 中 712 处硬编码颜色（全部 CSS 731 处）；令牌块在 `globals.css` 中重复 | `web/src/styles.css`、`web/src/globals.css` | UI-DS-01, UI-DS-04 |
+| 7.9 | 所有用户可见字符串外置 | 31 个文件 858 段中文，无 i18n 层；无主题 Provider | 源码扫描 | UI-I18N-01, UI-DS-02 |
+| 7.10 | 树与表暴露 role 与 ARIA 状态 | 1 个 `aria-*` 属性、0 个 `role` 属性 | 源码扫描 | UI-A11Y-04 |
+
+| 7.11 | 拾取会话中 `Delete` 被忽略 | `Delete` 仍删除当前选择；只有 `Backspace` 被特判 | `web/src/app/App.tsx:91-95` | UI-INT-02 |
+
+**为记录起见，以下不是偏差：** 拾取状态机、视口渲染质量（色调映射、软阴影、剖切、测量）
+以及目录/系列管理器均已实现，不受上述条目影响。

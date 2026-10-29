@@ -1,7 +1,7 @@
 ---
 title: "OmniM Glossary"
 status: reference
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/server, proto"
 evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
@@ -1108,3 +1108,31 @@ The cross-section interpolation method for `CrossSectionSegment`, extended from 
 | Genesis（创成） | 创成方式 | The per-instance creation method — its geometry class (Surface/Linear/Point/Body) + implementation family (GenRule) + form. Recorded on the object instance, never inferred from the object's semantic name. One ObjectType (e.g. Wall) may legally have several genesis classes (see Data Model §1 dual-axis model). |
 | Form（形态） | 形态 | A sub-variant within an implementation family, explicitly enumerated (LayerExtrusion: `panel`/`region`; roof: `footprint`/`extrusion-profile`). UI pick modes derive from the form. |
 | Authorization matrix（授权矩阵） | 授权矩阵 | Governance table keyed by `(objectType, genesis class/form)`: which creation methods are legal for which semantic names. Out-of-matrix genrule requests are rejected (400). See Data Model §1 "Governance". |
+
+## 27. UI Terms (Frontend)
+
+Terms used by the frontend contracts in [`specification/ui/`](../specification/ui/IA_SHELL.md).
+
+| Term | Meaning | Code / doc reference |
+|---|---|---|
+| **Dock** | Resizable, collapsible panel region attached to the shell (left, right, bottom) | `web/src/app/layout/AppLayout.tsx`; IA_SHELL §4 |
+| **Ribbon** | Contextual command strip showing only the active discipline's commands | IA_SHELL §3.3 |
+| **Status bar** | Read-only strip with coordinates, selection count, units, save state, frame rate | IA_SHELL §6 |
+| **Design token** | Named visual value (color, space, type, shadow) consumed by components | DESIGN_SYSTEM §2 |
+| **Semantic token** | Role-based token (`--surface-panel`) mapped per theme; components must use these | DESIGN_SYSTEM §2.1 |
+| **Panel registry** | Runtime registry of panels with position, order, visibility, and tab metadata | `web/src/app/panels/PanelRegistry.tsx` |
+| **Dirty state** | Project has changes not yet written to the user's target file | DATA_INTEGRITY §3 |
+| **Project home** | Entry screen with new/open/recent/sample; no viewport | IA_SHELL §2.1 |
+| **Pick session** | State machine `idle → configuring → picking → creating → done/error` | `web/src/shared/creation/stateMachine.ts` |
+| **Storey view** | Filter showing only one building storey | `web/src/shared/storeyView.ts` |
+| **Toast** | Transient, typed notification that does not steal focus | FEEDBACK_ERRORS §8 |
+| **Command palette** | Fuzzy command search opened with `Ctrl/Cmd+K` | IA_SHELL §8 |
+| **Visual regression** | Screenshot comparison against a committed baseline | TESTING (Web Tests) |
+| **A11Y** | Accessibility; here WCAG 2.2 AA on critical paths | A11Y §1 |
+| **ACR / VPAT** | Accessibility Conformance Report / Voluntary Product Accessibility Template | A11Y §10 |
+| **RTM** | Requirements traceability matrix; here `REQUIREMENTS_REGISTER` | product/REQUIREMENTS_REGISTER |
+| **DoD** | Definition of Done: functional, UI, docs, test, release checklists | process/DEFINITION_OF_DONE |
+| **G0–G3** | Release gates: contract ready, alpha, beta, GA | status/RELEASE_READINESS §2 |
+| **On-demand rendering** | Render only when the scene or camera changes, keeping idle CPU near zero | PERFORMANCE §4.3 |
+| **Instancing** | Drawing many identical meshes with one draw call (`InstancedMesh`) | PERFORMANCE §4.2 |
+| **Pseudo-localization** | Synthetic locale (`en-XA`) that expands text to expose layout breakage | I18N_L10N §6 |

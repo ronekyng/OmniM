@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-10-28
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap phase.
 
-**Last updated: 2026-10-28**
+**Last updated: 2026-10-29**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-10-29] — Frontend documentation baseline (G0)
+
+### Added
+- **Product layer** (`docs/product/`): vision and scope, personas and five journeys, a 96-requirement PRD, and a requirements traceability register (RTM).
+- **UI contracts** (`docs/specification/ui/`): shell/IA, design system, interaction, feedback and errors, data integrity, accessibility, i18n, performance, compatibility, security, telemetry — 11 bilingual pairs.
+- **Truth layer**: `WEB_ARCHITECTURE` (current state with measured debt), `FRONTEND_MATURITY` (ISO/IEC 25010 scorecard, 1.7/5), `FRONTEND_BASELINE`, `RELEASE_READINESS` (G0–G3).
+- **Process layer**: definition of done, design operations, release and support checklist, and the G0 independent review record.
+- **Reference**: keyboard map and a stable `OMNI-*` error-code catalogue.
+- **Tooling**: `scripts/check_ui_contracts.py` (requirement IDs, keymap conflicts, error codes, debt metrics with `--strict`), `scripts/gen_keymap.py --check`; both plus `npm test` are now in CI. `check_docs.py` also validates front matter.
+
+### Changed
+- **Gate rebalance (O1):** six completeness requirements moved from G2 to G3 (`UI-DS-05/07/10`, `UI-A11Y-06/08`, `UI-I18N-05`); `UI-DS-08` retained at G2. Gate totals are now G1 25 · G2 37 · G3 34. Status totals remain ✅1 · 🔀17 · 📅78.
+- **Corrected claims**: 81 unique REST paths (was 79/83/"~120"), 731 hex + 61 rgb/hsl colour literals, 858 CJK runs across 31 files, 63 emoji occurrences, minimum supported width 1280×720 with 1024–1279 degraded, `FCP ≤1.2 s` separated from `FMP ≤2.5 s`.
+- **Fixed stale references**: `OmcomConsole.tsx` → `OmniPanel.tsx`, `CatalogBrowser.tsx` → `AvailableComponentsPanel.tsx`; `test-all.sh` no longer runs web tests twice.
+
+### Not implemented (known gaps)
+- Visual baseline screenshots, the performance reference machine, e2e/visual/a11y/perf suites, and English-literal detection in the string scan. Tracked as O3–O6 in the G0 review record.
 
 ## [2026-10-29] — Storey view + section link (P8-S4c)
 

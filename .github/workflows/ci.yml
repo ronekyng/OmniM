@@ -38,6 +38,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - run: npm test
       - run: npm run build
 
   docs:
@@ -49,6 +50,8 @@ jobs:
         with:
           python-version: "3.12"
       - run: python scripts/check_docs.py
+      - run: python scripts/check_ui_contracts.py
+      - run: python scripts/gen_keymap.py --check
       - run: python scripts/check_write_paths.py
 
   branch-guard:

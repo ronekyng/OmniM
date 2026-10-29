@@ -228,6 +228,8 @@ Object
 
 - [文档门户](docs/README.zh-CN.md) - 按角色索引的全部文档
 - [平台架构](docs/architecture/PLATFORM_ARCH.zh-CN.md) - 当前实现的分层架构
+- [前端 PRD 与界面契约](docs/product/PRD_FRONTEND.zh-CN.md) - 96 条前端需求、外壳、设计系统、交互、数据完整性（[English](docs/product/PRD_FRONTEND.md)）
+- [前端成熟度](docs/status/FRONTEND_MATURITY.zh-CN.md) - ISO/IEC 25010 评分与距商用的诚实距离（[English](docs/status/FRONTEND_MATURITY.md)）
 - [数据流](docs/architecture/DATA_FLOW.zh-CN.md) - 端到端数据流
 - [写入路径](docs/architecture/WRITE_PATHS.zh-CN.md) - 逐端点保存/撤销状态快照
 - [架构决策记录](docs/architecture/DECISIONS.zh-CN.md) - 关键技术决策记录

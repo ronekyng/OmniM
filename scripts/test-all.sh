@@ -12,10 +12,6 @@ python3 scripts/check_write_paths.py
 echo "[omnim] running Rust tests..."
 cargo test
 
-echo "[omnim] running web unit tests..."
-(cd web && npm test)
-
-
 if command -v node >/dev/null 2>&1; then
   if [ ! -d web/node_modules ]; then
     echo "[omnim] installing web dependencies..."

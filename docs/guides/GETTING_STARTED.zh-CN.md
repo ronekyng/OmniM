@@ -1,7 +1,7 @@
 ---
 title: "快速开始"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -106,6 +106,7 @@ Vite 开发服务器监听 **http://localhost:5173**，并把 `/api/*` 代理到
 - [TESTING.md](TESTING.md) — Rust 单元测试、服务器 API 集成测试、Web Vitest、`scripts/test-all.sh`。
 - `docs/architecture/PLATFORM_ARCH.md` — 长篇平台架构文档。
 - `README.md` — 项目愿景、三大核心层（元件库、系列库、Omcom）与路线图。
+- **前端产品化** — 界面是可用原型，还不是商用外壳。诚实评分见 [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md)，96 条需求见 [PRD_FRONTEND](../product/PRD_FRONTEND.zh-CN.md)，今天可用的快捷键见 [KEYBOARD_MAP](../reference/KEYBOARD_MAP.zh-CN.md)。当前应用直接进入工作区并加载 `$OMNIM_PROJECT`；项目首页是契约要求，尚未实现。
 
 ## 停止服务
 

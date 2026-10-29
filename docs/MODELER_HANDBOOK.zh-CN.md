@@ -1,7 +1,7 @@
 ---
 title: "OmniM 建模者手册"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,viewer}、docs/reference/API.zh-CN.md 与 docs/guides/GETTING_STARTED.zh-CN.md 核实，2026-10-27"
 ---
@@ -37,6 +37,11 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 - 视口工具栏有 **Toggle snap** 按钮（`IcoSnap`，提示 "Toggle snap"）。每次拾取与悬停端点都会经过 `snapPoint()`。
 - 默认：启用，网格 + 顶点 + 端点开启，边与中点关闭，阈值 **0.5 m**，网格 **1.0 m**。需要不同阈值可改 `web/src/app/components/viewer/three/Snapping.ts`。
 - 捕捉只是几何吸附：不会推断墙体、楼层或参数化关系。网格显示用 **G** 切换。
+
+### 1.5 界面外壳与快捷键
+- 当前构建直接进入工作区并加载 `$OMNIM_PROJECT`（默认 `project.omnim`）。带新建/打开/最近的项目首页是契约要求，尚未实现——见 [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.zh-CN.md) §2。
+- 属性面板当前以浮层覆盖视口打开；契约要求停靠右侧。见 [CODE_DEVIATIONS §7](status/CODE_DEVIATIONS.zh-CN.md)。
+- 今天已验证的快捷键：`W`/`E` 移动/旋转、`F` 适配、`H` 首页、`G` 网格、`O` 正交、`X` 坐标空间、`Del` 删除、`Enter` 完成拾取、`Backspace` 撤点、`Esc` 取消。完整列表：[KEYBOARD_MAP](reference/KEYBOARD_MAP.zh-CN.md)。
 
 ## 2. 建筑
 ### 2.1 创建墙体（默认 panel；可选 region）

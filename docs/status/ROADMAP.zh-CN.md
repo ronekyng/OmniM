@@ -1,7 +1,7 @@
 ---
 title: "OmniM 开发路线图"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -138,6 +138,25 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## Phase 7b：前端产品化 (2026 Q4 – 2027 Q1) — 🔄 契约已起草
+
+Phase 7 交付了可用的界面，但没有交付商用界面。Phase 7b 用四个波次、G0–G3 门禁，补齐"功能原型"与"可支持产品"之间的差距。
+
+| 波次 | 范围 | 门禁 | 需求 |
+|---|---|---|---|
+| A | 外壳、停靠、状态栏、双主题、图标与组件体系 | G1 → G2 | UI-SHL、UI-DS |
+| B | 项目首页、新建/打开/保存/另存为、脏状态、错误边界、弹窗、自动命名 | G1 | UI-DAT、UI-FBK、UI-INT |
+| C | 命令注册表、反馈三态、i18n、可访问性、撤销历史 | G2 | UI-INT、UI-I18N、UI-A11Y |
+| D | 按需渲染、实例化、虚拟化、e2e、视觉回归、CI 门禁 | G2 → G3 | UI-PRF、UI-CMP、UI-SEC、UI-TLM |
+
+**契约**：[PRD_FRONTEND](../product/PRD_FRONTEND.zh-CN.md) · [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md) · [IA_SHELL](../specification/ui/IA_SHELL.zh-CN.md) · [DESIGN_SYSTEM](../specification/ui/DESIGN_SYSTEM.zh-CN.md) · [INTERACTION](../specification/ui/INTERACTION.zh-CN.md) · [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md)
+
+**证据**：[FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md) 当前给前端 1.7/5；[FRONTEND_BASELINE](../status/FRONTEND_BASELINE.zh-CN.md) 记录"改前"测量；[RELEASE_READINESS](../status/RELEASE_READINESS.zh-CN.md) 跟踪门禁。
+
+**已知阻塞项**：属性面板浮动（UI-SHL-03）、无项目首页与 open/new 端点（UI-DAT-01）；`POST /api/project/save` 已存在但客户端从不调用（UI-DAT-02）、无错误边界（UI-FBK-06）、原生弹窗（UI-FBK-05）、时间戳命名（UI-INT-09）、731 hex + 61 rgb/hsl 颜色字面量（UI-DS-04）、无 i18n（UI-I18N-01）、无可访问性语义（UI-A11Y-04）。
+
+---
+
 ## Phase 8：领域扩展 & 生产级构件库 (2028 Q1-Q2) — 🔄 进行中
 
 **当前状态**：生产级目录数据已大量落地（钢型材按 EN 10365/GB/T 706，管道等级按 ASME B36.10，混凝土模板，带法兰等级的连接点定义）；材料映射到真实标准；构件通过 BRep 正确性检查验证。领域专项工作仍待完成：
@@ -165,7 +184,7 @@ evidence: "audited against code 2026-10-27"
 
 ## Phase 10：云服务器 & 协作 (2029) — 📅 计划中
 
-**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（去重后 79 条路由），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
+**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（81 条唯一路径），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
 
 **未实现** 📅：PostgreSQL + PostGIS 存储、版本历史/审计追踪（目前仅 JSON 文件保存）、WebSocket 实时通知、几何流式传输、客户端缓存层、多用户协作/冲突解决、在线状态、协作 UI。服务器中**没有任何 WebSocket**。
 
@@ -206,6 +225,7 @@ evidence: "audited against code 2026-10-27"
 
 在开发过程中记录的零散事项；按时机捡起，不排阶段：
 
+- **前端产品化（Frontend productization）** — 已排期为上文 **Phase 7b**，不是无排期技术债。契约集与基线：[PRD_FRONTEND](../product/PRD_FRONTEND.zh-CN.md)、[FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md)、[FRONTEND_BASELINE](../status/FRONTEND_BASELINE.zh-CN.md)、[RELEASE_READINESS](../status/RELEASE_READINESS.zh-CN.md)。
 - **恢复单一写入路径** — ✅ **2026-10-28 完成（Wave 1）**。55 个已迁移 handler 全部走 `mutation::apply` / `Executor`；直写端点 42 → 0，撤销/重做有端点级测试（`crates/server/tests/write_paths.rs`、`instantiate_import.rs`），`scripts/check_write_paths.py` 已接入 CI 强制执行。例外：`section_handler`（仅缓存刷新）、`import_ifc`（单条整项目命令）、`.omnimlib` 导入（全局 `LIBRARY`）。见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)。
 - **持久化策略** — ✅ **2026-10-28 完成（Wave 1）**。默认落盘（`project.omnim` / `$OMNIM_PROJECT`），`OMNIM_EPHEMERAL=1` 可关闭，保存为原子写，`POST /api/project/save` 可显式落盘。所有已迁移 handler 都会持久化；唯一不写项目的路径是 `.omnimlib` 导入到全局 `LIBRARY`。证据：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 - **收敛几何生成路径** — *2026-10-28 基本落地（Wave 3）*：genrule 的 layered 族实例化路径驱动特征树（`Wall-Path`/`Slab-Path`/`Floor-Path`/`Roof-Path` 模板，`FeatureType::PathSweep` → `gen_rule::path_sweep`），产出**领域对象类型**并携带 `catalog_ref`/`param_values`，与遗留内核共享实现（逐位 parity 测试）。剩余：矩形参数快速创建（`wall`/`slab` 变体）、屋顶两点坡向、目录 extrude 型 pipe/road 模板与 `LinearComponent` 引擎。证据：CODE_DEVIATIONS §6.3。
@@ -236,6 +256,7 @@ evidence: "audited against code 2026-10-27"
 | M5 | 2027 Q2 | 目录构件建模（20+ 构件） | ✅ |
 | M6 / M6b | 2027 Q3–Q4 | GenRule 重构、默认模板、Library/SeriesStore 基础设施 | ✅ |
 | M7 | 2027 Q4 | UI：工作台 + Library Manager + SeriesStore Manager | ✅ |
+| M7b | 2026 Q4–2027 Q1 | 前端产品化：外壳、项目生命周期、主题、i18n、性能、门禁（G0–G3） | 🔄 |
 | M8 | 2028 Q1–Q2 | 领域扩展 + 生产级构件库 | 🔄 |
 | M9 | 2028 Q3 | AMIR AI 编译 | 🔀 部分完成 |
 | M10 | 2029 | 云存储 + 协作 | 📅（已有 REST+JSON 文件服务器） |

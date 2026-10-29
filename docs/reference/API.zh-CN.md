@@ -1,13 +1,13 @@
 ---
 title: "OmniM REST API 参考"
 status: reference
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/server, proto"
 evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档通过审计该路由表生成；下列所有端点均可在该表中按相同顺序找到。服务器共暴露 **83 条路由**（去重后，2026-10-27 审计；2026-10-28 新增持久化端点 `/api/project/save`；2026-10-29 P8-S1 新增 4 条轴网基准端点）。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **81 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；82 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
 
 ## 目录
 
@@ -611,6 +611,26 @@ curl -sS -X POST "$BASE/api/amir/translate" -H 'Content-Type: application/json' 
 curl -sS -X POST "$BASE/api/amir/describe" -H 'Content-Type: application/json' \
   -d '{"object_ids":null,"format":"text"}'
 ```
+
+## 项目生命周期（计划中）
+
+界面契约需要项目级端点，目前尚不存在。契约见
+[DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md) §8，**今天未实现**。
+
+| 方法 | 路径 | 用途 | 状态 |
+|---|---|---|---|
+| GET | `/api/project` | 项目状态，扩展 `path`、`dirty`、`last_saved_at`、`schema_version` | 🔀 端点存在但无这些字段 |
+| POST | `/api/project/save` | 显式保存；返回路径与时间 | ✅ |
+| POST | `/api/project/new` | 创建并切换项目 | 📅 |
+| POST | `/api/project/open` | 按路径打开（限制在允许根目录） | 📅 |
+| POST | `/api/project/save-as` | 另存到新路径并更新会话 | 📅 |
+| GET | `/api/project/recent` | 最近项目并检查存在性 | 📅 |
+| GET | `/api/project/autosaves` | 当前项目的恢复快照 | 📅 |
+| POST | `/api/project/restore` | 恢复快照 | 📅 |
+
+> **安全边界：** 服务端没有鉴权。`/api/project/open` 与允许根目录规则
+> （[SECURITY_PRIVACY](../specification/ui/SECURITY_PRIVACY.zh-CN.md) §4）用于防止任意路径读取；
+> 服务绝不应暴露到不可信网络。
 
 ## 静态文件
 

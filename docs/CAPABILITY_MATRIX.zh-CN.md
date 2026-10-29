@@ -1,7 +1,7 @@
 ---
 title: "OmniM 能力矩阵"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、docs/status/FORMAT_COMPAT.md、docs/status/CODE_DEVIATIONS.md 与 crates/ifc/src/lib.rs 审计，2026-10-27"
 ---
@@ -24,6 +24,8 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 | — | 不适用于该对象或工作流 |
 | 🗓 | 仅计划：有设计条目，但没有 ObjectType/UI/API |
 | ✅* | 可用，但几何会被压平成 Mesh，参数化历史不再是权威来源 |
+
+> **界面质量不在此表跟踪。** 本矩阵回答*能创建什么*，不回答*界面好不好用*。外壳、主题、可访问性、i18n、性能与项目生命周期见 [FRONTEND_MATURITY](status/FRONTEND_MATURITY.zh-CN.md) 评分，契约见 [PRD_FRONTEND](product/PRD_FRONTEND.zh-CN.md)。
 
 ## 1. 建筑
 

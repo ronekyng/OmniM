@@ -1,7 +1,7 @@
 ---
 title: "OmniM — 当前架构"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/, web/"
 evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 ---
@@ -186,6 +186,10 @@ OmniM 刻意拥有**两个互不共享代码的独立渲染器**:
 | 原生查看器 | —(2026-10-27 删除:`omnim-renderer` 作为孤儿 crate 被移除;重启方案走 RFC) | — | — |
 
 两者的关键共性:**服务器只通过 REST 暴露几何;渲染完全在客户端、与服务器代码无关。**
+
+前端渲染契约还增加两条尚未实现的要求：**由主题派生的视口调色板**（深/浅场景配色，渲染代码中不写字面量）
+与**按需渲染**（空闲时不得持续 `requestAnimationFrame`）。契约见
+[DESIGN_SYSTEM §10](../specification/ui/DESIGN_SYSTEM.zh-CN.md) 与 [PERFORMANCE §4](../specification/ui/PERFORMANCE.zh-CN.md)。
 两个渲染器都不消费服务端栅格化;不存在服务端 GPU 流水线。
 
 ---

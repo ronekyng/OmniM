@@ -1,7 +1,7 @@
 ---
 title: "构建 OmniM"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -118,7 +118,10 @@ cd web && npm run dev   # 将 web/vite.config.ts 中的代理目标改为 :3100
 | `dev-server.sh` | 杀掉占用 `:3000` 的进程（fuser/lsof），`cargo build`，然后以 `OMNIM_PROJECT` 启动 `./target/debug/omnim`。 | 检测到时同时打印 `localhost` 与一条 **WSL2 eth0 IP**——WSL URL 仅在 WSL2 之下有意义。端口随 `OMNIM_PORT` 变化。 |
 | `dev-web.sh` | 加载 nvm（`use 24`），缺 `node_modules` 时 `npm install`，然后 `npm run dev`。 | Linux 下 `node` 不可用时退出并给出安装指引。服务端口 :5173。 |
 | `stop-server.sh` | 杀掉 `OMNIM_PORT`（默认 3000）上的进程，用 `ss` 报告端口状态。 | 无；可重复执行。 |
-| `test-all.sh` | 对整个工作区跑 `cargo test`，然后（有 node 时）在 `web/` 执行 `npm install && npm run build`。 | **不运行 Web 单元测试**——只做 Vite 构建。Web 测试需单独在 `web/` 跑 `npm run test`；见 [TESTING.md](TESTING.md)。 |
+| `test-all.sh` | 跑 `check_docs.py`、`check_write_paths.py`、`cargo test`，然后（有 node 时）在 `web/` 执行 `npm test && npm run build`。 | **不**运行 `check_ui_contracts.py` 或 `gen_keymap.py --check`。见 [TESTING.md](TESTING.md)。 |
+| `check_docs.py` | 校验相对链接、代码围栏、重复编号标题、front matter、中英标题对齐。 | 提交文档变更前运行；CI 中会执行。 |
+| `check_ui_contracts.py` | 校验需求 ID 唯一性、是否出现在 PRD、快捷键冲突、未知 `OMNI-*` 错误码；`--strict` 还会在契约债务超阈值时失败。 | 依赖 `docs/` 与 `web/src/`。 |
+| `gen_keymap.py` | `--check` 校验 [KEYBOARD_MAP](../reference/KEYBOARD_MAP.zh-CN.md) 与中英对齐；`--emit --write` 写出 `docs/reference/keymap.json`。 | 命令注册表落地前仅做一致性校验。 |
 
 ## 故障排查
 
@@ -127,5 +130,4 @@ cd web && npm run dev   # 将 web/vite.config.ts 中的代理目标改为 :3100
 - **项目数据没有持久化/没出现。** 默认已落盘到 `project.omnim` / `$OMNIM_PROJECT`；确认没有设置 `OMNIM_EPHEMERAL=1|true|yes`，并确认服务器工作目录指向你期望的文件。`.omnimlib` 导入属于库状态，不是项目状态。完整矩阵：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
 - **`~/.omnim/library.omnimlib` 文件损坏。** 解析失败会记录警告并静默使用种子目录；删除或修复该文件即可消除警告。
 - **WSL2 网络。** `dev-server.sh` 会打印 WSL2 eth0 IP；若 localhost 转发不生效，Windows 侧请使用该 URL。
-- **过时的 `scripts/update_roadmap.py`。** 它是一次性遗留，不属于任何构建/测试流程。忽略即可。
 - **Web 构建在 Node 上失败。** `dev-web.sh` 与 README 假设有 nvm；先 `nvm install --lts` 再重试。

@@ -1,7 +1,7 @@
 ---
 title: "OmniM 文档"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "verified against the docs tree 2026-10-27"
 ---
@@ -47,6 +47,24 @@ evidence: "verified against the docs tree 2026-10-27"
 - [领域映射](specification/DOMAINS.zh-CN.md) — 建筑/土木/工厂/机械对象分类树
 - [IFC 扩展策略](specification/IFC_EXTENSION.zh-CN.md) — IFC 兼容与扩展策略
 
+### 🎨 我想设计或产品化界面
+
+- [前端愿景与范围](product/VISION_SCOPE.zh-CN.md) — 定位、用户、非目标与成功指标（[English](product/VISION_SCOPE.md)）
+- [画像与旅程](product/PERSONAS_JOURNEYS.zh-CN.md) — 三类画像与五条端到端旅程（[English](product/PERSONAS_JOURNEYS.md)）
+- [前端 PRD](product/PRD_FRONTEND.zh-CN.md) — 11 个域、96 条带验收标准的需求（[English](product/PRD_FRONTEND.md)）
+- [需求登记册](product/REQUIREMENTS_REGISTER.zh-CN.md) — RTM：ID、契约、验证、门禁、状态（[English](product/REQUIREMENTS_REGISTER.md)）
+- [外壳与信息架构](specification/ui/IA_SHELL.zh-CN.md) · [设计系统](specification/ui/DESIGN_SYSTEM.zh-CN.md) · [交互](specification/ui/INTERACTION.zh-CN.md)
+- [反馈与错误](specification/ui/FEEDBACK_ERRORS.zh-CN.md) · [数据完整性](specification/ui/DATA_INTEGRITY.zh-CN.md) · [可访问性](specification/ui/A11Y.zh-CN.md) · [国际化](specification/ui/I18N_L10N.zh-CN.md) · [性能](specification/ui/PERFORMANCE.zh-CN.md)
+- [兼容性](specification/ui/COMPATIBILITY.zh-CN.md) · [安全与隐私](specification/ui/SECURITY_PRIVACY.zh-CN.md) · [遥测](specification/ui/TELEMETRY.zh-CN.md) — GA 范围契约
+- [完成定义](process/DEFINITION_OF_DONE.zh-CN.md) · [设计运营](process/DESIGN_OPS.zh-CN.md) · [本地化流程](guides/LOCALIZATION_WORKFLOW.zh-CN.md)
+- [发布与支持清单](process/RELEASE_CHECKLIST.zh-CN.md) — 发布说明、迁移、运行手册、已知问题（[English](process/RELEASE_CHECKLIST.md)）
+- [G0 评审记录（2026-10-29）](process/G0_REVIEW_2026-10-29.zh-CN.md) — 独立评审发现与处置（[English](process/G0_REVIEW_2026-10-29.md)）
+- [Web 架构现状](architecture/WEB_ARCHITECTURE.zh-CN.md) — 前端今天是什么样，附实测债务（[English](architecture/WEB_ARCHITECTURE.md)）
+- [前端成熟度](status/FRONTEND_MATURITY.zh-CN.md) · [基线](status/FRONTEND_BASELINE.zh-CN.md) · [发布就绪度](status/RELEASE_READINESS.zh-CN.md)
+- [快捷键表](reference/KEYBOARD_MAP.zh-CN.md) · [错误码](reference/ERROR_CODES.zh-CN.md)
+- [前端开发者指南](guides/FRONTEND_GUIDE.zh-CN.md) — 面板、命令、弹窗、令牌、字符串五条 recipe
+- [RFC-0002：界面外壳与设计系统](RFC/RFC-0002-ui-shell-and-design-system.zh-CN.md)
+
 ### 🔍 我要查 API 或术语
 - [REST API 参考](reference/API.zh-CN.md) — 全部服务端路由与 curl 示例
 - [Omcom 命令参考](reference/OMCOM_REFERENCE.zh-CN.md)
@@ -66,12 +84,15 @@ evidence: "verified against the docs tree 2026-10-27"
 
 ```
 docs/
+├── product/         # 为什么做、给谁做：愿景、画像、PRD、需求登记册
 ├── architecture/    # 已建成：当前架构、数据流、架构决策记录
 ├── guides/          # 如何运行、构建、测试、在代码库中导航
 ├── specification/   # 设计契约：数据模型、Omcom、AMIR、目录与系列库、领域
-├── reference/       # 查阅：REST API、命令参考、术语表
-├── status/          # 实况：路线图、格式矩阵、偏差记录、变更日志
-├── RFC/             # 开放设计提案（文本 DSL、存储模型）
+│   └── ui/          # 界面契约：外壳、设计系统、交互、可访问性、国际化、性能
+├── reference/       # 查阅：REST API、命令参考、快捷键表、错误码、术语表
+├── status/          # 实况：路线图、格式矩阵、前端成熟度、发布就绪度
+├── process/         # 治理：完成定义、设计运营
+├── RFC/             # 开放设计提案（文本 DSL、存储模型、界面外壳）
 └── research/        # 背景调研；不属于契约的一部分
 ```
 

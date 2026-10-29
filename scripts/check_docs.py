@@ -6,6 +6,8 @@ Checks (stdlib only):
   (b) code-fence parity per file (an even number of ``` lines)
   (c) duplicate numbered headings (## N. / ### N.M) within a file
   (d) English/Chinese heading-count and heading-number parity for X.md / X.zh-CN.md
+  (e) front matter on every contract/status/guide/reference doc: title, status,
+      last_updated, applies_to, evidence, with an allowed status value
 
 Exit code 1 if any check fails. The known glossary heading-count mismatch is
 skipped by default (use ``--strict-parity`` to include it); other known
@@ -28,6 +30,12 @@ DUP_RE = re.compile(r"^(#{2,3})\s+(\d+(?:\.\d+)*)\.?(?=\s|$)")
 FENCE_RE = re.compile(r"^\s*```")
 LINK_RE = re.compile(r"!?\[[^\]]*\]\(([^)\n]+)\)")
 IGNORED_PREFIXES = ("#", "http://", "https://", "mailto:", "tel:", "data:", "javascript:", "file:")
+FRONT_MATTER_DIRS = {
+    "product", "specification", "status", "architecture", "guides", "reference", "process", "RFC",
+}
+ALLOWED_STATUS = {"current", "design", "history", "research", "reference", "deprecated"}
+REQUIRED_FIELDS = ("title", "status", "last_updated", "applies_to", "evidence")
+DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # Known, pre-existing mismatch: the zh glossary has one extra UI-constraint
 # subsection that the English glossary does not. Do not hide new mismatches.
 KNOWN_PARITY_SKIPS = ("docs/reference/GLOSSARY*",)
@@ -77,6 +85,41 @@ def check_links(root: Path, path: Path, lines: list[str], failures: list[str]) -
             if not resolved.exists():
                 failures.append(f"{path.relative_to(root)}:{lineno}: broken link -> {match.group(1).strip()}")
                 count += 1
+    return count
+
+
+def check_front_matter(root: Path, path: Path, text: str, failures: list[str]) -> int:
+    rel_path = path.relative_to(root)
+    if rel_path.parent == Path("docs"):
+        pass  # docs root docs participate
+    elif rel_path.parts[0] != "docs" or len(rel_path.parts) < 3 or rel_path.parts[1] not in FRONT_MATTER_DIRS:
+        return 0
+    if not text.startswith("---\n"):
+        failures.append(f"{rel_path}: missing front matter")
+        return 1
+    end = text.find("\n---\n", 4)
+    if end < 0:
+        failures.append(f"{rel_path}: unterminated front matter")
+        return 1
+    block = text[4:end]
+    fields: dict[str, str] = {}
+    for line in block.splitlines():
+        if ":" in line:
+            key, _, value = line.partition(":")
+            fields[key.strip()] = value.strip().strip('"')
+    count = 0
+    for field in REQUIRED_FIELDS:
+        if not fields.get(field):
+            failures.append(f"{rel_path}: front matter missing {field}")
+            count += 1
+    status = fields.get("status")
+    if status and status not in ALLOWED_STATUS:
+        failures.append(f"{rel_path}: invalid status {status!r}")
+        count += 1
+    updated = fields.get("last_updated")
+    if updated and not DATE_RE.match(updated):
+        failures.append(f"{rel_path}: last_updated must be YYYY-MM-DD (got {updated!r})")
+        count += 1
     return count
 
 
@@ -148,13 +191,14 @@ def main() -> int:
     patterns += [part for value in args.skip_parity for part in value.split(",") if part]
     files = sorted(docs.rglob("*.md"))
     failures: list[str] = []
-    broken = fences = duplicates = 0
+    broken = fences = duplicates = front_matter = 0
 
     for path in files:
         text = path.read_text(encoding="utf-8")
         broken += check_links(root, path, strip_code(text), failures)
         fences += check_fences(root, path, text, failures)
         duplicates += check_duplicate_headings(root, path, text, failures)
+        front_matter += check_front_matter(root, path, text, failures)
 
     parity_failed = 0
     parity_skipped = 0
@@ -196,6 +240,7 @@ def main() -> int:
     print(f"  broken relative links : {broken}")
     print(f"  fence-parity failures : {fences}")
     print(f"  duplicate numbered H  : {duplicates}")
+    print(f"  front-matter failures : {front_matter}")
     print(f"  en/zh pairs checked   : {pairs} (skipped: {parity_skipped})")
     if failures:
         print(f"\nFAIL ({len(failures)} issue(s)):")

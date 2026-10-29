@@ -1,7 +1,7 @@
 ---
 title: "Building OmniM"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -118,7 +118,10 @@ Scripts live in `scripts/` and all resolve paths relative to the repo root (`cd 
 | `dev-server.sh` | Kills anything on `:3000` (fuser/lsof), `cargo build`, then starts `./target/debug/omnim` with `OMNIM_PROJECT`. | Prints both `localhost` and a **WSL2 eth0 IP** line when it detects one — the WSL URL is only meaningful under WSL2. Port is `OMNIM_PORT`-aware. |
 | `dev-web.sh` | Sources nvm (`use 24`), `npm install` if `node_modules` missing, then `npm run dev`. | Exits with instructions if `node` is unavailable on Linux. Serves at :5173. |
 | `stop-server.sh` | Kills the process on `OMNIM_PORT` (default 3000) and reports port status via `ss`. | None; safe to repeat. |
-| `test-all.sh` | Runs `cargo test` for the whole workspace, then (if node exists) `npm install && npm run build` in `web/`. | **Does not run web unit tests** — just the Vite build. Run `npm run test` in `web/` separately; see [TESTING.md](TESTING.md). |
+| `test-all.sh` | Runs `check_docs.py`, `check_write_paths.py`, `cargo test`, then (if node exists) `npm test && npm run build` in `web/`. | Does **not** run `check_ui_contracts.py` or `gen_keymap.py --check`. See [TESTING.md](TESTING.md). |
+| `check_docs.py` | Validates relative links, code fences, duplicate numbered headings, front matter, and en/zh heading parity. | Run before committing documentation changes; runs in CI. |
+| `check_ui_contracts.py` | Validates requirement-ID uniqueness, PRD presence, keymap conflicts, and unknown `OMNI-*` error codes. `--strict` also fails when contract debt exceeds the recorded ceiling. | Requires `docs/` and `web/src/`. |
+| `gen_keymap.py` | `--check` validates [KEYBOARD_MAP](../reference/KEYBOARD_MAP.md) and en/zh parity; `--emit --write` writes `docs/reference/keymap.json`. | Consistency only until the command registry lands. |
 
 ## Troubleshooting
 
@@ -127,5 +130,4 @@ Scripts live in `scripts/` and all resolve paths relative to the repo root (`cd 
 - **Project data didn't persist / reappear.** Defaults persist to `project.omnim` / `$OMNIM_PROJECT`; check that `OMNIM_EPHEMERAL` is not `1`/`true`/`yes` and that the server CWD points at the file you expect. `.omnimlib` imports are library state, not project state. Full matrix: [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
 - **Bad library file at `~/.omnim/library.omnimlib`.** A parse failure logs a warning and silently uses the seeded catalog; delete or fix the file to stop the warning.
 - **WSL2 networking.** `dev-server.sh` prints a WSL2 eth0 IP; from Windows use that URL instead of localhost if localhost forwarding doesn't work.
-- **Stale `scripts/update_roadmap.py`.** It's a one-off, left in place; not part of any build/test flow. Ignore it.
 - **web build fails on Node.** `dev-web.sh` and the README assume nvm; `nvm install --lts` then retry.

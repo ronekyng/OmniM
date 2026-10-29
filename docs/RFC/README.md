@@ -15,6 +15,7 @@ RFC (Request for Comments) documents are used to discuss major design changes in
 | --- | ----- | ------ |
 | [RFC-0001](RFC-0001-omcom-text-dsl.md) | Omcom Text DSL (nom-based text grammar) | **Draft** — the definitive design for the Omcom text language; the in-product console currently executes JSON commands only |
 | [STORAGE_MODEL.md](STORAGE_MODEL.md) | Storage model design proposal | **Proposed / 未采纳** — moved here from `docs/` (repo-root docs) as a design proposal; not implemented (current persistence is JSON-file `.omnim`) |
+| [RFC-0002](RFC-0002-ui-shell-and-design-system.md) | UI shell and design system (docked shell, dual themes, requirement traceability) | **Draft** — contracts exist in `specification/ui/`; implementation not started |
 
 ## Scope
 

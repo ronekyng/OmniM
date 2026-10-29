@@ -1,7 +1,7 @@
 ---
 title: "OmniM Capability Matrix"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "audited against docs/reference/API.md, docs/specification/DOMAINS.md, docs/status/FORMAT_COMPAT.md, docs/status/CODE_DEVIATIONS.md and crates/ifc/src/lib.rs 2026-10-27"
 ---
@@ -24,6 +24,8 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 | — | Not applicable to this object or workflow |
 | 🗓 | Planned-only: design listed, no ObjectType/UI/API |
 | ✅* | Works, but the geometry is flattened to a Mesh and the parametric history is no longer authoritative |
+
+> **UI quality is not tracked here.** This matrix answers *what can be created*, not *how good the interface is*. Shell, theming, accessibility, i18n, performance, and project lifecycle are scored in [FRONTEND_MATURITY](status/FRONTEND_MATURITY.md) and specified in [PRD_FRONTEND](product/PRD_FRONTEND.md).
 
 ## 1. Building
 

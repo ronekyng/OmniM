@@ -1,7 +1,7 @@
 ---
 title: "OmniM 术语表 (Glossary)"
 status: reference
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/server, proto"
 evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
@@ -1115,3 +1115,31 @@ Project 中的对象，带缓存几何、特征历史、
 | 创成方式 | Genesis | 实例级的创建方式——其几何分类（面/线/点/体）+ 实现家族（GenRule）+ 形态。记录在对象实例上，从不由对象语义名推导。一个 ObjectType（如 Wall）可合法拥有多个创成分类（见数据模型 §1 双轴模型）。 |
 | 形态 | Form | 实现家族内的子变体，显式枚举（LayerExtrusion：`panel`/`region`；屋顶：`footprint`/`extrusion-profile`）。UI 拾取模式由形态推导。 |
 | 授权矩阵 | Authorization matrix | 以 `(objectType, 创成分类/形态)` 为键的治理表：哪些创建方式对哪些语义名合法。矩阵外的 genrule 请求被拒绝（400）。见数据模型 §1 治理规则。 |
+
+## 27. 界面术语（前端）
+
+[`specification/ui/`](../specification/ui/IA_SHELL.zh-CN.md) 中界面契约使用的术语。
+
+| 术语 | 含义 | 代码 / 文档引用 |
+|---|---|---|
+| **停靠（Dock）** | 附着在外壳上的可调宽、可折叠面板区域（左、右、底） | `web/src/app/layout/AppLayout.tsx`；IA_SHELL §4 |
+| **功能区（Ribbon）** | 只显示当前专业命令的上下文命令条 | IA_SHELL §3.3 |
+| **状态栏** | 只读条，显示坐标、选中数、单位、保存状态、帧率 | IA_SHELL §6 |
+| **设计令牌** | 有名称的视觉取值（颜色、间距、字体、阴影），供组件消费 | DESIGN_SYSTEM §2 |
+| **语义令牌** | 按角色命名的令牌（`--surface-panel`），按主题映射；组件必须使用 | DESIGN_SYSTEM §2.1 |
+| **面板注册表** | 运行时面板注册表，含位置、顺序、可见性与标签元数据 | `web/src/app/panels/PanelRegistry.tsx` |
+| **脏状态** | 项目有尚未写入用户目标文件的修改 | DATA_INTEGRITY §3 |
+| **项目首页** | 新建/打开/最近/示例的入口界面，无视口 | IA_SHELL §2.1 |
+| **拾取会话** | 状态机 `idle → configuring → picking → creating → done/error` | `web/src/shared/creation/stateMachine.ts` |
+| **楼层视图** | 只显示某一楼层的过滤视图 | `web/src/shared/storeyView.ts` |
+| **提示消息（Toast）** | 不抢焦点的瞬时分级通知 | FEEDBACK_ERRORS §8 |
+| **命令面板** | 用 `Ctrl/Cmd+K` 打开的模糊命令搜索 | IA_SHELL §8 |
+| **视觉回归** | 与已提交基线做截图比对 | TESTING（Web 测试） |
+| **A11Y** | 可访问性；此处指关键路径 WCAG 2.2 AA | A11Y §1 |
+| **ACR / VPAT** | 可访问性一致性报告 / 自愿产品可访问性模板 | A11Y §10 |
+| **RTM** | 需求追溯矩阵；此处为 `REQUIREMENTS_REGISTER` | product/REQUIREMENTS_REGISTER |
+| **DoD** | 完成定义：功能、界面、文档、测试、发布清单 | process/DEFINITION_OF_DONE |
+| **G0–G3** | 发布门禁：契约就绪、Alpha、Beta、GA | status/RELEASE_READINESS §2 |
+| **按需渲染** | 只在场景或相机变化时渲染，使空闲 CPU 接近零 | PERFORMANCE §4.3 |
+| **实例化** | 用一次绘制调用画出多个相同网格（`InstancedMesh`） | PERFORMANCE §4.2 |
+| **伪本地化** | 用合成语言（`en-XA`）扩长文本以暴露布局问题 | I18N_L10N §6 |

@@ -1,7 +1,7 @@
 ---
 title: "Architecture Map"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -32,10 +32,10 @@ A developer's map of the OmniM workspace: what each crate is responsible for, ho
 - This is the front of the sketch → constraint → feature → BRep pipeline used by both part modeling and catalog definitions.
 
 ### `crates/omcom` — the Omcom DSL
-- `lib.rs` (~3.6k LOC, a single file): the interpreter for the **Omcom** text command language. Every mutation path — console input, REST `/api/omcom`, AI-generated commands — funnels into `omnim_omcom::execute` style entry points which mutate the project and library. This is the "one command language" at the heart of README's design.
+- `lib.rs` (6,969 LOC, a single file): the interpreter for the **Omcom** text command language. Every mutation path — console input, REST `/api/omcom`, AI-generated commands — funnels into `omnim_omcom::execute` style entry points which mutate the project and library. This is the "one command language" at the heart of README's design.
 
 ### `crates/server` — `omnim-server`
-- `lib.rs` (~3.6k LOC): all Axum routes and handlers. REST surface spans objects/properties/materials/measurements/lifecycle/administrative/breakdown/omcom/mesh/sketches/components/catalog/series/AMIR/undo-redo/IFC import-export — about 120 routes under `/api/*`.
+- `lib.rs` (5,887 LOC): all Axum routes and handlers. REST surface spans objects/properties/materials/measurements/lifecycle/administrative/breakdown/omcom/mesh/sketches/components/catalog/series/AMIR/undo-redo/IFC import-export — 81 unique paths under `/api/*`.
 - `main.rs`: the `omnim` binary — env resolution (`OMNIM_PROJECT`/`OMNIM_HOST`/`OMNIM_PORT`), library init, shared `Arc<RwLock<Project>>`.
 - Depends on model, omcom, sketch, ifc, amir, core.
 
@@ -49,11 +49,12 @@ A developer's map of the OmniM workspace: what each crate is responsible for, ho
 - LLM providers in `llm/`: `mock.rs`, `openai.rs`, `anthropic.rs` behind a `Provider` trait. `AMIR_PROVIDER=mock` is keyless and links intent → Omcom deterministically.
 
 ### `web/` — frontend
-- React 19 + Vite + three.js + zustand + react-query + react-router.
-- `web/src/app/` — application shell: `App.tsx`, `panels/` (panel registry + object tree/properties/domains panels), `components/` (ThreeViewer, ObjectTree, OmcomConsole, AiChat, CatalogBrowser, SeriesBrowser, …), `store/`, `layout/`, `context/`.
-- `web/src/shared/` — `api.ts` (typed REST client), `types.ts`, `queries.ts`, geometry helpers.
-- `web/src/sketch/`, `web/src/library/`, `web/src/series/` — catalog component editor, library manager page, series manager page.
-- Unit tests in `web/src/__tests__/` (Vitest).
+- React 19 + Vite + three.js 0.185 + zustand + react-query + react-router 7.
+- `web/src/app/` — application shell: `App.tsx` (routes, global shortcuts), `layout/AppLayout.tsx`, `panels/` (panel registry, object tree, properties, domain panels), `components/` (`ThreeViewer`, `MainToolbar`, `OmniPanel`, `AiChat`, `ObjectTree`, `ObjectPropertiesPanel`, `AvailableComponentsPanel`, `GridPanel`, `create/`, `viewer/three/`), `store/appStore.ts`, `context/`.
+- `web/src/shared/` — `api.ts` (typed REST client), `types.ts`, `queries.ts`, `catalog.ts`, geometry and creation state-machine helpers.
+- `web/src/sketch/`, `web/src/library/`, `web/src/series/` — component editor (feature tree + 2D/3D sketch), library manager page, series manager page.
+- Unit tests in `web/src/__tests__/` (Vitest): 5 files, 79 tests.
+- UI contracts and debt: [WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) · [FRONTEND_GUIDE](FRONTEND_GUIDE.md) · [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md).
 
 ## Dependency Graph
 
@@ -91,7 +92,7 @@ graph TD
 1. `proto/omcom.proto` — extend `Operation` / add fields (also `proto/omnim.proto` for model-side types).
 2. `crates/core/build.rs` — no change usually; codegen picks up the proto automatically. Serde derives are already applied to all generated types.
 3. `crates/omcom/src/lib.rs` — implement the parse + execute branch for the new op.
-4. `web/src/shared/api.ts` and the Omcom console UI in `web/src/app/components/OmcomConsole.tsx` to surface it.
+4. `web/src/shared/api.ts` and the Omcom console UI in `web/src/app/components/OmniPanel.tsx` to surface it.
 
 **Adding a REST route**
 1. Add handler + `.route("/api/…", get/post/put/delete(...))` in `crates/server/src/lib.rs` (all routes registered in one `Router` chain).
@@ -101,12 +102,15 @@ graph TD
 **Adding a new component-catalog type**
 1. `crates/model/src/seed_catalog.rs` — add the seeded definition (params, connectors, template).
 2. `crates/model/src/catalog.rs` — types/logic if the data model needs new fields.
-3. If such a type appears in the browser UI, check `web/src/app/components/CatalogBrowser.tsx` mappings.
+3. If such a type appears in the browser UI, check `web/src/app/components/AvailableComponentsPanel.tsx` mappings.
 
 **Adding a new UI panel**
 1. Define the panel in `web/src/app/panels/PanelTypes.ts` and register it in `web/src/app/panels/PanelRegistry.tsx` / `defaultPanels.ts`.
 2. Implement content in `web/src/app/components/` (or DomainPanels inside `panels/DomainPanels.tsx`).
-3. Wired data flows through `web/src/shared/api.ts`.
+3. Wire data through `web/src/shared/api.ts`.
+4. Implement loading, empty, and error states ([FEEDBACK_ERRORS](../specification/ui/FEEDBACK_ERRORS.md) §3).
+5. Add a screenshot to the visual baseline and a verification row to the requirement register.
+6. Full recipes for panels, commands, dialogs, tokens, and strings: [FRONTEND_GUIDE](FRONTEND_GUIDE.md).
 
 **Adding a new sketch constraint or entity**
 - `crates/sketch/src/lib.rs` (types) and `crates/sketch/src/solver.rs` (mapping to `slvs`), then wire REST handlers in `crates/server/src/lib.rs` (`/api/sketches/...`) and the sketch editor in `web/src/sketch/`.

@@ -1,9 +1,9 @@
 ---
 title: "Code-Level Deviations from Documented Model"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
-evidence: "audited against code 2026-10-27"
+evidence: "audited against code 2026-10-27; §7 audited 2026-10-29"
 ---
 # Code-Level Deviations from Documented Model
 
@@ -11,7 +11,7 @@ This document lists places where the codebase deviates from the documented conce
 
 ## 1. 4-Class Component Taxonomy (Surface / Linear / Point / Body) — **RESOLVED** (2026-08-11)
 
-**Documented** (see `DATA_MODEL.md §1`, `GLOSSARY.md §17`, `DOMAINS.md §7.1`, `PLATFORM_ARCH.md §3.1`):
+**Documented** (see `DATA_MODEL.md §1`, `GLOSSARY.md §17`, `DOMAINS.md §7.1`, `PLATFORM_ARCH.md §3`):
 
 | Class | Objects | GenRule |
 |-------|---------|---------|
@@ -184,3 +184,28 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 - `instantiate_from_series()` only fills `ParamConstraint.default_value`; it does not enforce `min/max/fixed`, and it does **not apply** `SpecComponent.material` (`crates/model/src/project.rs:368-386`).
 - `Project::connect()` only checks that both objects exist; it does not validate connector points, type codes, bore, or pressure rating, and does not write `from_point`/`to_point` (`crates/model/src/project.rs:105-121`).
 - `ConnectorDef` has only `direction`; there is no `up`/axis, so flange bolt-hole or valve-stem orientation cannot be determined (`proto/omnim.proto:506-518`).
+
+## 7. Frontend UI Deviations — **Known** (2026-10-29)
+
+Audited against `web/src` on 2026-10-29. These are the gaps between the UI contracts in
+[`specification/ui/`](../specification/ui/IA_SHELL.md) and the code that exists today.
+Requirement IDs trace to [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md).
+
+| # | Contract / expectation | Actual | Evidence | Requirement |
+|---|---|---|---|---|
+| 7.1 | Properties panel docks on the right | Defaults to a centered floating overlay that covers the viewport | `web/src/app/store/appStore.ts:89` (`panelMode: 'floating'`), `.floating-panel-overlay` in `styles.css` | UI-SHL-03 |
+| 7.2 | The app starts at a project home and never loads a project implicitly | Workspace is the only main route; a `project.omnim` from the working directory is loaded by the server | `web/src/app/App.tsx` routes, `crates/server/src/main.rs:50` | UI-DAT-01 |
+| 7.3 | Explicit save (`Ctrl/Cmd+S`) exists | No save control and zero client calls to `POST /api/project/save` | `web/src/shared/api.ts`, toolbar | UI-DAT-02 |
+| 7.4 | Every panel has loading/empty/error states | Most panels implement loading only; errors surface as raw strings | `web/src/app/panels/*` | UI-FBK-01 |
+| 7.5 | Destructive actions use the shared dialog family | Five `window.confirm/alert/prompt` call sites | `App.tsx`, `MainToolbar.tsx`, `ObjectTree.tsx` | UI-FBK-05 |
+| 7.6 | A panel failure is isolated | No error boundary anywhere; a render exception blanks the app | zero `ErrorBoundary` / `componentDidCatch` | UI-FBK-06 |
+| 7.7 | Objects are named `Type-nnn` | Names are timestamps (`wall-${Date.now()}`); 52 `Date.now()` call sites, most used to build object names | `MainToolbar.tsx`, `DomainPanels.tsx` | UI-INT-09 |
+| 7.8 | UI styling uses semantic tokens only | 712 hardcoded colors in `styles.css` (731 across all CSS); the token block is duplicated in `globals.css` | `web/src/styles.css`, `web/src/globals.css` | UI-DS-01, UI-DS-04 |
+| 7.9 | All user-visible strings are externalized | 858 CJK runs across 31 files, no i18n layer; no theme provider | source scan | UI-I18N-01, UI-DS-02 |
+| 7.10 | Trees and tables expose roles and ARIA state | 1 `aria-*` attribute, 0 `role` attributes | source scan | UI-A11Y-04 |
+
+| 7.11 | `Delete` is ignored during a picking session | `Delete` deletes the current selection; only `Backspace` is special-cased | `web/src/app/App.tsx:91-95` | UI-INT-02 |
+
+**Not deviations, for the record:** the picking state machine, viewport rendering quality
+(tone mapping, soft shadows, sectioning, measurement), and the catalog/series managers are
+implemented and are not affected by the items above.

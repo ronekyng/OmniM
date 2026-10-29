@@ -1,7 +1,7 @@
 ---
 title: "OmniM Development Roadmap"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -138,6 +138,25 @@ Built-in catalog seed data + `instantiate_from_series()` in `crates/model/`; han
 
 ---
 
+## Phase 7b: Frontend Productization (2026 Q4 – 2027 Q1) — 🔄 Contracts drafted
+
+Phase 7 delivered a working UI; it did not deliver a commercial one. Phase 7b closes the gap between "feature prototype" and "supportable product" in four waves, gated G0–G3.
+
+| Wave | Scope | Gate | Requirements |
+|---|---|---|---|
+| A | Shell, docking, status bar, dual themes, icon and component system | G1 → G2 | UI-SHL, UI-DS |
+| B | Project home, new/open/save/save-as, dirty state, error boundaries, dialogs, auto-naming | G1 | UI-DAT, UI-FBK, UI-INT |
+| C | Command registry, feedback states, i18n, accessibility, undo history | G2 | UI-INT, UI-I18N, UI-A11Y |
+| D | On-demand rendering, instancing, virtualization, e2e, visual regression, CI gates | G2 → G3 | UI-PRF, UI-CMP, UI-SEC, UI-TLM |
+
+**Contracts**: [PRD_FRONTEND](../product/PRD_FRONTEND.md) · [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md) · [IA_SHELL](../specification/ui/IA_SHELL.md) · [DESIGN_SYSTEM](../specification/ui/DESIGN_SYSTEM.md) · [INTERACTION](../specification/ui/INTERACTION.md) · [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.md)
+
+**Evidence**: [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md) scores the frontend at 1.7/5 today; [FRONTEND_BASELINE](../status/FRONTEND_BASELINE.md) records the "before" measurements; [RELEASE_READINESS](../status/RELEASE_READINESS.md) tracks the gates.
+
+**Known blockers**: floating properties panel (UI-SHL-03), no project home and no open/new endpoints (UI-DAT-01); `POST /api/project/save` exists but the client never calls it (UI-DAT-02), no error boundary (UI-FBK-06), native dialogs (UI-FBK-05), timestamp naming (UI-INT-09), 731 hex + 61 rgb/hsl color literals (UI-DS-04), no i18n (UI-I18N-01), no accessibility semantics (UI-A11Y-04).
+
+---
+
 ## Phase 8: Domain Extensions & Production-Grade Components (2028 Q1-Q2) — 🔄 In progress
 
 **Current status**: production-grade catalog data largely landed (steel sections per EN 10365/GB/T 706, pipe schedules per ASME B36.10, concrete templates, connector definitions with flange ratings); material assignments mapped to real standards; components validated through BRep correctness checks. Domain-specific work remains:
@@ -165,7 +184,7 @@ Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN cove
 
 ## Phase 10: Cloud Server & Collaboration (2029) — 📅 Planned
 
-**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (79 deduplicated routes) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
+**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (81 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
 
 **Not implemented** 📅: PostgreSQL + PostGIS storage, version history / audit trail (currently only JSON file save), WebSocket real-time notifications, geometry streaming, client cache layers, multi-user collaboration/Conflict resolution, presence, collaboration UI. There is **no WebSocket anywhere in the server**.
 
@@ -206,6 +225,7 @@ Elbow / pipe routing: **delivered as an API slice (2026-10-29)** — `genrule: "
 
 Unplanned-widow items recorded during development; pick up opportunistically, no scheduled phase:
 
+- **Frontend productization（前端产品化）** — scheduled as **Phase 7b** above, not an unscheduled backlog item. Contract set and baseline: [PRD_FRONTEND](../product/PRD_FRONTEND.md), [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md), [FRONTEND_BASELINE](../status/FRONTEND_BASELINE.md), [RELEASE_READINESS](../status/RELEASE_READINESS.md).
 - **Restore the single write path（恢复单一写入路径）** — ✅ **DONE 2026-10-28 (Wave 1)**. All 55 migrated handlers route through `mutation::apply` / `Executor`; direct writes went 42 → 0, undo/redo coverage is endpoint-tested (`crates/server/tests/write_paths.rs`, `instantiate_import.rs`), and `scripts/check_write_paths.py` enforces the invariant in CI. Exceptions: `section_handler` (cache-only lock), `import_ifc` (single whole-project command), `.omnimlib` import (global `LIBRARY`). See [WRITE_PATHS](../architecture/WRITE_PATHS.md).
 - **Persistence policy（持久化策略）** — ✅ **DONE 2026-10-28 (Wave 1)**. Persistence defaults on (`project.omnim` / `$OMNIM_PROJECT`), `OMNIM_EPHEMERAL=1` disables it, saves are atomic, and `POST /api/project/save` flushes explicitly. Every migrated handler persists; the only non-project write left is `.omnimlib` import into the global `LIBRARY`. Evidence: [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
 - **Converge geometry generation（收敛几何生成路径）** — *mostly landed 2026-10-28 (Wave 3)*: the genrule layered family instantiates path-driven feature trees (`Wall-Path`/`Slab-Path`/`Floor-Path`/`Roof-Path` templates, `FeatureType::PathSweep` → `gen_rule::path_sweep`) and produces the **domain object type** with `catalog_ref`/`param_values`, sharing the legacy kernel (exact-mesh parity tests). Remaining: rect parameter quick-forms (`wall`/`slab` variants), roof 2-point profiles, and catalog extrude-based pipe/road templates vs the `LinearComponent` engine. Evidence: CODE_DEVIATIONS §6.3.
@@ -236,6 +256,7 @@ Unplanned-widow items recorded during development; pick up opportunistically, no
 | M5 | 2027 Q2 | Catalog component modeling (20+ components) | ✅ |
 | M6 / M6b | 2027 Q3–Q4 | GenRule refactor, default templates, Library/SeriesStore infra | ✅ |
 | M7 | 2027 Q4 | UI: Workspace + Library Manager + SeriesStore Manager | ✅ |
+| M7b | 2026 Q4–2027 Q1 | Frontend productization: shell, project lifecycle, themes, i18n, performance, gates (G0–G3) | 🔄 |
 | M8 | 2028 Q1–Q2 | Domain extensions + production-grade components | 🔄 |
 | M9 | 2028 Q3 | AMIR AI compilation | 🔀 Partial |
 | M10 | 2029 | Cloud storage + collaboration | 📅 (REST+JSON-file server exists) |

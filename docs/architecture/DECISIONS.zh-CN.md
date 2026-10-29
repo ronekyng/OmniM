@@ -1,7 +1,7 @@
 ---
 title: "OmniM — 架构决策记录(Architecture Decision Records)"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/, web/"
 evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 ---
@@ -42,6 +42,12 @@ evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 | [ADR-0004](#adr-0004-json-文件持久化单-project-rwlock) | JSON 文件持久化(单 Project,RwLock)及其已知局限 | Accepted |
 | [ADR-0005](#adr-0005-手写-ifc-解析器而非-ifc-crate) | 手写 IFC 解析器,而非 ifc crate | Accepted（含一条实现说明） |
 | [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator) | 所有变更路径统一走 Executor/Validator | Accepted — Implemented (2026-10-28) |
+| [ADR-0007](#adr-0007-双主题令牌分层) | 双主题令牌分层（原始 → 语义 → 组件） | Accepted（设计） |
+| [ADR-0008](#adr-0008-停靠式外壳优先于浮动面板) | 停靠式外壳优先于浮动面板 | Accepted（设计） |
+| [ADR-0009](#adr-0009-可扩展的面板注册表) | 可扩展的面板注册表（标签元数据） | Accepted（设计） |
+| [ADR-0010](#adr-0010-基于键的-i18n-与-icu) | 基于键的 i18n 与 ICU 格式化 | Accepted（设计） |
+| [ADR-0011](#adr-0011-单一命令注册表) | 单一命令注册表作为快捷键与菜单真值 | Accepted（设计） |
+| [ADR-0012](#adr-0012-界面契约的文档即代码) | 界面契约的文档即代码 | Accepted（设计） |
 
 ---
 
@@ -227,3 +233,76 @@ Wave 1 已恢复该不变量。所有变更 REST handler 现在构造 `OmniComma
 `import_ifc` 记录单条 `Command::ReplaceProject { before, after }`（整项目事务）；
 `POST /api/catalog/import` 修改的是会话级全局 `LIBRARY`（`.omnimlib` 批量导入），不是 `Project`。
 当前矩阵见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。
+
+
+### ADR-0007. 双主题令牌分层
+
+**状态**：Accepted（设计）——尚未实现。
+
+**背景**：`styles.css` 有 712 处硬编码颜色，令牌块在 `globals.css` 中重复。产品需要深色与浅色主题，但不能有两套视觉语言。
+
+**决策**：三层令牌（原始 → 语义 → 组件）。主题是 `<html>` 上 `[data-theme]` 对语义层的重定义。组件只能消费语义或组件令牌。3D 场景从同一主题派生的 `ViewerPalette` 取值。
+
+**后果**：一次性迁移约 4,000 行 CSS；扫描（`check_ui_contracts.py --tokens`）阻止字面量回流；高对比成为第三套语义映射，而不是第三套设计。
+
+**替代方案**：CSS-in-JS 主题（引入大依赖）；只做深色（否决：投影与打印需要浅色）。
+
+### ADR-0008. 停靠式外壳优先于浮动面板
+
+**状态**：Accepted（设计）——尚未实现。
+
+**背景**：属性面板默认是居中浮层（`appStore.ts:89`），选中对象就遮住视口。布局是组件局部状态，刷新即丢失。
+
+**决策**：七个固定区域，停靠与视口是兄弟关系，可调宽、可折叠。浮动模式保留为逃生通道。布局按用户存入 `localStorage`，绝不写入项目文件。
+
+**后果**：壳体重写必须先于面板美化；`layoutStore` 取代临时状态。
+
+**替代方案**：美化浮动面板（解决不了遮挡）；可拆浏览器窗口（超出范围）。
+
+### ADR-0009. 可扩展的面板注册表
+
+**状态**：Accepted（设计）——部分实现。
+
+**背景**：`PanelRegistry` 已能按位置与顺序注册面板，但没有标签、图标、默认宽度或持久化钩子。
+
+**决策**：为 `PanelRegistration` 增加 `icon`、`tabGroup`、`defaultWidth`、`minWidth`、`collapsible`、`keepMounted`，并保持既有注册向后兼容。
+
+**后果**：面板作者只声明一次意图；外壳负责标签、分隔条与恢复逻辑。
+
+**替代方案**：在外壳中硬编码面板（否决：阻挡领域面板）；插件 API（为时过早）。
+
+### ADR-0010. 基于键的 i18n 与 ICU
+
+**状态**：Accepted（设计）——尚未实现。
+
+**背景**：31 个文件中有 858 段内联中文；没有语言切换，也没有回退。
+
+**决策**：把所有用户可见字符串外置到按语言划分的词典，通过 `t(key)` 访问。复数、数字、日期与单位使用 ICU MessageFormat。默认 `zh-CN`，回退 `en-US`。
+
+**后果**：大规模机械迁移；扫描阻止新增字面量；伪本地化成为发布检查；对象名前缀按契约保持 ASCII。
+
+**替代方案**：运行时翻译（不可靠）；第三方 i18n 库（可以，但词典契约比库更重要）。
+
+### ADR-0011. 单一命令注册表
+
+**状态**：Accepted（设计）——尚未实现。
+
+**背景**：快捷键在 `App.tsx` 用 `switch` 处理，控制台、草图编辑器、对象树与 AI 面板各自实现按键处理。菜单、功能区、上下文菜单重复实现可用性判断。
+
+**决策**：一个注册表定义命令（`id`、`labelKey`、`group`、`shortcut`、`enabled`、`run`）。菜单、功能区、命令面板、上下文菜单都从它渲染。KEYBOARD_MAP 镜像它并在 CI 校验。
+
+**后果**：文档无法静默漂移；加载时即可发现冲突；草图编辑器必须迁移到同一注册表。
+
+**替代方案**：组件各自监听（当前状态，易漂移）；第三方热键库（仍然需要命令模型）。
+
+### ADR-0012. 界面契约的文档即代码
+
+**状态**：Accepted（设计）——部分实现。
+
+**背景**：此前的文档描述过不存在的功能（见 2026-10-27 审计），并引用过已删除的文件。
+
+**决策**：每条界面需求都有 ID、契约锚点、验证物、门禁与状态。`check_docs.py` 强制结构与双语对齐；`check_ui_contracts.py` 强制 ID 与债务规则；`gen_keymap.py --check` 强制快捷键表一致。
+
+**后果**：CI 成为文档真值的仲裁者；新增需求有固定成本；债务计数可见且必须下降。
+
+**替代方案**：仅靠评审纪律的散文文档（已经失败过一次）。

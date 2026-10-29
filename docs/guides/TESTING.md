@@ -1,7 +1,7 @@
 ---
 title: "Testing Guide"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -86,7 +86,23 @@ npm run test:watch    # or: npx vitest
 
 Existing tests live in `web/src/__tests__/` (`stateMachine.test.ts` covers the creation-tool / interaction state machine used by the viewer). Vitest matches files like `__tests__/*.test.ts` by default.
 
-Note: **`scripts/test-all.sh` does not run web unit tests** — it only runs `cargo test` and then `npm install && npm run build` for the web app. To cover everything, run it *and* `cd web && npm run test`.
+**Verification layers** (target structure; only the unit layer exists today):
+
+| Layer | Location | Command | Gate | Status |
+|---|---|---|---|---|
+| Unit | `web/src/__tests__/` | `npm test` | G1 | ✅ 5 files / 79 tests |
+| Component | co-located `*.test.tsx` | `npm test` | G2 | 📅 |
+| E2E | `web/tests/e2e/` | `npm run e2e` | G1 | 📅 |
+| Visual regression | `web/tests/visual/` | `npm run visual` | G2 | 📅 |
+| Accessibility | `web/tests/a11y/` | `npm run a11y` | G2 | 📅 |
+| Performance | `web/tests/perf/` | `npm run perf` | G2 | 📅 |
+| Doc structure | `docs/` | `python3 scripts/check_docs.py` (links, fences, headings, front matter, bilingual parity) | G0 | ✅ |
+| UI contracts | `docs/`, `web/src/` | `python3 scripts/check_ui_contracts.py` | G0 | ✅ |
+| Keyboard map | `docs/reference/` | `python3 scripts/gen_keymap.py --check` | G2 | ✅ (consistency only) |
+
+The required paths and budgets are defined in [DEFINITION_OF_DONE](../process/DEFINITION_OF_DONE.md) §5 and [PERFORMANCE](../specification/ui/PERFORMANCE.md) §8. A test that cannot fail for the stated reason is not evidence.
+
+Note: `scripts/test-all.sh` runs `check_docs.py`, `check_write_paths.py`, `cargo test`, and (when node is available) `npm test && npm run build` in `web/`. It does **not** run `check_ui_contracts.py` or `gen_keymap.py --check`; run those separately until they are added to the script or CI.
 
 ## Known Flaky Tests
 

@@ -15,6 +15,7 @@ RFC（Request for Comments）文档用于讨论 OmniM 的重大设计变更。
 | --- | ----- | ------ |
 | [RFC-0001](RFC-0001-omcom-text-dsl.md) | Omcom 文本 DSL（基于 nom 的文本语法） | **Draft（草案）** — Omcom 文本语言的权威设计；产品内控制台目前仅执行 JSON 命令 |
 | [STORAGE_MODEL.md](STORAGE_MODEL.md) | 存储模型设计提案 | **Proposed / 未采纳** — 从仓库根 `docs/` 目录移入此处作为设计提案；未落地实现（当前持久化为 JSON 文件 `.omnim`） |
+| [RFC-0002](RFC-0002-ui-shell-and-design-system.zh-CN.md) | 界面外壳与设计系统（停靠外壳、双主题、需求追溯） | **草案** — 契约已在 `specification/ui/`；实现未开始 |
 
 ## 适用范围
 

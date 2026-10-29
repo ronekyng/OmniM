@@ -1,7 +1,7 @@
 ---
 title: "Getting Started"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -107,6 +107,7 @@ Once the app loads, try these in any order:
 - [TESTING.md](TESTING.md) — Rust unit tests, server API integration tests, web Vitest, and `scripts/test-all.sh`.
 - `docs/architecture/PLATFORM_ARCH.md` — the long-form platform architecture document.
 - `README.md` — project vision, the three core layers (Component Catalog, Series Library, Omcom), and roadmap.
+- **Frontend productization** — the UI is a working prototype, not yet a commercial shell. Read [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md) for the honest score, [PRD_FRONTEND](../product/PRD_FRONTEND.md) for the 96 requirements, and [KEYBOARD_MAP](../reference/KEYBOARD_MAP.md) for what works today. Today the app opens the workspace directly and loads `$OMNIM_PROJECT`; a project home is contractual but not implemented.
 
 ## Stopping Things
 

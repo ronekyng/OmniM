@@ -1,7 +1,7 @@
 ---
 title: "OmniM Modeler Handbook"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "task flows checked against web/src/app/components/{MainToolbar,create,viewer}, docs/reference/API.md and docs/guides/GETTING_STARTED.md 2026-10-27"
 ---
@@ -37,6 +37,11 @@ Rule of thumb: if you type a number into a catalog parameter panel, think **mm**
 - The viewport toolbar has a **Toggle snap** button (`IcoSnap`, title "Toggle snap"). Snapping is applied by `snapPoint()` on every pick and on the hover endpoint.
 - Defaults: enabled, grid + vertex + endpoint on, edge and midpoint off, threshold **0.5 m**, grid **1.0 m**. Change points in `web/src/app/components/viewer/three/Snapping.ts` if you need a different threshold.
 - Snapping is geometric only: it does not infer walls, levels or parametric relationships. Grid visibility is toggled with **G**.
+
+### 1.5 Interface shell and shortcuts
+- The current build opens the workspace directly and loads `$OMNIM_PROJECT` (default `project.omnim`). A project home with new/open/recent is contractual but not implemented — see [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.md) §2.
+- The properties panel currently opens as a floating overlay over the viewport; the contract docks it on the right. See [CODE_DEVIATIONS §7](status/CODE_DEVIATIONS.md).
+- Verified shortcuts today: `W`/`E` move/rotate, `F` fit, `H` home, `G` grid, `O` ortho, `X` space, `Del` delete, `Enter` finish picking, `Backspace` remove the last point, `Esc` cancel. Full reference: [KEYBOARD_MAP](reference/KEYBOARD_MAP.md).
 
 ## 2. Building
 ### 2.1 Create a wall (panel by default; region optional)

@@ -1,7 +1,7 @@
 ---
 title: "OmniM Documentation"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "verified against the docs tree 2026-10-27"
 ---
@@ -48,6 +48,24 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Domain Mapping](specification/DOMAINS.md) — Building / Civil / Plant / Mechanical object taxonomy ([中文](specification/DOMAINS.zh-CN.md))
 - [IFC Extension Strategy](specification/IFC_EXTENSION.md) — IFC compatibility policy ([中文](specification/IFC_EXTENSION.zh-CN.md))
 
+### 🎨 I want to design or productize the UI
+
+- [Frontend Vision & Scope](product/VISION_SCOPE.md) — positioning, users, non-goals, success metrics ([中文](product/VISION_SCOPE.zh-CN.md))
+- [Personas & Journeys](product/PERSONAS_JOURNEYS.md) — three personas and five end-to-end journeys ([中文](product/PERSONAS_JOURNEYS.zh-CN.md))
+- [Frontend PRD](product/PRD_FRONTEND.md) — 96 requirements in 11 areas with acceptance criteria ([中文](product/PRD_FRONTEND.zh-CN.md))
+- [Requirements Register](product/REQUIREMENTS_REGISTER.md) — the RTM: ID, contract, verification, gate, status ([中文](product/REQUIREMENTS_REGISTER.zh-CN.md))
+- [Shell & IA](specification/ui/IA_SHELL.md) · [Design System](specification/ui/DESIGN_SYSTEM.md) · [Interaction](specification/ui/INTERACTION.md) ([中文](specification/ui/IA_SHELL.zh-CN.md))
+- [Feedback & Errors](specification/ui/FEEDBACK_ERRORS.md) · [Data Integrity](specification/ui/DATA_INTEGRITY.md) · [A11Y](specification/ui/A11Y.md) · [i18n](specification/ui/I18N_L10N.md) · [Performance](specification/ui/PERFORMANCE.md)
+- [Compatibility](specification/ui/COMPATIBILITY.md) · [Security & Privacy](specification/ui/SECURITY_PRIVACY.md) · [Telemetry](specification/ui/TELEMETRY.md) — GA-scope contracts
+- [Definition of Done](process/DEFINITION_OF_DONE.md) · [Design Ops](process/DESIGN_OPS.md) · [Localization Workflow](guides/LOCALIZATION_WORKFLOW.md)
+- [Release & Support Checklist](process/RELEASE_CHECKLIST.md) — release notes, migration, runbook, known issues ([中文](process/RELEASE_CHECKLIST.zh-CN.md))
+- [G0 Review Record (2026-10-29)](process/G0_REVIEW_2026-10-29.md) — independent review findings and dispositions ([中文](process/G0_REVIEW_2026-10-29.zh-CN.md))
+- [Web Architecture](architecture/WEB_ARCHITECTURE.md) — what the frontend is today, with measured debt ([中文](architecture/WEB_ARCHITECTURE.zh-CN.md))
+- [Frontend Maturity](status/FRONTEND_MATURITY.md) · [Baseline](status/FRONTEND_BASELINE.md) · [Release Readiness](status/RELEASE_READINESS.md) ([中文](status/FRONTEND_MATURITY.zh-CN.md))
+- [Keyboard Map](reference/KEYBOARD_MAP.md) · [Error Codes](reference/ERROR_CODES.md) ([中文](reference/KEYBOARD_MAP.zh-CN.md))
+- [Frontend Guide](guides/FRONTEND_GUIDE.md) — five recipes: panel, command, dialog, token, string ([中文](guides/FRONTEND_GUIDE.zh-CN.md))
+- [RFC-0002: UI Shell & Design System](RFC/RFC-0002-ui-shell-and-design-system.md)
+
 ### 🔍 I need an API or a term
 - [REST API Reference](reference/API.md) — all server routes with curl examples ([中文](reference/API.zh-CN.md))
 - [Omcom Command Reference](reference/OMCOM_REFERENCE.md) ([中文](reference/OMCOM_REFERENCE.zh-CN.md))
@@ -67,12 +85,15 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 
 ```
 docs/
+├── product/         # Why and for whom: vision, personas, PRD, requirement register
 ├── architecture/    # What IS built: current architecture, data flows, ADRs
 ├── guides/          # How to run, build, test, and navigate the codebase
 ├── specification/   # Design contracts: data model, Omcom, AMIR, catalog, domains
-├── reference/       # Lookup: REST API, command reference, glossary
-├── status/          # Truth: roadmap, format matrix, deviations, changelog
-├── RFC/             # Open design proposals (text DSL, storage model)
+│   └── ui/          # UI contracts: shell, design system, interaction, a11y, i18n, perf
+├── reference/       # Lookup: REST API, command reference, keyboard map, error codes, glossary
+├── status/          # Truth: roadmap, format matrix, frontend maturity, release readiness
+├── process/         # Governance: definition of done, design operations
+├── RFC/             # Open design proposals (text DSL, storage model, UI shell)
 └── research/        # Background research; not part of the contract
 ```
 

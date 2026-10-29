@@ -1,7 +1,7 @@
 ---
 title: "OmniM — Current Architecture"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "crates/, web/"
 evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 ---
@@ -187,6 +187,11 @@ OmniM deliberately has **two independent renderers**, and they do not share code
 | (Native viewer | removed 2026-10-27: `omnim-renderer` was deleted as an orphan crate; re-introduction would go through an RFC) | | |
 
 The key property of both: **the server exposes geometry over REST; rendering is fully client-side and server-code-agnostic.**
+
+The frontend rendering contract adds two requirements not yet implemented: a **theme-derived viewport palette**
+(dark/light scene colours, no literals in renderer code) and **on-demand rendering** (no continuous
+`requestAnimationFrame` loop while idle). Both are specified in
+[DESIGN_SYSTEM §10](../specification/ui/DESIGN_SYSTEM.md) and [PERFORMANCE §4](../specification/ui/PERFORMANCE.md).
 Neither renderer consumes server-side rasterization; there is no server-side GPU pipeline.
 
 ---

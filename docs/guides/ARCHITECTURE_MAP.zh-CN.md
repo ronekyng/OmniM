@@ -1,7 +1,7 @@
 ---
 title: "架构地图"
 status: current
-last_updated: 2026-10-27
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -32,10 +32,10 @@ OmniM 工作区的开发者地图：各 crate 的职责、彼此依赖，以及�
 - 它是 草图 → 约束 → 特征 → BRep 管线的入口，零件建模与目录定义共用此管线。
 
 ### `crates/omcom` — Omcom DSL
-- `lib.rs`（约 3.6k 行，单文件）：**Omcom** 文本命令语言的解释器。所有变更路径——控制台输入、REST `/api/omcom`、AI 生成的指令——都汇聚到 `omnim_omcom` 的 execute 入口，由它变更项目与库。这就是 README 所说"一条命令语言"的核心。
+- `lib.rs`（6,969 行，单文件）：**Omcom** 文本命令语言的解释器。所有变更路径——控制台输入、REST `/api/omcom`、AI 生成的指令——都汇聚到 `omnim_omcom` 的 execute 入口，由它变更项目与库。这就是 README 所说"一条命令语言"的核心。
 
 ### `crates/server` — omnim-server
-- `lib.rs`（约 3.6k 行）：全部 Axum 路由与处理函数。REST 面覆盖 对象/属性/材料/测量/生命周期/管理/分解/omcom/网格/草图/组件/目录/系列/AMIR/撤销重做/IFC 导入导出——`/api/*` 下约 120 条路由。
+- `lib.rs`（5,887 行）：全部 Axum 路由与处理函数。REST 面覆盖 对象/属性/材料/测量/生命周期/管理/分解/omcom/网格/草图/组件/目录/系列/AMIR/撤销重做/IFC 导入导出——`/api/*` 下 81 条唯一路径。
 - `main.rs`：`omnim` 二进制——读取环境变量（`OMNIM_PROJECT`/`OMNIM_HOST`/`OMNIM_PORT`）、初始化元件库、创建共享的 `Arc<RwLock<Project>>`。
 - 依赖 model、omcom、sketch、ifc、amir、core。
 
@@ -51,11 +51,12 @@ OmniM 工作区的开发者地图：各 crate 的职责、彼此依赖，以及�
 - `llm/` 下的 LLM 供应商：`mock.rs`、`openai.rs`、`anthropic.rs`，由 `Provider` trait 统一。`AMIR_PROVIDER=mock` 免密钥，且将意图确定性映射到 Omcom。
 
 ### `web/` — 前端
-- React 19 + Vite + three.js + zustand + react-query + react-router。
-- `web/src/app/` — 应用外壳：`App.tsx`、`panels/`（面板注册表 + 对象树/属性/领域面板）、`components/`（ThreeViewer、ObjectTree、OmcomConsole、AiChat、CatalogBrowser、SeriesBrowser 等）、`store/`、`layout/`、`context/`。
-- `web/src/shared/` — `api.ts`（带类型的 REST 客户端）、`types.ts`、`queries.ts`、几何辅助。
-- `web/src/sketch/`、`web/src/library/`、`web/src/series/` — 目录组件编辑器、库管理页、系列管理页。
-- 单元测试在 `web/src/__tests__/`（Vitest）。
+- React 19 + Vite + three.js 0.185 + zustand + react-query + react-router 7。
+- `web/src/app/` — 应用外壳：`App.tsx`（路由、全局快捷键）、`layout/AppLayout.tsx`、`panels/`（面板注册表、对象树、属性、领域面板）、`components/`（`ThreeViewer`、`MainToolbar`、`OmniPanel`、`AiChat`、`ObjectTree`、`ObjectPropertiesPanel`、`AvailableComponentsPanel`、`GridPanel`、`create/`、`viewer/three/`）、`store/appStore.ts`、`context/`。
+- `web/src/shared/` — `api.ts`（带类型的 REST 客户端）、`types.ts`、`queries.ts`、`catalog.ts`、几何与创建状态机辅助。
+- `web/src/sketch/`、`web/src/library/`、`web/src/series/` — 构件编辑器（特征树 + 2D/3D 草图）、库管理页、系列管理页。
+- 单元测试在 `web/src/__tests__/`（Vitest）：5 个文件、79 个测试。
+- 界面契约与债务：[WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.zh-CN.md) · [FRONTEND_GUIDE](FRONTEND_GUIDE.zh-CN.md) · [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md)。
 
 ## 依赖关系图
 
@@ -93,7 +94,7 @@ graph TD
 1. `proto/omcom.proto` — 扩展 `Operation` / 增加字段（模型侧类型在 `proto/omnim.proto`）。
 2. `crates/core/build.rs` — 通常无需修改；代码生成会自动拾取 proto。serde 派生已应用于所有生成类型。
 3. `crates/omcom/src/lib.rs` — 为新操作实现解析与执行分支。
-4. `web/src/shared/api.ts` 与 Omcom 控制台 UI（`web/src/app/components/OmcomConsole.tsx`）将其暴露出来。
+4. `web/src/shared/api.ts` 与 Omcom 控制台 UI（`web/src/app/components/OmniPanel.tsx`）将其暴露出来。
 
 **新增 REST 路由**
 1. 在 `crates/server/src/lib.rs` 添加处理函数与 `.route("/api/…", get/post/put/delete(...))`（所有路由在一条 `Router` 链上注册）。
@@ -103,12 +104,15 @@ graph TD
 **新增元件目录类型**
 1. `crates/model/src/seed_catalog.rs` — 添加种子定义（参数、连接件、模板）。
 2. `crates/model/src/catalog.rs` — 若数据模型需要新字段则在此扩展类型/逻辑。
-3. 若该类型要在浏览器 UI 出现，检查 `web/src/app/components/CatalogBrowser.tsx` 的映射。
+3. 若该类型要在浏览器 UI 出现，检查 `web/src/app/components/AvailableComponentsPanel.tsx` 的映射。
 
 **新增 UI 面板**
 1. 在 `web/src/app/panels/PanelTypes.ts` 定义面板，并在 `web/src/app/panels/PanelRegistry.tsx` / `defaultPanels.ts` 注册。
 2. 在 `web/src/app/components/` 实现内容（或在 `panels/DomainPanels.tsx` 里）。
 3. 数据通过 `web/src/shared/api.ts` 接入。
+4. 实现加载、空、错误三态（[FEEDBACK_ERRORS](../specification/ui/FEEDBACK_ERRORS.zh-CN.md) §3）。
+5. 把截图加入视觉基线，并在需求登记册补验证行。
+6. 面板、命令、弹窗、令牌、字符串的完整 recipe：[FRONTEND_GUIDE](FRONTEND_GUIDE.zh-CN.md)。
 
 **新增草图约束或实体**
 - `crates/sketch/src/lib.rs`（类型）与 `crates/sketch/src/solver.rs`（映射到 `slvs`），然后在 `crates/server/src/lib.rs` 接 REST 处理（`/api/sketches/...`），编辑器在 `web/src/sketch/`。

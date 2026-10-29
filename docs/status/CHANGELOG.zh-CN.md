@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-10-28
+last_updated: 2026-10-29
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图阶段组织。
 
-**最后更新：2026-10-28**
+**最后更新：2026-10-29**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,24 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-10-29] — 前端文档基线（G0）
+
+### 新增
+- **产品层**（`docs/product/`）：愿景与范围、画像与五条旅程、96 条需求的 PRD、需求追溯登记册（RTM）。
+- **界面契约**（`docs/specification/ui/`）：外壳/信息架构、设计系统、交互、反馈与错误、数据完整性、可访问性、国际化、性能、兼容性、安全、遥测——11 对双语契约。
+- **真值层**：`WEB_ARCHITECTURE`（含实测债务的现状）、`FRONTEND_MATURITY`（ISO/IEC 25010 评分 1.7/5）、`FRONTEND_BASELINE`、`RELEASE_READINESS`（G0–G3）。
+- **流程层**：完成定义、设计运营、发布与支持清单、G0 独立评审记录。
+- **参考**：快捷键表与稳定的 `OMNI-*` 错误码目录。
+- **工具**：`scripts/check_ui_contracts.py`（需求 ID、快捷键冲突、错误码、债务指标，支持 `--strict`）、`scripts/gen_keymap.py --check`；两者与 `npm test` 均已接入 CI。`check_docs.py` 现在也校验 front matter。
+
+### 变更
+- **门禁再平衡（O1）：** 6 项完备度需求从 G2 移到 G3（`UI-DS-05/07/10`、`UI-A11Y-06/08`、`UI-I18N-05`）；`UI-DS-08` 保留在 G2。门禁总数为 G1 25 · G2 37 · G3 34；状态总数仍为 ✅1 · 🔀17 · 📅78。
+- **更正声明**：81 条唯一 REST 路径（原为 79/83/"约 120"）、731 hex + 61 rgb/hsl 颜色字面量、31 个文件 858 段中文、63 处 emoji、最低支持宽度 1280×720（1024–1279 降级）、`FCP ≤1.2 s` 与 `FMP ≤2.5 s` 分开表述。
+- **修复过期引用**：`OmcomConsole.tsx` → `OmniPanel.tsx`、`CatalogBrowser.tsx` → `AvailableComponentsPanel.tsx`；`test-all.sh` 不再重复跑两遍 Web 测试。
+
+### 未实现（已知缺口）
+- 视觉基线截图、性能参考机、e2e/视觉/可访问性/性能套件、字符串扫描对英文硬编码的检测。均记录为 G0 评审的 O3–O6。
 
 ## [2026-10-29] — 楼层视图与剖切联动（P8-S4c）
 
