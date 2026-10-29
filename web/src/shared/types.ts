@@ -50,6 +50,8 @@ export type OmniObject = {
   properties: Record<string, PropertyValue>;
   property_sets: PropertySet[];
   catalog_ref?: CatalogRef | null;
+  /** Datum elevation in metres (P8-S1); present on storeys. */
+  elevation?: number | null;
 };
 
 export type UpdatePropertiesRequest = {

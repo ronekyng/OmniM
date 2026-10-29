@@ -70,6 +70,9 @@ export type CreationForm = {
   columnHeight: string;
   /** Datum elevation in metres (storey creation, P8-S1). */
   elevation: string;
+  /** Level-driven vertical extent (P8-S3): bottom/top storey ids (both-or-neither). */
+  bottomLevelId: string;
+  topLevelId: string;
   geometryType: GeometryType;
   p1: string; p2: string; p3: string;
   length: string; height: string; width: string;
@@ -145,7 +148,28 @@ export const DEFAULT_FORM: CreationForm = {
   columnMode: 'place',
   columnHeight: '4',
   elevation: '0',
+  bottomLevelId: '',
+  topLevelId: '',
 };
+
+/** Object types that expose the level-driven vertical-extent selectors (P8-S3). */
+export const EXTENT_TYPES = new Set<ObjectType>(['wall', 'slab', 'floor', 'roof']);
+
+export type StoreyOption = { id: string; name: string; elevation: number };
+
+/** BuildingStorey objects as level options, sorted by elevation (P8-S3). */
+export function storeyOptions(
+  objects: { id: string; name: string; object_type: number | string; elevation?: number | null }[],
+): StoreyOption[] {
+  return objects
+    .filter((o) => o.object_type === 3 || o.object_type === 'storey' || o.object_type === 'BuildingStorey')
+    .map((o) => ({
+      id: o.id,
+      name: o.name,
+      elevation: typeof o.elevation === 'number' ? o.elevation : 0,
+    }))
+    .sort((a, b) => a.elevation - b.elevation || a.name.localeCompare(b.name));
+}
 
 export type ValidationResult = {
   valid: boolean;
@@ -165,6 +189,16 @@ export function validateForm(form: CreationForm): ValidationResult {
   if (form.objectType === 'storey') {
     // Elevation may be negative (basement levels), but must be a number.
     if (isNaN(parseFloat(form.elevation))) errors.elevation = '标高必须是数字';
+  }
+  if (EXTENT_TYPES.has(form.objectType)) {
+    // P8-S3: extent refs are both-or-neither and must differ. Ordering
+    // (top above bottom) is enforced server-side, where elevations are known.
+    const hasBottom = !!form.bottomLevelId;
+    const hasTop = !!form.topLevelId;
+    if (hasBottom !== hasTop) errors.bottomLevelId = '标高范围需同时选择底部与顶部';
+    else if (hasBottom && hasTop && form.bottomLevelId === form.topLevelId) {
+      errors.bottomLevelId = '底部与顶部不能是同一楼层';
+    }
   }
   return { valid: Object.keys(errors).length === 0, errors };
 }

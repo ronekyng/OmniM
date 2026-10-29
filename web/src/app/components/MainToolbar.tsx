@@ -133,6 +133,10 @@ export function MainToolbar({
         layers,
         parent_id: parentId,
         series_id: seriesId || undefined,
+        // P8-S3: level-driven vertical extent (both-or-neither; server validates)
+        ...(form.bottomLevelId && form.topLevelId
+          ? { bottom_level_id: form.bottomLevelId, top_level_id: form.topLevelId }
+          : {}),
         start_x: sx, start_y: sy, start_z: sz,
         end_x: ex, end_y: ey, end_z: ez,
         ...(objectType === 'wall' && useBoundary
@@ -241,6 +245,10 @@ export function MainToolbar({
         parent_id: parentId,
         // P8-S1: datum elevation on storey creation (m; may be negative).
         ...(objectType === 'storey' ? { elevation: parseFloat(form.elevation) || 0 } : {}),
+        // P8-S3: level-driven vertical extent (both-or-neither).
+        ...(form.bottomLevelId && form.topLevelId
+          ? { bottom_level_id: form.bottomLevelId, top_level_id: form.topLevelId }
+          : {}),
       });
     }
 

@@ -34,7 +34,7 @@ There are exactly two import/export routes in the server: IFC and native JSON. N
 - **Hand-written** STEP Physical File (SPF) text parser — no IFC library dependency.
 - Target schema: **IFC 2x3 / IFC 4** (same code path; no IFC 4x3-specific entities).
 - **Import** (`import_ifc_with_options`): line-by-line entity parsing, entity resolvable via `doc.get(ref)`, optional origin normalization, hierarchy + property-set reconstruction.
-- **Export** (`export_ifc`): placement-based entities and solid/parametric geometry (extruded/revolved profiles via `IFCEXTRUDEDAREASOLID`/`IFCREVOLVEDAREASOLID`, mesh via faceted BRep), with IfcGlobalId/name/description properties and compressed GlobalIds.
+- **Export** (`export_ifc`): placement-based entities and solid/parametric geometry (extruded/revolved profiles via `IFCEXTRUDEDAREASOLID`/`IFCREVOLVEDAREASOLID`, mesh via faceted BRep), with IfcGlobalId/name/description properties and compressed GlobalIds. **`IFCBUILDINGSTOREY` is exported schema-shaped (10 attributes) so the native `Elevation` attribute carries `OmniObject.elevation`** (P8-S3, `$` when unset); other classes keep the simplified 7-attribute form.
 
 ### Entity types that actually load on import
 

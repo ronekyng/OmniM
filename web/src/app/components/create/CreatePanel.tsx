@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CreationForm, CreationPhase, ObjectType, GeometryType } from '../../../shared/types/creation';
-import { withGenesisForm } from '../../../shared/types/creation';
+import { withGenesisForm, EXTENT_TYPES, storeyOptions, type StoreyOption } from '../../../shared/types/creation';
 import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, objectTypeLabel } from '../../../shared/catalog';
 import { ParentSelector } from './ParentSelector';
 import { SeriesSelector } from './SeriesSelector';
@@ -244,6 +244,10 @@ export function CreatePanel({
           </div>
         )}
 
+        {EXTENT_TYPES.has(form.objectType) && (
+          <LevelFields form={form} errors={errors} onChange={handleChange} />
+        )}
+
         {isPrimitive && (
           <div className="create-row create-row--labeled">
             <select value={form.geometryType} onChange={(e) => handleGeometryTypeChange(e.target.value as GeometryType)}>
@@ -321,6 +325,51 @@ export function CreatePanel({
         </button>
       </div>
     </>
+  );
+}
+
+/** Bottom/top level selectors for the vertical-extent contract (P8-S3). */
+function LevelFields({
+  form, errors, onChange,
+}: {
+  form: CreationForm;
+  errors: Record<string, string>;
+  onChange: (p: Partial<CreationForm>) => void;
+}) {
+  const [levels, setLevels] = useState<StoreyOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.listObjects()
+      .then((objects) => { if (!cancelled) setLevels(storeyOptions(objects)); })
+      .catch(() => { if (!cancelled) setLevels([]); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const label = (l: StoreyOption) => `${l.name}（${l.elevation.toFixed(2)} m）`;
+
+  if (levels.length === 0) {
+    return (
+      <div className="create-row">
+        <span className="hint">无楼层基准（可选）：先在建筑分类中创建楼层</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="create-row create-row--labeled">
+      <span className="field-label">底部标高</span>
+      <select value={form.bottomLevelId} onChange={(e) => onChange({ bottomLevelId: e.target.value })}>
+        <option value="">无</option>
+        {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
+      </select>
+      <span className="field-label">顶部标高</span>
+      <select value={form.topLevelId} onChange={(e) => onChange({ topLevelId: e.target.value })}>
+        <option value="">无</option>
+        {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
+      </select>
+      {errors.bottomLevelId && <span className="field-error">{errors.bottomLevelId}</span>}
+    </div>
   );
 }
 

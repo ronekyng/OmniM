@@ -749,6 +749,21 @@ pub fn export_ifc(project: &Project) -> String {
             None => "$".to_string(),
         };
 
+        if class == "IFCBUILDINGSTOREY" {
+            // P8-S3: emit the schema-shaped 10-attribute IfcBuildingStorey so
+            // the native Elevation attribute is carried. The generic
+            // 7-attribute form used for other classes has no slot for it.
+            let elevation = match obj.elevation {
+                Some(e) => format!("{}", e),
+                None => "$".to_string(),
+            };
+            out.push_str(&format!(
+                "#{}={}('{}',$,'{}',{},$,{},{},$,.ELEMENT.,{});\n",
+                ifc_id, class, global_id, name, description, placement_str, shape_str, elevation
+            ));
+            continue;
+        }
+
         out.push_str(&format!(
             "#{}={}('{}',$,{},'{}',$,{},{});
 ",

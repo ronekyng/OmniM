@@ -5,6 +5,8 @@ import {
   defaultFormForType,
   pickModeForForm,
   previewFormFor,
+  storeyOptions,
+  validateForm,
   withGenesisForm,
   type CreationForm,
 } from '../shared/types/creation';
@@ -98,5 +100,31 @@ describe('addPathPreview dispatch (unified preview)', () => {
     const g = new THREE.Group();
     addPathPreview(g, { points: pts, closed: false, form: 'point' });
     expect(g.children.filter((c) => c instanceof THREE.Mesh).length).toBe(3);
+  });
+});
+
+describe('level-driven extent (P8-S3)', () => {
+  it('storeyOptions keeps only storeys, defaults missing elevations to 0, sorts by elevation', () => {
+    const options = storeyOptions([
+      { id: 'f2', name: 'F2', object_type: 3, elevation: 3.9 },
+      { id: 'w1', name: 'W1', object_type: 100 },
+      { id: 'f1', name: 'F1', object_type: 3, elevation: 0 },
+      { id: 'b1', name: 'B1', object_type: 3, elevation: -3.5 },
+    ]);
+    expect(options.map((o) => o.id)).toEqual(['b1', 'f1', 'f2']);
+    expect(storeyOptions([{ id: 'x', name: 'X', object_type: 3 }])[0].elevation).toBe(0);
+  });
+
+  it('extent refs are both-or-neither, distinct, and only offered on extent types', () => {
+    const wall = createInitialForm('wall');
+    expect(validateForm({ ...wall, bottomLevelId: 'f1' }).errors.bottomLevelId).toBeTruthy();
+    expect(
+      validateForm({ ...wall, bottomLevelId: 'f1', topLevelId: 'f1' }).errors.bottomLevelId,
+    ).toBeTruthy();
+    expect(validateForm({ ...wall, bottomLevelId: 'f1', topLevelId: 'f2' }).valid).toBe(true);
+
+    // Columns are not extent-capable in the UI (catalog Component path).
+    const column = createInitialForm('column');
+    expect(validateForm({ ...column, bottomLevelId: 'f1' }).valid).toBe(true);
   });
 });

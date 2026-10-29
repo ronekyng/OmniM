@@ -22,6 +22,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — Level UI + IFC elevation export (P8-S3)
+
+### Added
+- **Level selectors in the creation panel**: walls/slabs/floors/roofs offer bottom/top storey selects (options from `GET /api/objects`, sorted by elevation, labelled with metres). Values flow into the `layered` genrule and the generic `POST /api/objects` body; the pair is client-validated (both-or-neither, distinct) and server-validated (ordering).
+- **IFC elevation export**: `IFCBUILDINGSTOREY` is written schema-shaped (10 attributes) so the native `Elevation` attribute carries `OmniObject.elevation` (`$` when unset); export stays importable.
+
+### Still open
+- Catalog `Component` (Extrude-feature) placements are not re-evaluated from level constraints; plain box geometry still gets the datum only.
+
 ## [2026-10-29] — Level-driven vertical extent (P8-S2)
 
 ### Added

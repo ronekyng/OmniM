@@ -32,6 +32,8 @@ const mockForm: CreationForm = {
   columnMode: 'place',
   columnHeight: '4',
   elevation: '0',
+  bottomLevelId: '',
+  topLevelId: '',
 };
 
 function expectState(

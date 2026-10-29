@@ -22,6 +22,15 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-29] — 标高 UI 与 IFC 标高导出（P8-S3）
+
+### 新增（Added）
+- **创建面板标高选择器**：墙/板/楼面/屋顶提供底部/顶部楼层下拉（选项来自 `GET /api/objects`，按标高排序并以米标注）。取值经 `layered` genrule 与通用 `POST /api/objects` 传入；成对/不同由前端校验，顺序由服务端校验。
+- **IFC 标高导出**：`IFCBUILDINGSTOREY` 以 schema 形状（10 属性）写出，原生 `Elevation` 属性承载 `OmniObject.elevation`（未设置写 `$`）；导出结果仍可被导入。
+
+### 仍未关闭
+- 目录 `Component`（Extrude 特征）放置尚未按标高约束重新求值；普通盒体几何仍仅获得基准。
+
 ## [2026-10-29] — 标高驱动竖向范围（P8-S2）
 
 ### 新增（Added）

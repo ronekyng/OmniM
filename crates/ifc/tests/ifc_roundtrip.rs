@@ -60,3 +60,52 @@ fn exports_project_to_ifc_with_hierarchy_and_property_sets() {
     assert!(exported.contains("IFCPROPERTYSET"));
     assert!(exported.contains("Pset_WallCommon"));
 }
+
+#[test]
+fn exports_storey_elevation_as_the_native_ifc_attribute() {
+    let mut project = omnim_model::Project::new("Levels");
+    let storey_id = project
+        .create_object(c::ObjectType::BuildingStorey, "F2")
+        .id
+        .clone();
+    project.objects.get_mut(&storey_id).unwrap().elevation = Some(3.9);
+    let dropped_id = project
+        .create_object(c::ObjectType::BuildingStorey, "Roof")
+        .id
+        .clone();
+    let _ = dropped_id;
+
+    let exported = omnim_ifc::export_ifc(&project);
+    assert!(exported.contains("IFCBUILDINGSTOREY"));
+    assert!(
+        exported.contains(".ELEMENT.,3.9)"),
+        "storey elevation must be exported as the native attribute:\n{}",
+        exported
+    );
+    // A storey without an elevation writes `$` for the optional attribute.
+    let roof_line = exported
+        .lines()
+        .find(|l| l.contains("IFCBUILDINGSTOREY") && l.contains("'Roof'"))
+        .expect("roof storey line");
+    assert!(roof_line.contains(".ELEMENT.,$)"), "{}", roof_line);
+}
+
+#[test]
+fn storey_export_roundtrips_through_import() {
+    let mut project = omnim_model::Project::new("Levels");
+    let id = project
+        .create_object(c::ObjectType::BuildingStorey, "F1")
+        .id
+        .clone();
+    project.objects.get_mut(&id).unwrap().elevation = Some(-3.5);
+    let exported = omnim_ifc::export_ifc(&project);
+    let imported = omnim_ifc::import_ifc(&exported).expect("storey export must stay importable");
+    assert!(
+        imported
+            .objects
+            .list()
+            .iter()
+            .any(|o| o.object_type == c::ObjectType::BuildingStorey as i32),
+        "imported project must still contain the storey"
+    );
+}
