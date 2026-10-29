@@ -68,6 +68,7 @@ type AppActions = {
   markDirty: () => void;
   saveProject: () => Promise<boolean>;
   saveProjectAs: (path: string) => Promise<boolean>;
+  resetSaveState: () => void;
   setTransformOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
   setVisualOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
   setCatalogPanelOpen: (v: boolean | ((prev: boolean) => boolean)) => void;
@@ -186,6 +187,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
         return false;
       }
     },
+    resetSaveState: () => set({ saveState: saveSucceeded(initialSaveState, Date.now()) }),
     saveProjectAs: async (path) => {
       if (get().saveState.status === 'saving') return false;
       set((s) => ({ saveState: beginSave(s.saveState) }));

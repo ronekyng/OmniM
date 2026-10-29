@@ -47,7 +47,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | e2e route matrix | G1 | 📅 |
+| UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | e2e route matrix | G1 | 🔀 |
 | UI-SHL-02 | Seven fixed workspace regions | IA_SHELL §3 | screenshot set `shell` | G1 | 🔀 |
 | UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | screenshot + resize e2e | G1 | 🔀 |
 | UI-SHL-04 | Left dock tabs, 240–400 px | IA_SHELL §4 | e2e tab switch | G1 | 🔀 |
@@ -113,7 +113,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | first-run e2e | G1 | 📅 |
+| UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | first-run e2e | G1 | 🔀 |
 | UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | save round-trip e2e | G1 | 🔀 |
 | UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | state e2e | G1 | 🔀 |
 | UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace | G2 | 📅 |

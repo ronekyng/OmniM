@@ -4,6 +4,7 @@ import { api } from '../shared/api';
 import { MainToolbar } from './components/MainToolbar';
 import { SectionPanel } from './components/SectionPanel';
 import { StoreyViewSelect } from './components/StoreyViewSelect';
+import { ProjectsPage } from './ProjectsPage';
 import { TitleBar } from './components/TitleBar';
 import { StatusBar } from './components/StatusBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -85,6 +86,18 @@ export function App() {
   }, [saveState.status]);
 
   useEffect(() => { registerDefaultPanels(); }, []);
+  useEffect(() => {
+    // UI-DAT-01: the workspace is only reachable after an explicit open/new.
+    // The server tracks whether this session has one; a restart lands here.
+    if (!isMain) return;
+    let cancelled = false;
+    api.currentProject()
+      .then((session) => {
+        if (!cancelled && !session.open) navigate('/projects', { replace: true });
+      })
+      .catch(() => { /* the workspace will surface the connection error */ });
+    return () => { cancelled = true; };
+  }, [isMain, navigate]);
   useEffect(() => { refresh(); reloadScene(); }, []);
   useEffect(() => { if (isMain) { refresh(); reloadScene(); } }, [location.pathname]);
 
@@ -172,6 +185,7 @@ export function App() {
   return (
     <ErrorBoundary scope="Workspace" resetKey={location.pathname}>
     <Routes>
+      <Route path="/projects" element={<ProjectsPage />} />
       <Route path="/component-editor" element={<ComponentEditorPage />} />
       <Route path="/series-manager" element={<SeriesManagerPage />} />
       <Route path="/library-manager" element={<LibraryManagerPage />} />
@@ -263,10 +277,10 @@ export function App() {
               <div className="hint">W:move E:rotate F:fit H:home G:grid O:ortho X:axis Del:delete | Click:select Ctrl+click:toggle Ctrl+drag:box-select</div>
             </div>
           </AppLayout>
-          <ToastContainer />
         </ThreeViewerContext.Provider>
       } />
     </Routes>
+    <ToastContainer />
     </ErrorBoundary>
   );
 }

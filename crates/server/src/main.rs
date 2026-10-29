@@ -2,10 +2,8 @@ use std::env;
 use std::sync::Arc;
 
 use omnim_model::{Library, Project, LIBRARY};
-use omnim_server::{ServerConfig, SharedProject};
+use omnim_server::{default_projects_root, ServerConfig, SharedProject};
 use tokio::sync::RwLock;
-
-const DEFAULT_PROJECT_FILE: &str = "project.omnim";
 
 fn init_library() {
     let lib_path = dirs::home_dir().map(|p| p.join(".omnim").join("library.omnimlib"));
@@ -46,8 +44,15 @@ fn is_ephemeral() -> bool {
 fn main() {
     init_library();
 
-    let project_file =
-        env::var("OMNIM_PROJECT").unwrap_or_else(|_| DEFAULT_PROJECT_FILE.to_string());
+    // Contract: the workspace is not bound to the working directory. The
+    // default root is `OMNIM_PROJECTS_DIR` or `~/.omnim/projects`; an explicit
+    // `OMNIM_PROJECT` still wins for scripted runs.
+    let project_file = env::var("OMNIM_PROJECT").unwrap_or_else(|_| {
+        default_projects_root()
+            .join("project.omnim")
+            .to_string_lossy()
+            .into_owned()
+    });
     let proj = load_or_new(&project_file);
 
     let host = env::var("OMNIM_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());

@@ -7,7 +7,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **82 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；83 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **86 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；87 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
 
 ## 目录
 
@@ -612,21 +612,22 @@ curl -sS -X POST "$BASE/api/amir/describe" -H 'Content-Type: application/json' \
   -d '{"object_ids":null,"format":"text"}'
 ```
 
-## 项目生命周期（计划中）
+## 项目会话（项目首页）
 
-界面契约需要项目级端点，目前尚不存在。契约见
-[DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md) §8，**今天未实现**。
+实现 [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md) §2 的项目首页契约。
 
-| 方法 | 路径 | 用途 | 状态 |
-|---|---|---|---|
-| GET | `/api/project` | 项目状态，扩展 `path`、`dirty`、`last_saved_at`、`schema_version` | 🔀 端点存在但无这些字段 |
-| POST | `/api/project/save` | 显式保存；返回路径与时间 | ✅ |
-| POST | `/api/project/new` | 创建并切换项目 | 📅 |
-| POST | `/api/project/open` | 按路径打开（限制在允许根目录） | 📅 |
-| POST | `/api/project/save-as` | 另存到新路径并更新会话 | 📅 |
-| GET | `/api/project/recent` | 最近项目并检查存在性 | 📅 |
-| GET | `/api/project/autosaves` | 当前项目的恢复快照 | 📅 |
-| POST | `/api/project/restore` | 恢复快照 | 📅 |
+| 方法 | 路径 | 用途 |
+|---|---|---|
+| GET | `/api/projects` | 列出允许根目录下的 `.omnim`（最多 20 个）：名称、路径、大小、修改时间。 |
+| GET | `/api/projects/current` | `{ open, name, path }`；服务重启后 `open` 为 false，直到显式新建/打开。 |
+| POST | `/api/projects/new` | 请求体 `{ name, sample? }`；创建并切换项目、写盘、清空撤销。同名 slug → `409`。 |
+| POST | `/api/projects/open` | 请求体 `{ path }`；加载并切换项目、清空撤销。文件不存在 → `404`。 |
+| POST | `/api/project/save` | 显式保存到当前路径。 |
+| POST | `/api/project/save-as` | 请求体 `{ path }`；写入新文件并切换会话保存目标。 |
+
+- **允许根目录**：`OMNIM_PROJECTS_DIR`，否则当前项目父目录（`main.rs` 默认 `~/.omnim/projects`）。相对路径在根目录下解析；`..`、根外绝对路径、非 `.omnim` 文件与符号链接逃逸均返回 `400`（`UI-SEC-03`）。
+- **示例项目**：`{ "name": "Demo", "sample": true }` 种入两个楼层（0 / 3.9 m）与四条轴网（A/B、1/2）。
+- **最近列表**：客户端在 `localStorage` 保存最多 10 条；服务端列表用于存在性校验。自动保存/恢复端点仍为计划。
 
 > **安全边界：** 服务端没有鉴权。`/api/project/open` 与允许根目录规则
 > （[SECURITY_PRIVACY](../specification/ui/SECURITY_PRIVACY.zh-CN.md) §4）用于防止任意路径读取；

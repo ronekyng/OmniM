@@ -22,6 +22,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-29] — G1 project home (P9-S2)
+
+### Added
+- **`/projects` home**: new project name, sample project, current session card, recent/available table with size, modified time and missing-file badge. Recent entries live in `localStorage` (`omnim.recent.projects.v1`, max 10) and never in the project file.
+- **Project session API**: `GET /api/projects` (existing `.omnim` files with name/size/modified), `GET /api/projects/current` (`open` flag survives only while the server session does), `POST /api/projects/new` (unique slug, optional sample seed, writes the file, clears undo), `POST /api/projects/open` (loads, retargets saves, clears undo).
+- **Sample project**: two storeys (0 / 3.9 m) and a four-line grid (A/B, 1/2), geometry-free so it opens instantly.
+- **Workspace gating**: after a server restart the workspace redirects to `/projects` until the user opens/creates a project; the title-bar project name also returns to the home with an unsaved-changes prompt.
+- **Allowed-root enforcement**: relative paths resolve under `OMNIM_PROJECTS_DIR` (default `~/.omnim/projects`, or the current project's parent); `..`, outside absolute paths, non-`.omnim` names and symlink escapes are rejected with `400` for open and save-as (`UI-SEC-03`).
+
+### Changed
+- Routes: 86 unique paths / 87 registrations (+4 project-session endpoints).
+- Frontend tests: 9 files / 94 tests; Rust 454.
+- Default project file moves to the project root instead of the server working directory.
+
+### Not implemented (known gaps)
+- Project metadata editing (`UI-DAT-07`), dependency report (`UI-DAT-09`), autosave/recovery (`UI-DAT-04/05`), missing-file "locate…", in-app navigation guard and theme/loading-state work.
+
 ## [2026-10-29] — G1 alpha shell and reliability (P9-S1)
 
 ### Added

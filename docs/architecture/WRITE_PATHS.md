@@ -28,13 +28,13 @@ with `python3 scripts/check_write_paths.py`; endpoint-level undo coverage lives 
 
 | Measure | Value |
 |---|---|
-| Routes under `/api/*` (deduplicated paths) | **79** |
-| Handlers scanned in `crates/server/src/lib.rs` | **105** |
-| Handlers calling `mutation::apply` | **55** |
-| Handlers delegating to the `Executor` while holding the lock | **7** (`create_object`, `delete_object`, `execute_omcom`, `genrule_create`, `undo`, `redo`, `import_ifc`) |
+| Routes under `/api/*` (deduplicated paths) | **86** |
+| Handlers scanned in `crates/server/src/lib.rs` | **114** |
+| Handlers calling `mutation::apply` | **58** |
+| Handlers delegating to the `Executor` while holding the lock | **9** (`create_object`, `delete_object`, `execute_omcom`, `genrule_create`, `undo`, `redo`, `import_ifc`, `new_project`, `open_project`) |
 | Non-allowlisted direct `project.write()` | **0** |
-| Direct `Project::save()` outside the explicit persistence handlers (`save_project`, `save_project_as`) | **0** |
-| Default persistence | **on** — `$OMNIM_PROJECT` (or `project.omnim`); `OMNIM_EPHEMERAL=1` disables |
+| Direct `Project::save()` outside the explicit persistence handlers (`save_project`, `save_project_as`, `new_project`) | **0** |
+| Default persistence | **on** — project root (`OMNIM_PROJECTS_DIR` / `~/.omnim/projects`), overridable by `OMNIM_PROJECT`; `OMNIM_EPHEMERAL=1` disables |
 
 ## How a mutation flows
 

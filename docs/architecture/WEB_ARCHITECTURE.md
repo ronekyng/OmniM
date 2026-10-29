@@ -3,7 +3,7 @@ title: "OmniM Web Architecture — Current State"
 status: current
 last_updated: 2026-10-29
 applies_to: "web/, crates/server"
-evidence: "audited against web/src on 2026-10-29 (21,130 lines across ts/tsx/css; 91 unit tests passing)"
+evidence: "audited against web/src on 2026-10-29 (21,641 lines across ts/tsx/css; 94 unit tests passing)"
 ---
 # OmniM Web Architecture — Current State
 
@@ -29,7 +29,7 @@ The web client is a React 19 single-page application served by Vite, talking to 
 | Server | Axum REST, JSON file persistence | `crates/server/src/lib.rs` |
 | Build output | Static bundle in `web/dist` | `web/dist/` |
 
-Routes today: `/` (workspace), `/component-editor`, `/series-manager`, `/library-manager`. There is no project home.
+Routes today: `/projects` (project home), `/` (workspace), `/component-editor`, `/series-manager`, `/library-manager`.
 
 ## 3. Frontend Layering
 
@@ -124,7 +124,8 @@ Observations:
 
 ## 8. Known Debt
 
-Counts measured on 2026-10-29; they are the baseline for [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md).
+Counts measured on 2026-10-29; they are the baseline for [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md). **P9 update:** D1 (docked properties), D2 (project home/save), D6 (auto-naming), D7 (native dialogs) and D8 (error boundaries) are resolved; the rows remain as the measurement snapshot.
+
 
 | # | Debt | Evidence | Requirement |
 |---|---|---|---|

@@ -625,3 +625,16 @@ export type Measurement = {
   color: string;
   created_at: number;
 };
+
+export type ProjectSummary = {
+  name: string;
+  path: string;
+  size: number;
+  modified: number | null;
+};
+
+export type CurrentProject = {
+  open: boolean;
+  name: string;
+  path: string | null;
+};

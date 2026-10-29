@@ -34,7 +34,7 @@ The overall score is the arithmetic mean, reported to one decimal. It is **not**
 | 1 | Functional suitability | **3.0** | 4 | Creation, catalog, sketch, console, measure, section work; project lifecycle missing (UI-DAT-01/02) |
 | 2 | Performance efficiency | **2.0** | 4 | Continuous render loop, full scene reload per mutation, no budgets enforced ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §5) |
 | 3 | Compatibility | **1.0** | 3 | No browser matrix, no WebGL2 gating, no DPI policy ([COMPATIBILITY](../specification/ui/COMPATIBILITY.md)) |
-| 4 | Usability | **2.5** | 4 | Docked properties, title/breadcrumb, status bar and auto-naming landed; project home and mixed zh/en remain ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §8) |
+| 4 | Usability | **3.0** | 4 | Docked properties, title/status bars, auto-naming and a project home (new/open/recent/sample) landed; mixed zh/en and theme remain ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §8) |
 | 5 | Reliability | **2.0** | 4 | Panel/route error boundaries, explicit save + save-as, dirty interception; no autosave or crash recovery yet ([DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.md)) |
 | 6 | Security | **1.0** | 3 | No auth disclosure, no path restriction, no role model ([SECURITY_PRIVACY](../specification/ui/SECURITY_PRIVACY.md)) |
 | 7 | Maintainability | **2.5** | 3 | Pure modules for layout/save/naming with unit tests; still a 4,110-line stylesheet, a 1,823-line `ThreeViewer.tsx`, and no lint/format |
@@ -50,20 +50,20 @@ Counts are derived from [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER
 
 | Area | Total | ✅ | 🔀 | 📅 | Coverage |
 |---|---|---|---|---|---|
-| SHL Shell and layout | 12 | 0 | 9 | 3 | 38% |
+| SHL Shell and layout | 12 | 0 | 10 | 2 | 42% |
 | DS Design system | 12 | 0 | 2 | 10 | 8% |
 | INT Interaction | 12 | 2 | 6 | 4 | 42% |
 | FBK Feedback and errors | 10 | 1 | 5 | 4 | 35% |
-| DAT Data integrity | 10 | 0 | 3 | 7 | 15% |
+| DAT Data integrity | 10 | 0 | 4 | 6 | 20% |
 | A11Y Accessibility | 8 | 0 | 0 | 8 | 0% |
 | I18N Internationalization | 7 | 0 | 0 | 7 | 0% |
 | PRF Performance | 8 | 0 | 0 | 8 | 0% |
 | CMP Compatibility | 6 | 0 | 0 | 6 | 0% |
 | SEC Security and privacy | 5 | 0 | 0 | 5 | 0% |
 | TLM Telemetry and support | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **96** | **3** | **25** | **68** | **16%** |
+| **Total** | **96** | **3** | **27** | **66** | **17%** |
 
-Coverage counts `✅` as complete and `🔀` as half. The result (16%) is the honest distance from "commercial", independent of code quality.
+Coverage counts `✅` as complete and `🔀` as half. The result (17%) is the honest distance from "commercial", independent of code quality.
 
 ## 4. Evidence Index
 
@@ -75,8 +75,8 @@ Coverage counts `✅` as complete and `🔀` as half. The result (16%) is the ho
 | `web/src/app/store/appStore.ts` | file | State ownership, floating default |
 | `web/src/app/components/ThreeViewer.tsx` | file | Rendering, picking, section, measure |
 | `web/src/shared/api.ts` | file | REST surface used by the client |
-| `web/src/__tests__/*.test.ts` | 8 files / 91 tests | Unit-level verification |
-| `wc -l web/src/**` | 21,130 lines | Size and concentration |
+| `web/src/__tests__/*.test.ts` | 9 files / 94 tests | Unit-level verification |
+| `wc -l web/src/**` | 21,641 lines | Size and concentration |
 | Color scan | 731 hex + 61 rgb/hsl across all CSS | Design-system debt |
 | CJK literal scan | 854 runs across 31 files | i18n debt |
 | Icon scan | 63 emoji occurrences, 25 used as panel icons | Icon-system debt |
@@ -99,13 +99,14 @@ Historical entries are appended when a wave closes, with the date and the change
 |---|---|---|
 | 2026-10-29 | 1.7 | Baseline measurement; no frontend productization work yet |
 | 2026-10-29 | 1.9 | G1 shell/reliability slice: docked properties, layout persistence, title/status bars, error boundaries, shared dialogs, explicit save/save-as, auto-naming |
+| 2026-10-29 | 1.9 | G1 project home: `/projects`, new/open, recent list, sample project, session gating and allowed-root enforcement |
 
 ## 6. Gate Readiness Snapshot
 
 | Gate | Status | Blocking items |
 |---|---|---|
 | G0 | 🔀 Contracts drafted | Review and sign-off of PRD, IA_SHELL, DESIGN_SYSTEM, INTERACTION |
-| G1 | 📅 Not ready | UI-SHL-01/02/04/05/07, UI-DAT-01, UI-FBK-01/02/08/09, UI-INT-01/04, UI-DS-02 |
+| G1 | 📅 Not ready | UI-DS-02, UI-FBK-02; remaining partial: SHL 02/04/05/07, DAT 02/03/06, FBK 01/08/09, INT 01/04 |
 | G2 | 📅 Not ready | DS/A11Y/I18N at pilot scope, PRF; remaining FBK and DAT |
 | G3 | 📅 Not ready | Completeness tiers (DS-05/07/10, A11Y-06/08, I18N-05); all CMP, SEC, TLM; DAT-08/09/10 |
 

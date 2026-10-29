@@ -3,7 +3,7 @@ title: "OmniM Web 架构 — 现状"
 status: current
 last_updated: 2026-10-29
 applies_to: "web/, crates/server"
-evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 21,130 行；91 个单元测试通过）"
+evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 21,641 行；94 个单元测试通过）"
 ---
 # OmniM Web 架构 — 现状
 
@@ -29,7 +29,7 @@ Web 客户端是一个 React 19 单页应用，由 Vite 提供构建，通过 RE
 | 服务 | Axum REST，JSON 文件持久化 | `crates/server/src/lib.rs` |
 | 构建产物 | `web/dist` 下的静态包 | `web/dist/` |
 
-当前路由：`/`（工作区）、`/component-editor`、`/series-manager`、`/library-manager`。没有项目首页。
+当前路由：`/projects`（项目首页）、`/`（工作区）、`/component-editor`、`/series-manager`、`/library-manager`。
 
 ## 3. 前端分层
 

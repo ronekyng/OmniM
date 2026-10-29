@@ -47,7 +47,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-SHL-01 | 三层应用结构（项目、工作区、编辑器） | IA_SHELL §2 | e2e 路由矩阵 | G1 | 📅 |
+| UI-SHL-01 | 三层应用结构（项目、工作区、编辑器） | IA_SHELL §2 | e2e 路由矩阵 | G1 | 🔀 |
 | UI-SHL-02 | 工作区七个固定区域 | IA_SHELL §3 | 截图集 `shell` | G1 | 🔀 |
 | UI-SHL-03 | 属性面板右停靠，260–600 px | IA_SHELL §4 | 截图 + 调宽 e2e | G1 | 🔀 |
 | UI-SHL-04 | 左停靠标签页，240–400 px | IA_SHELL §4 | 标签切换 e2e | G1 | 🔀 |
@@ -113,7 +113,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | 首启 e2e | G1 | 📅 |
+| UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | 首启 e2e | G1 | 🔀 |
 | UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | 保存往返 e2e | G1 | 🔀 |
 | UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | 状态 e2e | G1 | 🔀 |
 | UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 | G2 | 📅 |

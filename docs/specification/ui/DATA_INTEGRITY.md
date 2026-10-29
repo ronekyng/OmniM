@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **Dual-track maintenance obligation**: `DATA_INTEGRITY.zh-CN.md` is a maintained translation. Keep section numbering, endpoint names, and requirement IDs aligned in the same change.
 >
-> **Status.** Design contract. The client now calls `POST /api/project/save` (explicit save, Ctrl/Cmd+S) and `POST /api/project/save-as`; the project home route plus open/new endpoints remain unimplemented. See [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
+> **Status.** Design contract. Project home (`/projects`), new/open, recent, sample, explicit save/save-as and allowed-root enforcement exist; metadata editing (`UI-DAT-07`), dependency report (`UI-DAT-09`), autosave and recovery remain unimplemented. See [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.md).
 
 ## 1. Purpose
 
@@ -190,7 +190,7 @@ Rules:
 
 ## 8. Server Contract (minimal)
 
-These endpoints are **required** by the UI. They do not exist yet except `GET /api/project` and `POST /api/project/save`.
+These endpoints are **required** by the UI. New/open/recent/current, save and save-as are implemented; autosave and recovery remain planned.
 
 | Method | Path | Purpose | Notes |
 |---|---|---|---|
@@ -199,15 +199,15 @@ These endpoints are **required** by the UI. They do not exist yet except `GET /a
 | POST | `/api/project/open` | Open by path | Path restricted to allowed roots |
 | POST | `/api/project/save` | Explicit save | Existing; returns path and timestamp |
 | POST | `/api/project/save-as` | Save to a new path | Returns new path; updates session |
-| GET | `/api/project/recent` | Recent list | Server-side list with existence check |
-| GET | `/api/project/autosaves` | Recovery snapshots | For the current project only |
-| POST | `/api/project/restore` | Restore a snapshot | Body: snapshot id |
+| GET | `/api/project/recent` | Recent list | Existing `.omnim` files in the allowed root (max 20) |
+| GET | `/api/project/autosaves` | Recovery snapshots | 📅 planned; for the current project only |
+| POST | `/api/project/restore` | Restore a snapshot | 📅 planned; body: snapshot id |
 
 Rules:
 
-1. `save_path` becomes mutable session state; switching projects must not leak undo history.
+1. `save_path` is mutable session state; switching projects clears undo history. `GET /api/project/current` exposes `{ open, name, path }` for workspace gating.
 2. Every endpoint returns a typed error with an `OMNI-*` code.
-3. New/open must be idempotent on retry after a network failure.
+3. Open is idempotent on retry; new returns `409` on an existing name and the UI may open that file instead.
 4. Undo/redo state is reset on project switch.
 
 ## 9. Non-Goals

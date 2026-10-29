@@ -25,13 +25,13 @@ evidence: "由 scripts/check_write_paths.py 与 cargo test --workspace 于 2026-
 
 | 指标 | 数值 |
 |---|---|
-| `/api/*` 路由（按路径去重） | **79** |
-| `crates/server/src/lib.rs` 扫描到的 handler | **105** |
-| 调用 `mutation::apply` 的 handler | **55** |
-| 持锁但委托 `Executor` 的 handler | **7**（`create_object`、`delete_object`、`execute_omcom`、`genrule_create`、`undo`、`redo`、`import_ifc`） |
+| `/api/*` 路由（按路径去重） | **86** |
+| `crates/server/src/lib.rs` 扫描到的 handler | **114** |
+| 调用 `mutation::apply` 的 handler | **58** |
+| 持锁但委托 `Executor` 的 handler | **9**（`create_object`、`delete_object`、`execute_omcom`、`genrule_create`、`undo`、`redo`、`import_ifc`、`new_project`、`open_project`） |
 | 白名单外的直写 `project.write()` | **0** |
-| 显式持久化处理器（`save_project`、`save_project_as`）之外的直连 `Project::save()` | **0** |
-| 默认持久化 | **开启** —— `$OMNIM_PROJECT`（缺省 `project.omnim`）；`OMNIM_EPHEMERAL=1` 关闭 |
+| 显式持久化处理器（`save_project`、`save_project_as`、`new_project`）之外的直连 `Project::save()` | **0** |
+| 默认持久化 | **开启** —— 项目根目录（`OMNIM_PROJECTS_DIR` / `~/.omnim/projects`），可由 `OMNIM_PROJECT` 覆盖；`OMNIM_EPHEMERAL=1` 关闭 |
 
 ## 一次变更的流转
 

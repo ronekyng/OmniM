@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
-import { saveLabel } from '../../shared/saveState';
+import { saveLabel, shouldWarnBeforeUnload } from '../../shared/saveState';
+import { useConfirm } from './ConfirmDialog';
 
 /** Workspace title bar: project name, dirty mark, breadcrumb, explicit save.
  *  Contract: IA_SHELL §2.2, DATA_INTEGRITY §3. */
 export function TitleBar() {
+  const navigate = useNavigate();
+  const confirm = useConfirm();
   const stats = useAppStore((s) => s.stats);
   const saveState = useAppStore((s) => s.saveState);
   const saveProject = useAppStore((s) => s.saveProject);
@@ -37,12 +41,26 @@ export function TitleBar() {
     return () => window.removeEventListener('keydown', onKey);
   }, [saveAsOpen]);
 
+  const openProjects = async () => {
+    if (shouldWarnBeforeUnload(saveState)) {
+      const ok = await confirm({
+        title: 'Leave without saving?',
+        message: 'The workspace has changes that were not explicitly saved in this session.',
+        confirmLabel: 'Leave',
+        cancelLabel: 'Stay',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    navigate('/projects');
+  };
+
   return (
     <div className="title-bar">
-      <div className="title-project" title={name}>
+      <button type="button" className="title-project" title="Back to projects" onClick={() => void openProjects()}>
         {dirty && <span className="dirty-dot" aria-label="Unsaved changes" />}
         <strong>{name}</strong>
-      </div>
+      </button>
       <nav className="breadcrumb" aria-label="Breadcrumb">
         <span>{name}</span>
         <span className="breadcrumb-sep">/</span>

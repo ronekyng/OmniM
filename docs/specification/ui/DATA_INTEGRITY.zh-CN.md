@@ -11,7 +11,7 @@ evidence: "n/a (design contract)"
 >
 > **双轨维护义务**：`DATA_INTEGRITY.zh-CN.md` 是持续维护的译文。在同一次变更中保持章节编号、端点名与需求 ID 一致。
 >
-> **状态。** 设计契约。客户端已调用 `POST /api/project/save`（显式保存、Ctrl/Cmd+S）与 `POST /api/project/save-as`；项目首页路由与 open/new 端点仍未实现。见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
+> **状态。** 设计契约。项目首页（`/projects`）、新建/打开、最近、示例、显式保存/另存为与允许根目录已实现；元数据编辑（`UI-DAT-07`）、依赖报告（`UI-DAT-09`）、自动保存与恢复仍未实现。见 [CODE_DEVIATIONS §7](../../status/CODE_DEVIATIONS.zh-CN.md)。
 
 ## 1. 目的
 
@@ -190,7 +190,7 @@ clean ──变更──▶ dirty ──保存──▶ saving ──成功─�
 
 ## 8. 服务端契约（最小集）
 
-这些端点是界面**必需**的。除 `GET /api/project` 与 `POST /api/project/save` 外，目前都不存在。
+这些端点是界面**必需**的。new/open/recent/current、save 与 save-as 已实现；自动保存与恢复仍为计划。
 
 | 方法 | 路径 | 用途 | 说明 |
 |---|---|---|---|
@@ -199,15 +199,15 @@ clean ──变更──▶ dirty ──保存──▶ saving ──成功─�
 | POST | `/api/project/open` | 按路径打开 | 路径限制在允许根目录 |
 | POST | `/api/project/save` | 显式保存 | 已存在；返回路径与时间 |
 | POST | `/api/project/save-as` | 另存到新路径 | 返回新路径；更新会话 |
-| GET | `/api/project/recent` | 最近列表 | 服务端列表并检查存在性 |
-| GET | `/api/project/autosaves` | 恢复快照 | 仅当前项目 |
-| POST | `/api/project/restore` | 恢复快照 | Body：快照 ID |
+| GET | `/api/project/recent` | 最近列表 | 允许根目录下的现有 `.omnim`（最多 20 个） |
+| GET | `/api/project/autosaves` | 恢复快照 | 📅 计划；仅当前项目 |
+| POST | `/api/project/restore` | 恢复快照 | 📅 计划；Body：快照 ID |
 
 规则：
 
-1. `save_path` 变为可变会话状态；切换项目不得泄漏撤销历史。
+1. `save_path` 是可变会话状态；切换项目清空撤销历史。`GET /api/project/current` 返回 `{ open, name, path }` 供工作区门禁使用。
 2. 每个端点返回带 `OMNI-*` 错误码的类型化错误。
-3. 新建/打开在网络失败重试时必须幂等。
+3. 打开在网络失败重试时幂等；新建在重名时返回 `409`，界面可改为打开现有文件。
 4. 项目切换时重置撤销/重做状态。
 
 ## 9. 非目标

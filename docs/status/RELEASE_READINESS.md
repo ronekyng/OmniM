@@ -52,7 +52,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 
 | Requirement | Status | Evidence / blocker |
 |---|---|---|
-| UI-SHL-01 Three application levels | 📅 | No `/projects` route; only workspace + editors |
+| UI-SHL-01 Three application levels | 🔀 | `/projects` + workspace + editors; route-matrix e2e pending |
 | UI-SHL-02 Seven fixed regions | 🔀 | Regions exist but not as a stable seven-zone shell |
 | UI-SHL-03 Properties docked right | 🔀 | Docked by default; width persisted (`layout.ts`); no resize e2e |
 | UI-SHL-04 Left dock tabs | 🔀 | Left sidebar exists; no tab groups |
@@ -73,12 +73,12 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | UI-FBK-07 Typed toasts, errors persist | 🔀 | Typed toasts exist; errors auto-dismiss |
 | UI-FBK-08 Dismissible, non-blocking feedback | 🔀 | Toasts are dismissible; placement overlaps chrome |
 | UI-FBK-09 Empty states with action | 🔀 | Some panels only |
-| UI-DAT-01 Project home | 📅 | No route, no server endpoints |
+| UI-DAT-01 Project home | 🔀 | `/projects` with new/open/recent/sample; server list/new/open + allowed-root; first-run e2e pending |
 | UI-DAT-02 Explicit save | 🔀 | Save button + Ctrl/Cmd+S + Save as… (`/api/project/save-as`); round-trip e2e pending |
 | UI-DAT-03 Dirty state | 🔀 | `saveState.ts` + title/status indicators; state e2e pending |
 | UI-DAT-06 Unsaved interception | 🔀 | `beforeunload` while dirty/failed; in-app navigation guard pending |
 
-**G1 verdict:** 📅 **not ready.** 3 of 25 complete (`UI-INT-02`, `UI-INT-09`, `UI-FBK-05`), 18 partial, 4 absent. Project home (`UI-DAT-01`) is the remaining structural blocker.
+**G1 verdict:** 📅 **not ready.** 3 of 25 complete (`UI-INT-02`, `UI-INT-09`, `UI-FBK-05`), 20 partial, 2 absent (`UI-DS-02`, `UI-FBK-02`).
 
 ## 5. G2 Beta Readiness
 
@@ -115,7 +115,6 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 
 | # | Issue | Gate | Owner | Requirement |
 |---|---|---|---|---|
-| B2 | No project home; no open/new endpoints (save/save-as exist) | G1 | Backend + Frontend | UI-DAT-01 |
 | B6 | Tokens bypassed in 731 places | G2 | Frontend | UI-DS-04 |
 | B7 | No i18n layer | G2 | Frontend | UI-I18N-01 |
 | B8 | No accessibility semantics | G2 | Frontend | UI-A11Y-04 |
@@ -129,6 +128,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | 2026-10-29 | G0 | Contracts drafted (product + ui) | This document set |
 | 2026-10-29 | — | Baseline measured | [FRONTEND_BASELINE](FRONTEND_BASELINE.md) |
 | 2026-10-29 | G1 (partial) | Shell/reliability slice: docked properties, layout persistence, title/status bars, error boundaries, shared dialogs, explicit save/save-as, auto-naming | `web/src/__tests__/{layout,saveState,naming}.test.ts`; Rust `persistence::save_as_retargets_the_session_and_rejects_bad_paths` |
+| 2026-10-29 | G1 (partial) | Project home: session gating, new/open/recent/sample, allowed-root enforcement | `crates/server/tests/projects.rs`; `web/src/__tests__/recentProjects.test.ts` |
 
 ## 9. Non-Goals
 

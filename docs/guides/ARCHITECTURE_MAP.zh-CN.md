@@ -35,7 +35,7 @@ OmniM 工作区的开发者地图：各 crate 的职责、彼此依赖，以及�
 - `lib.rs`（6,969 行，单文件）：**Omcom** 文本命令语言的解释器。所有变更路径——控制台输入、REST `/api/omcom`、AI 生成的指令——都汇聚到 `omnim_omcom` 的 execute 入口，由它变更项目与库。这就是 README 所说"一条命令语言"的核心。
 
 ### `crates/server` — omnim-server
-- `lib.rs`（5,926 行）：全部 Axum 路由与处理函数。REST 面覆盖 对象/属性/材料/测量/生命周期/管理/分解/omcom/网格/草图/组件/目录/系列/AMIR/撤销重做/IFC 导入导出——`/api/*` 下 82 条唯一路径。
+- `lib.rs`（6,206 行）：全部 Axum 路由与处理函数。REST 面覆盖 对象/属性/材料/测量/生命周期/管理/分解/omcom/网格/草图/组件/目录/系列/AMIR/撤销重做/IFC 导入导出——`/api/*` 下 86 条唯一路径。
 - `main.rs`：`omnim` 二进制——读取环境变量（`OMNIM_PROJECT`/`OMNIM_HOST`/`OMNIM_PORT`）、初始化元件库、创建共享的 `Arc<RwLock<Project>>`。
 - 依赖 model、omcom、sketch、ifc、amir、core。
 

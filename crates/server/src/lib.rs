@@ -9,7 +9,11 @@ use omnim_amir::{AmirConfig, AmirEngine, AmirError};
 use omnim_core as c;
 use omnim_model::{Project, LIBRARY};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    path::{Path as FsPath, PathBuf},
+    sync::Arc,
+};
 use tokio::sync::RwLock;
 use tower_http::services::ServeDir;
 
@@ -24,6 +28,12 @@ pub struct AppState {
     /// Current project file. Mutable so Save-As can retarget the session;
     /// `None` means ephemeral (no writes).
     pub save_path: RwLock<Option<String>>,
+    /// Root for project files (`OMNIM_PROJECTS_DIR` or the project's parent
+    /// directory). Open/Save-As reject paths that resolve outside it.
+    pub projects_root: PathBuf,
+    /// Whether a project has been explicitly opened/created in this server
+    /// session. The workspace is gated on this (UI-DAT-01).
+    pub session_open: RwLock<bool>,
 }
 
 pub type SharedProject = Arc<RwLock<Project>>;
@@ -44,11 +54,14 @@ pub fn create_router(project: SharedProject, save_path: Option<String>) -> Route
         }
     });
 
+    let projects_root = resolve_projects_root(save_path.as_deref());
     let state = Arc::new(AppState {
         project,
         executor: RwLock::new(omnim_omcom::Executor::new()),
         amir,
         save_path: RwLock::new(save_path),
+        projects_root,
+        session_open: RwLock::new(false),
     });
     build_router(state)
 }
@@ -59,6 +72,10 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/project", get(get_project))
         .route("/api/project/save", post(save_project))
         .route("/api/project/save-as", post(save_project_as))
+        .route("/api/project/recent", get(list_projects))
+        .route("/api/project/current", get(current_project))
+        .route("/api/project/new", post(new_project))
+        .route("/api/project/open", post(open_project))
         .route("/api/tree", get(get_tree))
         .route("/api/stats", get(get_stats))
         .route("/api/objects", get(list_objects))
@@ -257,28 +274,291 @@ struct SaveAsRequest {
 }
 
 /// POST /api/project/save-as — write the current project to a new file and
-/// retarget subsequent explicit saves at it. The path is used verbatim; the
-/// project root allow-list is a G3 security item (UI-SEC-02).
+/// retarget subsequent explicit saves at it. Paths resolve inside the project
+/// root only (`UI-SEC-03`).
 async fn save_project_as(
     State(state): State<SharedState>,
     Json(req): Json<SaveAsRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
-    let path = req.path.trim();
-    if path.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, "path is required".into()));
-    }
-    if !path.ends_with(".omnim") {
-        return Err((StatusCode::BAD_REQUEST, "path must end with .omnim".into()));
-    }
+    let path = resolve_project_path(&state.projects_root, &req.path)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
     let p = state.project.read().await;
-    p.save(path).map_err(|e| {
+    p.save(path.to_string_lossy().as_ref()).map_err(|e| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("save failed: {}", e),
         )
     })?;
-    *state.save_path.write().await = Some(path.to_string());
-    Ok(Json(serde_json::json!({ "success": true, "saved": path })))
+    *state.save_path.write().await = Some(path.to_string_lossy().into_owned());
+    Ok(Json(
+        serde_json::json!({ "success": true, "saved": path.to_string_lossy() }),
+    ))
+}
+
+// ============================================================
+// Project session (project home: new / open / recent)
+// ============================================================
+
+/// Default project root: `OMNIM_PROJECTS_DIR`, else `~/.omnim/projects`.
+pub fn default_projects_root() -> PathBuf {
+    if let Ok(dir) = std::env::var("OMNIM_PROJECTS_DIR") {
+        if !dir.trim().is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
+    dirs::home_dir()
+        .map(|home| home.join(".omnim").join("projects"))
+        .unwrap_or_else(|| PathBuf::from("."))
+}
+
+fn resolve_projects_root(save_path: Option<&str>) -> PathBuf {
+    if let Ok(dir) = std::env::var("OMNIM_PROJECTS_DIR") {
+        if !dir.trim().is_empty() {
+            return PathBuf::from(dir);
+        }
+    }
+    if let Some(path) = save_path {
+        if let Some(parent) = FsPath::new(path).parent() {
+            if !parent.as_os_str().is_empty() {
+                return parent.to_path_buf();
+            }
+        }
+    }
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
+
+fn slugify_project_name(name: &str) -> String {
+    let mut slug = String::new();
+    let mut last_dash = false;
+    for ch in name.chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch.to_ascii_lowercase());
+            last_dash = false;
+        } else if !last_dash && !slug.is_empty() {
+            slug.push('-');
+            last_dash = true;
+        }
+    }
+    let slug = slug.trim_matches('-');
+    if slug.is_empty() {
+        "project".into()
+    } else {
+        slug.to_string()
+    }
+}
+
+/// Resolve a project path inside `root`, rejecting traversal and symlink
+/// escapes (`UI-SEC-03`). The file need not exist (New/Save-As), but its
+/// parent must, and the resolved path must stay under the canonical root.
+fn resolve_project_path(root: &FsPath, input: &str) -> Result<PathBuf, String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("path is required".into());
+    }
+    let candidate = FsPath::new(trimmed);
+    if candidate.extension().and_then(|e| e.to_str()) != Some("omnim") {
+        return Err("path must end with .omnim".into());
+    }
+    let joined = if candidate.is_absolute() {
+        candidate.to_path_buf()
+    } else {
+        root.join(candidate)
+    };
+    let file_name = joined
+        .file_name()
+        .ok_or_else(|| "path must name a file".to_string())?;
+    let parent = joined.parent().unwrap_or(root);
+    let canonical_root = root
+        .canonicalize()
+        .map_err(|e| format!("project root unavailable: {}", e))?;
+    let canonical_parent = parent
+        .canonicalize()
+        .map_err(|e| format!("project directory unavailable: {}", e))?;
+    let resolved = canonical_parent.join(file_name);
+    if !resolved.starts_with(&canonical_root) {
+        return Err("path is outside the allowed project root".into());
+    }
+    Ok(resolved)
+}
+
+#[derive(Serialize)]
+struct ProjectSummary {
+    name: String,
+    path: String,
+    size: u64,
+    modified: Option<u64>,
+}
+
+async fn list_projects(
+    State(state): State<SharedState>,
+) -> Result<Json<Vec<ProjectSummary>>, (StatusCode, String)> {
+    std::fs::create_dir_all(&state.projects_root)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let mut projects = Vec::new();
+    let entries = std::fs::read_dir(&state.projects_root)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) != Some("omnim") {
+            continue;
+        }
+        let Ok(meta) = entry.metadata() else { continue };
+        let modified = meta
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_secs());
+        let name = Project::load(path.to_string_lossy().as_ref())
+            .map(|project| project.name)
+            .unwrap_or_else(|_| {
+                path.file_stem()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or("project")
+                    .to_string()
+            });
+        projects.push(ProjectSummary {
+            name,
+            path: path.to_string_lossy().into_owned(),
+            size: meta.len(),
+            modified,
+        });
+    }
+    projects.sort_by(|a, b| b.modified.cmp(&a.modified).then(a.name.cmp(&b.name)));
+    projects.truncate(20);
+    Ok(Json(projects))
+}
+
+#[derive(Serialize)]
+struct CurrentProject {
+    open: bool,
+    name: String,
+    path: Option<String>,
+}
+
+async fn current_project(State(state): State<SharedState>) -> Json<CurrentProject> {
+    let p = state.project.read().await;
+    Json(CurrentProject {
+        open: *state.session_open.read().await,
+        name: p.name.clone(),
+        path: state.save_path.read().await.clone(),
+    })
+}
+
+#[derive(Deserialize)]
+struct NewProjectRequest {
+    name: String,
+    #[serde(default)]
+    sample: bool,
+}
+
+/// Seed a small datum-only sample: two storeys and a four-line grid. Kept
+/// geometry-free so it opens instantly and does not depend on the catalog.
+fn seed_sample_project(project: &mut Project) {
+    use omnim_model::grid::{GridAxis, GridLine};
+
+    for (name, elevation) in [("Ground Floor", 0.0), ("Level 1", 3.9)] {
+        let id = project
+            .create_object(c::ObjectType::BuildingStorey, name)
+            .id
+            .clone();
+        if let Some(obj) = project.objects.get_mut(&id) {
+            obj.elevation = Some(elevation);
+        }
+    }
+    for (label, axis, coordinate) in [
+        ("A", GridAxis::AlongX, 0.0),
+        ("B", GridAxis::AlongX, 6.0),
+        ("1", GridAxis::AlongY, 0.0),
+        ("2", GridAxis::AlongY, 8.0),
+    ] {
+        project.grids.insert(GridLine::new(label, axis, coordinate));
+    }
+    project.objects.rebuild_children();
+}
+
+async fn new_project(
+    State(state): State<SharedState>,
+    Json(req): Json<NewProjectRequest>,
+) -> Result<Json<CurrentProject>, (StatusCode, String)> {
+    let name = req.name.trim();
+    if name.is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "project name is required".into()));
+    }
+    std::fs::create_dir_all(&state.projects_root)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let file_name = format!("{}.omnim", slugify_project_name(name));
+    let path = resolve_project_path(&state.projects_root, &file_name)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    if path.exists() {
+        return Err((
+            StatusCode::CONFLICT,
+            format!(
+                "a project named '{}' already exists in this root",
+                path.file_stem().unwrap_or_default().to_string_lossy()
+            ),
+        ));
+    }
+
+    let mut project = Project::new(name);
+    if req.sample {
+        seed_sample_project(&mut project);
+    }
+    project.save(path.to_string_lossy().as_ref()).map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("save failed: {}", e),
+        )
+    })?;
+
+    let path_string = path.to_string_lossy().into_owned();
+    {
+        let mut p = state.project.write().await;
+        *p = project;
+        *state.save_path.write().await = Some(path_string.clone());
+        state.executor.write().await.clear_history();
+        *state.session_open.write().await = true;
+    }
+    let p = state.project.read().await;
+    Ok(Json(CurrentProject {
+        open: true,
+        name: p.name.clone(),
+        path: Some(path_string),
+    }))
+}
+
+#[derive(Deserialize)]
+struct OpenProjectRequest {
+    path: String,
+}
+
+async fn open_project(
+    State(state): State<SharedState>,
+    Json(req): Json<OpenProjectRequest>,
+) -> Result<Json<CurrentProject>, (StatusCode, String)> {
+    let path = resolve_project_path(&state.projects_root, &req.path)
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    if !path.exists() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            format!("project file not found: {}", path.to_string_lossy()),
+        ));
+    }
+    let project = Project::load(path.to_string_lossy().as_ref())
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("open failed: {}", e)))?;
+    let path_string = path.to_string_lossy().into_owned();
+    let name = project.name.clone();
+    {
+        let mut p = state.project.write().await;
+        *p = project;
+        *state.save_path.write().await = Some(path_string.clone());
+        state.executor.write().await.clear_history();
+        *state.session_open.write().await = true;
+    }
+    Ok(Json(CurrentProject {
+        open: true,
+        name,
+        path: Some(path_string),
+    }))
 }
 
 #[derive(Serialize, Clone)]

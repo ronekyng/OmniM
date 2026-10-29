@@ -187,7 +187,7 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 
 ## 7. Frontend UI Deviations — **Known** (2026-10-29)
 
-> **P9 update (2026-10-29).** 7.1, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; 7.2 (project home), 7.4 (panel states), 7.8–7.11 remain open.
+> **P9 update (2026-10-29).** 7.1, 7.2, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, a project home with new/open/recent/sample exists, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; 7.4 (panel states) and 7.8–7.11 remain open.
 
 
 Audited against `web/src` on 2026-10-29. These are the gaps between the UI contracts in

@@ -184,7 +184,7 @@ Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN cove
 
 ## Phase 10: Cloud Server & Collaboration (2029) — 📅 Planned
 
-**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (82 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
+**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (86 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
 
 **Not implemented** 📅: PostgreSQL + PostGIS storage, version history / audit trail (currently only JSON file save), WebSocket real-time notifications, geometry streaming, client cache layers, multi-user collaboration/Conflict resolution, presence, collaboration UI. There is **no WebSocket anywhere in the server**.
 

@@ -1,4 +1,4 @@
-import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint } from './types';
+import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
@@ -15,6 +15,18 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   stats: () => request<StatsResponse>('/api/stats'),
+  listProjects: () => request<ProjectSummary[]>('/api/project/recent'),
+  currentProject: () => request<CurrentProject>('/api/project/current'),
+  newProject: (name: string, sample = false) => request<CurrentProject>('/api/project/new', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, sample }),
+  }),
+  openProject: (path: string) => request<CurrentProject>('/api/project/open', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  }),
   saveProject: () => request<{ success: boolean; saved: string }>('/api/project/save', { method: 'POST' }),
   saveProjectAs: (path: string) => request<{ success: boolean; saved: string }>('/api/project/save-as', {
     method: 'POST',
