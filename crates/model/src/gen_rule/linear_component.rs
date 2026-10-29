@@ -9,6 +9,15 @@
 //! - 相邻环之间生成四边形面片
 //! - 两端加盖
 
+//! LinearComponentGen — Linear 家族的生成引擎（DATA_MODEL §1/§6.4）
+//!
+//! **授权边界（§1 授权矩阵）**：本模块承载 Linear 类的路径 + 截面引擎
+//! （Road 分段网格、Pipe/Beam 快速体），以及 Point 类的过渡引导线管
+//! （`build_guide_line`，featureLine/contourLine 专用）。
+//! **§6.4 边界注记：墙不是 LinearComponent** —— 墙是 Surface（LayerExtrusion，
+//! 见 layer_extrusion.rs）；DN、弯头、地形目标是 Linear 语义，禁止进入
+//! Surface 家族。跨类组合一律先过 `gen_rule::matrix::authorize`。
+
 use omnim_core as c;
 use c::{FaceIndices, MeshGeometry, Point2D, Point3D, Vector3D};
 

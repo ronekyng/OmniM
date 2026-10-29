@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Point3D } from '../../../../shared/types/creation';
+import type { Point3D, PathPreviewForm } from '../../../../shared/types/creation';
 import type { LayerDefInput } from '../../../../shared/types';
 
 export function clearMarkerGroup(group: THREE.Group): void {
@@ -218,4 +218,59 @@ export function addLayerPreview(
   height = 3,
 ): THREE.Group | null {
   return addLayeredWallPreview(group, [from, to], layers, height);
+}
+// ── Unified path preview (Wave 2, DATA_MODEL §1 form → preview lookup) ──────
+
+export type { PathPreviewForm };
+
+export type PathPreviewSpec = {
+  /** Picked points in world metres. */
+  points: Point3D[];
+  /** Closed loop (region footprints; panel loops repeat the first point). */
+  closed: boolean;
+  /** Genesis form deciding the visual language. */
+  form: PathPreviewForm;
+  /** Layer stack (mm) for panel previews — same mm→m scale as the server. */
+  layers?: LayerDefInput[];
+  /** Extrusion height in metres for panel previews. */
+  height?: number;
+  /** Outline color override (e.g. red on invalid polygons). */
+  color?: number;
+};
+
+/** Single entry point for in-scene creation previews, dispatched by genesis
+ *  form instead of scattered per-type switches:
+ *  - `region`  → closed outline + ground-plane fan fill;
+ *  - `panel`   → per-segment layered ghost with mitered bends (closed loops
+ *                repeat the first point so the last bend closes);
+ *  - `linear`  → thin outline along the alignment;
+ *  - `point`   → outline + point markers (transitional guide lines). */
+export function addPathPreview(group: THREE.Group, spec: PathPreviewSpec): void {
+  if (spec.points.length === 0) return;
+  if (spec.form === 'region') {
+    addPreviewLine(group, spec.points, spec.color);
+    if (spec.closed && spec.points.length >= 3) {
+      if (spec.points.length >= 2) {
+        addPreviewLine(group, [spec.points[spec.points.length - 1], spec.points[0]], spec.color ?? 0xffd34d);
+      }
+      addPolygonFill(group, spec.points, spec.color);
+    }
+    return;
+  }
+  if (spec.form === 'panel') {
+    const pts = spec.closed && spec.points.length >= 3
+      ? [...spec.points, spec.points[0]]
+      : spec.points;
+    if (spec.layers && spec.layers.length > 0 && pts.length >= 2) {
+      addLayeredWallPreview(group, pts, spec.layers, spec.height ?? 3);
+    } else {
+      addPreviewLine(group, pts, spec.color);
+    }
+    return;
+  }
+  // linear / point: thin guide outline (+ markers for the point family)
+  addPreviewLine(group, spec.points, spec.color);
+  if (spec.form === 'point') {
+    for (const p of spec.points) addPointMarker(group, p, spec.color);
+  }
 }

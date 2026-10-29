@@ -18,6 +18,7 @@ const mockForm: CreationForm = {
   core: '0.2', finish: '0.02',
   thickness: '0.3', radius: '0.3',
   targetWallId: '',
+  form: 'panel' as const,
   openingWidth: '1.0', openingHeight: '2.1',
   catalogType: 'concrete-rect',
   catalogDefId: '',

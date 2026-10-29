@@ -25,6 +25,13 @@ export type PickMode =
 
 /** Roof creation sub-mode (Phase 4.2). */
 export type RoofMode = 'footprint' | 'extrusion';
+/** Genesis form of the instance (DATA_MODEL §1 dual-axis model):
+ *  `panel` = open centerline + layered thickness,
+ *  `region` = closed boundary footprint.
+ *  Per-type defaults: wall → panel, slab/floor/roof → region.
+ *  The server authorization matrix accepts wall × panel/region,
+ *  slab/floor/roof × region, roof × panel (2-point profile). */
+export type GenesisFormKind = 'panel' | 'region';
 /** Column creation sub-mode (Phase 4.1). */
 export type ColumnMode = 'place' | 'segment';
 
@@ -51,7 +58,9 @@ export type CreationForm = {
   boundary_points: Point3D[];
   /** True when boundary_points form a closed polygon (slab/floor/roof footprint). */
   is_closed: boolean;
-  /** Active interaction mode (derived from type + roofMode/columnMode). */
+  /** Genesis form of this instance (per-type default, user-selectable for walls). */
+  form: GenesisFormKind;
+  /** Active interaction mode (derived from type + form + roofMode/columnMode). */
   pickMode: PickMode;
   /** Roof sub-mode: footprint polygon vs segment extrusion. */
   roofMode: RoofMode;
@@ -128,6 +137,7 @@ export const DEFAULT_FORM: CreationForm = {
   layersJson: JSON.stringify(DEFAULT_LAYERS_WALL),
   boundary_points: [],
   is_closed: false,
+  form: 'panel',
   pickMode: { mode: 'segment', minClicks: 2 },
   roofMode: 'footprint',
   columnMode: 'place',
@@ -152,6 +162,16 @@ export function validateForm(form: CreationForm): ValidationResult {
   return { valid: Object.keys(errors).length === 0, errors };
 }
 
+/** Per-type default genesis form (DATA_MODEL §1 authorization matrix defaults). */
+export function defaultFormForType(type: ObjectType): GenesisFormKind {
+  switch (type) {
+    case 'slab': case 'floor': case 'roof':
+      return 'region';
+    default:
+      return 'panel';
+  }
+}
+
 export function defaultPickModeForType(type: ObjectType): PickMode {
   switch (type) {
     case 'wall': case 'road': case 'bridge': case 'tunnel':
@@ -168,6 +188,37 @@ export function defaultPickModeForType(type: ObjectType): PickMode {
   }
 }
 
+/** Visual preview language for a creation session (Markers.addPathPreview). */
+export type PathPreviewForm = 'panel' | 'region' | 'linear' | 'point';
+
+/** Map a creation form to its preview language — the same form → preview
+ *  lookup the server's authorization matrix speaks (DATA_MODEL §1). */
+export function previewFormFor(form: CreationForm): PathPreviewForm {
+  switch (form.objectType) {
+    case 'wall':
+      return form.form;
+    case 'roof':
+      return form.roofMode === 'extrusion' ? 'panel' : 'region';
+    case 'slab': case 'floor':
+      return 'region';
+    case 'road': case 'bridge': case 'tunnel':
+      return 'linear';
+    case 'feature_line': case 'contour_line':
+      return 'point';
+    case 'beam': case 'column': case 'pipe': case 'duct':
+      return 'linear';
+    default:
+      return 'point';
+  }
+}
+
+/** Switch the genesis form of a surface-type form and re-derive its pick mode.
+ *  The authorization matrix on the server decides whether the combination is
+ *  allowed; the UI only offers combinations with a matrix row. */
+export function withGenesisForm(form: CreationForm, kind: GenesisFormKind): CreationForm {
+  return { ...form, form: kind, pickMode: pickModeForForm({ ...form, form: kind }) };
+}
+
 export function needsPoints(mode: PickMode): boolean {
   return mode.mode === 'polyline' || mode.mode === 'polygon' || mode.mode === 'segment';
 }
@@ -179,12 +230,19 @@ export function neededClicksForType(type: ObjectType): number {
   return mode.mode === 'polygon' ? 3 : 2;
 }
 
-/** Effective pick mode for the given form, honouring roof/column sub-modes. */
+/** Effective pick mode for the given form, honouring the genesis form and
+ *  roof/column sub-modes. This is the single `form → pickMode` lookup —
+ *  callers must not re-derive per-type switches (DATA_MODEL §1 governance 2). */
 export function pickModeForForm(form: CreationForm): PickMode {
   if (form.objectType === 'roof') {
     return form.roofMode === 'extrusion'
       ? { mode: 'segment', minClicks: 2 }
       : { mode: 'polygon', minClicks: 3 };
+  }
+  if (form.objectType === 'wall') {
+    return form.form === 'region'
+      ? { mode: 'polygon', minClicks: 3 }
+      : { mode: 'polyline', minClicks: 2 };
   }
   if (form.objectType === 'column') {
     return form.columnMode === 'segment'
@@ -286,7 +344,8 @@ export function createInitialForm(type: ObjectType, points: Point3D[] = []): Cre
     form.layers = DEFAULT_LAYERS_FLOOR;
     form.layersJson = JSON.stringify(DEFAULT_LAYERS_FLOOR);
   }
-  form.pickMode = defaultPickModeForType(type);
+  form.form = defaultFormForType(type);
+  form.pickMode = pickModeForForm(form);
   return applyPointsToForm(form, points);
 }
 

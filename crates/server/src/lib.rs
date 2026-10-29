@@ -1175,7 +1175,22 @@ enum GenRuleRequest {
     /// when the picked `alignment` ([x,y,z] N-point broken polyline, serde default empty,
     /// swept one by one per segment with length ≥ 2) is present, a segmented road mesh is generated along the broken
     /// polyline. The frontend convention: `path` is only used by the wall category (layered wall), the road uses `alignment`.
-    Road { name: String, length: f64, width: f64, thickness: f64, #[serde(default)] alignment: Vec<[f64; 3]>, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
+    Road {
+        name: String,
+        length: f64,
+        width: f64,
+        thickness: f64,
+        /// Contract form `path { points, closed: false }` — the canonical alignment input.
+        #[serde(default)]
+        path: Option<PathInput>,
+        /// Legacy alias for `path` (N-point broken polyline).
+        #[serde(default)]
+        alignment: Option<PathInput>,
+        #[serde(default)]
+        parent_id: Option<String>,
+        #[serde(default)]
+        series_id: Option<String>,
+    },
     #[serde(rename = "pipe")]
     Pipe { name: String, length: f64, radius: f64, #[serde(default)] parent_id: Option<String>, #[serde(default)] series_id: Option<String> },
     #[serde(rename = "door")]
@@ -1199,12 +1214,13 @@ enum GenRuleRequest {
         #[serde(default)]
         height: f64,  // wall/roof height
         layers: Vec<LayerDefRequest>,
-        /// Continuous center-line path (wall): coordinate triples [x, y, z] in metres.
+        /// Center-line path (wall / roof-profile): contract `{ points, closed }`
+        /// or legacy bare array. Closed form for walls = region pieces.
         #[serde(default)]
-        path: Vec<[f64; 3]>,
-        /// Closed boundary footprint (slab/roof/floor): coordinate triples [x, y, z].
+        path: Option<PathInput>,
+        /// Closed boundary footprint (slab/roof/floor): contract or legacy array.
         #[serde(default)]
-        boundary: Vec<[f64; 3]>,
+        boundary: Option<PathInput>,
         #[serde(default)]
         parent_id: Option<String>,
         #[serde(default)]
@@ -1227,8 +1243,12 @@ enum GenRuleRequest {
     #[serde(rename = "line")]
     Line {
         name: String,
+        /// Contract form `path { points, closed: false }`.
         #[serde(default)]
-        alignment: Vec<[f64; 3]>,
+        path: Option<PathInput>,
+        /// Legacy alias for `path`.
+        #[serde(default)]
+        alignment: Option<PathInput>,
         #[serde(default)]
         diameter: f64,
         #[serde(default)]
@@ -1255,6 +1275,54 @@ impl LayerDefRequest {
             material_id: self.material_id.clone(),
             function: self.function.clone(),
         }
+    }
+}
+
+/// `path` accepts the contract form `{ "points": [[x,y,z]...], "closed": bool }`
+/// or a legacy bare array (`path[]` / `boundary[]` / `alignment[]`).
+/// Contract: DATA_MODEL §1 dual-axis model; both spellings normalize to `PathSpec`.
+#[derive(Deserialize, Clone)]
+#[serde(untagged)]
+enum PathInput {
+    Contract {
+        points: Vec<[f64; 3]>,
+        #[serde(default)]
+        closed: bool,
+    },
+    Legacy(Vec<[f64; 3]>),
+}
+
+#[derive(Debug, Clone)]
+struct PathSpec {
+    points: Vec<[f64; 3]>,
+    closed: bool,
+}
+
+impl PathInput {
+    fn normalize(self, legacy_closed: bool) -> PathSpec {
+        match self {
+            PathInput::Contract { points, closed } => PathSpec { points, closed },
+            PathInput::Legacy(points) => PathSpec { points, closed: legacy_closed },
+        }
+    }
+}
+
+/// Validate a normalized spec through the shared pure-geometry layer
+/// (`gen_rule::path_geom`): open ≥ min points / closed polygon checks.
+fn validate_spec(spec: &PathSpec, min: usize) -> Result<(), String> {
+    use omnim_model::gen_rule::path_geom;
+    let pts: Vec<omnim_core::Point2D> = spec
+        .points
+        .iter()
+        .map(|c| omnim_core::Point2D { x: c[0], y: c[1] })
+        .collect();
+    path_geom::validate_path(&pts, spec.closed, min)
+}
+
+/// String-typed property value for metadata properties (genesis recording).
+fn str_prop(v: &str) -> c::PropertyValue {
+    c::PropertyValue {
+        value_type: Some(c::property_value::ValueType::StringValue(v.to_string())),
     }
 }
 
@@ -1353,22 +1421,46 @@ async fn genrule_create(
             if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
             obj.clone()
         }
-        GenRuleRequest::Road { name, length, width, thickness, alignment, .. } => {
-            // B3：拾取折线（alignment ≥ 2 点）→ 逐段道路网格（绕段角旋转、平移到段起点）；
+        GenRuleRequest::Road { name, length, width, thickness, path, alignment, .. } => {
+            // 路径契约：path { points, closed:false } 为规范输入，alignment[] 为遗留别名；
+            // 两者同时出现视为歧义。授权矩阵：road × linear。
+            let road_spec: Option<PathSpec> = match (path, alignment) {
+                (Some(_), Some(_)) => {
+                    return Err((StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into()));
+                }
+                (Some(p), None) => Some(p.clone().normalize(false)),
+                (None, Some(a)) => Some(a.clone().normalize(false)),
+                (None, None) => None,
+            };
+            if let Some(ref spec) = road_spec {
+                if spec.closed {
+                    return Err((StatusCode::BAD_REQUEST, "road path must be open (a road is a linear component, not a region)".into()));
+                }
+                omnim_model::gen_rule::matrix::authorize("road", "linear")
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                validate_spec(spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+            // B3：拾取折线（≥ 2 点）→ 逐段道路网格（绕段角旋转、平移到段起点）；
             // 否则退化为旧的单段直路
-            let mesh = if alignment.len() >= 2 {
-                omnim_model::gen_rule::linear_component::build_road_alignment(
-                    alignment, *width, *thickness, 30,
-                )
-            } else {
-                omnim_model::gen_rule::linear_component::build_road(
+            let mesh = match &road_spec {
+                Some(spec) if spec.points.len() >= 2 => {
+                    omnim_model::gen_rule::linear_component::build_road_alignment(
+                        &spec.points, *width, *thickness, 30,
+                    )
+                }
+                _ => omnim_model::gen_rule::linear_component::build_road(
                     *length, *width, *thickness * 0.7, *thickness * 0.3, 30,
-                )
+                ),
             };
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             let id = p.create_object(omnim_core::ObjectType::Road, name).id.clone();
             let obj = p.objects.get_mut(&id).expect("genrule object was just created");
             obj.geometry = Some(geom);
+            if road_spec.is_some() {
+                obj.set_property("genesis_class", str_prop("Linear"));
+                obj.set_property("genesis_form", str_prop("linear"));
+            }
             if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
             obj.clone()
         }
@@ -1433,7 +1525,8 @@ async fn genrule_create(
         }
         GenRuleRequest::Layered { name, mode, length, width, height, layers, path, boundary, start_x, start_y, start_z, end_x, end_y, end_z, .. } => {
             use omnim_core::Point2D;
-            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_path_elevated, build_layered_slab_path_elevated, build_layered_roof_profile, merge_collinear, validate_boundary, LayerDef as MLayerDef};
+            use omnim_model::gen_rule::layer_extrusion::{build_layered_wall, build_layered_slab, build_layered_path_elevated, build_layered_slab_path_elevated, build_layered_roof_profile, LayerDef as MLayerDef};
+            use omnim_model::gen_rule::path_geom;
             if layers.is_empty() {
                 return Err((StatusCode::BAD_REQUEST, "layered genrule requires at least one layer".into()));
             }
@@ -1444,48 +1537,77 @@ async fn genrule_create(
                 "floor" => omnim_core::ObjectType::Floor,
                 _ => omnim_core::ObjectType::Wall,
             };
+            let kind = match mode.as_str() {
+                "slab" => "slab",
+                "roof" => "roof",
+                "floor" => "floor",
+                _ => "wall",
+            };
+
+            // ── Path contract + (objectType, form) authorization (DATA_MODEL §1) ──
+            let open = path.clone().map(|p| p.normalize(false));
+            let closed = boundary.clone().map(|b| b.normalize(true));
+            if open.is_some() && closed.is_some() {
+                return Err((StatusCode::BAD_REQUEST,
+                    "provide either `path` or `boundary`, not both".into()));
+            }
+            let is_roof_profile = open.as_ref().is_some_and(|spec| {
+                spec.points.len() == 2
+                    && (spec.points[0][0], spec.points[0][1]) != (spec.points[1][0], spec.points[1][1])
+            });
+            let form: Option<&'static str> = if open.is_some() {
+                if kind == "roof" {
+                    if !is_roof_profile {
+                        return Err((StatusCode::BAD_REQUEST,
+                            "roof 'panel' form requires exactly 2 distinct points; use `boundary` for a footprint roof".into()));
+                    }
+                    Some("panel")
+                } else {
+                    Some("panel")
+                }
+            } else if closed.is_some() {
+                Some("region")
+            } else {
+                None // parameter quick-form (rect), no path input — outside the matrix
+            };
+            if let Some(f) = form {
+                omnim_model::gen_rule::matrix::authorize(kind, f)
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+
             let to_p2 = |p: &[f64; 3]| Point2D { x: p[0], y: p[1] };
             let mut skip_end_transform = false;
-            let mut mesh = if mode.as_str() == "wall" {
-                if path.len() >= 2 {
-                    // C2：墙体路径按 ≥ 2 个互异点校验（C3 先合并共线/重复点）
-                    let merged = merge_collinear(&path.iter().map(to_p2).collect::<Vec<_>>());
+            let mut mesh = if let Some(spec) = &open {
+                validate_spec(spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                // B1：不再丢弃拾取点的 z。约定（见 docs/reference/API.md GenRule）：
+                // 所有拾取点 z 相等 → 该公共 z 作为基准高程；z 各不相同 → 取首点 z
+                // （当前生成器为纯平面拉伸，不支持逐点放坡）。拾取坐标为绝对坐标，
+                // 因此跳过 start/end 长条变换。
+                let base_z = spec.points[0][2];
+                skip_end_transform = true;
+                if kind == "roof" && is_roof_profile {
+                    let w = if *width <= 0.0 { 1.0 } else { *width };
+                    build_layered_roof_profile(
+                        [spec.points[0][0], spec.points[0][1]],
+                        [spec.points[1][0], spec.points[1][1]], w, &layer_defs, base_z,
+                    )
+                } else {
+                    let merged = path_geom::merge_collinear(&spec.points.iter().map(to_p2).collect::<Vec<_>>());
                     if merged.len() < 2 {
                         return Err((StatusCode::BAD_REQUEST, "wall path requires at least 2 distinct points".into()));
                     }
-                    // B1：不再丢弃拾取点的 z。约定（见 docs/reference/API.md GenRule）：
-                    // - 所有拾取点 z 相等 → 该公共 z 作为基准高程，几何体落于拾取高程；
-                    // - z 各不相同（斜坡路径）→ 简化方案：取首点 z 为基准高程，其余点的
-                    //   高程差异被忽略（当前生成器为纯平面拉伸，不支持逐点放坡）。
-                    // 拾取点坐标是绝对坐标（含 z），因此构建后跳过 start/end 长条
-                    // 变换，避免对整段路径再做空移/回折。
-                    let base_z = path[0][2];
-                    let _ = path.iter().all(|p| (p[2] - base_z).abs() < 1e-6); // 斜坡差异被忽略，仅取首点
-                    skip_end_transform = true;
                     build_layered_path_elevated(&merged, false, *height, base_z, &layer_defs)
-                } else {
-                    build_layered_wall(*length, *height, &layer_defs)
                 }
-            } else if boundary.len() >= 3 {
-                // Closed footprint: lift each layer along +Z over the boundary.
-                // C2：先校验轮廓（无效 → 400），再 C3 合并共线点
-                let merged = merge_collinear(&boundary.iter().map(to_p2).collect::<Vec<_>>());
-                validate_boundary(&merged)
-                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
-                // B1：slab/roof/floor footprint 以第一个轮廓点的高程为基准 z
-                let base_z = boundary[0][2];
+            } else if let Some(spec) = &closed {
+                // Closed footprint: polygon checks (≥3 pts, degenerate area,
+                // self-intersection) live in the shared path_geom layer.
+                validate_spec(spec, 3).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                let merged = path_geom::merge_collinear(&path_geom::normalize_closed(&spec.points.iter().map(to_p2).collect::<Vec<_>>()));
+                let base_z = spec.points[0][2];
                 skip_end_transform = true;
                 build_layered_slab_path_elevated(&merged, &layer_defs, base_z)
-            } else if mode.as_str() == "roof" && path.len() == 2 && (path[0][0] != path[1][0] || path[0][1] != path[1][1]) {
-                // B2：两点轮廓屋面（profile roof）——start→end 为跨度方向，
-                // width 为垂直跨度延伸宽度（width ≤ 0 时回落 1.0）。
-                // 高程处理与 B1 相同：取首点 z 为基准高程；几何体构建于
-                // 拾取坐标（含旋转/平移），因此跳过 start/end 长条变换。
-                let w = if *width <= 0.0 { 1.0 } else { *width };
-                skip_end_transform = true;
-                build_layered_roof_profile(
-                    [path[0][0], path[0][1]], [path[1][0], path[1][1]], w, &layer_defs, path[0][2],
-                )
+            } else if kind == "wall" {
+                build_layered_wall(*length, *height, &layer_defs)
             } else {
                 build_layered_slab(*length, *width, &layer_defs)
             };
@@ -1510,15 +1632,35 @@ async fn genrule_create(
             let id = p.create_object(object_type, name).id.clone();
             let obj = p.objects.get_mut(&id).expect("genrule object was just created");
             obj.geometry = Some(geom);
+            if let Some(f) = form {
+                let cf = omnim_model::gen_rule::matrix::authorize(kind, f).expect("authorized above");
+                obj.set_property("genesis_class", str_prop(cf.class.as_str()));
+                obj.set_property("genesis_form", str_prop(cf.form));
+            }
             if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
             obj.clone()
         }
-        GenRuleRequest::Line { name, alignment, diameter, .. } => {
+        GenRuleRequest::Line { name, path, alignment, diameter, .. } => {
             use omnim_core::Point3D;
-            let pts: Vec<Point3D> = alignment.iter().map(|c| Point3D { x: c[0], y: c[1], z: c[2] }).collect();
-            if pts.len() < 2 {
-                return Err((StatusCode::BAD_REQUEST, "line genrule requires at least 2 alignment points".into()));
+            // 路径契约同 Road：path 为规范输入，alignment[] 为遗留别名。授权矩阵：line × point。
+            let line_spec: PathSpec = match (path, alignment) {
+                (Some(_), Some(_)) => {
+                    return Err((StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into()));
+                }
+                (Some(p), None) => p.clone().normalize(false),
+                (None, Some(a)) => a.clone().normalize(false),
+                (None, None) => {
+                    return Err((StatusCode::BAD_REQUEST, "line genrule requires at least 2 points".into()));
+                }
+            };
+            if line_spec.closed {
+                return Err((StatusCode::BAD_REQUEST, "line path must be open".into()));
             }
+            omnim_model::gen_rule::matrix::authorize("line", "point")
+                .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            validate_spec(&line_spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            let pts: Vec<Point3D> = line_spec.points.iter().map(|c| Point3D { x: c[0], y: c[1], z: c[2] }).collect();
             let mesh = omnim_model::gen_rule::linear_component::build_guide_line(&pts, if *diameter > 0.0 { *diameter } else { 0.05 }, 16);
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             // FeatureLine/ContourLine map to the proto ObjectType when available.
@@ -1526,6 +1668,8 @@ async fn genrule_create(
             let id = p.create_object(object_type, name).id.clone();
             let obj = p.objects.get_mut(&id).expect("genrule object was just created");
             obj.geometry = Some(geom);
+            obj.set_property("genesis_class", str_prop("Point"));
+            obj.set_property("genesis_form", str_prop("point"));
             if let Some(pid) = parent_id { if !pid.is_empty() { obj.parent_id = Some(pid.to_string()); } }
             obj.clone()
         }

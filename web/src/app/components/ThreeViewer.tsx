@@ -11,7 +11,8 @@ import { useAppStore } from '../store/appStore';
 import type { ObjectType, Point3D, CreationForm } from '../../shared/types/creation';
 import { createInitialForm, applyPointsToForm, pickModeForForm, defaultPickModeForType } from '../../shared/types/creation';
 import { LAYERED_TYPES } from '../../shared/catalog';
-import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayeredWallPreview, addPolygonFill, addPlaceCursor } from './viewer/three/Markers';
+import { previewFormFor } from '../../shared/types/creation';
+import { clearMarkerGroup, addPointMarker, addPreviewLine, createDashedPreviewLine, addLayeredWallPreview, addPolygonFill, addPlaceCursor, addPathPreview } from './viewer/three/Markers';
 import { polygonPreviewError } from '../../shared/creation/polyline';
 import { pickGroundPoint, pickingHint, requiredClicks } from './viewer/three/Picking';
 import { SnapIndicator } from './viewer/three/SnapIndicator';
@@ -175,13 +176,16 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     previewLineRef.current = null;
     layerPreviewRef.current = null;
     for (const p of creationPoints) addPointMarker(g, p);
-    if (creationPhase !== 'picking' && creationPoints.length > 1) {
-      addPreviewLine(g, creationPoints);
-      const mode = creationForm ? pickModeForForm(creationForm) : null;
-      if (mode?.mode === 'polygon' && creationPoints.length >= 3) {
-        addPreviewLine(g, [creationPoints[creationPoints.length - 1], creationPoints[0]], 0xffd34d);
-        addPolygonFill(g, creationPoints);
-      }
+    if (creationPhase !== 'picking' && creationPoints.length > 1 && creationForm) {
+      // Unified form-dispatched preview (DATA_MODEL §1): panel → layered ghost,
+      // region → outline + fill, linear/point → guide outline.
+      addPathPreview(g, {
+        points: creationPoints,
+        closed: pickModeForForm(creationForm).mode === 'polygon',
+        form: previewFormFor(creationForm),
+        layers: creationForm.layers,
+        height: parseFloat(creationForm.height || '3') || 3,
+      });
     }
   }, [creationPoints, creationPhase, creationForm]);
 
@@ -929,14 +933,18 @@ focusObject: (id) => {
               ? polygonPreviewError(previewPts)
               : null;
             const previewColor = polygonIssue ? 0xff4040 : undefined;
-            if (mode.mode !== 'polygon' && objType && LAYERED_TYPES.has(objType) && currentPoints.length >= 1
-              && form?.layers && form.layers.length > 0 && previewPts.length <= 33) {
-              // Whole-path layered ghost (per-segment boxes + mitered bends,
-              // same mm→m scale as the server) — replaces "last segment only".
-              addLayeredWallPreview(hoverGroup, previewPts, form.layers, parseFloat(form.height || '3') || 3);
-            } else if (mode.mode === 'polygon' && currentPoints.length >= 1) {
-              addPreviewLine(hoverGroup, previewPts, previewColor);
-              if (previewPts.length >= 3) addPolygonFill(hoverGroup, previewPts, previewColor);
+            if (mode.mode !== 'place' && currentPoints.length >= 1) {
+              // Unified form-dispatched hover preview; polygon previews turn
+              // red when the footprint is invalid (same rules the server
+              // enforces with a 400 on submit).
+              addPathPreview(hoverGroup, {
+                points: previewPts,
+                closed: mode.mode === 'polygon',
+                form: form ? previewFormFor(form) : 'point',
+                layers: form?.layers,
+                height: parseFloat(form?.height || '3') || 3,
+                color: previewColor,
+              });
             } else if (mode.mode === 'place' && currentPoints.length === 0) {
               addPlaceCursor(hoverGroup, endPt);
             } else if (currentPoints.length >= 1) {

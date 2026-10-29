@@ -497,8 +497,32 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
-  | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path[]`（墙中心线 `[x,y,z]` 点）或 `boundary[]`（slab/roof/floor 闭合轮廓）, `start_*`/`end_*`, `parent_id?`, `series_id?` |
-  | `line` | `name`, `alignment`（`[x,y,z]` 点，≥ 2）, `diameter`, `parent_id?` — 生成细引导管线（`FeatureLine`） |
+  | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path` / `boundary`（见下方路径契约）, `start_*`/`end_*`, `parent_id?`, `series_id?` |
+  | `line` | `name`, `path` / `alignment`（见下方路径契约，≥ 2 点）, `diameter`, `parent_id?` — 生成细引导管线（`FeatureLine`） |
+
+  **路径契约（2026-10-28，DATA_MODEL §1）。** 路径形输入接受契约形态
+  `{ "points": [[x,y,z],…], "closed": bool }`，**或**遗留裸数组
+  （`path[]` / `boundary[]` / `alignment[]`）。遗留数组按历史闭合语义归一化
+  （path → 开放，boundary → 闭合）。同一输入同时给出两种拼写
+  （`path` + `boundary`、`path` + `alignment`）返回 `400`。
+
+  **`(objectType, form)` 授权矩阵（DATA_MODEL §1 治理规则 4）。**
+  分派前检查 `gen_rule::matrix::authorize(kind, form)`；矩阵外的组合返回
+  **400 "creation method '<form>' is not authorized for object type '<kind>'"**。
+  当前授权行：
+
+  | kind | form | 创成类 |
+  |---|---|---|
+  | `wall` | `panel`（开放中心线） | Surface |
+  | `wall` | `region`（封闭轮廓块） | Surface |
+  | `slab` / `floor` | `region` | Surface |
+  | `roof` | `region`（轮廓）/ `panel`（两点坡向段） | Surface |
+  | `road` | `linear`（开放 alignment） | Linear |
+  | `line` | `point`（引导管） | Point |
+
+  创建的对象会把判定结果记录为 `genesis_class` / `genesis_form` 属性。
+  road 与 line 的路径必须开放（`closed: true` → 400）；roof 的 `panel`
+  路径必须恰好 2 个互异点。
 
   单位为米。`series_id` 非空时改走目录/系列路径：它只用于选择 `ComponentDef` 以记录元数据/系列归属，几何仍由硬编码的 `build_wall`/`build_slab`/`build_road`/`build_pipe` 网格生成器产生（`param_values: HashMap::new()`）。这属过渡实现——经 `/api/catalog/instantiate` 的特征树/BRep 才是正式几何路径。
 

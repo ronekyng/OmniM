@@ -22,6 +22,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [2026-10-28] — Path contract & genesis-form authorization (Wave 2)
+
+### Added
+- **`path { points, closed }` contract** on `/api/genrule` (`layered`, `road`, `line`); legacy `path[]`/`boundary[]`/`alignment[]` aliases normalize with their historical closure; ambiguous double-spelling returns 400.
+- **`(objectType, form)` authorization matrix** (`gen_rule::matrix`, DATA_MODEL §1 governance 4): authorized rows wall×panel/region, slab/floor/roof×region, roof×panel (2-point profile), road×linear, line×point; everything else returns 400 with the contract reason. Created objects record `genesis_class`/`genesis_form` properties.
+- **Shared pure-geometry layer** (`gen_rule::path_geom`): `iter_segments` / `merge_collinear` / `validate_path` dispatch by open/closed — below classification, no class semantics (§6.4 boundary note is now a module-header contract on both engines).
+- **Frontend**: `CreationForm.form` field (wall panel/region dropdown, roof sub-modes feed it), single `form → pickMode` lookup, `withGenesisForm` helper; unified `addPathPreview` (region → outline+fill, panel → layered ghost with miter, linear/point → guide outline).
+
+### Tests
+- `genrule_contract.rs` (9 seed cases: contract/alias/region/profile/matrix-400/closed-rejections/ambiguity/bowtie), `path_geom` + `matrix` unit tests, web `genesisForm.test.ts` (10 cases). Full suite: Rust 385, web 69.
+
 ## [2026-10-28] — Single write path & persistence (Wave 1)
 
 ### Changed

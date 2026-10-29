@@ -1,7 +1,15 @@
-//! LayerExtrusionGen — 多层拉伸引擎
+//! LayerExtrusionGen — Surface 家族的生成引擎（DATA_MODEL §1/§6.2）
 //!
 //! 将路径 + 层结构展开为多个几何基元（Box/Extrusion）。
 //! 适用于建筑构件：墙体 (Wall)、楼板 (Slab)、地板 (Floor)、屋面 (Roof)。
+//!
+//! **授权边界（§1 授权矩阵 + §6.4 边界注记）**：本模块只承载 Surface 类的
+//! `panel`（开放中心线）与 `region`（封闭轮廓）两种 Form。禁止把其它类的
+//! 语义带进来——DN/弯头/地形目标属于 Linear 家族（linear_component.rs），
+//! 布尔/自由雕塑属于 Body 家族。跨类组合一律先过 `gen_rule::matrix::authorize`，
+//! 矩阵未授权的组合直接 400。
+//!
+//! 底层纯几何（分段/共线合并/校验）位于 `path_geom.rs`，不带任何类语义。
 //!
 //! 原理：
 //! - 路径定义中心线，各层沿中心线法向偏移
@@ -563,37 +571,9 @@ fn segments_properly_intersect(p1: &Point2D, p2: &Point2D, p3: &Point2D, p4: &Po
         && ((d3 > 1e-9 && d4 < -1e-9) || (d3 < -1e-9 && d4 > 1e-9))
 }
 
-/// C3 共线合并：移除路径/轮廓中连续共线（叉积 ≈ 0）的中间点及重复点。
-///
-/// 用于墙体路径与封闭轮廓的预处理，避免共线点产生多余的零转角段。
-/// 保留首尾点；共线判定阈值 abs(叉积) < 1e-9。
+/// C3 共线合并（兼容入口）：实现已下沉到无类语义的 `path_geom::merge_collinear`。
 pub fn merge_collinear(points: &[Point2D]) -> Vec<Point2D> {
-    if points.len() < 3 {
-        return points.to_vec();
-    }
-    let mut out: Vec<Point2D> = Vec::with_capacity(points.len());
-    out.push(points[0]);
-    for p in &points[1..] {
-        // 去重：与前一点几乎重合的跳过
-        if seg_len(out.last().unwrap(), p) < 1e-9 {
-            continue;
-        }
-        if out.len() >= 2 {
-            let a = &out[out.len() - 2];
-            let b = out.last().unwrap();
-            let cr = (b.x - a.x) * (p.y - a.y) - (b.y - a.y) * (p.x - a.x);
-            // 共线且中间点在 a→p 之间（同向），可安全移除
-            if cr.abs() < 1e-9 {
-                let ab = (b.x - a.x) * (p.x - a.x) + (b.y - a.y) * (p.y - a.y);
-                if ab > 0.0 {
-                    *out.last_mut().unwrap() = *p;
-                    continue;
-                }
-            }
-        }
-        out.push(*p);
-    }
-    out
+    crate::gen_rule::path_geom::merge_collinear(points)
 }
 
 /// 屋面各层与跨度两端点在分段后共线退化检查（见 merge_collinear 文档）。

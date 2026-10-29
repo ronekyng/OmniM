@@ -493,12 +493,36 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   |---|---|
   | `wall` | `name`, `length`, `height`, `core_thickness`, `finish_thickness`, `start_x/y/z`, `end_x/y/z`, `parent_id?`, `series_id?` |
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
-  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`; optional `alignment` (picked polyline as `Path(open)`, `[x,y,z]` in metres, default empty). With `alignment` ≥ 2 points the road is generated per segment along the polyline (each segment `build_road`-meshed, rotated by its segment angle and translated to the segment start, using the same `width`/`thickness`); with < 2 points the single straight road of `length` is generated. For roads the picked polyline goes in `alignment` — `path` is reserved for the wall semantics of `layered`. |
+  | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`; optional `alignment` (picked polyline as `Path(open)`, `[x,y,z]` in metres, default empty). With ≥ 2 points the road is generated per segment along the polyline (each segment `build_road`-meshed, rotated by its segment angle and translated to the segment start, using the same `width`/`thickness`); with < 2 points the single straight road of `length` is generated. The polyline may arrive as contract `path { points, closed: false }` or legacy `alignment[]` — see the path contract below. |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` |
   | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` (parented to the wall; boolean-subtracted opening from the wall bbox) |
   | `assembly` | `name`, `components[]` of `{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`, `parent_id?` |
-  | `layered` | `name`, `mode` (`wall\|slab\|roof\|floor`), `length`, `width`, `height`, `layers[]` of `{ name, thickness, material_id, function }`, `path[]` (wall center-line `[x,y,z]` points) or `boundary[]` (slab/roof/floor closed footprint), `start_*`/`end_*`, `parent_id?`, `series_id?` |
-  | `line` | `name`, `alignment` (`[x,y,z]` points, ≥ 2), `diameter`, `parent_id?` — generates a thin guide tube (`FeatureLine`) |
+  | `layered` | `name`, `mode` (`wall\|slab\|roof\|floor`), `length`, `width`, `height`, `layers[]` of `{ name, thickness, material_id, function }`, `path` / `boundary` (see the path contract below), `start_*`/`end_*`, `parent_id?`, `series_id?` |
+  | `line` | `name`, `path` / `alignment` (see the path contract below, ≥ 2 points), `diameter`, `parent_id?` — generates a thin guide tube (`FeatureLine`) |
+
+  **Path contract (2026-10-28, DATA_MODEL §1).** Path-shaped inputs accept the
+  contract form `{ "points": [[x,y,z],…], "closed": bool }` **or** the legacy
+  bare arrays (`path[]` / `boundary[]` / `alignment[]`). Legacy arrays normalize
+  with their historical closure (path → open, boundary → closed). Providing both
+  spellings for one input (`path` + `boundary`, `path` + `alignment`) is a `400`.
+
+  **`(objectType, form)` authorization matrix (DATA_MODEL §1 governance 4).**
+  The dispatch checks `gen_rule::matrix::authorize(kind, form)`; combinations
+  without a matrix row return **400 "creation method '<form>' is not authorized
+  for object type '<kind>'"**. Authorized rows today:
+
+  | kind | form | Genesis |
+  |---|---|---|
+  | `wall` | `panel` (open centerline) | Surface |
+  | `wall` | `region` (closed boundary pieces) | Surface |
+  | `slab` / `floor` | `region` | Surface |
+  | `roof` | `region` (footprint) / `panel` (2-point profile) | Surface |
+  | `road` | `linear` (open alignment) | Linear |
+  | `line` | `point` (guide tube) | Point |
+
+  Created objects record the decision as `genesis_class` / `genesis_form`
+  properties. Road and line paths must be open (`closed: true` → 400); a roof
+  `panel` path must have exactly 2 distinct points.
 
   Units are metres. `series_id` forwards the request to the catalog/series path: it selects a `ComponentDef` for metadata/series attribution, but the geometry is still produced by the hard-coded `build_wall`/`build_slab`/`build_road`/`build_pipe` mesh generators (with `param_values: HashMap::new()`). This is transitional — feature-tree/BRep via `/api/catalog/instantiate` is the official geometry path.
 

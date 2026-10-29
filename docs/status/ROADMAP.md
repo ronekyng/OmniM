@@ -186,7 +186,7 @@ Not started: structural analysis, clash detection, cost estimation, plugin ecosy
 
 Designs agreed and documented as contracts (in the specification) but not yet implemented. Ordering below is practical (dependency-first), not calendar-based. Status marks follow the legend above.
 
-### 1. Path / Genesis abstraction（路径 + 创成分类）— 📅 Accepted, not implemented
+### 1. Path / Genesis abstraction（路径 + 创成分类）— ✅ Implemented (2026-10-28, Wave 2)
 
 **Contract**: [DATA_MODEL §1 — dual-axis model & governance](../specification/DATA_MODEL.md) (agreed 2026-10-27). Multi-point picking unifies as `Path { points, closed }`; genesis class binds to the per-instance creation method, not the object name; genrule dispatch consults an `(objectType, class/form)` authorization matrix.
 

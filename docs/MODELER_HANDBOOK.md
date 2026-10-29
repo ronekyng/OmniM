@@ -39,13 +39,14 @@ Rule of thumb: if you type a number into a catalog parameter panel, think **mm**
 - Snapping is geometric only: it does not infer walls, levels or parametric relationships. Grid visibility is toggled with **G**.
 
 ## 2. Building
-### 2.1 Create a wall (Path open, panel form)
+### 2.1 Create a wall (panel by default; region optional)
 1. Start the server and web app ([GETTING_STARTED](guides/GETTING_STARTED.md)); open <http://localhost:5173>.
 2. Click **Create** (defaults to wall) or **建筑** → **墙体**.
-3. Click at least two points in the viewport. **Backspace** removes the last point, **Esc** cancels, **Enter** finishes the path.
-4. In the Create panel, edit the layer stack in **LayerEditor** (thicknesses are mm; templates include exterior/interior/partition walls). Optionally pick a **系列** (series).
-5. Click **创建**. The result is an object whose type is `Wall`, with a layered extrusion.
-6. API equivalent: `POST /api/genrule` with `{"type":"layered","mode":"wall","height":3,"layers":[...],"path":[[x,y,z],...]}`. See [API §GenRule](reference/API.md#genrule).
+3. Pick the genesis form in the Create panel: **中心线（面板）** (default, polyline picks) or **封闭轮廓（块）** (closed polygon picks). The pick mode follows the form.
+4. Click at least two points in the viewport (panel) or three boundary points (region). **Backspace** removes the last point, **Esc** cancels, **Enter** finishes.
+5. In the Create panel, edit the layer stack in **LayerEditor** (thicknesses are mm; templates include exterior/interior/partition walls). Optionally pick a **系列** (series).
+6. Click **创建**. The result is an object whose type is `Wall`, with a layered extrusion, plus `genesis_class`/`genesis_form` properties.
+7. API equivalent: `POST /api/genrule` with `{"type":"layered","mode":"wall","height":3,"layers":[...],"path":{"points":[[x,y,z],…],"closed":false}}` (legacy bare `path[]` still accepted). The created object records `genesis_class`/`genesis_form`. See [API §GenRule](reference/API.md#genrule).
 
 What you do **not** get: a WallType/compound-type object, wall joins, host propagation or openings as objects. The layer stack is also stored as a `layers` property for round-tripping, but it is not a reusable type.
 

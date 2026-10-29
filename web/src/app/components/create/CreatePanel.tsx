@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CreationForm, CreationPhase, ObjectType, GeometryType } from '../../../shared/types/creation';
+import { withGenesisForm } from '../../../shared/types/creation';
 import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, objectTypeLabel } from '../../../shared/catalog';
 import { ParentSelector } from './ParentSelector';
 import { SeriesSelector } from './SeriesSelector';
@@ -160,6 +161,22 @@ export function CreatePanel({
           onChange={(id) => handleChange({ parentId: id })}
         />
 
+        {form.objectType === 'wall' && (
+          <div className="create-row create-row--labeled">
+            <span className="field-label">墙形式</span>
+            <select
+              value={form.form}
+              onChange={(e) => handleChange(withGenesisForm(form, e.target.value as 'panel' | 'region'))}
+            >
+              <option value="panel">中心线（面板）</option>
+              <option value="region">封闭轮廓（块）</option>
+            </select>
+            <small className="hint">
+              {form.form === 'panel' ? '沿中心线选点，逐段生成' : '沿封闭轮廓选点，整块生成'}
+            </small>
+          </div>
+        )}
+
         {form.objectType === 'roof' && (
           <div className="create-row create-row--labeled">
             <span className="field-label">屋顶模式</span>
@@ -167,10 +184,10 @@ export function CreatePanel({
               value={form.roofMode}
               onChange={(e) => {
                 const roofMode = e.target.value as 'footprint' | 'extrusion';
-                handleChange({
-                  roofMode,
-                  pickMode: roofMode === 'extrusion' ? { mode: 'segment', minClicks: 2 } : { mode: 'polygon', minClicks: 3 },
-                });
+                handleChange(withGenesisForm(
+                  { ...form, roofMode },
+                  roofMode === 'extrusion' ? 'panel' : 'region',
+                ));
               }}
             >
               <option value="footprint">轮廓（多边形）</option>

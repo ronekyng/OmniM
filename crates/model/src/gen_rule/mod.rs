@@ -13,6 +13,8 @@ pub mod layer_extrusion;
 pub mod linear_component;
 pub mod assembly;
 pub mod boolean_subtract;
+pub mod path_geom;
+pub mod matrix;
 
 use omnim_core as c;
 use c::{MeshGeometry, ParametricGeometry};

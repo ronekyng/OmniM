@@ -186,7 +186,7 @@ evidence: "audited against code 2026-10-27"
 
 已议定并作为契约写入规范（specification），但尚未实现的设计。顺序按依赖关系而非日历排期，状态标记沿用上方图例。
 
-### 1. Path / 创成分类抽象—— 📅 已定稿，未实现
+### 1. Path / 创成分类抽象—— ✅ 已实现（2026-10-28，Wave 2）
 
 **契约**：[数据模型 §1 —— 双轴模型与治理规则](../specification/DATA_MODEL.zh-CN.md)（2026-10-27 议定）。多点拾取统一为 `Path { points, closed }`；创成分类绑定实例的创建方式而非对象名；genrule 分派查询 `(objectType, 分类/形态)` 授权矩阵。
 

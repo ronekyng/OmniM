@@ -22,6 +22,17 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
+## [2026-10-28] — 路径契约与创成形式授权（Wave 2）
+
+### 新增（Added）
+- **`path { points, closed }` 契约**：`/api/genrule` 的 `layered`、`road`、`line`；遗留 `path[]`/`boundary[]`/`alignment[]` 别名按历史闭合语义归一化；同一输入双拼写返回 400。
+- **`(objectType, form)` 授权矩阵**（`gen_rule::matrix`，DATA_MODEL §1 治理规则 4）：已授权 wall×panel/region、slab/floor/roof×region、roof×panel（两点坡向）、road×linear、line×point；矩阵外组合返回 400 及契约理由。创建对象记录 `genesis_class`/`genesis_form` 属性。
+- **共享纯几何层**（`gen_rule::path_geom`）：`iter_segments` / `merge_collinear` / `validate_path` 按开/闭分派——位于分类之下、无类语义（§6.4 边界注记已写成两个引擎的模块头契约）。
+- **前端**：`CreationForm.form` 字段（墙 panel/region 下拉、屋顶子模式接入），唯一 `form → pickMode` 查表，`withGenesisForm` 辅助；统一 `addPathPreview`（region → 轮廓+填充，panel → 分层 ghost+miter，linear/point → 引导线）。
+
+### 测试（Tests）
+- `genrule_contract.rs`（9 个 seed 用例：契约/别名/region/profile/矩阵 400/闭合拒绝/歧义/蝴蝶结）、`path_geom` + `matrix` 单测、web `genesisForm.test.ts`（10 例）。全量：Rust 385，web 69。
+
 ## [2026-10-28] — 单一写入路径与持久化（Wave 1）
 
 ### 变更（Changed）

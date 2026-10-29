@@ -39,13 +39,14 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 - 捕捉只是几何吸附：不会推断墙体、楼层或参数化关系。网格显示用 **G** 切换。
 
 ## 2. 建筑
-### 2.1 创建墙体（Path 开放，面板形式）
+### 2.1 创建墙体（默认 panel；可选 region）
 1. 启动服务端与 Web 应用（[GETTING_STARTED](guides/GETTING_STARTED.zh-CN.md)）；打开 <http://localhost:5173>。
 2. 点击 **Create**（默认墙），或 **建筑** → **墙体**。
-3. 在视口点击至少两个点。**Backspace** 删除上一点，**Esc** 取消，**Enter** 结束路径。
-4. 在创建面板用 **LayerEditor** 编辑层栈（厚度为 mm；模板含外墙/内墙/隔墙）。可选 **系列**。
-5. 点击 **创建**。结果是类型为 `Wall` 的分层拉伸对象。
-6. API 等价写法：`POST /api/genrule`，`{"type":"layered","mode":"wall","height":3,"layers":[...],"path":[[x,y,z],...]}`。见 [API §GenRule](reference/API.zh-CN.md#genrule)。
+3. 在创建面板选择墙形式：**中心线（面板）**（默认，折线选点）或 **封闭轮廓（块）**（封闭多边形选点）。拾取模式跟随形式。
+4. 在视口点击至少两个点（panel）或三个轮廓点（region）。**Backspace** 删除上一点，**Esc** 取消，**Enter** 结束路径。
+5. 用 **LayerEditor** 编辑层栈（厚度为 mm；模板含外墙/内墙/隔墙）。可选 **系列**。
+6. 点击 **创建**。结果是类型为 `Wall` 的分层拉伸对象，并记录 `genesis_class`/`genesis_form` 属性。
+7. API 等价写法：`POST /api/genrule`，`{"type":"layered","mode":"wall","height":3,"layers":[...],"path":{"points":[[x,y,z],…],"closed":false}}`（遗留裸 `path[]` 仍可用）。见 [API §GenRule](reference/API.zh-CN.md#genrule)。
 
 你**不会**得到：WallType/复合类型对象、墙连接、宿主传播或作为对象的洞口。层栈还会以 `layers` 属性保存以便往返，但它不是可复用类型。
 

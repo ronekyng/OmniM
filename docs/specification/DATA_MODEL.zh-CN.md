@@ -132,7 +132,7 @@ OmniM 采用 **统一几何内核 + 分层语义** 的架构，在同一个几�
 3. **禁止跨类实现**：携带另一类语义的实现（墙获得 DN/弯头/地形目标；管获得 LayerExtrusion）一律禁止。注意：墙的 *LayerExtrusion 生成器* 可以在线构件之下共享"恒定截面沿路径扫掠"这一底层原语——它不携带类语义、位于分类之下，"分类决定实现"约束的是 GenRule 家族，不是几何工具函数。
 4. **授权矩阵，键为 `(objectType, 创成分类/形态)`**：genrule 分派时查矩阵（默认：wall→panel、slab/floor→region、beam/pipe/duct→等截面线性、tank/pump/valve→primitive…）；矩阵外组合返回"该创成方式未授权给此对象类型"并 400。新增授权——例如 `wall × Linear`（带地形目标，即挡土墙）——通过显式添加矩阵行获得，随实现落地。
 
-> 模型来源：2026-10-27 路径（Path）抽象讨论中议定（迁移沿革见 status/CHANGELOG.md）；本小节即设计契约。实现待办见 status/ROADMAP.md → "Accepted Designs Pending Implementation"。
+> 模型来源：2026-10-27 路径（Path）抽象讨论中议定（迁移沿革见 status/CHANGELOG.md）；本小节即设计契约。实现已于 2026-10-28 交付（`gen_rule::matrix` + `gen_rule::path_geom` 与 `path { points, closed }` 契约）。
 
 **Library vs Project**：**Library** 是 **session 级全局单例**，持有主元件目录（`CatalogStore`）、构件模板库（`ComponentStore`）和特征树模板（`FeatureTreeRegistry`）。一次加载，跨项目共享。**SeriesStore** 是 **独立模块**——它定义选择器决策树，通过 ComponentDef ID 引用 Library 中的内容。**Project** 持有私有的 `SeriesStore`（项目内建的系列）和 `external_series_refs`（外部系列引用）。Project **不持有** Library 引用。参见 [§14](#14-构件目录元件库--paragon) 和 [§15](#15-系列库等级库--specon)。
 
