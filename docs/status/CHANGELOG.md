@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Viewport chrome**: the view tool strip is a 42 px edge rail; the storey selector moved to a top-left viewport control; the shortcut hint is a compact bottom-right chip.
 - **Title bar**: duplicate project name in the breadcrumb removed, clean-state save text hidden, Save/Save-as/Reset grouped; the default tool is now "none" instead of an always-active Transform.
 - **Bottom dock**: collapsed Console/AI tabs sit on the viewport edge without the previous empty strip.
+- **Polish**: the grid form follows its list instead of being pinned to the bottom; the shortcut hint is a compact chip with the full list in its tooltip; the Component action has a stable width and group separators have more air.
 
 ### Not implemented (known gaps)
 - No visual/e2e regression test for this re-layout; requirement statuses stay partial until the screenshot/e2e evidence exists.

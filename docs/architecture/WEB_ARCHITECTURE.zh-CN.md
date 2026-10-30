@@ -3,7 +3,7 @@ title: "OmniM Web 架构 — 现状"
 status: current
 last_updated: 2026-10-29
 applies_to: "web/, crates/server"
-evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 21,800 行；94 个单元测试通过）"
+evidence: "2026-10-29 对照 web/src 审计（ts/tsx/css 共 21,801 行；94 个单元测试通过）"
 ---
 # OmniM Web 架构 — 现状
 

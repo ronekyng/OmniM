@@ -3,7 +3,7 @@ title: "OmniM Web Architecture — Current State"
 status: current
 last_updated: 2026-10-29
 applies_to: "web/, crates/server"
-evidence: "audited against web/src on 2026-10-29 (21,800 lines across ts/tsx/css; 94 unit tests passing)"
+evidence: "audited against web/src on 2026-10-29 (21,801 lines across ts/tsx/css; 94 unit tests passing)"
 ---
 # OmniM Web Architecture — Current State
 

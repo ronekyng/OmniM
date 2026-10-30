@@ -422,7 +422,7 @@ export function MainToolbar({
         <button onClick={() => fileRef.current?.click()} title="Import IFC"><IcoImport /><span className="btn-label">Import</span></button>
         <button onClick={() => void exportIfc()} title="Export IFC"><IcoExport /><span className="btn-label">Export</span></button>
         <span className="separator" />
-        <button className="accent" onClick={async () => {
+        <button className="accent component-action" onClick={async () => {
           try {
             const comp = await api.createComponent({ name: `comp-${Date.now()}` });
             onEditComponent?.(comp.id);

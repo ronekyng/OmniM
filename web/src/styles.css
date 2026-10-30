@@ -267,7 +267,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .grid-panel { display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; }
-.grid-panel-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 1; }
+.grid-panel-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 45%; }
 .grid-empty { color: var(--text-muted); font-size: var(--fs-sm); padding: 10px 4px; }
 .grid-line-row { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--border); }
 .grid-label { width: 20px; font-weight: 700; text-align: center; }
@@ -499,6 +499,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   min-height: 30px;
 }
 .main-toolbar button.domain-switch { min-width: 52px; justify-content: center; }
+.main-toolbar button.component-action { min-width: 98px; }
 .btn-label { font-size: var(--fs-xs); }
 
 .main-toolbar button,
@@ -537,7 +538,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   height: 22px;
   background: var(--border);
   align-self: center;
-  margin: 0 4px;
+  margin: 0 6px;
 }
 
 /* Second-row domain toolbar */

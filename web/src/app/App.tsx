@@ -277,7 +277,7 @@ export function App() {
                 <button className={isOrtho ? 'active' : ''} onClick={() => { setIsOrtho((v) => !v); viewerRef.current?.toggleOrtho(); }} title="Toggle ortho/perspective (O)"><IcoOrtho /></button>
                 <button className={transformSpace === 'local' ? 'active' : ''} onClick={() => { const next = transformSpace === 'world' ? 'local' : 'world'; setTransformSpace(next); viewerRef.current?.setTransformSpace(next); }} title={`Transform space: ${transformSpace} (X)`}><IcoLocal /></button>
               </div>
-              <div className="hint">W:move E:rotate F:fit H:home G:grid O:ortho X:axis Del:delete | Click:select Ctrl+click:toggle Ctrl+drag:box-select</div>
+              <div className="hint" title="W move · E rotate · F fit · H home · G grid · O ortho · X axis · Del delete · Click select · Ctrl+click toggle · Ctrl+drag box-select">W/E transform · F fit · H home · G grid · O ortho · Del delete · Ctrl+drag box select</div>
             </div>
           </AppLayout>
         </ThreeViewerContext.Provider>
