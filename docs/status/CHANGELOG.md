@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -21,6 +21,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-10-30] — Workspace shell re-layout (P9-S3)
+
+### Changed
+- **Toolbar is a real ribbon row**: the floating centered pill is gone; the command bar spans the workspace, groups Create/Modify/History/Exchange/Editors/Disciplines with separators, never shrinks labels into vertical text, and scrolls horizontally only when needed.
+- **Left dock tabs**: Objects and Grids are separate tabs (object count badge) instead of stacked panels; the redundant "OmniM Editor" heading is removed and the tree gets the full dock height.
+- **Grid editor**: the cramped inline form is replaced by labelled Label/Direction/Coordinate/From/To fields with full-width actions and a scrollable line list.
+- **Viewport chrome**: the view tool strip is a 42 px edge rail; the storey selector moved to a top-left viewport control; the shortcut hint is a compact bottom-right chip.
+- **Title bar**: duplicate project name in the breadcrumb removed, clean-state save text hidden, Save/Save-as/Reset grouped; the default tool is now "none" instead of an always-active Transform.
+- **Bottom dock**: collapsed Console/AI tabs sit on the viewport edge without the previous empty strip.
+
+### Not implemented (known gaps)
+- No visual/e2e regression test for this re-layout; requirement statuses stay partial until the screenshot/e2e evidence exists.
 
 ## [2026-10-29] — G1 project home (P9-S2)
 

@@ -69,11 +69,22 @@ async fn seeded_def_with_tree(port: u16) -> Option<serde_json::Value> {
         .json()
         .await
         .unwrap();
-    defs.into_iter().find(|d| {
-        d["feature_tree_id"]
-            .as_str()
-            .map(|s| !s.is_empty())
-            .unwrap_or(false)
+    // Pick a non-path template: `Wall-Path`/`Slab-Path` require picked path
+    // points and would make this test depend on catalog iteration order.
+    let concrete = defs.iter().find(|d| {
+        d["name"] == "Concrete-Wall"
+            && d["feature_tree_id"]
+                .as_str()
+                .map(|s| !s.is_empty())
+                .unwrap_or(false)
+    });
+    concrete.cloned().or_else(|| {
+        defs.into_iter().find(|d| {
+            d["feature_tree_id"]
+                .as_str()
+                .map(|s| !s.is_empty())
+                .unwrap_or(false)
+        })
     })
 }
 

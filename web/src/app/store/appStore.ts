@@ -92,7 +92,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
   return {
     selectedIds: [],
     primaryMeshInfo: null,
-    transformMode: 'translate' as TransformMode,
+    transformMode: null as TransformMode,
     visualMode: 'shaded' as VisualMode,
     section: { enabled: false, axis: 'x', value: 0 },
     measureMode: 'none' as MeasureMode,

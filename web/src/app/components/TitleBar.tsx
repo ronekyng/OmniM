@@ -62,20 +62,19 @@ export function TitleBar() {
         <strong>{name}</strong>
       </button>
       <nav className="breadcrumb" aria-label="Breadcrumb">
-        <span>{name}</span>
-        <span className="breadcrumb-sep">/</span>
         <span>Workspace</span>
         <span className="breadcrumb-sep">/</span>
         <span aria-current="page">{tool}</span>
       </nav>
       <span className={`save-indicator status-${saveState.status}`} title={saveState.error ?? undefined}>
-        {saveLabel(saveState)}
+        {saveState.status === 'clean' ? '' : saveLabel(saveState)}
       </span>
       <div className="title-actions">
         <button type="button" onClick={() => void saveProject()} disabled={saveState.status === 'saving'} title="Save (Ctrl/Cmd+S)">
           Save
         </button>
-        <button type="button" onClick={() => setSaveAsOpen(true)}>Save as…</button>
+        <button type="button" onClick={() => setSaveAsOpen(true)}>Save as</button>
+        <span className="title-sep" />
         <button type="button" onClick={resetLayout} title="Reset docks to defaults">Reset layout</button>
       </div>
 

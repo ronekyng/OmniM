@@ -413,8 +413,8 @@ export function MainToolbar({
       <div className="main-toolbar">
         <button onClick={onRefresh} title="Refresh"><IcoRefresh /></button>
         <button className="accent" onClick={() => { setAssemblyOpen(false); handleDomainObjectClick('wall'); }} title="Create object"><IcoAdd /><span className="btn-label">Create</span></button>
-        <button onClick={() => { setAssemblyOpen((v) => !v); }} title="Assembly (multi-part)"><IcoAssy /><span className="btn-label">Assy</span></button>
-        <button className="danger" disabled={selectedIds.length === 0} onClick={onDelete} title="Delete selected"><IcoDelete /><span className="btn-label">Del</span></button>
+        <button onClick={() => { setAssemblyOpen((v) => !v); }} title="Assembly (multi-part)"><IcoAssy /><span className="btn-label">Assembly</span></button>
+        <button className="danger" disabled={selectedIds.length === 0} onClick={onDelete} title="Delete selected"><IcoDelete /><span className="btn-label">Delete</span></button>
         <span className="separator" />
         <button disabled={!canUndo} onClick={() => void doUndo()} title="Undo (Ctrl+Z)"><IcoUndo /></button>
         <button disabled={!canRedo} onClick={() => void doRedo()} title="Undo"><IcoRedo /></button>
@@ -429,16 +429,16 @@ export function MainToolbar({
           } catch (e) {
             toast.error(`创建 Component 失败: ${e instanceof Error ? e.message : String(e)}`);
           }
-        }} title="创建 Component 并进入编辑器"><IcoSketch /><span className="btn-label">+ Component</span></button>
+        }} title="创建 Component 并进入编辑器"><IcoSketch /><span className="btn-label">Component</span></button>
         <span className="separator" />
         <button onClick={() => setCatalogOpen((v) => !v)} title="Catalog browser"><IcoCatalog /><span className="btn-label">Catalog</span></button>
         <button onClick={() => navigate('/series-manager')} title="Series Manager"><IcoSeries /><span className="btn-label">Series</span></button>
         <button onClick={() => navigate('/library-manager')} title="Library Manager"><IcoCatalog /><span className="btn-label">Library</span></button>
         <span className="separator" />
-        <button className={activeDomain === 'building' ? 'active' : ''} onClick={() => setActiveDomain(activeDomain === 'building' ? null : 'building')} title="建筑"><IcoGrid /><span className="btn-label">建筑</span></button>
-        <button className={activeDomain === 'civil' ? 'active' : ''} onClick={() => setActiveDomain(activeDomain === 'civil' ? null : 'civil')} title="土木"><IcoGrid /><span className="btn-label">土木</span></button>
-        <button className={activeDomain === 'plant' ? 'active' : ''} onClick={() => setActiveDomain(activeDomain === 'plant' ? null : 'plant')} title="工厂"><IcoGrid /><span className="btn-label">工厂</span></button>
-        <button className={activeDomain === 'mechanical' ? 'active' : ''} onClick={() => setActiveDomain(activeDomain === 'mechanical' ? null : 'mechanical')} title="机械"><IcoGrid /><span className="btn-label">机械</span></button>
+        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'building' ? null : 'building')} title="建筑"><IcoGrid /><span className="btn-label">建筑</span></button>
+        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'civil' ? null : 'civil')} title="土木"><IcoGrid /><span className="btn-label">土木</span></button>
+        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'plant' ? null : 'plant')} title="工厂"><IcoGrid /><span className="btn-label">工厂</span></button>
+        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'mechanical' ? null : 'mechanical')} title="机械"><IcoGrid /><span className="btn-label">机械</span></button>
       </div>
 
       {activeDomain && (

@@ -76,7 +76,7 @@ Coverage counts `✅` as complete and `🔀` as half. The result (17%) is the ho
 | `web/src/app/components/ThreeViewer.tsx` | file | Rendering, picking, section, measure |
 | `web/src/shared/api.ts` | file | REST surface used by the client |
 | `web/src/__tests__/*.test.ts` | 9 files / 94 tests | Unit-level verification |
-| `wc -l web/src/**` | 21,641 lines | Size and concentration |
+| `wc -l web/src/**` | 21,800 lines | Size and concentration |
 | Color scan | 731 hex + 61 rgb/hsl across all CSS | Design-system debt |
 | CJK literal scan | 854 runs across 31 files | i18n debt |
 | Icon scan | 63 emoji occurrences, 25 used as panel icons | Icon-system debt |

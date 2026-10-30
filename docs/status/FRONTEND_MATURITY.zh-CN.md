@@ -76,7 +76,7 @@ evidence: "2026-10-29 对照 web/src 评分；需求计数来自 REQUIREMENTS_RE
 | `web/src/app/components/ThreeViewer.tsx` | 文件 | 渲染、拾取、剖切、测量 |
 | `web/src/shared/api.ts` | 文件 | 客户端使用的 REST 面 |
 | `web/src/__tests__/*.test.ts` | 5 文件 / 79 测试 | 单元级验证 |
-| `wc -l web/src/**` | 21,641 行 | 体量与集中度 |
+| `wc -l web/src/**` | 21,800 行 | 体量与集中度 |
 | 颜色扫描 | `styles.css` 712 处 hex；全部 CSS 731 hex + 61 rgb/hsl | 设计系统债务 |
 | CJK 字面量扫描 | 31 个文件中 858 段 | i18n 债务 |
 | 图标扫描 | 63 处 emoji，其中 25 处作为面板图标 | 图标系统债务 |

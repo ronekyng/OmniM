@@ -99,7 +99,6 @@ export function ObjectTreePanel() {
 
   return (
     <>
-      <h1>OmniM Editor</h1>
       {stats && (
         <div className="stats-bar">
           Objects: <b>{stats.object_count}</b> · Materials: <b>{stats.material_count}</b> · Lifecycle: <b>{stats.lifecycle_record_count}</b>

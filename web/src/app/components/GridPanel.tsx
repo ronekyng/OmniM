@@ -94,64 +94,83 @@ export function GridPanel() {
   };
 
   return (
-    <div className="grid-panel" style={{ padding: 8, fontSize: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ fontWeight: 600 }}>轴网 Grids</div>
-      {lines.length === 0 && <div style={{ opacity: 0.6 }}>暂无轴线</div>}
-      {lines.map((line) => (
-        <div key={line.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span
-            style={{
-              fontWeight: 700,
-              color: line.axis === 'AlongX' ? '#ff9f43' : '#54a0ff',
-              minWidth: 18,
-            }}
-          >
-            {line.label}
-          </span>
-          <span style={{ flex: 1, opacity: 0.75 }}>
-            {line.axis === 'AlongX' ? 'X向' : 'Y向'} @ {line.coordinate.toFixed(2)} m
-          </span>
-          <button type="button" onClick={() => edit(line)} disabled={busy}>编辑</button>
-          <button type="button" onClick={() => void remove(line.id)} disabled={busy}>×</button>
-        </div>
-      ))}
-
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        <input
-          placeholder="轴号 A/1"
-          value={draft.label}
-          onChange={(e) => setDraft({ ...draft, label: e.target.value })}
-          style={{ width: 70 }}
-        />
-        <select value={draft.axis} onChange={(e) => setDraft({ ...draft, axis: e.target.value as Draft['axis'] })}>
-          <option value="AlongY">Y向（字母）</option>
-          <option value="AlongX">X向（数字）</option>
-        </select>
-        <input
-          placeholder="坐标 m"
-          value={draft.coordinate}
-          onChange={(e) => setDraft({ ...draft, coordinate: e.target.value })}
-          style={{ width: 62 }}
-        />
-        <input
-          placeholder="起点"
-          value={draft.extent_min}
-          onChange={(e) => setDraft({ ...draft, extent_min: e.target.value })}
-          style={{ width: 52 }}
-        />
-        <input
-          placeholder="终点"
-          value={draft.extent_max}
-          onChange={(e) => setDraft({ ...draft, extent_max: e.target.value })}
-          style={{ width: 52 }}
-        />
-        <button type="button" onClick={() => void submit()} disabled={busy || !draft.label.trim()}>
-          {draft.id ? '保存修改' : '添加'}
-        </button>
-        {draft.id && <button type="button" onClick={() => setDraft(EMPTY)} disabled={busy}>取消</button>}
+    <div className="grid-panel">
+      <div className="grid-panel-list">
+        {lines.length === 0 && <div className="grid-empty">No grid lines yet.</div>}
+        {lines.map((line) => (
+          <div key={line.id} className="grid-line-row">
+            <span className={`grid-label ${line.axis === 'AlongX' ? 'axis-x' : 'axis-y'}`}>
+              {line.label}
+            </span>
+            <span className="grid-line-meta">
+              {line.axis === 'AlongX' ? 'X' : 'Y'} · {line.coordinate.toFixed(2)} m
+            </span>
+            <button type="button" className="grid-icon-btn" onClick={() => edit(line)} disabled={busy}>Edit</button>
+            <button type="button" className="grid-icon-btn danger" onClick={() => void remove(line.id)} disabled={busy} title="Delete">×</button>
+          </div>
+        ))}
       </div>
-      {error && <div style={{ color: '#ff6b6b' }}>{error}</div>}
-      <div style={{ opacity: 0.55 }}>范围留 0/0 表示视口内无限延伸（±20 m）</div>
+
+      <form
+        className="grid-form"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        <div className="grid-form-title">{draft.id ? 'Edit grid line' : 'Add grid line'}</div>
+        <label>
+          <span>Label</span>
+          <input
+            placeholder="A / 1"
+            value={draft.label}
+            onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+          />
+        </label>
+        <label>
+          <span>Direction</span>
+          <select value={draft.axis} onChange={(e) => setDraft({ ...draft, axis: e.target.value as Draft['axis'] })}>
+            <option value="AlongY">Y (letters)</option>
+            <option value="AlongX">X (numbers)</option>
+          </select>
+        </label>
+        <label>
+          <span>Coordinate (m)</span>
+          <input
+            placeholder="0.00"
+            value={draft.coordinate}
+            onChange={(e) => setDraft({ ...draft, coordinate: e.target.value })}
+          />
+        </label>
+        <div className="grid-form-extent">
+          <label>
+            <span>From (m)</span>
+            <input
+              placeholder="0"
+              value={draft.extent_min}
+              onChange={(e) => setDraft({ ...draft, extent_min: e.target.value })}
+            />
+          </label>
+          <label>
+            <span>To (m)</span>
+            <input
+              placeholder="0"
+              value={draft.extent_max}
+              onChange={(e) => setDraft({ ...draft, extent_max: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="grid-form-actions">
+          {draft.id && (
+            <button type="button" onClick={() => setDraft(EMPTY)} disabled={busy}>Cancel</button>
+          )}
+          <button type="submit" className="primary" disabled={busy || !draft.label.trim()}>
+            {draft.id ? 'Save changes' : 'Add grid line'}
+          </button>
+        </div>
+        <p className="grid-hint">0 / 0 extends the line across the viewport (±20 m).</p>
+        {error && <div className="grid-error">{error}</div>}
+      </form>
     </div>
   );
 }
