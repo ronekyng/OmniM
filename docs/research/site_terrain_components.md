@@ -1,6 +1,6 @@
 ---
 title: "CAD/BIM 平台场地与地形构件逻辑研究"
-status: research
+status: archived  # research snapshot; not a contract doc, unmaintained since 2026-08
 last_updated: 2026-08-07
 applies_to: "n/a (research)"
 evidence: "n/a (background research)"

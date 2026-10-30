@@ -1,9 +1,9 @@
 ---
 title: "OmniM 建模者手册"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/, crates/server, crates/model, crates/ifc"
-evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,viewer}、docs/reference/API.zh-CN.md 与 docs/guides/GETTING_STARTED.zh-CN.md 核实，2026-10-27"
+evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,viewer}、web/src/app/{App,ProjectsPage,TitleBar}.tsx、docs/reference/API.zh-CN.md 与 docs/guides/GETTING_STARTED.zh-CN.md 核实，2026-10-30"
 ---
 # OmniM 建模者手册
 一份面向当前 Web 应用与 REST API 的任务式指南。下面的每条流程**今天都可执行**；缺口在出现处直接说明，而不是隐藏。逐对象能力见 [CAPABILITY_MATRIX](CAPABILITY_MATRIX.zh-CN.md)。
@@ -31,7 +31,7 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 - **会保存**：创建/删除对象、`/api/genrule`、`/api/omcom`、撤销/重做、sketch 变更、对象改名、特征增加/更新/删除/重建。
 - **会保存**：其余全部端点——变换/改父级/连接、材质、测量、管理区/分解、系列、目录定义、目录放置与 IFC 导入。
 - 更稳妥的单次会话办法：用 `GET /api/export/ifc`（或工具栏 **Export**）保留几何快照，但要接受 §6.2 的 IFC 限制。
-- 撤销覆盖全部变更端点（对象、属性、变换、父子/连接、材质、草图、构件、目录、系列、测量、管理区/分解、实例化、IFC 导入）。见 [WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)。
+- 撤销覆盖全部变更端点（对象、属性、变换、父子/连接、材质、草图、构件、目录、系列、测量、管理区/分解、实例化、IFC 导入）。两处已记录例外见 [WRITE_PATHS](architecture/WRITE_PATHS.zh-CN.md)：`.omnimlib` 导入全局库（无项目级撤销条目，库文件非项目）与 `section_handler` 缓存刷新（非用户变更）。
 
 ### 1.4 捕捉
 - 视口工具栏有 **Toggle snap** 按钮（`IcoSnap`，提示 "Toggle snap"）。每次拾取与悬停端点都会经过 `snapPoint()`。
@@ -39,7 +39,7 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 - 捕捉只是几何吸附：不会推断墙体、楼层或参数化关系。网格显示用 **G** 切换。
 
 ### 1.5 界面外壳与快捷键
-- 当前构建直接进入工作区并加载 `$OMNIM_PROJECT`（默认 `project.omnim`）。带新建/打开/最近的项目首页是契约要求，尚未实现——见 [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.zh-CN.md) §2。
+- 当前构建默认进入工作区；无打开会话时重定向到 `/projects` 项目首页（新建/打开/最近/示例已落地，2026-10-29）——见 [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.zh-CN.md) §2 与 [CODE_DEVIATIONS](status/CODE_DEVIATIONS.zh-CN.md) P9。
 - 属性面板当前以浮层覆盖视口打开；契约要求停靠右侧。见 [CODE_DEVIATIONS §7](status/CODE_DEVIATIONS.zh-CN.md)。
 - 今天已验证的快捷键：`W`/`E` 移动/旋转、`F` 适配、`H` 首页、`G` 网格、`O` 正交、`X` 坐标空间、`Del` 删除、`Enter` 完成拾取、`Backspace` 撤点、`Esc` 取消。完整列表：[KEYBOARD_MAP](reference/KEYBOARD_MAP.zh-CN.md)。
 
@@ -92,7 +92,7 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 领域面板（**建筑/土木/工厂/机械**）还提供一键快速创建，绕过系列门禁并实例化目录构件。它们创建的是 `Component` 对象，不要指望得到语义化的 `Tank`/`Beam`/`Door` 对象。
 
 ### 2.6 建筑中尚不可用的能力
-- **楼层的标高/层高**：`BuildingStorey` 只有名称，没有楼层/标高系统；没有按楼层放置或按楼层宿主。
+- **楼层的标高**：已有基准标高（创建 storey 时可输入，`elevation` 单位为米，对应 `IfcBuildingStorey.Elevation`，P8-S1）；竖向范围可经 `bottom_level_id`/`top_level_id` 对路径驱动对象单步级联（P8-S2）；楼层视图（视口工具栏选择器，P8-S4）可按楼层过滤网格并置剖切面。仍缺：普通几何的 `level_id` 挂接仅 API，没有轴网对象。
 - **轴网对象**：没有轴网/轴线对象类型或 UI，只有视口网格。
 - **墙类型**：没有 `WallType`/`FloorType`/`RoofType` 库对象；层栈按实例编辑。
 - **洞口对象**：门窗是对象，但扣洞是包围盒布尔；没有 `Opening` 元素、窗台/过梁约束或洞口明细。
@@ -147,11 +147,17 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 2. 真正的零件请走目录路径（§2.5）或构件编辑器（§2.4）：草图 → 约束 → 求解 → 特征 → BRep。
 3. `POST /api/objects` 传 `"part"` 创建 `Part`；目录实例化创建 `Component`。请按后续用途选择路径。
 
-### 5.2 装配
-1. 点击主工具栏 **Assy** 打开 **AssemblyPanel**。
-2. 添加 box/cylinder/sphere/cone 子件，设置尺寸与 X/Y/Z 偏移（米），点击 **创建 Assembly**。
-3. API：`POST /api/genrule`，`{"type":"assembly","name":"...","components":[{"name":"...","shape":"box","p1":2,"p2":1,"p3":1,"tx":0,"ty":0,"tz":0}]}`。
-4. 结果是带合并网格的 `Assembly` 对象，不是受约束的产品结构。需要特征树装配时，请在构件编辑器里构建 `Component`。
+### 5.2 装配（容器 + 子件，2026-10-30）
+1. 点击主工具栏 **Assembly** 打开 **AssemblyPanel**。
+2. 命名装配、可选父级，然后逐个添加子件，二选一：
+   - **目录构件**：选目录 `ComponentDef`，编辑参数（毫米），设置位置（米）与 Z 旋转（度）；
+   - **基本体**：box/cylinder/sphere/cone + 尺寸与位置（米）。
+3. 点击 **创建 Assembly**。结果是类型为 `Assembly` 的**容器对象**，子件作为普通对象挂在容器下：对象树可分别选择、删除、导出；子件位姿在建时烘焙进几何。
+4. API：`POST /api/assemblies`，`{"name":"...","parts":[{"name":"base","shape":"box","p1":2,"p2":1,"p3":0.2,"position":{"x":0,"y":0,"z":0}},{"name":"pump","component_def_id":"<ComponentDef id>","params":{...},"position":{"x":0,"y":0,"z":0.3},"rotation_z":0}]}`；`skip_series_gate` 可选。创建是**单步撤销**。
+5. 移动容器会级联到全部子件（一次撤销）；删除容器默认**整树删除**（`DELETE /api/objects/{id}`，容器自动级联；普通对象仍保持"子件提升"）。
+6. 旧路径 `POST /api/genrule` `{"type":"assembly",...}` 仍可用，但输出是**合并网格**（无结构），仅供脚本/遗留调用与内建设备类型（Stair/AHU/Chiller/Transformer/Reactor）。
+
+限制：子件没有独立 live placement（位姿已烘焙），没有 BOM/算量端点、没有运动副或约束装配；嵌套装配未开放。设计契约见 [ASSEMBLY](specification/ASSEMBLY.zh-CN.md)。
 
 ### 5.3 运动学与制造（计划中）
 - **运动副、约束、轴、运动副对与执行器** 仅计划；没有配合求解器或运动仿真。**紧固件**（螺栓/螺母/垫圈/螺钉/铆钉/销）与制造对象类型（孔/型腔/槽/螺纹/PMI）仅计划。
@@ -161,10 +167,9 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 
 ## 6. 数据与交换
 ### 6.1 保存与加载 `.omnim`
-- 项目是启动时从 `OMNIM_PROJECT`（默认 `project.omnim`）加载的单个 JSON 文档。executor 组端点的变更会自动落盘；也存在显式保存路由 `POST /api/project/save`（Web 界面暂无保存按钮）。
-- 只有 §1.3 列出的五个处理器会写文件，且 `save_path` 必须为 `Some`。目录放置、GenRule、IFC 导入与系列编辑都只在内存中。
-- 会话习惯：假设 `OMNIM_PROJECT=./dev-project.omnim`，用对象创建等 executor 组动作即可自动落盘；遗留直写动作（变换、材质、系列编辑等）仍需用 `POST /api/project/save` 手动补存。关闭前检查文件时间戳。
-- 撤销不能跨重启保护你：只有执行器路径上的操作在撤销栈中。
+- 项目是启动时从 `OMNIM_PROJECT`（默认 `project.omnim`）加载的单个 JSON 文档。全部变更端点自动落盘（`OMNIM_EPHEMERAL=1` 关闭）；也可随时 `POST /api/project/save` 强制保存，标题栏还有显式 **Save / Save as** 按钮（快捷键见 [KEYBOARD_MAP](reference/KEYBOARD_MAP.zh-CN.md)）。
+- 会话习惯：假设 `OMNIM_PROJECT=./dev-project.omnim`，所有动作均自动落盘；排障时同样可以 `POST /api/project/save` 显式刷写。关闭前检查文件时间戳。
+- 撤销不能跨重启保护你：撤销栈只在内存中。
 
 ### 6.2 IFC 导入与导出
 - 工具栏 **Import** / **Export** 对应 `POST /api/import/ifc` 与 `GET /api/export/ifc`。

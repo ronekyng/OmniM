@@ -55,7 +55,11 @@ fn main() {
     });
     let proj = load_or_new(&project_file);
 
-    let host = env::var("OMNIM_HOST").unwrap_or_else(|_| "0.0.0.0".to_string());
+    // Loopback by default: the API is unauthenticated, so binding all
+    // interfaces out of the box would expose the whole project to the LAN
+    // (`UI-SEC-00`). Set OMNIM_HOST=0.0.0.0 (or any specific address) to
+    // publish deliberately.
+    let host = env::var("OMNIM_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port: u16 = env::var("OMNIM_PORT")
         .ok()
         .and_then(|p| p.parse().ok())

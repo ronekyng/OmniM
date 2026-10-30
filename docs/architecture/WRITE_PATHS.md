@@ -64,6 +64,7 @@ All of these are undoable and persist by default.
 | Grid datum (P8-S1) | `POST/GET /api/grids`, `PUT/DELETE /api/grids/{id}` | ✅ | ✅ | P8-S1 |
 | Administrative / breakdown | create/delete division, create/delete node, link object, link division | ✅ | ✅ | 4 |
 | Catalog instantiation | `/api/catalog/instantiate` (object + generated sketches as one command) | ✅ | ✅ | 5 |
+| Assembly container (2026-10-30) | `POST /api/assemblies` (container + catalog/primitive parts; `Command::CreateBatch` carries instantiation sketches, one undo step); container transforms cascade to parts (`Command::Batch`) | ✅ (single step) | ✅ | ASSEMBLY |
 | IFC import | `/api/import/ifc` (whole-project transaction, merge or replace) | ✅ | ✅ | 5 |
 | Explicit save | `POST /api/project/save` | — | ✅ | 1 |
 
@@ -73,9 +74,11 @@ All of these are undoable and persist by default.
 |---|---|---|---|
 | `section_handler` | Takes the project write lock only to refresh feature caches before reading section lines; no user-visible mutation | — | — |
 | `import_ifc` | Bulk import replaces whole aggregates; recorded as `Command::ReplaceProject { before, after }` — one undo step, deliberate memory trade-off | ✅ (single step) | ✅ |
-| `POST /api/catalog/import` (`import_catalog_handler`) | Imports an `.omnimlib` into the session-global `LIBRARY`, not into `Project`; there is no project-level undo entry | ❌ | ❌ (library file, not project) |
+| `POST /api/catalog/import` (`import_catalog_handler`) | Imports an `.omnimlib` into the session-global `LIBRARY`, not into `Project`; there is no project-level undo entry. **Read-constrained** (2026-10-30): the file must live under an import root (projects root, `~/.omnim`, server cwd, or colon-separated `OMNIM_IMPORT_ROOTS`) and end with `.omnimlib`; `.omnimseries` loads (`POST /api/series/load`, `/api/omcom` `LoadSeries`) follow the same rule | ❌ | ❌ (library file, not project) |
 | `preview_catalog_component` | Builds the instance on a throwaway `Project`; no write lock and no residue in the live model | — | — |
 | `/api/genrule` geometry | Command + undo + save are correct, but geometry is still hard-coded mesh rather than feature-tree driven (Wave 3) | ✅ | ✅ |
+
+- **Assembly delete (2026-10-30)**: `DELETE /api/objects/{id}` removes the whole subtree for `Assembly` containers by default (`DeleteCascade.deleted_children`, with containment/connection snapshots and lifecycle/breakdown detach); other objects keep the promote-children behaviour. One undo restores the subtree.
 
 ## Persistence
 

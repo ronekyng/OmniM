@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图阶段组织。
 
-**最后更新：2026-10-29**
+**最后更新：2026-10-30**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,44 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-10-30] — 创建显示与朝向修复
+
+### 修复（Fixed）
+- **新建墙体/楼板/屋顶/楼层不可见**：PathSweep/genrule 产出的域对象几何本来是**米**，但带 `catalog_ref` 的对象在 `/api/mesh` 被统一按毫米缩放 0.001，导致 5 m 墙只剩 5 mm。现在只对真正的目录 `Component` 实例（模板几何以毫米编写）缩放；域对象按米直接显示。
+- **梁/管/风管创建后竖直**：目录模板沿局部 +Z 挤出，旧逻辑只发送绕 Z 的偏航，无法把长度轴放倒到拾取线段。`InstantiateCatalogOperation` 新增可选 `rotation` 四元数（`position` 平移前应用），界面按“局部 +Z → 拾取方向”生成并让构件从起点延伸；同时移除目录线性构件创建后的重复中点平移。
+
+## [2026-10-30] — 装配容器与子件
+
+### 新增（Added）
+- **`POST /api/assemblies`**：创建 `Assembly` **容器**，直接子件是普通对象——目录 `Component`（`catalog_ref`、特征树几何、参数 mm、位姿 m）或基本体 `Part`（box/cylinder/sphere/cone，位姿烘焙）。创建是一条 `Command::CreateBatch`（含实例化草图），**单步撤销**。
+- **整树删除**：`DELETE /api/objects/{id}?cascade_children=true`（容器默认）删除全部后代，并把子树快照进 `DeleteCascade.deleted_children`；一次撤销恢复整棵子树。
+- **级联变换**：`PUT /api/objects/{容器}/transform` 把矩阵作用到每个直接子件，并记录一条分组撤销条目（`Command::Batch`）。
+- 新 OMCOM 面：`ASSEMBLY_CREATE`（130）+ `CreateAssemblyOperation`、`DELETE_OBJECT_SUBTREE`（131）；AssemblyPanel 支持目录构件（可编辑参数）与基本体 + 位姿输入。
+
+### 变更（Changed）
+- `Assembly` 对象现在是**结构容器**（自身无几何），不再是不可拆的合并网格。旧 `POST /api/genrule` 的 `type: "assembly"` 路径保留，供脚本与复用 `AssemblyGen` 的内建设备类型（`Stair`、`AHU`、`Chiller`、`Transformer`、`Reactor`）。
+- 路由表：87 条唯一路径 / 88 次注册。
+
+### 未实现（已知缺口）
+- 逐子件 live placement（位姿已烘焙）、BOM/工程量端点、运动副与嵌套装配——登记于 [ROADMAP](ROADMAP.zh-CN.md) 与 [ASSEMBLY](../specification/ASSEMBLY.zh-CN.md) 契约。
+
+## [2026-10-30] — 审计整改周期（代码 / 文档 / UI-UX）
+
+### 修复（Fixed）
+- **model P0/P1**：`remove_containment` 从 Vec 删除并重建双索引；钢筋笼箍筋 z 沿构件长度分布；`resolve_param` 修正运算优先级（`1+2*3 = 7`）；`set_parent` 原子化并加环防护；`CatalogStore.by_category` 反序列化即重建；对象删除级联清理（子对象提升、关系/lifecycle/breakdown 引用剥离）并支持一步撤销（`DeleteCascade`）；创建时 `ifc_class`/`tags` 直写补记 `ModifyObject`。
+- **假成功（omcom/amir）**：未知草图约束码与越界索引改为报错回滚；阵列实例上限 1 万；AMIR `amir-undo`/`amir-redo` 哨兵转调真实 `Executor::undo/redo`；草图求解失败不再回写坐标；近似 Boolean/Chamfer/Fillet 通过新增的 `ExecutionResult.warnings` 字段显式告警（控制台与 AI 面板已消费）。
+- **IFC**：语句切分改为字符串字面量感知的状态机（名称含 `;` 不再截断），修复 `''` 转义；`parse_value`/`convert_ifc_item`/放置链加递归深度上限。
+- **server**：无认证 API 默认绑回环（`OMNIM_HOST` 显式发布）；导入端点收敛到允许根目录（含 `/api/omcom` 的 `LoadSeries`，拒绝 traversal 与 symlink 逃逸）；导出产物移至 `~/.omnim/exports` 带纳秒后缀；100 MB body 上限只挂 IFC 导入；自动保存失败在响应中给出 `persist_failed`。
+- **web**：`api.ts` 全部 31 个方法统一走 `request`/`requestVoid`（非 2xx 抛出）并附契约测试；17 处 `.catch(() => {})` 改为可见告警；Assembly/LayerEditor/目录面板补单位标注；"Unsaved changes" 假警报改为 "Auto-saved server-side · Ctrl+S to snapshot"；轴网跨度改语义开关；默认命名弃时间戳改 `<prefix>-<nnn>`；约束工具栏补 title/aria；草图画布改用主壳石墨配色。
+
+### 变更（Changed）
+- CI：`clippy --all-targets`（失败可见）与 web typecheck 步骤；`check_write_paths.py` 扫描不足 20 个 handler 时拒绝通过。
+- 实测：Rust 测试 467（原 454）、web 测试 100（原 94）、`--all-targets` 下 clippy 0 error（原为编译失败）、`check_docs.py --strict-parity` 全绿且无永久豁免。
+
+### 未实现（已知缺口）
+- G2/G3 前端项：完整 token 迁移（712 处硬编码颜色）、i18n、A11Y、编辑器视觉统一、图标体系重做。
+- 审计进度小节中登记的结构性债务：server 认证中间件/`TimeoutLayer`、persist 移出写锁、omcom 拆文件 + executor Result 化、真 CSG 内核、`App.tsx` selector 粒度、react-query hooks 启用或移除、clippy 警告基线收紧。
 
 ## [2026-10-30] — 工作区壳层重排（P9-S3）
 

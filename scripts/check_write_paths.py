@@ -115,6 +115,22 @@ def main() -> int:
 
     total = sum(len(x) for x in (write_offenders, save_offenders, library_offenders))
     print(f"scanned {len(bodies)} handlers in {Path(args.lib).name}")
+
+    # Fail-safe (audit 2026-10-30): this is a single-file regex scan. If a
+    # refactor splits lib.rs into submodules (or renames the handler fn
+    # pattern), the scan silently degrades to zero coverage — turning a
+    # regression-checking gate into a rubber stamp. Refuse to run blind.
+    if len(bodies) < 20:
+        print(
+            "\nFAIL: only "
+            f"{len(bodies)} handlers were found by the static scan, but the "
+            "server defines dozens of `async fn` handlers. The scan is no "
+            "longer reading the real file structure (submodule split or "
+            "pattern mismatch?) — fix CALL_RE/path handling or extend the "
+            "script to enumerate modules before trusting its output."
+        )
+        return 1
+
     for label, names in (
         ("direct project.write()", write_offenders),
         ("direct Project::save()", save_offenders),

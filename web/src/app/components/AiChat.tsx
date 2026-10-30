@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../../shared/api';
+import { notify } from '../../shared/toast';
 import type { AmirChatResponse } from '../../shared/types';
 
 type ChatMessage = {
@@ -59,15 +60,31 @@ export function AiChat({ onExecuted }: { onExecuted: () => void }) {
 
       if (response.commands?.length) {
         let execError: string | null = null;
+        const warnings: string[] = [];
         for (const cmd of response.commands) {
           try {
-            await api.executeOmcom(cmd);
+            const result = await api.executeOmcom(cmd);
+            // Sentinel undo/redo commands ("amir-undo"/"amir-redo") return the
+            // executor's real outcome — surface it instead of staying quiet
+            // (acceptance note ③: empty undo stack used to be invisible).
+            if (!result.success) {
+              execError = `${(cmd as { id?: string })?.id ?? 'command'}: ${result.message}`;
+              break;
+            }
+            if (result.warnings?.length) {
+              warnings.push(...result.warnings);
+            }
           } catch (e) {
             execError = `Command failed: ${e instanceof Error ? e.message : String(e)}`;
             break;
           }
         }
         if (execError) setError(execError);
+        if (warnings.length) {
+          for (const w of warnings.slice(0, 3)) {
+            notify.warning(w);
+          }
+        }
         onExecuted();
       }
     } catch (err) {

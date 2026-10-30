@@ -1,12 +1,13 @@
 ---
 title: "行业标准参考资料与平台调研"
-status: research
+status: archived  # research snapshot; not a contract doc, unmaintained since 2026-08
 last_updated: 2026-07-09
 applies_to: "n/a (research)"
 evidence: "n/a (background research)"
 ---
 # 行业标准参考资料与平台调研
 
+> **文档性质（审计 2026-10-30 P2-3）**：本目录全部为**已归档的背景调研快照**（`status: archived`），不是契约文档、不受 check_docs 的时效约束；内容停留在 2026-07/08 的调研状态，供溯源而非对照当前实现。
 ## 目录结构
 
 ### IFC4.3 标准参考

@@ -1272,7 +1272,7 @@ function drawDistanceMeasurement(viewer: ViewerState, p1: THREE.Vector3, p2: THR
     points: [{ x: p1.x, y: p1.y, z: p1.z }, { x: p2.x, y: p2.y, z: p2.z }],
     value: dist,
     color: '#44ff88',
-  }).catch(() => {});
+  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 function drawAngleMeasurement(viewer: ViewerState, vertex: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3) {
@@ -1316,7 +1316,7 @@ function drawAngleMeasurement(viewer: ViewerState, vertex: THREE.Vector3, p1: TH
     points: [{ x: vertex.x, y: vertex.y, z: vertex.z }, { x: p1.x, y: p1.y, z: p1.z }, { x: p2.x, y: p2.y, z: p2.z }],
     value: deg,
     color: '#ffaa44',
-  }).catch(() => {});
+  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 function drawAreaMeasurement(viewer: ViewerState, points: THREE.Vector3[]) {
@@ -1376,7 +1376,7 @@ function drawAreaMeasurement(viewer: ViewerState, points: THREE.Vector3[]) {
     points: pts,
     value: area,
     color: '#44aaff',
-  }).catch(() => {});
+  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 /** Render a persisted Measurement object into the scene's measureGroup. */
@@ -1549,14 +1549,15 @@ async function persistSelectedTransform(viewer: ViewerState, selectedId?: string
   const hasRotate = Math.abs(deltaQuat.x) + Math.abs(deltaQuat.y) + Math.abs(deltaQuat.z) > 1e-6;
   if (!hasMove && !hasScale && !hasRotate) return;
   const origin = mesh.position.clone();
-  const response = await api.transformObject(selectedId, {
-    origin: { x: origin.x, y: origin.y, z: origin.z },
-    translation: { x: deltaPos.x, y: deltaPos.y, z: deltaPos.z },
-    rotation: hasRotate ? { x: deltaQuat.x, y: deltaQuat.y, z: deltaQuat.z, w: deltaQuat.w } : null,
-    scale: { x: scale.x, y: scale.y, z: scale.z },
-  });
-  if (!response.ok) {
-    notify.error(`Save transform failed: ${response.status} ${response.statusText}`);
+  try {
+    await api.transformObject(selectedId, {
+      origin: { x: origin.x, y: origin.y, z: origin.z },
+      translation: { x: deltaPos.x, y: deltaPos.y, z: deltaPos.z },
+      rotation: hasRotate ? { x: deltaQuat.x, y: deltaQuat.y, z: deltaQuat.z, w: deltaQuat.w } : null,
+      scale: { x: scale.x, y: scale.y, z: scale.z },
+    });
+  } catch (err) {
+    notify.error(`Save transform failed: ${err instanceof Error ? err.message : String(err)}`);
     return;
   }
   mesh.userData.basePosition = mesh.position.clone();

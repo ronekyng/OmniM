@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap phase.
 
-**Last updated: 2026-10-29**
+**Last updated: 2026-10-30**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-10-30] — Creation display & orientation fixes
+
+### Fixed
+- **New walls/slabs/roofs/floors were invisible**: PathSweep/genrule domain objects carry metre-scale geometry, but `/api/mesh` scaled every object with a `catalog_ref` by 0.001 as if it were millimetres (a 5 m wall became 5 mm). Only genuine catalog `Component` instances (template geometry authored in mm) are scaled now; domain objects render in metres.
+- **Beams/pipes/ducts were created vertical**: catalog templates extrude along local +Z, and the old placement only sent a Z yaw, which cannot lay the length axis onto the picked segment. `InstantiateCatalogOperation` now accepts an optional `rotation` quaternion (applied before the position translation); the UI derives it from local +Z → picked direction and anchors the part at the segment start. The duplicate midpoint translation after catalog linear creation was also removed.
+
+## [2026-10-30] — Assembly container + parts
+
+### Added
+- **`POST /api/assemblies`**: creates an `Assembly` **container** whose direct children are ordinary objects — catalog `Component` parts (`catalog_ref`, feature-tree geometry, params in mm, pose in m) or primitive `Part` bodies (box/cylinder/sphere/cone, baked pose). Creation is one `Command::CreateBatch` (including instantiation sketches), so it is a single undo step.
+- **Subtree delete**: `DELETE /api/objects/{id}?cascade_children=true` (the default for containers) removes every descendant and snapshots the subtree in `DeleteCascade.deleted_children`; one undo restores the whole subtree.
+- **Cascading transform**: `PUT /api/objects/{container}/transform` applies the matrix to every direct child and records one grouped undo entry (`Command::Batch`).
+- New OMCOM surface: `ASSEMBLY_CREATE` (130) with `CreateAssemblyOperation`, `DELETE_OBJECT_SUBTREE` (131); the AssemblyPanel now supports catalog parts with parameter editing plus primitive parts and pose inputs.
+
+### Changed
+- An `Assembly` object is now a structural container (no geometry of its own) instead of an opaque merged mesh. The legacy `POST /api/genrule` `type: "assembly"` path remains for scripts and the built-in equipment types (`Stair`, `AHU`, `Chiller`, `Transformer`, `Reactor`) that reuse `AssemblyGen`.
+- Route table: 87 unique paths / 88 registrations.
+
+### Not implemented (known gaps)
+- Per-part live placement (poses are baked), BOM/quantity endpoint, kinematic joints and nested assemblies — tracked in [ROADMAP](ROADMAP.md) and the [ASSEMBLY](../specification/ASSEMBLY.md) contract.
+
+## [2026-10-30] — Audit remediation cycle (code / docs / UI-UX)
+
+### Fixed
+- **Model P0/P1**: `remove_containment` deleted from the vector and rebuilt both indexes; stirrup `z` now spreads along the rebar cage; `resolve_param` honours operator precedence (`1+2*3 = 7`); `set_parent` is atomic with a cycle guard; `CatalogStore.by_category` is rebuilt on deserialize; object deletion cascades (children promoted, relations/lifecycle/breakdown cleaned) with one-step undo (`DeleteCascade`); create-time `ifc_class`/`tags` writes are recorded as `ModifyObject`.
+- **Fake success (omcom/amir)**: unknown sketch-constraint codes and out-of-range entity/constraint indexes now fail with rollback; array fan-out capped at 10k; AMIR `amir-undo`/`amir-redo` sentinels routed to the real `Executor::undo/redo`; failed sketch solves no longer write back coordinates; approximate boolean/chamfer/fillet now surface `warnings` (new `ExecutionResult.warnings` field, consumed by the console and AI panel).
+- **IFC**: statement splitting is a string-literal-aware state machine (names with `;` survive), `''` escaping fixed, recursion depth caps on `parse_value`/`convert_ifc_item`/placement chains.
+- **Server**: unauthenticated API now binds loopback by default (`OMNIM_HOST` to publish); import endpoints confined to allowed roots (traversal + symlink escapes rejected, including `/api/omcom` `LoadSeries`); export artifacts moved to `~/.omnim/exports` with nanosecond suffixes; 100 MB body limit scoped to IFC import; failed auto-save surfaces `persist_failed` in the response.
+- **Web**: all 31 `api.ts` methods funnel through `request`/`requestVoid` (non-ok throws) with contract tests; 17 swallowed `.catch(() => {})` sites now report; Assembly/LayerEditor/catalog panels carry unit labels; the "Unsaved changes" false alarm now reads "Auto-saved server-side · Ctrl+S to snapshot"; grid spans use a semantic toggle; default object names dropped timestamps for `<prefix>-<nnn>`; constraint toolbar has titles/aria labels; sketch canvas adopted the shell graphite palette.
+
+### Changed
+- CI: `clippy --all-targets` (failures now visible) and `web` typecheck step; `check_write_paths.py` refuses to pass when it scans fewer than 20 handlers.
+- Measured: 467 Rust tests (was 454), 100 web tests (was 94), 0 clippy errors under `--all-targets` (was a compile failure), `check_docs.py --strict-parity` green with no permanent exemptions.
+
+### Not implemented (known gaps)
+- G2/G3 frontend items: full token migration (712 hard-coded colours), i18n, A11Y, editor visual unification, icon-system rework.
+- Structural debt tracked in the audit progress notes: server auth middleware/`TimeoutLayer`, persist off the write lock, omcom file split + `Result` executor, real CSG kernel, `App.tsx` selector granularity, react-query hooks enable-or-remove, clippy warning backlog ratchet.
 
 ## [2026-10-30] — Workspace shell re-layout (P9-S3)
 

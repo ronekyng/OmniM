@@ -297,7 +297,33 @@ commissioning_acceptance 5, asset 6, operation_maintenance 7, production 8, deco
 `RecordStatus`: unspecified 0, draft 1, open 2, in_progress 3, blocked 4, completed 5,
 approved 6, rejected 7, closed 8.
 
-### 3.10 Action families without dedicated operations
+### 3.11 Assembly container operations (2026-10-30)
+
+`ASSEMBLY_CREATE` (130) carries `CreateAssemblyOperation`:
+
+```json
+{
+  "name": "Pump skid",
+  "parent_id": "",
+  "skip_series_gate": true,
+  "parts": [
+    { "name": "base", "primitive": { "shape": "box", "p1": 2, "p2": 1, "p3": 0.2,
+      "position": { "x": 0, "y": 0, "z": 0 }, "rotation_z": 0 } },
+    { "name": "pump", "component": { "component_def_id": "<ComponentDef id>",
+      "params": { "length": 1200 }, "position": { "x": 0, "y": 0, "z": 0.3 },
+      "rotation_z": 0 } }
+  ]
+}
+```
+
+- The container is `ObjectType::ASSEMBLY` with no geometry; parts become ordinary
+  child objects (`Component` with `catalog_ref`, or `Part`).
+- Creation is one `Command::CreateBatch` (including instantiation sketches): one undo.
+- `DELETE_OBJECT_SUBTREE` (131) deletes the container's whole subtree as one undo step;
+  `DELETE_OBJECT` keeps promote-children semantics.
+- Contract: [ASSEMBLY](../specification/ASSEMBLY.md).
+
+### 3.12 Action families without dedicated operations
 
 Some action codes have no `Operation` variant yet; they are reserved at the executor layer or
 handled by other services:
@@ -368,6 +394,8 @@ All actions from `proto/omcom.proto` `enum Action`, kept in wire order:
 | 107 | `EXTRUDE_SKETCH` | Sketch → body |
 | 108 | `REVOLVE_SKETCH` | Sketch → body |
 | 110 | `CREATE_COMPONENT` | Component |
+| 130 | `ASSEMBLY_CREATE` | Assembly (2026-10-30) |
+| 131 | `DELETE_OBJECT_SUBTREE` | Assembly (2026-10-30) |
 | 111 | `ADD_FEATURE` | Component |
 | 112 | `REMOVE_FEATURE` | Component |
 | 113 | `REBUILD_FEATURES` | Component |

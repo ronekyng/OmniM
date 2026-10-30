@@ -191,7 +191,7 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 
 ## 7. 前端界面偏差 — **已知**（2026-10-29）
 
-> **P9 更新（2026-10-29）。** 7.1、7.2、7.3、7.5、7.6、7.7 已解决：属性面板默认右停靠、项目首页（新建/打开/最近/示例）落地、显式保存/另存为已接通、原生弹窗移除、错误边界落地、自动命名有单测。下表保留为审计快照；7.4（面板三态）、7.8–7.11 仍开放。
+> **P9 更新（2026-10-29）。** 7.1、7.2、7.3、7.5、7.6、7.7 已解决：属性面板默认右停靠、项目首页（新建/打开/最近/示例）落地、显式保存/另存为已接通、原生弹窗移除、错误边界落地、自动命名有单测。下表保留为审计快照；**P10 增补（2026-10-30）**：7.12/7.13 已按 UI/UX 验收审计立项并同日整改关闭（保存语义单一口径、参数面板单位标注）；7.4（面板三态）、7.8–7.11 仍开放。
 
 
 2026-10-29 对照 `web/src` 审计。以下是 [`specification/ui/`](../specification/ui/IA_SHELL.zh-CN.md)
@@ -212,6 +212,8 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 | 7.10 | 树与表暴露 role 与 ARIA 状态 | 1 个 `aria-*` 属性、0 个 `role` 属性 | 源码扫描 | UI-A11Y-04 |
 
 | 7.11 | 拾取会话中 `Delete` 被忽略 | `Delete` 仍删除当前选择；只有 `Backspace` 被特判 | `web/src/app/App.tsx:91-95` | UI-INT-02 |
+| 7.12 | 保存语义单一口径（自动落盘 vs "未保存"） | **已整改（2026-10-30，UI/UX 审计 F1）**：服务端每次变更默认落盘，而 UI 显式保存状态机把 dirty 显示为 "Unsaved changes"（假警报）。现 `saveLabel` dirty 态为 "Auto-saved server-side · Ctrl+S to snapshot"，TitleBar 徽标 aria 同步；`FRONTEND_MATURITY` §5 口径改为"脏状态=快照分级" | `web/src/shared/saveState.ts`、`TitleBar.tsx`、`FRONTEND_MATURITY.md` | UI-DAT-02 |
+| 7.13 | 参数面板同屏单位可读（mm/m 双单位） | **已整改（2026-10-30，UI/UX 审计 F4/D1/D2）**：Assembly 面板尺寸/偏移占位符标注 (m)，顶部加 mm/m 双单位提示；LayerEditor 厚度标 (mm)；目录参数面板此前已带 unit 后缀；轴网贯通语义开关替代 0/0 密码 | `AssemblyPanel.tsx`、`LayerEditor.tsx`、`GridPanel.tsx` | UI-INT-09 |
 
 **为记录起见，以下不是偏差：** 拾取状态机、视口渲染质量（色调映射、软阴影、剖切、测量）
 以及目录/系列管理器均已实现，不受上述条目影响。

@@ -64,6 +64,27 @@ impl LifecycleStore {
         self.records.values().collect()
     }
 
+    /// Detach every reference to `object_id` from records, returning the
+    /// (record id, object id) pairs removed so undo can re-attach them.
+    pub fn detach_object(&mut self, object_id: &str) -> Vec<(String, String)> {
+        let mut detached = Vec::new();
+        let affected: Vec<String> = self
+            .records
+            .iter()
+            .filter(|(_, r)| r.related_object_ids.iter().any(|o| o == object_id))
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in affected {
+            let record = self.records.get_mut(&id).unwrap();
+            record.related_object_ids.retain(|o| o != object_id);
+            if let Some(list) = self.by_object.get_mut(object_id) {
+                list.retain(|i| i != &id);
+            }
+            detached.push((id, object_id.to_string()));
+        }
+        detached
+    }
+
     pub fn find_by_phase(&self, phase: c::LifecyclePhase) -> Vec<&c::ProjectLifecycleRecord> {
         self.by_phase
             .get(&(phase as i32))

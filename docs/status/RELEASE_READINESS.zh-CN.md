@@ -1,9 +1,9 @@
 ---
 title: "OmniM 前端发布就绪度"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/"
-evidence: "2026-10-29 依据 REQUIREMENTS_REGISTER 与 FRONTEND_MATURITY 评估门禁状态"
+evidence: "2026-10-30 依据 REQUIREMENTS_REGISTER 与 FRONTEND_MATURITY 评估门禁状态；并入建模师 UI/UX 复验（G1 体验档）口径区分"
 ---
 # OmniM 前端发布就绪度
 
@@ -79,6 +79,8 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-DAT-06 未保存拦截 | 🔀 | 脏/失败时 `beforeunload`；应用内导航拦截待补 |
 
 **G1 判定：** 📅 **未就绪。** 25 条中 3 条完成（`UI-INT-02`、`UI-INT-09`、`UI-FBK-05`），20 条部分实现，2 条缺失（`UI-DS-02`、`UI-FBK-02`）。
+
+> **验收记录（2026-10-30，口径区分）。** 建模师 UI/UX 复验（[MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)）以**可用原型（G1）档的 UI/UX 维度**正式放行：两个 P0-UX（保存假警报、单位陷阱）已关闭。这不改变上表按 RTM 逐条判定的门禁状态——25 条仍以 `REQUIREMENTS_REGISTER` 的验证证据为准，本看板不因"体验验收通过"而升级门禁。
 
 ## 5. G2 Beta 就绪
 

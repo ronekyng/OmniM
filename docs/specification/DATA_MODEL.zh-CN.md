@@ -973,7 +973,7 @@ message GenRule {
 | 1. Primitive | 工厂、机械 | 罐、泵、阀、齿轮 | 直接将类型参数映射为单个体元（**体构件**） |
 | 2. LayerExtrusion | 建筑 | Wall、Slab、Floor、Roof | 将面边界 + 层结构展开为多条 Extrusion；**面构件**的主要 GenRule |
 | 3. LinearComponent | 建筑、市政、工厂 | Beam、Column、Road、Bridge、Pipe、CableTray | 路径 + 变截面横断面 + 外部约束；**线构件**的 GenRule |
-| 4. Assembly | 机械、工厂 | 设备、装配体 | 组合多个图元为一个对象（**体构件**） |
+| 4. Assembly | 机械、工厂 | 设备、装配体 | 组合多个图元（遗留合并网格）；**2026-10-30 起**另有容器形态：`/api/assemblies` 创建 `Assembly` 容器 + `Component`/`Part` 子件（见 [ASSEMBLY](ASSEMBLY.zh-CN.md)） |
 | 5. BooleanSubtract | 全部 | 开孔、SNO | 在已有几何上做布尔差集 |
 
 > **注意**：表中移除了 Wall 作为 LinearComponent 的归属。墙是**面构件**（见 [§1](#1-概述)），通过 LayerExtrusion 生成，而非 LinearComponent。
@@ -1147,7 +1147,7 @@ ComponentSequence
 
 **流程图式 VariationRule（SAC 模式）**：当前 `VariationRule` 仅支持简单插值（constant/linear/smooth）。未来应支持 Civil3D Subassembly Composer 风格的流程图逻辑——`Sequence`、`Decision`、`Switch` 节点——实现基于参数、目标和外部条件的条件几何生成。
 
-> **设计规范**：TerrainModel、LogicalObject、BooleanSubtract 增强、Assembly 增强、约束系统（§6.8–§6.12）均为设计规范。其 protobuf 消息仅定义于本文档，尚未实现于代码库/proto 文件。
+> **设计规范**：TerrainModel、LogicalObject、BooleanSubtract 增强、约束系统（§6.8–§6.12）均为设计规范，其 protobuf 消息仅定义于本文档，尚未实现于代码库/proto 文件。**Assembly 增强已部分落地**（2026-10-30）：容器对象 + 子件（`CreateAssemblyOperation`，见 [ASSEMBLY](ASSEMBLY.zh-CN.md)）；运动副与嵌套装配仍属规范。
 
 ### 6.8 地形模型 (TerrainModel TIN 曲面)
 

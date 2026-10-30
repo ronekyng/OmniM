@@ -1,9 +1,9 @@
 ---
 title: "OmniM 快捷键表"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/"
-evidence: "2026-10-29 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.tsx、OmniPanel.tsx、ObjectTree.tsx、AiChat.tsx 核实"
+evidence: "2026-10-30 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.tsx、OmniPanel.tsx、ObjectTree.tsx、AiChat.tsx 核实"
 ---
 # OmniM 快捷键表
 
@@ -26,7 +26,7 @@ evidence: "2026-10-29 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.ts
 
 | 快捷键 | 命令 | 作用域 | 状态 |
 |---|---|---|---|
-| `Ctrl/Cmd+S` | 保存项目 | 全局 | 📅 |
+| `Ctrl/Cmd+S` | 保存项目 | 全局 | ✅ |
 | `Ctrl/Cmd+Shift+S` | 另存为 | 全局 | 📅 |
 | `Ctrl/Cmd+Z` | 撤销 | 全局 | 🔀 |
 | `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | 重做 | 全局 | 🔀 |
@@ -38,6 +38,8 @@ evidence: "2026-10-29 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.ts
 | `F1` | 快捷键帮助 | 全局 | 📅 |
 | `F6` | 循环区域 | 全局 | 📅 |
 | `?` | 聚焦控件的上下文帮助 | 全局 | 📅 |
+
+> 注：`Ctrl/Cmd+S` 对应标题栏 **Save** 按钮。"另存为"命令尚无快捷键（📅）——当前 `Ctrl/Cmd+Shift+S` 会落入与 `Ctrl+S` 相同的分支、触发普通保存；请使用标题栏 **Save as** 按钮。
 
 ## 3. 视口快捷键
 

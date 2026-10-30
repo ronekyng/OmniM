@@ -123,8 +123,14 @@ export function MainToolbar({
     const parentId = form.parentId || undefined;
     const seriesId = form.seriesId || undefined;
 
+    // Helper for the post-create field writes below: they used to be wrapped
+    // in `.catch(() => {})`, which ate HTTP 500s and read as "saved
+    // successfully" — surface them.
+    const warnField = (err: unknown) =>
+      toast.error(`附加字段保存失败: ${err instanceof Error ? err.message : String(err)}`);
+
     // Ensure the catalog is loaded so we can resolve the selected ComponentDef.
-    await ensureCatalogLoaded().catch(() => {});
+    await ensureCatalogLoaded().catch(warnField);
     const catalogSnapshot = getCatalogSnapshot();
 
     // ── Layered surface components (wall/slab/roof/floor) → layered genrule ──
@@ -242,15 +248,22 @@ export function MainToolbar({
       const pz = parseFloat(form.posZ) || 0;
 
       let result: { component_id: string; object_type: string; name: string };
-      if (LINEAR_TYPES.has(objectType)) {
-        const mx = (sx + ex) / 2, my = (sy + ey) / 2, mz = (sz + ez) / 2;
+      const hasSpan =
+        LINEAR_TYPES.has(objectType) &&
+        length > 1e-9 &&
+        (ex !== sx || ey !== sy || ez !== sz);
+      if (hasSpan) {
+        // Linear catalog components extrude along local +Z (their template
+        // convention). Lay that axis along the picked segment and anchor the
+        // part at the start point — a Z-yaw alone leaves beams vertical.
         if ('length' in params) params.length = Math.round(length * 1000);
+        const rotation = quaternionFromZTo(ex - sx, ey - sy, ez - sz);
         result = await api.instantiateFromCatalog({
           component_def_id: def.id,
           instance_name: name,
           params,
-          position: { x: mx, y: my, z: mz },
-          rotation_z: Math.atan2(ey - sy, ex - sx),
+          position: { x: sx, y: sy, z: sz },
+          ...(rotation ? { rotation } : {}),
           skip_series_gate: !seriesId,
         });
       } else {
@@ -284,35 +297,52 @@ export function MainToolbar({
         name: obj.name,
         description: form.desc || '',
         ifc_class: form.ifcClass || '',
-      }).catch(() => {});
+      }).catch(warnField);
     }
 
     if (LAYERED_TYPES.has(objectType) && form.layers) {
-      await api.setProperty(obj.id, { name: 'layers', value: JSON.stringify(form.layers) }).catch(() => {});
+      await api.setProperty(obj.id, { name: 'layers', value: JSON.stringify(form.layers) }).catch(warnField);
     }
-    if (LINEAR_TYPES.has(objectType) && !GENRULE_TYPES.has(objectType)) {
+    // Catalog instances were already positioned by the instantiate call —
+    // transforming them again by the midpoint would double the offset.
+    if (LINEAR_TYPES.has(objectType) && !GENRULE_TYPES.has(objectType) && !CATALOG_TYPES.has(objectType)) {
       const mx = (sx + ex) / 2, my = (sy + ey) / 2, mz = (sz + ez) / 2;
       if (mx !== 0 || my !== 0 || mz !== 0) {
-        await api.transformObject(obj.id, { origin: null, translation: { x: mx, y: my, z: mz }, rotation: null, scale: { x: 1, y: 1, z: 1 } }).catch(() => {});
+        await api.transformObject(obj.id, { origin: null, translation: { x: mx, y: my, z: mz }, rotation: null, scale: { x: 1, y: 1, z: 1 } }).catch(warnField);
       }
     }
     if (LINEAR_TYPES.has(objectType)) {
-      await api.setProperty(obj.id, { name: 'start_point', value: `${sx},${sy},${sz}` }).catch(() => {});
-      await api.setProperty(obj.id, { name: 'end_point', value: `${ex},${ey},${ez}` }).catch(() => {});
+      await api.setProperty(obj.id, { name: 'start_point', value: `${sx},${sy},${sz}` }).catch(warnField);
+      await api.setProperty(obj.id, { name: 'end_point', value: `${ex},${ey},${ez}` }).catch(warnField);
     } else if (SURFACE_TYPES.has(objectType)) {
       if (objectType === 'wall' || objectType === 'slab') {
-        await api.setProperty(obj.id, { name: 'height', value: String(parseFloat(form.height) || 3) }).catch(() => {});
-        await api.setProperty(obj.id, { name: 'core_thickness', value: String(parseFloat(form.core) || 0.2) }).catch(() => {});
-        await api.setProperty(obj.id, { name: 'finish_thickness', value: String(parseFloat(form.finish) || 0.02) }).catch(() => {});
+        await api.setProperty(obj.id, { name: 'height', value: String(parseFloat(form.height) || 3) }).catch(warnField);
+        await api.setProperty(obj.id, { name: 'core_thickness', value: String(parseFloat(form.core) || 0.2) }).catch(warnField);
+        await api.setProperty(obj.id, { name: 'finish_thickness', value: String(parseFloat(form.finish) || 0.02) }).catch(warnField);
       }
     } else {
       const px = parseFloat(form.posX) || 0, py = parseFloat(form.posY) || 0, pz = parseFloat(form.posZ) || 0;
       if (px !== 0 || py !== 0 || pz !== 0) {
-        await api.transformObject(obj.id, { origin: null, translation: { x: px, y: py, z: pz }, rotation: null, scale: { x: 1, y: 1, z: 1 } }).catch(() => {});
+        await api.transformObject(obj.id, { origin: null, translation: { x: px, y: py, z: pz }, rotation: null, scale: { x: 1, y: 1, z: 1 } }).catch(warnField);
       }
     }
 
     toast.success(`Created ${obj.name || 'object'}`);
+  }
+
+  /** Quaternion rotating local +Z onto `(dx, dy, dz)` (no scaling).
+   *  Used to lay +Z-extruded catalog beams/pipes along a picked segment. */
+  function quaternionFromZTo(dx: number, dy: number, dz: number) {
+    const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+    if (len < 1e-9) return null;
+    const nx = dx / len, ny = dy / len, nz = dz / len;
+    if (nz > 1 - 1e-9) return null;
+    if (nz < -1 + 1e-9) return { x: 1, y: 0, z: 0, w: 0 };
+    const sx = -ny, sy = nx;
+    const sinTheta = Math.hypot(sx, sy);
+    const half = Math.acos(Math.max(-1, Math.min(1, nz))) / 2;
+    const k = Math.sin(half) / sinTheta;
+    return { x: sx * k, y: sy * k, z: 0, w: Math.cos(half) };
   }
 
   function createOperation(f: CreationForm) {
@@ -424,7 +454,8 @@ export function MainToolbar({
         <span className="separator" />
         <button className="accent component-action" onClick={async () => {
           try {
-            const comp = await api.createComponent({ name: `comp-${Date.now()}` });
+            const names = (await api.listObjects()).map((o) => o.name);
+            const comp = await api.createComponent({ name: nextAutoName('Component', names) });
             onEditComponent?.(comp.id);
           } catch (e) {
             toast.error(`创建 Component 失败: ${e instanceof Error ? e.message : String(e)}`);
@@ -480,7 +511,7 @@ export function MainToolbar({
       )}
 
       {assemblyOpen && (
-        <AssemblyPanel onCreated={onCreated} />
+        <AssemblyPanel onCreated={onCreated} tree={tree ?? []} />
       )}
     </>
   );

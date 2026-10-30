@@ -46,6 +46,7 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Component Catalog & Series Library](specification/CATALOG_SERIES.md) — 元件库 / 系列库 (PARAGON/SPECON-inspired) ([中文](specification/CATALOG_SERIES.zh-CN.md))
 - [Lifecycle Model](specification/LIFECYCLE.md) — nine-phase project lifecycle as data ([中文](specification/LIFECYCLE.zh-CN.md))
 - [Domain Mapping](specification/DOMAINS.md) — Building / Civil / Plant / Mechanical object taxonomy ([中文](specification/DOMAINS.zh-CN.md))
+- [Assembly Container](specification/ASSEMBLY.md) — container + Component/Part children, delete/transform semantics ([中文](specification/ASSEMBLY.zh-CN.md))
 - [IFC Extension Strategy](specification/IFC_EXTENSION.md) — IFC compatibility policy ([中文](specification/IFC_EXTENSION.zh-CN.md))
 
 ### 🎨 I want to design or productize the UI
@@ -75,6 +76,7 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Roadmap](status/ROADMAP.md) — phase status with code evidence ([中文](status/ROADMAP.zh-CN.md))
 - [Format Compatibility](status/FORMAT_COMPAT.md) — honest import/export matrix ([中文](status/FORMAT_COMPAT.zh-CN.md))
 - [Code Deviations](status/CODE_DEVIATIONS.md) — ledger of spec-vs-code gaps ([中文](status/CODE_DEVIATIONS.zh-CN.md))
+- [Audit & acceptance records (2026-10-30)](status/CODE_AUDIT_2026-10-30.zh-CN.md) — code audit; [modeler docs audit](status/MODELER_DOCS_AUDIT_2026-10-30.zh-CN.md) / [re-audit](status/MODELER_DOCS_REAUDIT_2026-10-30.zh-CN.md); [UI/UX audit](status/MODELER_UIUX_AUDIT_2026-10-30.zh-CN.md) / [re-audit](status/MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md) (zh-CN snapshots)
 - [Changelog](status/CHANGELOG.md) ([中文](status/CHANGELOG.zh-CN.md))
 
 ### 💬 I want to shape the design

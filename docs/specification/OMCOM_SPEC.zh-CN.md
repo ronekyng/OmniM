@@ -106,6 +106,7 @@ message OmniCommand {
 | **导入/导出** | `IMPORT_FILE`、`EXPORT_FILE`、`PARSE_TO_OMCOM` | — |
 | **元件库** | `DEFINE_COMPONENT`、`ADD_COMPONENT_PARAM`、`ADD_CONNECTOR`、`ADD_COMPONENT_FEATURE`*、`PUBLISH_COMPONENT`、`LIST_CATALOG`、`DELETE_COMPONENT_DEF` | `DefineComponentOperation`、`AddComponentParamOperation`、`AddConnectorOperation`、`PublishComponentOperation`、`DeleteComponentDefOperation` |
 | **系列库** | `CREATE_SERIES`、`ADD_SELECTOR`、`ADD_ANSWER`、`ADD_SPEC_COMPONENT`、`ADD_PARAM_CONSTRAINT`、`LIST_SERIES`、`DELETE_SERIES`、`LOAD_SERIES` | `CreateSeriesOperation`、`AddSelectorOperation`、`AddAnswerOperation`、`AddSpecComponentOperation`、`AddParamConstraintOperation`、`LoadSeriesOperation` |
+| **装配（2026-10-30）** | `ASSEMBLY_CREATE`、`DELETE_OBJECT_SUBTREE` | `CreateAssemblyOperation`（容器 + `AssemblyPart`：`ComponentPart`（catalog_ref）/`PrimitivePart`） |
 | **校验** | `VALIDATE` | — |
 
 \* = schema 与 `Action` 枚举中已预留；proto 注释中标注为「reserved for future」。

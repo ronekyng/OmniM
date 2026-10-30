@@ -323,7 +323,7 @@ export function ObjectTree({
           ref={searchRef}
           className="tree-search"
           type="text"
-          placeholder="Search by name / type / IFC class… (/)"
+          placeholder="搜索名称 / 类型 / IFC Class… (/)"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />

@@ -105,6 +105,121 @@ async fn wall_panel_via_contract_path() {
 }
 
 #[tokio::test]
+async fn path_wall_mesh_keeps_metre_scale() {
+    // Regression (2026-10-30): path-driven walls carry a `catalog_ref` for
+    // traceability but their geometry is metres. The mesh endpoint must not
+    // shrink them by 0.001 (that made new walls/slabs invisible).
+    let (port, _) = test_server().await;
+    let (status, obj) = genrule(
+        port,
+        serde_json::json!({
+            "genrule": "layered",
+            "mode": "wall",
+            "name": "W-mesh",
+            "height": 3.0,
+            "path": { "points": [[0.0, 0.0, 0.0], [5.0, 0.0, 0.0]], "closed": false },
+            "layers": layers()
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "contract wall failed: {}", obj);
+    let id = json_of(&obj)["id"].as_str().unwrap().to_string();
+
+    let mesh: serde_json::Value = reqwest::Client::new()
+        .get(api_url(port, "/api/mesh"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let entry = mesh["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["id"] == id.as_str())
+        .expect("wall mesh entry");
+    let min = entry["bbox_min"].as_array().unwrap();
+    let max = entry["bbox_max"].as_array().unwrap();
+    let span = |axis: usize| max[axis].as_f64().unwrap() - min[axis].as_f64().unwrap();
+    assert!(
+        span(0) > 4.0,
+        "wall length should stay ~5 m, got {}",
+        span(0)
+    );
+    assert!(
+        span(2) > 2.0,
+        "wall height should stay ~3 m, got {}",
+        span(2)
+    );
+}
+
+#[tokio::test]
+async fn linear_catalog_part_rotation_lays_beam_along_segment() {
+    // Regression (2026-10-30): beam templates extrude along local +Z. With only
+    // a Z yaw the beam stayed vertical; the explicit `rotation` quaternion must
+    // lay it along the picked (horizontal) segment.
+    use omnim_model::LIBRARY;
+    let (port, _) = test_server().await;
+    let beam_def_id = {
+        let lib = LIBRARY.read().unwrap();
+        lib.as_ref()
+            .unwrap()
+            .catalog
+            .find_by_name("Concrete-Beam-Rect")
+            .unwrap()
+            .id
+            .clone()
+    };
+    // +Z → +X: 90° about +Y.
+    let s = std::f64::consts::FRAC_1_SQRT_2;
+    let resp = reqwest::Client::new()
+        .post(api_url(port, "/api/catalog/instantiate"))
+        .json(&serde_json::json!({
+            "component_def_id": beam_def_id,
+            "instance_name": "Beam-X",
+            "params": { "length": 4000.0, "width": 300.0, "depth": 500.0 },
+            "position": { "x": 0.0, "y": 0.0, "z": 0.0 },
+            "rotation": { "x": 0.0, "y": s, "z": 0.0, "w": s },
+            "skip_series_gate": true
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200, "{}", resp.text().await.unwrap());
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let id = body["component_id"].as_str().unwrap().to_string();
+
+    let mesh: serde_json::Value = reqwest::Client::new()
+        .get(api_url(port, "/api/mesh"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let entry = mesh["objects"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|o| o["id"] == id.as_str())
+        .expect("beam mesh entry");
+    let min = entry["bbox_min"].as_array().unwrap();
+    let max = entry["bbox_max"].as_array().unwrap();
+    let span = |axis: usize| max[axis].as_f64().unwrap() - min[axis].as_f64().unwrap();
+    assert!(
+        span(0) > 3.5,
+        "beam length should lie along X (~4 m), got {}",
+        span(0)
+    );
+    assert!(
+        span(2) < 1.0,
+        "beam vertical extent should be the section depth (<1 m), got {}",
+        span(2)
+    );
+}
+
+#[tokio::test]
 async fn wall_panel_via_legacy_path_alias() {
     let (port, _) = test_server().await;
     let (status, obj) = genrule(

@@ -172,6 +172,24 @@ impl BreakdownStore {
         self.nodes.values().collect()
     }
 
+    /// Detach every reference to `object_id` from nodes, returning the
+    /// (node id, object id) pairs removed so undo can re-attach them.
+    pub fn detach_object(&mut self, object_id: &str) -> Vec<(String, String)> {
+        let mut detached = Vec::new();
+        let affected: Vec<String> = self
+            .nodes
+            .iter()
+            .filter(|(_, n)| n.related_object_ids.iter().any(|o| o == object_id))
+            .map(|(id, _)| id.clone())
+            .collect();
+        for id in affected {
+            let node = self.nodes.get_mut(&id).unwrap();
+            node.related_object_ids.retain(|o| o != object_id);
+            detached.push((id, object_id.to_string()));
+        }
+        detached
+    }
+
     pub fn find_by_level(&self, level: c::BreakdownLevel) -> Vec<&BreakdownNode> {
         self.by_level
             .get(&(level as i32))
@@ -195,8 +213,14 @@ impl BreakdownStore {
 
     pub fn ancestors_of(&self, id: &str) -> Vec<&BreakdownNode> {
         let mut result = Vec::new();
+        let mut visited = std::collections::HashSet::new();
         let mut current = id;
         while let Some(node) = self.nodes.get(current) {
+            // Cycle guard (audit 2026-10-30): a parent loop in hand-edited or
+            // imported data must not spin forever.
+            if !visited.insert(current.to_string()) {
+                break;
+            }
             if let Some(ref pid) = node.parent_id {
                 if let Some(parent) = self.nodes.get(pid) {
                     result.push(parent);
@@ -214,7 +238,12 @@ impl BreakdownStore {
     pub fn descendants_of(&self, id: &str) -> Vec<&BreakdownNode> {
         let mut result = Vec::new();
         let mut stack = vec![id];
+        // Cycle guard: only visit each node once (audit 2026-10-30).
+        let mut visited = std::collections::HashSet::new();
         while let Some(current) = stack.pop() {
+            if !visited.insert(current.to_string()) {
+                continue;
+            }
             if let Some(children) = self.by_parent.get(current) {
                 for child_id in children {
                     if let Some(child) = self.nodes.get(child_id) {

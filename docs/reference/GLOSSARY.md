@@ -160,7 +160,7 @@ OmniM supports 50+ object types, grouped by engineering domain.
 | Enum Value | Chinese | English | Description |
 |------------|---------|---------|-------------|
 | `OBJECT_TYPE_PART` (400) | 零件 | Part | Mechanical part |
-| `OBJECT_TYPE_ASSEMBLY` (401) | 组件 | Assembly | Mechanical assembly |
+| `OBJECT_TYPE_ASSEMBLY` (401) | 装配 / 装配容器 | Assembly / Assembly container | Container object: parts are `Component` (catalog_ref) or `Part`; no geometry of its own; see [ASSEMBLY](../specification/ASSEMBLY.md) |
 | `OBJECT_TYPE_FASTENER` (402) | 紧固件 | Fastener | Bolt/nut/washer |
 | `OBJECT_TYPE_GEAR` (403) | 齿轮 | Gear | Transmission gear |
 | `OBJECT_TYPE_SHAFT` (404) | 轴 | Shaft | Drive shaft |
@@ -168,6 +168,7 @@ OmniM supports 50+ object types, grouped by engineering domain.
 | `OBJECT_TYPE_MOTOR` (406) | 电机 | Motor | Drive motor |
 | `OBJECT_TYPE_SPRING` (407) | 弹簧 | Spring | Elastic element |
 | `OBJECT_TYPE_SEAL` (408) | 密封件 | Seal | Sealing device |
+| — | 物料清单 / BOM | Bill of Materials | Assembly parts rolled up by `catalog_ref` (endpoint planned; see ROADMAP) |
 
 ### 2.6 Other
 
@@ -288,6 +289,24 @@ The following features support the `is_cut` toggle for creating holes/pockets:
 | `TANGENT_TO_FACE` | 与面相切 | Tangent to Face | ⌒ | Sketch entity is tangent to a model face |
 | `TRACTION` | 牵引 | Traction | → | Traction constraint for sweep guide curves |
 | `TORSION_CONTINUITY` | 扭转连续性 | Torsion Continuity | G3 | G3 torsion continuity for sweep guide curves |
+
+### Constraint operations (EditorToolbar)
+
+Constraint buttons shown in the UI toolbar:
+
+| Constraint | Button | Description |
+|------|---------|------|
+| Horizontal | H | Horizontal constraint |
+| Vertical | V | Vertical constraint |
+| Coincident | ⦿ | Coincident constraint |
+| Parallel | ∥ | Parallel constraint |
+| Perpendicular | ⊥ | Perpendicular constraint |
+| Length | L= | Length constraint |
+| Distance | D= | Distance constraint |
+| Angle | ∠ | Angle constraint |
+| Fixed | ⚓ | Fixed constraint |
+| Tangent | ⌒ | Tangent constraint |
+| AtMidpoint | ◉ | Midpoint constraint |
 
 ---
 

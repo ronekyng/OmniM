@@ -7,7 +7,7 @@ evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
 # OmniM REST API 参考
 
-> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **86 条唯一路径**（2026-10-29 从 `.route(...)` 调用计数；87 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
+> **权威唯一来源**：[`crates/server/src/lib.rs`](../../crates/server/src/lib.rs) 中 `build_router` 内的 `.route(...)` 路由表。本文档已对照该路由表审计；下列端点均可在表中找到，**但明确标注 📅 计划中的除外**。服务器共暴露 **87 条唯一路径**（2026-10-30 从 `.route(...)` 调用计数；88 次注册，其中一条路径注册了两次）。一条路径可承载多个 HTTP 方法。
 
 ## 目录
 
@@ -91,7 +91,7 @@ curl -sS "$BASE/api/stats"
 | `POST /api/objects` | 创建对象。 |
 | `GET /api/objects/{id}` | 获取单个对象。 |
 | `PUT /api/objects/{id}` | 更新名称/描述/IFC 类/标签。 |
-| `DELETE /api/objects/{id}` | 删除对象（可撤销）。 |
+| `DELETE /api/objects/{id}` | 删除对象（可撤销）。`?cascade_children=true` 删除整棵子树；`Assembly` 容器默认级联，其余对象默认提升子件。 |
 | `PUT /api/objects/{id}/prop` | 设置单个字符串属性。 |
 | `PUT /api/objects/{id}/properties` | 批量更新字段 + 属性。 |
 | `GET /api/object-types/{type}/properties` | 某类型的属性定义。 |
@@ -457,10 +457,11 @@ curl -sS -X POST "$BASE/api/sketches/$SID/extrude" -H 'Content-Type: application
     "params": { "length": 2000, "bore": 100 },
     "position": { "x": 0, "y": 0, "z": 0 },
     "rotation_z": 0,
+    "rotation": { "x": 0, "y": 0.7071, "z": 0, "w": 0.7071 },
     "skip_series_gate": false }
   ```
 
-  `skip_series_gate: true` 会跳过"目录变换必须来自系列选择"的校验。响应 `InstantiateResponse`：`{ component_id, object_type, name }`；失败（如参数值非法）为 `400`。
+  `rotation_z` 为绕 Z 的平面偏航；可选 `rotation` 为**局部四元数**（在 `position` 平移前应用），用于把沿局部 +Z 挤出的线性构件（梁/管/风管）放倒到拾取线段方向。界面在两点拾取时会自动发送该四元数，并让构件从起点沿线段延伸。`skip_series_gate: true` 会跳过"目录变换必须来自系列选择"的校验。响应 `InstantiateResponse`：`{ component_id, object_type, name }`；失败（如参数值非法）为 `400`。
 - `POST /api/catalog/preview` 请求体：`{ "component_def_id": "def-1", "params": {...} }` → `c::MeshGeometry`（vertices/normals/uvs/faces），由毫米缩放到米；临时实例在响应前被移除，不会持久化到项目。
 
 ```bash
@@ -468,6 +469,37 @@ curl -sS -X POST "$BASE/api/sketches/$SID/extrude" -H 'Content-Type: application
 curl -sS -X POST "$BASE/api/catalog/instantiate" -H 'Content-Type: application/json' \
   -d '{"component_def_id":"def-1","instance_name":"Pipe A","params":{"length":2000}}'
 ```
+
+## 装配容器（Assembly）
+
+装配是**容器对象**：直接子件为目录 `Component`（带 `catalog_ref`）或基本体 `Part`，子件是普通对象（可单独选择/删除/导出）。设计契约见 [ASSEMBLY](../specification/ASSEMBLY.zh-CN.md)。
+
+| 方法与路径 | 用途 |
+|---|---|
+| `POST /api/assemblies` | 创建装配容器 + 子件（单步撤销）。 |
+
+- 请求体（`CreateAssemblyRequest`）：
+
+  ```json
+  {
+    "name": "Pump skid",
+    "parent_id": "可选父对象 id",
+    "skip_series_gate": true,
+    "parts": [
+      { "name": "base", "shape": "box", "p1": 2.0, "p2": 1.0, "p3": 0.2,
+        "position": { "x": 0, "y": 0, "z": 0 }, "rotation_z": 0 },
+      { "name": "pump", "component_def_id": "<ComponentDef id>",
+        "params": { "length": 1200 }, "position": { "x": 0, "y": 0, "z": 0.3 },
+        "rotation_z": 0.785 }
+    ]
+  }
+  ```
+
+  `parts` 为 1–64 个；目录子件参数单位 mm、`position` 单位 m、`rotation_z` 为弧度；基本体 `shape ∈ {box,cylinder,sphere,cone}`，尺寸单位 m 且须为正。`skip_series_gate` 语义同目录实例化。响应 `{ assembly_id, name, parts:[{id,name,kind}], part_count }`；校验失败 `400`。
+- 容器无自身几何；子件位姿在建时烘焙进几何。
+- `PUT /api/objects/{assembly_id}/transform` 对带子件的容器级联到全部直接子件（一次撤销）。
+- `DELETE /api/objects/{assembly_id}` 默认删除整棵子树（一次撤销恢复）。
+- 遗留：`POST /api/genrule` 的 `{"type":"assembly",...}` 仍返回合并网格（无结构），仅供脚本/内建设备类型使用。
 
 ## 系列（Series）
 

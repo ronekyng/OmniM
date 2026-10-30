@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { api } from '../../shared/api';
 import { notify } from '../../shared/toast';
+import { nextAutoName } from '../../shared/naming';
 import type { ComponentDef, ParamDef, Series } from '../../shared/types';
 import { IcoClose } from './Icons';
 import { useAppStore } from '../store/appStore';
@@ -32,13 +33,19 @@ export function AvailableComponentsPanel() {
   const [favVersion, setFavVersion] = useState(0);
   const [showMaterials, setShowMaterials] = useState(false);
 
+  const [objectNames, setObjectNames] = useState<string[]>([]);
   useEffect(() => {
+    api.listObjects()
+      .then((list) => setObjectNames(list.map((o) => o.name)))
+      .catch(() => { /* names only power auto-naming; keep last list */ });
     ensureCatalogLoaded()
       .then(() => setLoading(false))
       .catch(() => setLoading(false));
     api.listSeries()
       .then((list) => setSeriesList(list))
-      .catch(() => {});
+      .catch((err: unknown) =>
+        notify.error(`系列列表加载失败: ${err instanceof Error ? err.message : String(err)}`),
+      );
   }, []);
 
   const DOMAIN_LABELS: Record<string, string> = {
@@ -93,7 +100,7 @@ export function AvailableComponentsPanel() {
     comp.params.forEach((p) => { params[p.name] = p.default_value; });
     e.dataTransfer.setData('application/x-omnim-catalog', JSON.stringify({
       component_def_id: comp.id,
-      instance_name: comp.name + '-' + Date.now(),
+      instance_name: nextAutoName(comp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), objectNames),
       params,
     }));
     e.dataTransfer.effectAllowed = 'copy';
@@ -105,7 +112,7 @@ export function AvailableComponentsPanel() {
     try {
       await api.instantiateFromCatalog({
         component_def_id: selectedComp.id,
-        instance_name: selectedComp.name + '-' + Date.now(),
+        instance_name: nextAutoName(selectedComp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), objectNames),
         params: paramValues,
         skip_series_gate: !selectedSeries,
       });

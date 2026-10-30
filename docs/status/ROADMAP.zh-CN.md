@@ -164,10 +164,22 @@ Phase 7 交付了可用的界面，但没有交付商用界面。Phase 7b 用四
 1. 📅 建筑：完整 IFC 元素覆盖、MEP 系统、工程量统计
 2. 📅 土木：地形拟合与土方、路线/纵断面编辑
 3. 📅 工厂：带分支管道布线、P&ID 集成
-4. 📅 机械：零件/装配、运动副
+4. 🔀 机械：零件 ✅；装配容器 + 子件 ✅（2026-10-30，`POST /api/assemblies`）；BOM/算量与运动副 📅
 5. 📅 前端：领域专属面板、筛选器、领域感知拖拽放置
 
 部分完成标准已达（钢 IPE/HEA/HEB 系列、CS150/SS304 DN 覆盖、BRep 验证）。
+
+**审计残余跟踪（2026-10-30 审计周期收尾）**：三份审计（代码 / 建模师文档 / UI-UX）的 P0/P1/P2 可落地项已整改；以下为登记的残余项，按门禁归属分批：
+
+| 归属 | 残余项 | 来源 |
+|---|---|---|
+| G2 前端门禁 | 完整 token 迁移（712 处硬编码颜色，`CODE_DEVIATIONS` 7.8）、i18n（7.9）、A11Y（7.10）、组件编辑器视觉统一（UI-UX E1/F2）、图标体系重做（E2） | MODELER_UIUX_AUDIT_2026-10-30 |
+| G2 反馈/性能 | 错误码呈现（`ERROR_CODES` 保留码尚未发射）、性能预算（TLM 0%，预算未进 CI） | MODELER_UIUX_REAUDIT_2026-10-30 §5 |
+| 前端性能/架构 | `App.tsx` 全量 store 订阅（20Hz 重渲染）、react-query hooks 启用或移除、`ThreeViewer` 拆分、`OmniPanel dangerouslySetInnerHTML` 改 token 渲染 | CODE_AUDIT_2026-10-30 P2/P3 |
+| server 安全/并发 | token 中间件、`TimeoutLayer` 与并发限制、persist 移出写锁（`spawn_blocking`）、`list_projects` 全量解析/`get_project` 全量克隆 | CODE_AUDIT_2026-10-30 P1/P2 |
+| 结构重构 | omcom 单文件拆分 + executor 分支 `Result` 化、`project.rs`/`seed_catalog.rs` 按域拆分、共享 `IndexedStore<T>` | CODE_AUDIT_2026-10-30 §5-第二波/长期 |
+| 几何内核 | 真三角网格 CSG/truck 布尔替代 AABB 近似（当前近似内核已带 warning） | CODE_AUDIT_2026-10-30 长期 |
+| 质量基线 | 212 条 clippy 警告清零并启用 `-D warnings`、`sketch` 约束构建 `let _ =` 语义化、`resolve_param` 未知参数显式失败 | CODE_AUDIT_2026-10-30 验收记录 |
 
 ---
 
@@ -184,7 +196,7 @@ Phase 7 交付了可用的界面，但没有交付商用界面。Phase 7b 用四
 
 ## Phase 10：云服务器 & 协作 (2029) — 📅 计划中
 
-**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（86 条唯一路径），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
+**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（87 条唯一路径），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
 
 **未实现** 📅：PostgreSQL + PostGIS 存储、版本历史/审计追踪（目前仅 JSON 文件保存）、WebSocket 实时通知、几何流式传输、客户端缓存层、多用户协作/冲突解决、在线状态、协作 UI。服务器中**没有任何 WebSocket**。
 

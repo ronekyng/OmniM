@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { api } from '../../shared/api';
+import { notify } from '../../shared/toast';
 import type { AmirChatResponse } from '../../shared/types';
 
 const JSON_KEY_RE = /("(?:[^"\\]|\\.)*")\s*:/g;
@@ -401,6 +402,9 @@ historyRawRef.current = [...historyRawRef.current, consoleInput];
         success: response.success,
         timestamp: Date.now(),
       }]);
+      for (const w of response.warnings?.slice(0, 5) ?? []) {
+        notify.warning(w);
+      }
       if (response.success) {
         setConsoleInput('');
         onExecuted();
@@ -656,7 +660,16 @@ historyRawRef.current = [...historyRawRef.current, consoleInput];
         let execError: string | null = null;
         for (const cmd of response.commands) {
           try {
-            await api.executeOmcom(cmd);
+            const result = await api.executeOmcom(cmd);
+            // Sentinel undo/redo ("amir-undo"/"amir-redo") results must not
+            // disappear (empty stack = a visible refusal).
+            if (!result.success) {
+              execError = `${(cmd as { id?: string })?.id ?? 'command'}: ${result.message}`;
+              break;
+            }
+            for (const w of result.warnings?.slice(0, 3) ?? []) {
+              notify.warning(w);
+            }
           } catch (e) {
             execError = `Command failed: ${e instanceof Error ? e.message : String(e)}`;
             break;

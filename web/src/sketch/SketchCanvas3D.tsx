@@ -26,7 +26,9 @@ export function SketchCanvas3D({ sketch, selectedEntityIdx, previewMesh }: Props
     if (!container) return;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
+    // E1 (UI/UX audit): match the shell graphite token (--bg-primary #1a1d23)
+    // instead of introducing a third navy palette.
+    scene.background = new THREE.Color(0x1a1d23);
 
     const w = container.clientWidth;
     const h = container.clientHeight;
@@ -58,7 +60,7 @@ export function SketchCanvas3D({ sketch, selectedEntityIdx, previewMesh }: Props
     fill.position.set(-5, -5, -5);
     scene.add(fill);
 
-    const grid = new THREE.GridHelper(20, 20, 0x444466, 0x333355);
+    const grid = new THREE.GridHelper(20, 20, 0x3a3f47, 0x2b2f36);
     grid.rotation.x = Math.PI / 2;
     scene.add(grid);
 
@@ -111,7 +113,7 @@ export function SketchCanvas3D({ sketch, selectedEntityIdx, previewMesh }: Props
 
     const planeGeo = new THREE.PlaneGeometry(10, 10);
     const planeMat = new THREE.MeshBasicMaterial({
-      color: 0x2a2a5e, transparent: true, opacity: 0.3,
+      color: 0x2f3640, transparent: true, opacity: 0.3,
       side: THREE.DoubleSide, depthWrite: false,
     });
     const plane = new THREE.Mesh(planeGeo, planeMat);
@@ -119,7 +121,7 @@ export function SketchCanvas3D({ sketch, selectedEntityIdx, previewMesh }: Props
     group.add(plane);
 
     const borderGeo = new THREE.EdgesGeometry(planeGeo);
-    const borderMat = new THREE.LineBasicMaterial({ color: 0x444488 });
+    const borderMat = new THREE.LineBasicMaterial({ color: 0x3f4650 });
     const border = new THREE.LineSegments(borderGeo, borderMat);
     border.rotation.x = -Math.PI / 2;
     group.add(border);

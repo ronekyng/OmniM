@@ -212,6 +212,42 @@ export type AssemblyComponentDef = {
   tz: number;
 };
 
+/** One part of the new assembly container (docs/specification/ASSEMBLY.md). */
+export type AssemblyPartInput = {
+  name: string;
+  /** Catalog part; when absent the part is a baked primitive. */
+  component_def_id?: string;
+  params?: Record<string, number>;
+  shape?: string;
+  p1?: number;
+  p2?: number;
+  p3?: number;
+  /** Metres. */
+  position?: { x: number; y: number; z: number };
+  /** Radians about the position point. */
+  rotation_z?: number;
+};
+
+export type CreateAssemblyRequest = {
+  name: string;
+  parent_id?: string;
+  skip_series_gate?: boolean;
+  parts: AssemblyPartInput[];
+};
+
+export type AssemblyPartInfo = {
+  id: string;
+  name: string;
+  kind: 'component' | 'part';
+};
+
+export type CreateAssemblyResponse = {
+  assembly_id: string;
+  name: string;
+  parts: AssemblyPartInfo[];
+  part_count: number;
+};
+
 export type GenRuleAssemblyRequest = {
   genrule: 'assembly';
   name: string;
@@ -283,6 +319,8 @@ export type ExecutionResult = {
   success: boolean;
   message: string;
   created_ids: string[];
+  /** Non-fatal caveats: approximate-kernel notices, etc. */
+  warnings?: string[];
 };
 
 // AMIR AI types

@@ -164,11 +164,22 @@ Phase 7 delivered a working UI; it did not deliver a commercial one. Phase 7b cl
 1. 📅 Building: complete IFC element coverage, MEP systems, quantity take-off
 2. 📅 Civil: terrain fitting & earthwork, alignment/profile editing
 3. 📅 Plant: pipe routing with branches, P&ID integration
-4. 📅 Mechanical: parts/assemblies, kinematic joints
+4. 🔀 Mechanical: parts ✅; assembly container + parts ✅ (2026-10-30, `POST /api/assemblies`); BOM/quantity and kinematic joints 📅
 5. 📅 Frontend: domain-specific panels, filters, domain-aware drag-to-place
 
 Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN coverage, BRep validation).
 
+**Audit residuals (2026-10-30 audit-cycle close-out)**: the P0/P1/P2 actionable findings of all three audits (code / modeler-docs / UI-UX) are remediated; the residual items below are registered by gate ownership so closing an audit never means forgetting its debt.
+
+| Owner | Residual item | Source |
+|---|---|---|
+| G2 frontend gate | Full token migration (712 hard-coded colours, `CODE_DEVIATIONS` 7.8), i18n (7.9), A11Y (7.10), editor visual unification (UI-UX E1/F2), icon-system rework (E2) | MODELER_UIUX_AUDIT_2026-10-30 |
+| G2 feedback/perf | Error-code presentation (`ERROR_CODES` codes still reserved/unemitted), performance budgets (TLM 0%, not enforced in CI) | MODELER_UIUX_REAUDIT_2026-10-30 §5 |
+| Frontend perf/architecture | `App.tsx` whole-store subscription (20 Hz re-renders), react-query hooks enable-or-remove, `ThreeViewer` split, `OmniPanel dangerouslySetInnerHTML` → token rendering | CODE_AUDIT_2026-10-30 P2/P3 |
+| Server security/concurrency | Token middleware, `TimeoutLayer` + concurrency limits, persist off the write lock (`spawn_blocking`), `list_projects` full parse / `get_project` full clone | CODE_AUDIT_2026-10-30 P1/P2 |
+| Structural refactor | omcom single-file split + executor `Result` branches, `project.rs`/`seed_catalog.rs` split by domain, shared `IndexedStore<T>` | CODE_AUDIT_2026-10-30 §5-wave2/long-term |
+| Geometry kernel | Real triangle-mesh CSG / truck boolean replacing the AABB approximation (approximate kernel already warns) | CODE_AUDIT_2026-10-30 long-term |
+| Quality baseline | Clear the 212 clippy warnings and enable `-D warnings`, make sketch constraint build `let _ =` explicit, make `resolve_param` fail loudly on unknown params | CODE_AUDIT_2026-10-30 acceptance record |
 ---
 
 ## Phase 9: AMIR AI Compilation (2028 Q3) — 🔄 Partial (delivered in advance, gaps remain)
@@ -184,7 +195,7 @@ Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN cove
 
 ## Phase 10: Cloud Server & Collaboration (2029) — 📅 Planned
 
-**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (86 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
+**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (87 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
 
 **Not implemented** 📅: PostgreSQL + PostGIS storage, version history / audit trail (currently only JSON file save), WebSocket real-time notifications, geometry streaming, client cache layers, multi-user collaboration/Conflict resolution, presence, collaboration UI. There is **no WebSocket anywhere in the server**.
 

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import * as THREE from 'three';
 import { api } from '../shared/api';
+import { nextAutoName } from '../shared/naming';
 import { notify } from '../shared/toast';
 import type { Sketch, SketchConstraintType, SketchResponse, FeatureItem } from '../shared/types';
 import { SketchCanvas2D } from './SketchCanvas2D';
@@ -83,7 +84,11 @@ export function ComponentEditorPage() {
     if (currentComponentId) {
       loadSketches(currentComponentId);
       loadFeatures(currentComponentId);
-      api.getComponent(currentComponentId).then(c => setComponentName(c.name)).catch(() => {});
+      api.getComponent(currentComponentId)
+        .then((c) => setComponentName(c.name))
+        .catch((err: unknown) =>
+          notify.error(`构件信息加载失败: ${err instanceof Error ? err.message : String(err)}`),
+        );
     }
   }, [currentComponentId, loadSketches, loadFeatures]);
 
@@ -673,6 +678,7 @@ export function ComponentEditorPage() {
         : 1;
 
       const sketchIds: string[] = [];
+      const sketchNamesBacklog: string[] = [];
       for (let i = 0; i < sketchCount; i++) {
         const label = type === 'revolve'
           ? (i === 0 ? 'profile' : 'axis')
@@ -683,8 +689,15 @@ export function ComponentEditorPage() {
           : type === 'lofted_fusion'
           ? (i === 0 ? 'profile1' : i === 1 ? 'profile2' : 'path')
           : (i === 0 ? 'profile' : 'section');
+        // A3: drop the timestamp suffix; the shared auto-name keeps names
+        // recognizable and unique.
+        const name = nextAutoName(
+          `${type}-${label}`,
+          sketches.map((sk) => sk.name ?? '').concat(sketchNamesBacklog),
+        );
+        sketchNamesBacklog.push(name);
         const sketch = await api.createSketch({
-          name: `${type}-${label}-${Date.now()}`,
+          name,
           component_id: currentComponentId,
         });
         sketchIds.push(sketch.id);
@@ -1113,14 +1126,21 @@ export function ComponentEditorPage() {
             onBlur={() => {
               setEditingName(false);
               if (currentComponentId && componentName.trim()) {
-                api.updateObject(currentComponentId, { name: componentName.trim() }).catch(() => {});
+                api.updateObject(currentComponentId, { name: componentName.trim() }).catch(
+                  (err: unknown) =>
+                    notify.error(`重命名保存失败: ${err instanceof Error ? err.message : String(err)}`),
+                );
               }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
               if (e.key === 'Escape') {
                 setEditingName(false);
-                api.getComponent(currentComponentId).then(c => setComponentName(c.name)).catch(() => {});
+                api.getComponent(currentComponentId)
+                  .then((c) => setComponentName(c.name))
+                  .catch((err: unknown) =>
+                    notify.error(`构件信息加载失败: ${err instanceof Error ? err.message : String(err)}`),
+                  );
               }
             }}
           />

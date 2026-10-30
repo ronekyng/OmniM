@@ -256,11 +256,38 @@ impl From<&c::ConnectorDef> for ConnectorDef {
 // CatalogStore - in-memory catalog storage
 // ============================================================
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Clone)]
 pub struct CatalogStore {
     components: HashMap<String, ComponentDef>,
     #[serde(skip)]
     by_category: HashMap<String, Vec<String>>,
+}
+
+// The `by_category` index is not persisted; derive(Deserialize) would silently
+// leave it empty and break category browsing after any load from disk, so
+// deserialize the raw components and rebuild the index.
+impl<'de> Deserialize<'de> for CatalogStore {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct Raw {
+            components: HashMap<String, ComponentDef>,
+        }
+        let raw = Raw::deserialize(deserializer)?;
+        let mut store = CatalogStore::new();
+        for (id, comp) in raw.components {
+            let category = comp.category.clone();
+            store.components.insert(id.clone(), comp);
+            store
+                .by_category
+                .entry(category)
+                .or_default()
+                .push(id.clone());
+        }
+        Ok(store)
+    }
 }
 
 impl Default for CatalogStore {

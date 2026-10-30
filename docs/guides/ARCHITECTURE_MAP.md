@@ -35,7 +35,7 @@ A developer's map of the OmniM workspace: what each crate is responsible for, ho
 - `lib.rs` (6,969 LOC, a single file): the interpreter for the **Omcom** text command language. Every mutation path — console input, REST `/api/omcom`, AI-generated commands — funnels into `omnim_omcom::execute` style entry points which mutate the project and library. This is the "one command language" at the heart of README's design.
 
 ### `crates/server` — `omnim-server`
-- `lib.rs` (6,206 LOC): all Axum routes and handlers. REST surface spans objects/properties/materials/measurements/lifecycle/administrative/breakdown/omcom/mesh/sketches/components/catalog/series/AMIR/undo-redo/IFC import-export — 86 unique paths under `/api/*`.
+- `lib.rs` (~6,600 LOC): all Axum routes and handlers. REST surface spans objects/properties/materials/measurements/lifecycle/administrative/breakdown/omcom/mesh/sketches/components/catalog/series/AMIR/undo-redo/IFC import-export — 87 unique paths under `/api/*`.
 - `main.rs`: the `omnim` binary — env resolution (`OMNIM_PROJECT`/`OMNIM_HOST`/`OMNIM_PORT`), library init, shared `Arc<RwLock<Project>>`.
 - Depends on model, omcom, sketch, ifc, amir, core.
 

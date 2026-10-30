@@ -50,6 +50,64 @@ fn imports_ifc_hierarchy_and_properties() {
 }
 
 #[test]
+fn imports_names_containing_semicolons() {
+    // A string literal containing ';' must not truncate the entity — the
+    // old `content.find(';')` splitter cut the entity mid-literal and the
+    // wall vanished silently.
+    let content = r#"ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Test IFC'),'2;1');
+FILE_NAME('test.ifc','2024-01-01T00:00:00',('Test'),('Test'),'OmniM','OmniM','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCSITE('site-guid',$,'Site; A','desc',$,$,$,$,.ELEMENT.,$,$,$,$,$);
+#2=IFCBUILDING('building-guid',$,'Building ''with'' quotes; inside','desc',$,$,$,$,.ELEMENT.,$,$,$);
+ENDSEC;
+END-ISO-10303-21;"#;
+
+    let project = omnim_ifc::import_ifc(content).unwrap();
+    let sites = project.objects.find_by_type(c::ObjectType::Site);
+    let buildings = project.objects.find_by_type(c::ObjectType::Building);
+    assert_eq!(sites.len(), 1, "site name with ';' must survive");
+    assert_eq!(buildings.len(), 1, "quotes + ';' inside name must survive");
+    assert_eq!(buildings[0].name, "Building 'with' quotes; inside");
+}
+
+#[test]
+fn self_referencing_geometry_is_rejected_not_fatal() {
+    // #4 is an IfcBooleanClippingResult whose operands refer back to #4.
+    // The depth cap must turn this into "no geometry", not a stack overflow.
+    let content = r#"ISO-10303-21;
+HEADER;
+FILE_DESCRIPTION(('Test IFC'),'2;1');
+FILE_NAME('test.ifc','2024-01-01T00:00:00',('Test'),('Test'),'OmniM','OmniM','');
+FILE_SCHEMA(('IFC4'));
+ENDSEC;
+DATA;
+#1=IFCSITE('site-guid',$,'Site A','Site description',$,$,$,$,.ELEMENT.,$,$,$,$,$);
+#2=IFCBUILDING('building-guid',$,'Building A','Building description',$,$,$,$,.ELEMENT.,$,$,$);
+#3=IFCBUILDINGSTOREY('storey-guid',$,'Level 1','Storey description',$,$,$,$,$,$);
+#4=IFCWALL('wall-guid',$,'Wall A','Wall description',$,$,$,$);
+#7=IFCBOOLEANCLIPPINGRESULT('DIFFERENCE',#4,#4);
+#8=IFCSHAPEREPRESENTATION(#9,'Body','SweptSolid',(#7));
+#9=IFCGEOMETRICREPRESENTATIONSUBCONTEXT('Body','Model',*,*,*,*,#10,$,.MODEL_VIEW.,$);
+#10=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.,#11,$);
+#11=IFCAXIS2PLACEMENT3D(#12,$,$);
+#12=IFCCARTESIANPOINT((0.,0.,0.));
+ENDSEC;
+END-ISO-10303-21;"#;
+
+    // Must terminate (Ok or Err), never a stack overflow.
+    let project = omnim_ifc::import_ifc(content).unwrap();
+    // Site/building/storey still import.
+    assert_eq!(
+        project.objects.find_by_type(c::ObjectType::Building).len(),
+        1
+    );
+}
+
+#[test]
 fn exports_project_to_ifc_with_hierarchy_and_property_sets() {
     let project = omnim_ifc::import_ifc(IFC_WITH_HIERARCHY_AND_PROPS).unwrap();
     let exported = omnim_ifc::export_ifc(&project);

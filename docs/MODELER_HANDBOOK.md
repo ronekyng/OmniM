@@ -1,9 +1,9 @@
 ---
 title: "OmniM Modeler Handbook"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/, crates/server, crates/model, crates/ifc"
-evidence: "task flows checked against web/src/app/components/{MainToolbar,create,viewer}, docs/reference/API.md and docs/guides/GETTING_STARTED.md 2026-10-27"
+evidence: "task flows checked against web/src/app/components/{MainToolbar,create,viewer}, web/src/app/{App,ProjectsPage,TitleBar}.tsx, docs/reference/API.md and docs/guides/GETTING_STARTED.md 2026-10-30"
 ---
 # OmniM Modeler Handbook
 A task-oriented guide for the current web app and REST API. Every workflow below is executable **today**; the gaps are stated where they occur rather than hidden. For a row-by-row capability view, use [CAPABILITY_MATRIX](CAPABILITY_MATRIX.md).
@@ -31,7 +31,7 @@ Rule of thumb: if you type a number into a catalog parameter panel, think **mm**
 - **Saved**: create/delete object, `/api/genrule`, `/api/omcom`, undo/redo, sketch mutations, object rename, feature add/update/remove/rebuild.
 - **Persisted**: everything else — transform/parent/connect, materials, measurements, administrative/breakdown, series, catalog definitions, catalog placement and IFC import.
 - Safer workaround for a session: `GET /api/export/ifc` (or the toolbar **Export**) keeps a geometry snapshot, despite the IFC limits in §6.2.
-- Undo is equally uneven: create/delete object, GenRule, Omcom and sketch entity edits are undoable; transform, properties, reparent, connect, material, catalog placement, IFC import and series edits are not. See [WRITE_PATHS](architecture/WRITE_PATHS.md) and [CODE_DEVIATIONS §6](status/CODE_DEVIATIONS.md).
+- Undo covers every mutation endpoint (objects, properties, transform, parent/connection, materials, sketch, components, catalog, series, measurements, administrative/breakdown, instantiation, IFC import). The two documented exceptions live in [WRITE_PATHS](architecture/WRITE_PATHS.md): `.omnimlib` import into the global library (no project-level undo entry, library file is not the project) and the `section_handler` cache refresh (not a user mutation).
 
 ### 1.4 Snapping
 - The viewport toolbar has a **Toggle snap** button (`IcoSnap`, title "Toggle snap"). Snapping is applied by `snapPoint()` on every pick and on the hover endpoint.
@@ -39,7 +39,7 @@ Rule of thumb: if you type a number into a catalog parameter panel, think **mm**
 - Snapping is geometric only: it does not infer walls, levels or parametric relationships. Grid visibility is toggled with **G**.
 
 ### 1.5 Interface shell and shortcuts
-- The current build opens the workspace directly and loads `$OMNIM_PROJECT` (default `project.omnim`). A project home with new/open/recent is contractual but not implemented — see [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.md) §2.
+- The current build opens the workspace by default and redirects to the `/projects` home (new/open/recent/samples live, 2026-10-29) when no session is open — see [DATA_INTEGRITY](specification/ui/DATA_INTEGRITY.md) §2 and [CODE_DEVIATIONS](status/CODE_DEVIATIONS.md) P9.
 - The properties panel currently opens as a floating overlay over the viewport; the contract docks it on the right. See [CODE_DEVIATIONS §7](status/CODE_DEVIATIONS.md).
 - Verified shortcuts today: `W`/`E` move/rotate, `F` fit, `H` home, `G` grid, `O` ortho, `X` space, `Del` delete, `Enter` finish picking, `Backspace` remove the last point, `Esc` cancel. Full reference: [KEYBOARD_MAP](reference/KEYBOARD_MAP.md).
 
@@ -92,7 +92,7 @@ This path creates real `Component` objects with a feature tree; it is not the sa
 Domain panels (**建筑/土木/工厂/机械**) also offer one-click quick actions that bypass the series gate and instantiate catalog components. They create `Component` objects, so do not expect a semantic `Tank`/`Beam`/`Door` object from them.
 
 ### 2.6 What is not available in Building
-- **Levels/elevation on storeys**: `BuildingStorey` has a name, not a level/elevation system. No level-aware placement or host-by-level.
+- **Levels/elevation on storeys**: a base elevation exists — settable when creating a storey (`elevation` in metres, mapped to `IfcBuildingStorey.Elevation`, P8-S1); vertical extents cascade one step via `bottom_level_id`/`top_level_id` on path-driven objects (P8-S2); the floor view selector (P8-S4) filters meshes by level and places the section plane. Still missing: `level_id` attachment for ordinary geometry is API-only, and there is no grid/axis object.
 - **Grid objects**: no grid/axis object type or UI; only the viewport grid.
 - **Wall types**: no `WallType`/`FloorType`/`RoofType` library object; layers are edited per instance.
 - **Opening objects**: doors/windows are objects, but the cut is a bbox boolean; there is no `Opening` element, sill/head constraints or opening schedule.
@@ -147,11 +147,17 @@ Limits: straight segments only — **no elbows, tees, reducers, flanges, branche
 2. For a real part, use the catalog path (§2.5) or the component editor (§2.4): sketch → constrain → solve → feature → BRep.
 3. `POST /api/objects` with `"part"` creates a `Part`; catalog instantiation creates a `Component`. Pick the path that matches what you need downstream.
 
-### 5.2 Assemblies
-1. Click **Assy** in the main toolbar to open **AssemblyPanel**.
-2. Add box/cylinder/sphere/cone child parts, set dimensions and X/Y/Z offsets (metres), then **创建 Assembly**.
-3. API: `POST /api/genrule` `{"type":"assembly","name":"...","components":[{"name":"...","shape":"box","p1":2,"p2":1,"p3":1,"tx":0,"ty":0,"tz":0}]}`.
-4. The result is an `Assembly` object with a merged mesh; it is not a constrained product structure. For a feature-tree assembly, build a `Component` in the component editor instead.
+### 5.2 Assemblies (container + parts, 2026-10-30)
+1. Click **Assembly** in the main toolbar to open **AssemblyPanel**.
+2. Name the assembly, optionally pick a parent, then add parts one of two ways:
+   - **Catalog part**: pick a `ComponentDef`, edit its parameters (mm), set position (m) and Z rotation (deg);
+   - **Primitive part**: box/cylinder/sphere/cone with dimensions and position (m).
+3. Click **创建 Assembly**. The result is an `Assembly` **container object** with its parts as ordinary child objects: the tree lets you select, delete and export them individually; part poses are baked into geometry at creation.
+4. API: `POST /api/assemblies` (e.g. `{"name":"...","parts":[{"name":"base","shape":"box","p1":2,"p2":1,"p3":0.2,"position":{"x":0,"y":0,"z":0}},{"name":"pump","component_def_id":"<ComponentDef id>","params":{...},"position":{"x":0,"y":0,"z":0.3},"rotation_z":0}]}`); `skip_series_gate` optional. Creation is one undo step.
+5. Moving the container cascades to all parts (one undo); deleting it removes the whole subtree by default (`DELETE /api/objects/{id}` cascades for containers; other objects still promote children).
+6. The legacy `POST /api/genrule` `{"type":"assembly",...}` path still works but returns a **merged mesh** (no structure), for scripts/backward compatibility and built-in equipment types (Stair/AHU/Chiller/Transformer/Reactor).
+
+Limits: parts have no live placement (poses are baked), no BOM/quantity endpoint, no kinematic joints or constrained assemblies; nested assemblies are not exposed. Contract: [ASSEMBLY](specification/ASSEMBLY.md).
 
 ### 5.3 Kinematics and manufacturing (planned)
 - **Joints, constraints, axes, kinematic pairs and actuators** are planned-only; no mate solver or motion study. **Fasteners** (bolt/nut/washer/screw/rivet/pin) and the manufacturing object types (hole/pocket/slot/thread/PMI) are planned-only.
@@ -161,10 +167,9 @@ See [ROADMAP Phase 8](status/ROADMAP.md) and [CODE_DEVIATIONS](status/CODE_DEVIA
 
 ## 6. Data and Exchange
 ### 6.1 Save and load `.omnim`
-- The project is one JSON document loaded at startup from `OMNIM_PROJECT` (default `project.omnim`). Executor-path mutations auto-save; there is also an explicit route `POST /api/project/save` (the Web UI has no Save button yet).
-- Everything else saves automatically; `POST /api/project/save` is available for an explicit flush.
-- Session habit: run with `OMNIM_PROJECT=./dev-project.omnim`; executor-path actions persist automatically. Verify the file timestamp before closing.
-- Undo does not protect you across a restart: it is in-memory only.
+- The project is one JSON document loaded at startup from `OMNIM_PROJECT` (default `project.omnim`). Every mutation endpoint auto-saves (`OMNIM_EPHEMERAL=1` disables); force a save any time with `POST /api/project/save`, or use the title-bar **Save / Save as** buttons (shortcut see [KEYBOARD_MAP](reference/KEYBOARD_MAP.md)).
+- Session habit: run with `OMNIM_PROJECT=./dev-project.omnim`; everything persists automatically — `POST /api/project/save` is equally available for an explicit flush. Verify the file timestamp before closing.
+- Undo does not protect you across a restart: the undo stack is in-memory only.
 
 ### 6.2 IFC import and export
 - Toolbar **Import** / **Export** map to `POST /api/import/ifc` and `GET /api/export/ifc`.

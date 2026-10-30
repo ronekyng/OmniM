@@ -63,9 +63,10 @@ export function App() {
     });
     if (!ok) return;
     for (const id of selectedIds) {
-      const response = await api.deleteObject(id);
-      if (!response.ok) {
-        toast.error(`Delete failed for ${id}: ${response.status} ${response.statusText}`);
+      try {
+        await api.deleteObject(id);
+      } catch (err) {
+        toast.error(`Delete failed for ${id}: ${err instanceof Error ? err.message : String(err)}`);
         return;
       }
     }

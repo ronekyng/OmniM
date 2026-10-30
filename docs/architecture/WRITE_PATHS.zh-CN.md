@@ -61,6 +61,7 @@ handler 不允许手写这对锁。
 | 轴网基准（P8-S1） | `POST/GET /api/grids`、`PUT/DELETE /api/grids/{id}` | ✅ | ✅ | P8-S1 |
 | 管理区 / 分解 | 区划创建/删除、节点创建/删除、关联对象、关联区划 | ✅ | ✅ | 4 |
 | 目录实例化 | `/api/catalog/instantiate`（对象 + 模板生成的草图作为一条命令） | ✅ | ✅ | 5 |
+| 装配容器（2026-10-30） | `POST /api/assemblies`（容器 + 目录/基本体子件；`Command::CreateBatch` 携带实例化草图，单步撤销）；容器变换级联到子件（`Command::Batch`） | ✅（单步） | ✅ | ASSEMBLY |
 | IFC 导入 | `/api/import/ifc`（整项目事务，merge 或 replace） | ✅ | ✅ | 5 |
 | 显式保存 | `POST /api/project/save` | — | ✅ | 1 |
 
@@ -70,7 +71,7 @@ handler 不允许手写这对锁。
 |---|---|---|---|
 | `section_handler` | 取写锁只为在读取剖切线前刷新特征缓存，没有用户可见变更 | — | — |
 | `import_ifc` | 批量导入整体替换聚合，记录为 `Command::ReplaceProject { before, after }`——单步撤销，显式的内存取舍 | ✅（单步） | ✅ |
-| `POST /api/catalog/import`（`import_catalog_handler`） | 把 `.omnimlib` 导入**会话级全局 `LIBRARY`**，不进入 `Project`，因此没有项目级撤销条目 | ❌ | ❌（库文件，非项目） |
+| `POST /api/catalog/import`（`import_catalog_handler`） | 把 `.omnimlib` 导入**会话级全局 `LIBRARY`**，不进入 `Project`，因此没有项目级撤销条目。**读路径受限**（2026-10-30）：文件必须位于导入根目录（projects 根、`~/.omnim`、服务器 cwd，或冒号分隔的 `OMNIM_IMPORT_ROOTS`）且以 `.omnimlib` 结尾；`.omnimseries` 加载（`POST /api/series/load`、`/api/omcom` 的 `LoadSeries`）同规 | ❌ | ❌（库文件，非项目） |
 | `preview_catalog_component` | 在一次性 `Project` 上构建实例；不取写锁、不污染实际模型 | — | — |
 | `/api/genrule` 几何 | 命令/撤销/落盘都正确，但几何仍是硬编码网格而非特征树驱动（Wave 3） | ✅ | ✅ |
 
@@ -86,6 +87,7 @@ handler 不允许手写这对锁。
   `ModifyObject` 的撤销快照覆盖**全部**可修改字段（关闭了 Wave 1 的缺口——
   `ifc_class`/`tags` 编辑此前不在还原范围），redo 重放 after 镜像。`POST /api/objects`
   校验失败返回 **400 与校验理由**（此前是无提示的 500）。
+- **装配删除（2026-10-30）**：`DELETE /api/objects/{id}` 对 `Assembly` 容器默认**整树删除**（`DeleteCascade.deleted_children`，含 containment/connection 快照与 lifecycle/breakdown 引用剥离），普通对象保持"子件提升"；一次撤销恢复整棵子树。
 - **标高驱动竖向范围级联（P8-S2）**：修改楼层 `elevation` 会重新解析所有受约束对象，
   受影响对象的 before/after 镜像存放在同一条 `Command::ModifyObject`（`cascade`）内——
   **一次请求、一步撤销**，redo 对称。`DELETE /api/objects/{id}` 拒绝删除仍被

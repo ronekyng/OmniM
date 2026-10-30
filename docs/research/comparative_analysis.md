@@ -1,6 +1,6 @@
 ---
 title: "跨平台内置构件逻辑对比分析与 OmniM 映射"
-status: research
+status: archived  # research snapshot; not a contract doc, unmaintained since 2026-08
 last_updated: 2026-07-09
 applies_to: "n/a (research)"
 evidence: "n/a (background research)"

@@ -36,7 +36,8 @@ impl Validator {
             | c::Action::RemoveConnection
             | c::Action::SetMaterial
             | c::Action::CreateGeometry
-            | c::Action::TransformGeometry => {
+            | c::Action::TransformGeometry
+            | c::Action::DeleteObjectSubtree => {
                 if let Some(target_id) = target_object_id(instr) {
                     if !project.objects.contains(&target_id) {
                         errors.push(format!("target object '{}' not found", target_id));
@@ -101,6 +102,66 @@ impl Validator {
                             if project.sketches.get(sid).is_none() {
                                 errors.push(format!("sketch '{}' not found", sid));
                             }
+                        }
+                        // Detailed checks: a wrong constraint type used to be
+                        // silently coerced to `Fixed` and OOB indexes were
+                        // silent no-ops — both are refuse-worthy now.
+                        match op_type {
+                            c::operation::Op::AddSketchConstraint(asc) => {
+                                if let Some(cd) = &asc.constraint {
+                                    if !(1..=19).contains(&cd.constraint_type) {
+                                        errors.push(format!(
+                                            "unknown sketch constraint type {} (1..19)",
+                                            cd.constraint_type
+                                        ));
+                                    }
+                                    if let Some(sketch) = project.sketches.get(&asc.sketch_id) {
+                                        for r in &cd.entity_refs {
+                                            let ei = (r.entity_index as usize).saturating_sub(1);
+                                            if ei >= sketch.entities.len() {
+                                                errors.push(format!(
+                                                    "constraint entity index {} out of range (sketch '{}' has {} entities)",
+                                                    ei, asc.sketch_id, sketch.entities.len()
+                                                ));
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            c::operation::Op::DeleteSketchEntity(dse) => {
+                                if let Some(sketch) = project.sketches.get(&dse.sketch_id) {
+                                    let ei = (dse.entity_index as usize).saturating_sub(1);
+                                    if ei >= sketch.entities.len() {
+                                        errors.push(format!(
+                                            "entity index {} out of range (sketch '{}' has {} entities)",
+                                            ei, dse.sketch_id, sketch.entities.len()
+                                        ));
+                                    }
+                                }
+                            }
+                            c::operation::Op::UpdateSketchEntity(ue) => {
+                                if let Some(sketch) = project.sketches.get(&ue.sketch_id) {
+                                    let ei = (ue.entity_index as usize).saturating_sub(1);
+                                    if ei >= sketch.entities.len() {
+                                        errors.push(format!(
+                                            "entity index {} out of range (sketch '{}' has {} entities)",
+                                            ei, ue.sketch_id, sketch.entities.len()
+                                        ));
+                                    }
+                                }
+                            }
+                            c::operation::Op::RemoveSketchConstraint(rsc) => {
+                                if let Some(sketch) = project.sketches.get(&rsc.sketch_id) {
+                                    let ci = (rsc.constraint_index as usize).saturating_sub(1);
+                                    if ci >= sketch.constraints.len() {
+                                        errors.push(format!(
+                                            "constraint index {} out of range (sketch '{}' has {} constraints)",
+                                            ci, rsc.sketch_id, sketch.constraints.len()
+                                        ));
+                                    }
+                                }
+                            }
+                            _ => {}
                         }
                     }
                 }
@@ -565,7 +626,15 @@ impl Validator {
                                 .and_then(omnim_model::geometry::geometry_to_mesh)
                                 .map(|m| !m.faces.is_empty())
                                 .unwrap_or(false);
-                            if !has_mesh {
+                            let is_container = project
+                                .objects
+                                .get(&tg.object_id)
+                                .map(|o| {
+                                    o.object_type == c::ObjectType::Assembly as i32
+                                        && !project.objects.children_of(&tg.object_id).is_empty()
+                                })
+                                .unwrap_or(false);
+                            if !has_mesh && !is_container {
                                 errors.push(format!(
                                     "transform target '{}' has no mesh geometry",
                                     tg.object_id
@@ -588,6 +657,59 @@ impl Validator {
                     c::operation::Op::SetObjectProperty(sop) => {
                         if !project.objects.contains(&sop.object_id) {
                             errors.push(format!("property target '{}' not found", sop.object_id));
+                        }
+                    }
+                    c::operation::Op::CreateAssembly(ca) => {
+                        if ca.name.trim().is_empty() {
+                            errors.push("assembly name is required".into());
+                        }
+                        if ca.parts.is_empty() || ca.parts.len() > 64 {
+                            errors.push("assembly requires 1..=64 parts".into());
+                        }
+                        if !ca.parent_id.is_empty() && project.objects.get(&ca.parent_id).is_none()
+                        {
+                            errors.push(format!("assembly parent '{}' not found", ca.parent_id));
+                        }
+                        for part in &ca.parts {
+                            if part.name.trim().is_empty() {
+                                errors.push("assembly part name is required".into());
+                                continue;
+                            }
+                            match &part.source {
+                                Some(c::assembly_part::Source::Component(cp)) => {
+                                    let known = LIBRARY
+                                        .read()
+                                        .map(|lib| {
+                                            lib.as_ref().map_or(false, |l| {
+                                                l.catalog.get(&cp.component_def_id).is_some()
+                                            })
+                                        })
+                                        .unwrap_or(false);
+                                    if !known {
+                                        errors.push(format!(
+                                            "assembly part '{}': catalog component '{}' not found",
+                                            part.name, cp.component_def_id
+                                        ));
+                                    }
+                                }
+                                Some(c::assembly_part::Source::Primitive(pp)) => {
+                                    let ok = match pp.shape.to_lowercase().as_str() {
+                                        "box" => pp.p1 > 0.0 && pp.p2 > 0.0 && pp.p3 > 0.0,
+                                        "cylinder" => pp.p1 > 0.0 && pp.p2 > 0.0,
+                                        "sphere" => pp.p1 > 0.0,
+                                        "cone" => pp.p1 > 0.0 && pp.p3 > 0.0,
+                                        _ => false,
+                                    };
+                                    if !ok {
+                                        errors.push(format!(
+                                            "assembly part '{}': invalid primitive '{}' dimensions",
+                                            part.name, pp.shape
+                                        ));
+                                    }
+                                }
+                                None => errors
+                                    .push(format!("assembly part '{}' has no source", part.name)),
+                            }
                         }
                     }
                     c::operation::Op::DeleteLifecycleRecord(dlr) => {
@@ -653,6 +775,18 @@ impl Validator {
                         if !project.objects.contains(&arr.source_object_id) {
                             errors
                                 .push(format!("array source '{}' not found", arr.source_object_id));
+                        }
+                        let (cx, cy, cz) = (
+                            arr.count_x.max(1) as usize,
+                            arr.count_y.max(1) as usize,
+                            arr.count_z.max(1) as usize,
+                        );
+                        let total = cx.saturating_mul(cy).saturating_mul(cz);
+                        if total > MAX_ARRAY_INSTANCES {
+                            errors.push(format!(
+                                "array would instantiate {} objects; limit is {}",
+                                total, MAX_ARRAY_INSTANCES
+                            ));
                         }
                     }
                     c::operation::Op::Boolean(bo) => {
@@ -780,11 +914,14 @@ fn feature_type_name(ft: &omnim_model::FeatureType) -> &'static str {
 // ExecutionResult
 // ============================================================
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
 pub struct ExecutionResult {
     pub success: bool,
     pub message: String,
     pub created_ids: Vec<String>,
+    /// Non-fatal caveats (approximate-kernel notices etc.) so clients show
+    /// them without regex-parsing `message` (acceptance note ④).
+    pub warnings: Vec<String>,
 }
 
 // ============================================================
@@ -820,18 +957,29 @@ fn validate_level_extent(
 /// 可逆命令 — 记录操作的反向数据
 #[derive(Clone)]
 pub enum Command {
+    /// 通用命令分组：一个用户动作包含多条独立命令时，作为单条撤销栈条目。
+    /// undo 逆序执行各子命令的逆向；redo 顺序执行正向。
+    Batch {
+        commands: Vec<Command>,
+    },
     /// 创建对象 — undo 时删除，redo 时恢复
     CreateObject {
         snapshot: ObjectSnapshot,
     },
-    /// 批量创建（一次用户动作产出多个对象，例如路由管 + 弯头管件）——
-    /// 单步 undo：删除全部；redo：恢复全部。
+    /// 批量创建（一次用户动作产出多个对象，例如路由管 + 弯头管件、装配
+    /// 容器 + 子件）——单步 undo：删除全部对象与随创建产生的草图；redo：
+    /// 恢复全部。`sketches` 为实例化目录构件时生成的草图快照。
     CreateBatch {
         snapshots: Vec<ObjectSnapshot>,
+        #[allow(dead_code)]
+        sketches: Vec<omnim_sketch::Sketch>,
     },
-    /// 删除对象 — undo 时恢复
+    /// 删除对象 — undo 时恢复；`cascade` 携带一次删除动作的全部引用清理
+    /// 数据（子对象原 parent、被移除的 containment/connection、lifecycle
+    /// 与 breakdown 的引用剥离），使撤销一次还原（审计 2026-10-30：级联）。
     DeleteObject {
         snapshot: ObjectSnapshot,
+        cascade: omnim_model::DeleteCascade,
     },
     /// 修改对象 — undo 恢复 before 快照，redo 重放 after 镜像。
     /// 快照覆盖 ModifyObject 可及的全部字段（P8-S1 起 incl. elevation/level_id；
@@ -1187,6 +1335,9 @@ pub enum Command {
 
 /// 最大 undo 历史深度
 const MAX_UNDO_DEPTH: usize = 200;
+/// One array must not be able to instantiate an unbounded number of objects
+/// (a 1e9 grid would OOM the server before the request even returns).
+const MAX_ARRAY_INSTANCES: usize = 10_000;
 
 pub struct Executor {
     /// undo 命令栈（最近的在末尾）
@@ -1223,6 +1374,7 @@ impl Executor {
                 success: false,
                 message: format!("Validation failed: {}", errors.join("; ")),
                 created_ids: vec![],
+                warnings: Vec::new(),
             };
         }
 
@@ -1233,11 +1385,17 @@ impl Executor {
                     success: false,
                     message: format!("Unknown action: {}", instr.action),
                     created_ids: vec![],
+                    warnings: Vec::new(),
                 };
             }
         };
 
         let mut created_ids = Vec::new();
+        // Non-fatal caveats surfaced in the final message: callers should
+        // know when geometry passed through an approximate kernel
+        // (audit 2026-10-30: placeholder boolean/chamfer/fillet used to be
+        // silent).
+        let mut warnings: Vec<String> = Vec::new();
 
         // 执行 operations
         for op in &instr.operations {
@@ -1504,6 +1662,25 @@ impl Executor {
                     }
 
                     c::operation::Op::Array(arr) => {
+                        // Cap the fan-out so a single instruction cannot OOM
+                        // the server (validated above, enforced here too).
+                        let (cx, cy, cz) = (
+                            arr.count_x.max(1) as usize,
+                            arr.count_y.max(1) as usize,
+                            arr.count_z.max(1) as usize,
+                        );
+                        let total = cx.saturating_mul(cy).saturating_mul(cz);
+                        if total > MAX_ARRAY_INSTANCES {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                format!(
+                                    "array would instantiate {} objects; limit is {}",
+                                    total, MAX_ARRAY_INSTANCES
+                                ),
+                                created_ids,
+                            );
+                        }
                         if let Some(src) = project.objects.get(&arr.source_object_id) {
                             let src_clone = src.clone();
                             let (cx, cy, cz) = (
@@ -1568,6 +1745,11 @@ impl Executor {
 
                     c::operation::Op::Boolean(bo) => {
                         // Boolean operation: merge operand meshes (simplified)
+                        warnings.push(
+                            "boolean used the approximate kernel: operand meshes are union-\
+                             merged, not CSG-subtracted; visual-only result"
+                                .to_string(),
+                        );
                         // Clone all needed data first to avoid borrow conflicts
                         let target_id = bo.target_object_id.clone();
                         let operand_ids = bo.operand_object_ids.clone();
@@ -1703,45 +1885,58 @@ impl Executor {
                     }
 
                     c::operation::Op::TransformGeometry(tg) => {
-                        if let Some(obj) = project.objects.get_mut(&tg.object_id) {
+                        // Assembly container (has children): cascade the same
+                        // transform to every direct child and record ONE undo
+                        // step (`Command::Batch` of ModifyObject commands).
+                        let is_container = project
+                            .objects
+                            .get(&tg.object_id)
+                            .map(|o| {
+                                o.object_type == c::ObjectType::Assembly as i32
+                                    && !project.objects.children_of(&tg.object_id).is_empty()
+                            })
+                            .unwrap_or(false);
+                        if is_container {
+                            let child_ids: Vec<String> = project
+                                .objects
+                                .children_of(&tg.object_id)
+                                .into_iter()
+                                .map(|o| o.id.clone())
+                                .collect();
+                            let mut entries: Vec<Command> = Vec::new();
+                            for cid in child_ids {
+                                let Some(before) = project.objects.get(&cid).cloned() else {
+                                    continue;
+                                };
+                                let old_geometry = before.geometry.clone();
+                                if let Some(geom) = project
+                                    .objects
+                                    .get_mut(&cid)
+                                    .and_then(|o| o.geometry.as_mut())
+                                {
+                                    transform_geometry_in_place(geom, tg);
+                                }
+                                if let Some(after) = project.objects.get(&cid).cloned() {
+                                    entries.push(Command::ModifyObject {
+                                        object_id: cid,
+                                        snapshot: ObjectSnapshot {
+                                            object: before,
+                                            removed_properties: Vec::new(),
+                                            old_material_id: None,
+                                            old_geometry,
+                                        },
+                                        after,
+                                        cascade: Vec::new(),
+                                    });
+                                }
+                            }
+                            if !entries.is_empty() {
+                                commands.push(Command::Batch { commands: entries });
+                            }
+                        } else if let Some(obj) = project.objects.get_mut(&tg.object_id) {
                             let old_geom = obj.geometry.clone();
                             if let Some(geom) = &mut obj.geometry {
-                                if let Some(mesh) = omnim_model::geometry::geometry_to_mesh(geom) {
-                                    let origin =
-                                        tg.pivot.clone().unwrap_or_else(|| mesh_center(&mesh));
-                                    let pre = c::Transform {
-                                        matrix: vec![],
-                                        translation: Some(c::Point3D {
-                                            x: -origin.x,
-                                            y: -origin.y,
-                                            z: -origin.z,
-                                        }),
-                                        rotation: None,
-                                        scale: None,
-                                    };
-                                    let main = c::Transform {
-                                        matrix: vec![],
-                                        translation: tg.translation.clone(),
-                                        rotation: tg.rotation.clone(),
-                                        scale: tg.scale.clone(),
-                                    };
-                                    let post = c::Transform {
-                                        matrix: vec![],
-                                        translation: Some(origin),
-                                        rotation: None,
-                                        scale: None,
-                                    };
-                                    let shifted =
-                                        omnim_model::geometry::transform_mesh(&mesh, &pre);
-                                    let transformed =
-                                        omnim_model::geometry::transform_mesh(&shifted, &main);
-                                    let transformed =
-                                        omnim_model::geometry::transform_mesh(&transformed, &post);
-                                    let bbox = omnim_model::geometry::compute_bbox(&transformed);
-                                    geom.representation =
-                                        Some(c::geometry::Representation::Mesh(transformed));
-                                    geom.bbox = Some(bbox);
-                                }
+                                transform_geometry_in_place(geom, tg);
                             }
                             commands.push(Command::TransformGeometry {
                                 object_id: tg.object_id.clone(),
@@ -2024,7 +2219,20 @@ impl Executor {
                                     17 => omnim_sketch::SketchConstraintType::PtOnLine,
                                     18 => omnim_sketch::SketchConstraintType::PtOnCircle,
                                     19 => omnim_sketch::SketchConstraintType::SameOrientation,
-                                    _ => omnim_sketch::SketchConstraintType::Fixed,
+                                    unknown => {
+                                        // Fail loudly: silently coercing to
+                                        // `Fixed` produced constraints the
+                                        // caller never asked for.
+                                        return self.fail_and_rollback(
+                                            &commands,
+                                            project,
+                                            format!(
+                                                "unknown sketch constraint type {} (validated range 1..19)",
+                                                unknown
+                                            ),
+                                            created_ids,
+                                        );
+                                    }
                                 };
                                 let entity_refs: Vec<omnim_sketch::SketchPointRef> = constr_data
                                     .entity_refs
@@ -2065,6 +2273,7 @@ impl Executor {
                     }
 
                     c::operation::Op::DeleteSketchEntity(dse) => {
+                        let mut out_of_range: Option<String> = None;
                         if let Some(sketch) = project.sketches.get_mut(&dse.sketch_id) {
                             let idx = (dse.entity_index as usize).saturating_sub(1);
                             if idx < sketch.entities.len() {
@@ -2073,11 +2282,27 @@ impl Executor {
                                     sketch_id: dse.sketch_id.clone(),
                                     entity,
                                 });
+                            } else {
+                                out_of_range = Some(format!(
+                                    "entity index {} out of range (sketch '{}' has {} entities)",
+                                    idx,
+                                    dse.sketch_id,
+                                    sketch.entities.len()
+                                ));
                             }
+                        }
+                        if let Some(message) = out_of_range {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                message,
+                                created_ids,
+                            );
                         }
                     }
 
                     c::operation::Op::RemoveSketchConstraint(rsc) => {
+                        let mut out_of_range: Option<String> = None;
                         if let Some(sketch) = project.sketches.get_mut(&rsc.sketch_id) {
                             let idx = (rsc.constraint_index as usize).saturating_sub(1);
                             if idx < sketch.constraints.len() {
@@ -2086,7 +2311,22 @@ impl Executor {
                                     sketch_id: rsc.sketch_id.clone(),
                                     constraint,
                                 });
+                            } else {
+                                out_of_range = Some(format!(
+                                    "constraint index {} out of range (sketch '{}' has {} constraints)",
+                                    idx,
+                                    rsc.sketch_id,
+                                    sketch.constraints.len()
+                                ));
                             }
+                        }
+                        if let Some(message) = out_of_range {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                message,
+                                created_ids,
+                            );
                         }
                     }
 
@@ -2313,6 +2553,7 @@ impl Executor {
 
                     c::operation::Op::UpdateSketchEntity(ue) => {
                         // 2026-10-28 Wave 1 Slice 3: entity restyle / geometry edit
+                        let mut out_of_range: Option<String> = None;
                         if let Some(sketch) = project.sketches.get_mut(&ue.sketch_id) {
                             let idx = (ue.entity_index as usize).saturating_sub(1);
                             if idx < sketch.entities.len() {
@@ -2347,7 +2588,22 @@ impl Executor {
                                     new_entity,
                                     old_solved,
                                 });
+                            } else {
+                                out_of_range = Some(format!(
+                                    "entity index {} out of range (sketch '{}' has {} entities)",
+                                    idx,
+                                    ue.sketch_id,
+                                    sketch.entities.len()
+                                ));
                             }
+                        }
+                        if let Some(message) = out_of_range {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                message,
+                                created_ids,
+                            );
                         }
                     }
 
@@ -2388,9 +2644,30 @@ impl Executor {
                             Ok(c::FeatureType::FeatureRevolve) => omnim_model::FeatureType::Revolve,
                             Ok(c::FeatureType::FeatureSweep) => omnim_model::FeatureType::Sweep,
                             Ok(c::FeatureType::FeatureLoft) => omnim_model::FeatureType::Loft,
-                            Ok(c::FeatureType::FeatureBoolean) => omnim_model::FeatureType::Boolean,
-                            Ok(c::FeatureType::FeatureChamfer) => omnim_model::FeatureType::Chamfer,
-                            Ok(c::FeatureType::FeatureFillet) => omnim_model::FeatureType::Fillet,
+                            Ok(c::FeatureType::FeatureBoolean) => {
+                                warnings.push(
+                                    "boolean feature used the approximate kernel: result is \
+                                     visual-only geometry, not a real CSG boolean"
+                                        .to_string(),
+                                );
+                                omnim_model::FeatureType::Boolean
+                            }
+                            Ok(c::FeatureType::FeatureChamfer) => {
+                                warnings.push(
+                                    "chamfer feature is a placeholder approximation (edge \
+                                     offset, not a real chamfer kernel)"
+                                        .to_string(),
+                                );
+                                omnim_model::FeatureType::Chamfer
+                            }
+                            Ok(c::FeatureType::FeatureFillet) => {
+                                warnings.push(
+                                    "fillet feature is a placeholder approximation (edge \
+                                     offset, not a real fillet kernel)"
+                                        .to_string(),
+                                );
+                                omnim_model::FeatureType::Fillet
+                            }
                             Ok(c::FeatureType::FeaturePattern) => omnim_model::FeatureType::Pattern,
                             Ok(c::FeatureType::FeatureShell) => omnim_model::FeatureType::Shell,
                             Ok(c::FeatureType::FeatureFusion) => omnim_model::FeatureType::Fusion,
@@ -2515,17 +2792,21 @@ impl Executor {
                     }
 
                     c::operation::Op::DeleteComponent(dc) => {
-                        // 2026-10-28 Wave 1 Slice 3: instance delete (undo via DeleteObject)
-                        if let Some(obj) = project.objects.remove(&dc.component_id) {
-                            project.objects.rebuild_children();
-                            commands.push(Command::DeleteObject {
+                        // 2026-10-28 Wave 1 Slice 3: instance delete (undo via DeleteObject);
+                        // 2026-10-30: deletes cascade (children promoted, references detached).
+                        match project.delete_object(&dc.component_id) {
+                            Ok((obj, cascade)) => commands.push(Command::DeleteObject {
                                 snapshot: ObjectSnapshot {
                                     object: obj,
                                     removed_properties: Vec::new(),
                                     old_material_id: None,
                                     old_geometry: None,
                                 },
-                            });
+                                cascade,
+                            }),
+                            Err(e) => {
+                                return self.fail_and_rollback(&commands, project, e, created_ids);
+                            }
                         }
                     }
 
@@ -3108,6 +3389,7 @@ impl Executor {
                                     success: true,
                                     message: format!("Loaded {} series from {}", count, ls.path),
                                     created_ids,
+                                    warnings: Vec::new(),
                                 };
                             }
                             Err(e) => {
@@ -3118,6 +3400,7 @@ impl Executor {
                                         ls.path, e
                                     ),
                                     created_ids: Vec::new(),
+                                    warnings: Vec::new(),
                                 };
                             }
                         }
@@ -3384,20 +3667,22 @@ impl Executor {
 
                         let params: std::collections::HashMap<String, f64> = ic.params.clone();
                         let result = if ic.skip_series_gate {
-                            project.instantiate_catalog_component_skip_gate(
+                            project.instantiate_catalog_component_oriented_skip_gate(
                                 &ic.component_def_id,
                                 &ic.instance_name,
                                 &params,
                                 ic.position.clone(),
                                 ic.rotation_z,
+                                ic.rotation.clone(),
                             )
                         } else {
-                            project.instantiate_catalog_component(
+                            project.instantiate_catalog_component_oriented(
                                 &ic.component_def_id,
                                 &ic.instance_name,
                                 &params,
                                 ic.position.clone(),
                                 ic.rotation_z,
+                                ic.rotation.clone(),
                             )
                         };
 
@@ -3447,9 +3732,209 @@ impl Executor {
                                     success: false,
                                     message: format!("instantiate_catalog failed: {}", e),
                                     created_ids: Vec::new(),
+                                    warnings: Vec::new(),
                                 };
                             }
                         }
+                    }
+
+                    c::operation::Op::CreateAssembly(ca) => {
+                        // Assembly container + parts, one undo step
+                        // (docs/specification/ASSEMBLY.md §2).
+                        if ca.name.trim().is_empty() {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                "assembly name is required".to_string(),
+                                created_ids,
+                            );
+                        }
+                        if ca.parts.is_empty() || ca.parts.len() > 64 {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                "assembly requires 1..=64 parts".to_string(),
+                                created_ids,
+                            );
+                        }
+                        if !ca.parent_id.is_empty() && !project.objects.contains(&ca.parent_id) {
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                format!("assembly parent '{}' not found", ca.parent_id),
+                                created_ids,
+                            );
+                        }
+                        let container_id = uuid::Uuid::new_v4().to_string();
+                        let mut container = OmniObject::new(c::ObjectType::Assembly, &ca.name);
+                        container.id = container_id.clone();
+                        container.parent_id = if ca.parent_id.is_empty() {
+                            None
+                        } else {
+                            Some(ca.parent_id.clone())
+                        };
+                        project.objects.insert(container.clone());
+                        if !ca.parent_id.is_empty() {
+                            let _ = project.relations.add_containment(c::Containment {
+                                parent_id: ca.parent_id.clone(),
+                                child_id: container_id.clone(),
+                                r#type: c::ContainmentType::Spatial as i32,
+                            });
+                        }
+
+                        let mut created_objects: Vec<OmniObject> = vec![container.clone()];
+                        let mut created_sketches: Vec<omnim_sketch::Sketch> = Vec::new();
+                        let mut part_ids: Vec<String> = Vec::new();
+                        let mut failure: Option<String> = None;
+
+                        for part in &ca.parts {
+                            let part_name = part.name.trim();
+                            if part_name.is_empty() {
+                                failure = Some("assembly part name is required".into());
+                                break;
+                            }
+                            match &part.source {
+                                Some(c::assembly_part::Source::Component(cp)) => {
+                                    let sketches_before: std::collections::HashSet<String> =
+                                        project
+                                            .sketches
+                                            .list()
+                                            .iter()
+                                            .map(|s| s.id.clone())
+                                            .collect();
+                                    let params: std::collections::HashMap<String, f64> =
+                                        cp.params.clone();
+                                    let result = if ca.skip_series_gate {
+                                        project.instantiate_catalog_component_skip_gate(
+                                            &cp.component_def_id,
+                                            part_name,
+                                            &params,
+                                            cp.position.clone(),
+                                            cp.rotation_z,
+                                        )
+                                    } else {
+                                        project.instantiate_catalog_component(
+                                            &cp.component_def_id,
+                                            part_name,
+                                            &params,
+                                            cp.position.clone(),
+                                            cp.rotation_z,
+                                        )
+                                    };
+                                    match result {
+                                        Ok(cid) => {
+                                            if let Some(obj) = project.objects.get_mut(&cid) {
+                                                obj.parent_id = Some(container_id.clone());
+                                            }
+                                            let _ =
+                                                project.relations.add_containment(c::Containment {
+                                                    parent_id: container_id.clone(),
+                                                    child_id: cid.clone(),
+                                                    r#type: c::ContainmentType::Spatial as i32,
+                                                });
+                                            for s in project.sketches.list() {
+                                                if !sketches_before.contains(&s.id) {
+                                                    created_sketches.push((*s).clone());
+                                                }
+                                            }
+                                            if let Some(o) = project.objects.get(&cid) {
+                                                created_objects.push(o.clone());
+                                            }
+                                            part_ids.push(cid);
+                                        }
+                                        Err(e) => {
+                                            failure = Some(format!(
+                                                "assembly part '{}': {}",
+                                                part_name, e
+                                            ));
+                                            break;
+                                        }
+                                    }
+                                }
+                                Some(c::assembly_part::Source::Primitive(pp)) => {
+                                    let Some(mesh) = assembly_primitive_mesh(pp) else {
+                                        failure = Some(format!(
+                                            "assembly part '{}': invalid primitive shape '{}'",
+                                            part_name, pp.shape
+                                        ));
+                                        break;
+                                    };
+                                    let half = pp.rotation_z / 2.0;
+                                    let transform = c::Transform {
+                                        matrix: vec![],
+                                        translation: Some(pp.position.clone().unwrap_or(
+                                            c::Point3D {
+                                                x: 0.0,
+                                                y: 0.0,
+                                                z: 0.0,
+                                            },
+                                        )),
+                                        rotation: Some(c::Rotation {
+                                            x: 0.0,
+                                            y: 0.0,
+                                            z: half.sin(),
+                                            w: half.cos(),
+                                        }),
+                                        scale: None,
+                                    };
+                                    let mesh =
+                                        omnim_model::geometry::transform_mesh(&mesh, &transform);
+                                    let mut obj = OmniObject::new(c::ObjectType::Part, part_name);
+                                    obj.geometry =
+                                        Some(omnim_model::geometry::mesh_to_geometry(&mesh));
+                                    obj.ifc_class = "IfcBuildingElementProxy".into();
+                                    obj.parent_id = Some(container_id.clone());
+                                    let cid = obj.id.clone();
+                                    project.objects.insert(obj.clone());
+                                    let _ = project.relations.add_containment(c::Containment {
+                                        parent_id: container_id.clone(),
+                                        child_id: cid.clone(),
+                                        r#type: c::ContainmentType::Spatial as i32,
+                                    });
+                                    created_objects.push(obj);
+                                    part_ids.push(cid);
+                                }
+                                None => {
+                                    failure = Some(format!(
+                                        "assembly part '{}' has no source",
+                                        part_name
+                                    ));
+                                    break;
+                                }
+                            }
+                        }
+
+                        if let Some(message) = failure {
+                            for id in part_ids {
+                                project.objects.remove(&id);
+                            }
+                            project.objects.remove(&container_id);
+                            for s in &created_sketches {
+                                project.sketches.remove(&s.id);
+                            }
+                            project.objects.rebuild_children();
+                            return self.fail_and_rollback(
+                                &commands,
+                                project,
+                                message,
+                                created_ids,
+                            );
+                        }
+                        project.objects.rebuild_children();
+                        created_ids.push(container_id);
+                        created_ids.extend(part_ids);
+                        commands.push(Command::CreateBatch {
+                            snapshots: created_objects
+                                .iter()
+                                .map(|obj| ObjectSnapshot {
+                                    object: obj.clone(),
+                                    removed_properties: Vec::new(),
+                                    old_material_id: None,
+                                    old_geometry: None,
+                                })
+                                .collect(),
+                            sketches: created_sketches,
+                        });
                     }
 
                     c::operation::Op::SetObjectProperty(sop) => {
@@ -3476,15 +3961,51 @@ impl Executor {
         match action {
             c::Action::DeleteObject => {
                 if let Some(tid) = target_object_id(instr) {
-                    if let Some(obj) = project.objects.remove(&tid) {
-                        commands.push(Command::DeleteObject {
+                    // Delete with cascade and surface guard refusals (level
+                    // anchoring) instead of silently skipping.
+                    match project.delete_object(&tid) {
+                        Ok((obj, cascade)) => commands.push(Command::DeleteObject {
                             snapshot: ObjectSnapshot {
                                 object: obj,
                                 removed_properties: Vec::new(),
                                 old_material_id: None,
                                 old_geometry: None,
                             },
-                        });
+                            cascade,
+                        }),
+                        Err(e) => {
+                            return ExecutionResult {
+                                success: false,
+                                message: format!("delete_object: {}", e),
+                                created_ids: Vec::new(),
+                                warnings: Vec::new(),
+                            };
+                        }
+                    }
+                }
+            }
+            c::Action::DeleteObjectSubtree => {
+                if let Some(tid) = target_object_id(instr) {
+                    // Assembly container delete: remove the whole subtree and
+                    // snapshot it for one-step undo (ASSEMBLY contract §3).
+                    match project.delete_object_subtree(&tid) {
+                        Ok((obj, cascade)) => commands.push(Command::DeleteObject {
+                            snapshot: ObjectSnapshot {
+                                object: obj,
+                                removed_properties: Vec::new(),
+                                old_material_id: None,
+                                old_geometry: None,
+                            },
+                            cascade,
+                        }),
+                        Err(e) => {
+                            return ExecutionResult {
+                                success: false,
+                                message: format!("delete_subtree: {}", e),
+                                created_ids: Vec::new(),
+                                warnings: Vec::new(),
+                            };
+                        }
                     }
                 }
             }
@@ -3541,6 +4062,7 @@ impl Executor {
                 created_ids.len()
             ),
             created_ids,
+            warnings,
         }
     }
 
@@ -3666,6 +4188,15 @@ impl Executor {
 
     /// 手动记录一条批量创建的 undo 命令（单步撤销一组对象）。
     pub fn record_create_batch(&mut self, objs: &[OmniObject]) {
+        self.record_create_batch_with_sketches(objs, &[]);
+    }
+
+    /// 批量创建 + 草图：装配创建时目录子件会生成草图，撤销必须一并移除。
+    pub fn record_create_batch_with_sketches(
+        &mut self,
+        objs: &[OmniObject],
+        sketches: &[omnim_sketch::Sketch],
+    ) {
         if objs.is_empty() {
             return;
         }
@@ -3680,6 +4211,7 @@ impl Executor {
                     old_geometry: None,
                 })
                 .collect(),
+            sketches: sketches.to_vec(),
         };
         if let Some(tx) = &mut self.transaction_stack {
             tx.push(command);
@@ -3689,6 +4221,91 @@ impl Executor {
         while self.undo_stack.len() > MAX_UNDO_DEPTH {
             self.undo_stack.remove(0);
         }
+    }
+
+    /// Record a direct field edit as a ModifyObject undo command. Used by
+    /// server handlers that patch fields the omcom op surface does not
+    /// express (create-time ifc_class/tags), so no write path bypasses undo.
+    pub fn push_modify_command(
+        &mut self,
+        object_id: &str,
+        before: &OmniObject,
+        after: OmniObject,
+        cascade: Vec<omnim_model::LevelExtentChange>,
+    ) {
+        self.redo_stack.clear();
+        let snapshot = ObjectSnapshot {
+            object: before.clone(),
+            removed_properties: Vec::new(),
+            old_material_id: before.material_id.clone(),
+            old_geometry: before.geometry.clone(),
+        };
+        let command = Command::ModifyObject {
+            object_id: object_id.to_string(),
+            snapshot,
+            after,
+            cascade,
+        };
+        if let Some(tx) = &mut self.transaction_stack {
+            tx.push(command);
+        } else {
+            self.undo_stack.push(command);
+        }
+        while self.undo_stack.len() > MAX_UNDO_DEPTH {
+            self.undo_stack.remove(0);
+        }
+    }
+
+    /// 手动记录一条删除对象**及其整棵子树**的 undo 命令（装配容器用）。
+    pub fn record_delete_object_subtree(
+        &mut self,
+        project: &mut Project,
+        object_id: &str,
+    ) -> Result<OmniObject, String> {
+        let (obj, cascade) = project.delete_object_subtree(object_id)?;
+        self.redo_stack.clear();
+        let snapshot = ObjectSnapshot {
+            object: obj.clone(),
+            removed_properties: Vec::new(),
+            old_material_id: None,
+            old_geometry: None,
+        };
+        let command = Command::DeleteObject { snapshot, cascade };
+        if let Some(tx) = &mut self.transaction_stack {
+            tx.push(command);
+        } else {
+            self.undo_stack.push(command);
+        }
+        while self.undo_stack.len() > MAX_UNDO_DEPTH {
+            self.undo_stack.remove(0);
+        }
+        Ok(obj)
+    }
+
+    /// 手动记录一条删除对象的 undo 命令（带级联清理，一次撤销即还原）。
+    pub fn record_delete_object(
+        &mut self,
+        project: &mut Project,
+        object_id: &str,
+    ) -> Result<OmniObject, String> {
+        let (obj, cascade) = project.delete_object(object_id)?;
+        self.redo_stack.clear();
+        let snapshot = ObjectSnapshot {
+            object: obj.clone(),
+            removed_properties: Vec::new(),
+            old_material_id: None,
+            old_geometry: None,
+        };
+        let command = Command::DeleteObject { snapshot, cascade };
+        if let Some(tx) = &mut self.transaction_stack {
+            tx.push(command);
+        } else {
+            self.undo_stack.push(command);
+        }
+        while self.undo_stack.len() > MAX_UNDO_DEPTH {
+            self.undo_stack.remove(0);
+        }
+        Ok(obj)
     }
 
     /// 手动记录一条删除对象的 undo 命令
@@ -3701,6 +4318,7 @@ impl Executor {
                 old_material_id: None,
                 old_geometry: None,
             },
+            cascade: omnim_model::DeleteCascade::default(),
         };
         if let Some(tx) = &mut self.transaction_stack {
             tx.push(command);
@@ -3847,18 +4465,36 @@ impl Executor {
     /// 逆向执行命令（用于 undo）
     fn apply_inverse(&self, cmd: &Command, project: &mut Project) -> String {
         match cmd {
-            Command::CreateBatch { snapshots } => {
+            Command::Batch { commands } => {
+                for sub in commands.iter().rev() {
+                    self.apply_inverse(sub, project);
+                }
+                format!("undo: batch of {} command(s)", commands.len())
+            }
+            Command::CreateBatch {
+                snapshots,
+                sketches,
+            } => {
                 for snap in snapshots {
                     project.objects.remove(&snap.object.id);
                 }
-                format!("undo: removed {} objects", snapshots.len())
+                for sketch in sketches {
+                    project.sketches.remove(&sketch.id);
+                }
+                format!(
+                    "undo: removed {} objects and {} sketches",
+                    snapshots.len(),
+                    sketches.len()
+                )
             }
             Command::CreateObject { snapshot } => {
                 project.objects.remove(&snapshot.object.id);
                 format!("undo: removed object {}", &snapshot.object.id[..8])
             }
-            Command::DeleteObject { snapshot } => {
-                project.objects.insert(snapshot.object.clone());
+            Command::DeleteObject { snapshot, cascade } => {
+                // One-step undo: restore the object, its children's original
+                // parents, the removed edges and the detached references.
+                project.restore_deleted(snapshot.object.clone(), cascade);
                 format!("undo: restored object {}", &snapshot.object.id[..8])
             }
             Command::ModifyObject {
@@ -4660,19 +5296,42 @@ impl Executor {
     /// 正向执行命令（用于 redo）
     fn apply_forward(&self, cmd: &Command, project: &mut Project) -> String {
         match cmd {
-            Command::CreateBatch { snapshots } => {
+            Command::Batch { commands } => {
+                for sub in commands {
+                    self.apply_forward(sub, project);
+                }
+                format!("redo: batch of {} command(s)", commands.len())
+            }
+            Command::CreateBatch {
+                snapshots,
+                sketches,
+            } => {
                 for snap in snapshots {
                     project.objects.insert(snap.object.clone());
                 }
-                format!("redo: created {} objects", snapshots.len())
+                for sketch in sketches {
+                    project.sketches.insert(sketch.clone());
+                }
+                format!(
+                    "redo: created {} objects and {} sketches",
+                    snapshots.len(),
+                    sketches.len()
+                )
             }
             Command::CreateObject { snapshot } => {
                 project.objects.insert(snapshot.object.clone());
                 format!("redo: created object {}", &snapshot.object.id[..8])
             }
-            Command::DeleteObject { snapshot } => {
-                project.objects.remove(&snapshot.object.id);
-                format!("redo: deleted object {}", &snapshot.object.id[..8])
+            Command::DeleteObject {
+                snapshot,
+                cascade: _,
+            } => {
+                // Redo re-applies the whole cascade deterministically; the
+                // recomputed cascade must equal the stored one.
+                match project.delete_object(&snapshot.object.id) {
+                    Ok(_) => format!("redo: deleted object {}", &snapshot.object.id[..8]),
+                    Err(e) => format!("redo: delete {} refused: {}", &snapshot.object.id[..8], e),
+                }
             }
             Command::ModifyObject {
                 object_id,
@@ -5402,6 +6061,7 @@ impl Executor {
             success: false,
             message: error,
             created_ids,
+            warnings: Vec::new(),
         }
     }
 
@@ -5732,6 +6392,75 @@ fn mesh_center(mesh: &c::MeshGeometry) -> c::Point3D {
     }
 }
 
+// Apply a TransformGeometryOperation's pre/main/post matrix to a geometry in
+// place (shared by the leaf path and the assembly-container cascade).
+fn transform_geometry_in_place(geom: &mut c::Geometry, tg: &c::TransformGeometryOperation) {
+    let Some(mesh) = omnim_model::geometry::geometry_to_mesh(geom) else {
+        return;
+    };
+    let origin = tg.pivot.clone().unwrap_or_else(|| mesh_center(&mesh));
+    let pre = c::Transform {
+        matrix: vec![],
+        translation: Some(c::Point3D {
+            x: -origin.x,
+            y: -origin.y,
+            z: -origin.z,
+        }),
+        rotation: None,
+        scale: None,
+    };
+    let main = c::Transform {
+        matrix: vec![],
+        translation: tg.translation.clone(),
+        rotation: tg.rotation.clone(),
+        scale: tg.scale.clone(),
+    };
+    let post = c::Transform {
+        matrix: vec![],
+        translation: Some(origin),
+        rotation: None,
+        scale: None,
+    };
+    let shifted = omnim_model::geometry::transform_mesh(&mesh, &pre);
+    let transformed = omnim_model::geometry::transform_mesh(&shifted, &main);
+    let transformed = omnim_model::geometry::transform_mesh(&transformed, &post);
+    let bbox = omnim_model::geometry::compute_bbox(&transformed);
+    geom.representation = Some(c::geometry::Representation::Mesh(transformed));
+    geom.bbox = Some(bbox);
+}
+
+fn assembly_primitive_mesh(pp: &c::PrimitivePart) -> Option<c::MeshGeometry> {
+    let (vertices, normals, faces) = match pp.shape.to_lowercase().as_str() {
+        "box" => omnim_model::mesh_gen::box_mesh(&c::Box {
+            length: pp.p1,
+            width: pp.p2,
+            height: pp.p3,
+        }),
+        "cylinder" => omnim_model::mesh_gen::cylinder_mesh(&c::Cylinder {
+            radius: pp.p1,
+            height: pp.p2,
+            segments: 32,
+        }),
+        "sphere" => omnim_model::mesh_gen::sphere_mesh(&c::Sphere {
+            radius: pp.p1,
+            segments: 32,
+        }),
+        "cone" => omnim_model::mesh_gen::cone_mesh(&c::Cone {
+            radius_bottom: pp.p1,
+            radius_top: pp.p2,
+            height: pp.p3,
+            segments: 32,
+        }),
+        _ => return None,
+    };
+    Some(c::MeshGeometry {
+        vertices,
+        normals,
+        uvs: Vec::new(),
+        faces,
+    })
+}
+
 fn parse_record_status(s: &str) -> c::RecordStatus {
     match s.to_lowercase().as_str() {
         "draft" => c::RecordStatus::Draft,
@@ -5830,6 +6559,122 @@ mod tests {
         let obj = proj.objects.get(&result.created_ids[0]).unwrap();
         assert_eq!(obj.name, "Wall-1");
         assert!(obj.geometry.is_some());
+    }
+
+    fn mk_sketch(exe: &mut Executor, proj: &mut Project) -> String {
+        let mut instr = make_instruction("sk", c::Action::CreateSketch);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::CreateSketch(c::CreateSketchOperation {
+                name: "s".into(),
+                origin: None,
+                normal: None,
+                component_id: String::new(),
+            })),
+        });
+        let result = exe.execute(&instr, proj);
+        assert!(result.success);
+        result.created_ids[0].clone()
+    }
+
+    #[test]
+    fn test_unknown_constraint_type_is_refused() {
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+        let sid = mk_sketch(&mut exe, &mut proj);
+
+        let mut instr = make_instruction("bad-type", c::Action::AddSketchConstraint);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::AddSketchConstraint(
+                c::AddSketchConstraintOperation {
+                    sketch_id: sid.clone(),
+                    constraint: Some(c::SketchConstraintData {
+                        constraint_type: 99,
+                        entity_refs: Vec::new(),
+                        value: 0.0,
+                        id: String::new(),
+                    }),
+                },
+            )),
+        });
+        let result = exe.execute(&instr, &mut proj);
+        assert!(
+            !result.success,
+            "unknown constraint code must surface, not coerce to Fixed"
+        );
+        assert!(
+            result.message.contains("constraint type"),
+            "message explains the problem: {}",
+            result.message
+        );
+    }
+
+    #[test]
+    fn test_oob_sketch_entity_index_is_refused() {
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+        let sid = mk_sketch(&mut exe, &mut proj);
+
+        let mut instr = make_instruction("oob-del", c::Action::DeleteSketchEntity);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::DeleteSketchEntity(
+                c::DeleteSketchEntityOperation {
+                    sketch_id: sid.clone(),
+                    entity_index: 5, // 1-based, sketch is empty
+                },
+            )),
+        });
+        // The validator refuses before the executor runs.
+        let result = exe.execute(&instr, &mut proj);
+        assert!(!result.success);
+        assert!(
+            result.message.contains("out of range"),
+            "{}",
+            result.message
+        );
+    }
+
+    #[test]
+    fn test_array_count_capped() {
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+        let mut instr = make_instruction("arr", c::Action::CreateObject);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::CreateObject(c::CreateObjectOperation {
+                r#type: c::ObjectType::Wall as i32,
+                name: "src".into(),
+                description: String::new(),
+                geometry: None,
+                properties: Vec::new(),
+                parent_id: String::new(),
+                elevation: None,
+                level_id: None,
+                bottom_level_id: None,
+                top_level_id: None,
+            })),
+        });
+        let result = exe.execute(&instr, &mut proj);
+        assert!(result.success);
+        let src = result.created_ids[0].clone();
+
+        let mut instr = make_instruction("arr2", c::Action::Array);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::Array(c::ArrayOperation {
+                source_object_id: src,
+                pattern: "linear".into(),
+                count_x: 1_000_000,
+                count_y: 0,
+                count_z: 0,
+                spacing_x: 1.0,
+                spacing_y: 0.0,
+                spacing_z: 0.0,
+            })),
+        });
+        let result = exe.execute(&instr, &mut proj);
+        assert!(
+            !result.success,
+            "an OOM-scale array must be refused with a message"
+        );
+        assert!(result.message.contains("limit"), "{}", result.message);
     }
 
     #[test]
@@ -6955,6 +7800,7 @@ mod tests {
                 vertex_indices: vec![0, 1, 2],
             }],
         };
+
         let normals = Project::recompute_normals(&mesh);
         assert_eq!(normals.len(), 3);
         for n in &normals {
@@ -6964,6 +7810,202 @@ mod tests {
                 (n.z - 1.0).abs() < 1e-6,
                 "Triangle in XY plane should have Z=1 normal"
             );
+        }
+    }
+
+    // ---- Assembly container (2026-10-30) ----
+
+    fn primitive_part(
+        name: &str,
+        shape: &str,
+        p1: f64,
+        p2: f64,
+        p3: f64,
+        x: f64,
+    ) -> c::AssemblyPart {
+        c::AssemblyPart {
+            name: name.into(),
+            source: Some(c::assembly_part::Source::Primitive(c::PrimitivePart {
+                shape: shape.into(),
+                p1,
+                p2,
+                p3,
+                position: Some(c::Point3D { x, y: 0.0, z: 0.0 }),
+                rotation_z: 0.0,
+            })),
+        }
+    }
+
+    fn create_assembly_instr(parts: Vec<c::AssemblyPart>) -> c::OmniCommand {
+        let mut instr = make_instruction("asm-create", c::Action::AssemblyCreate);
+        instr.operations.push(c::Operation {
+            op: Some(c::operation::Op::CreateAssembly(
+                c::CreateAssemblyOperation {
+                    name: "ASM-1".into(),
+                    parent_id: String::new(),
+                    skip_series_gate: true,
+                    parts,
+                },
+            )),
+        });
+        instr
+    }
+
+    #[test]
+    fn test_assembly_create_is_one_undo_step() {
+        let _guard = lock_library();
+        setup_library();
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+
+        let parts = vec![
+            c::AssemblyPart {
+                name: "body".into(),
+                source: Some(c::assembly_part::Source::Component(c::ComponentPart {
+                    component_def_id: {
+                        let lib = LIBRARY.read().unwrap();
+                        lib.as_ref()
+                            .unwrap()
+                            .catalog
+                            .find_by_name("Concrete-Wall")
+                            .unwrap()
+                            .id
+                            .clone()
+                    },
+                    params: Default::default(),
+                    position: Some(c::Point3D {
+                        x: 5.0,
+                        y: 0.0,
+                        z: 0.0,
+                    }),
+                    rotation_z: 0.0,
+                })),
+            },
+            primitive_part("foot", "box", 1.0, 1.0, 1.0, 2.0),
+        ];
+        let result = exe.execute(&create_assembly_instr(parts), &mut proj);
+        assert!(result.success, "{}", result.message);
+        assert_eq!(result.created_ids.len(), 3, "container + 2 parts");
+        let container_id = result.created_ids[0].clone();
+        let container = proj.objects.get(&container_id).unwrap();
+        assert_eq!(container.object_type, c::ObjectType::Assembly as i32);
+        assert!(container.geometry.is_none(), "container owns no geometry");
+        assert_eq!(proj.objects.children_of(&container_id).len(), 2);
+        assert_eq!(proj.relations.children_of(&container_id).len(), 2);
+        assert_eq!(proj.objects.len(), 3);
+
+        // One undo removes container, parts and instantiation sketches.
+        let sketches_before_undo = proj.sketches.len();
+        exe.undo(&mut proj).unwrap();
+        assert_eq!(proj.objects.len(), 0);
+        assert_eq!(proj.sketches.len(), 0, "instantiation sketches removed too");
+
+        // Redo restores everything.
+        exe.redo(&mut proj).unwrap();
+        assert_eq!(proj.objects.len(), 3);
+        assert_eq!(proj.sketches.len(), sketches_before_undo);
+    }
+
+    #[test]
+    fn test_assembly_delete_subtree_and_restore() {
+        let _guard = lock_library();
+        setup_library();
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+        let result = exe.execute(
+            &create_assembly_instr(vec![
+                primitive_part("a", "box", 1.0, 1.0, 1.0, 0.0),
+                primitive_part("b", "cylinder", 0.5, 2.0, 0.0, 3.0),
+            ]),
+            &mut proj,
+        );
+        assert!(result.success, "{}", result.message);
+        let container_id = result.created_ids[0].clone();
+
+        let mut del = make_instruction("asm-del", c::Action::DeleteObjectSubtree);
+        del.target = Some(c::Target {
+            target_type: Some(c::target::TargetType::Object(c::ObjectTarget {
+                object_id: container_id.clone(),
+            })),
+        });
+        let result = exe.execute(&del, &mut proj);
+        assert!(result.success, "{}", result.message);
+        assert_eq!(proj.objects.len(), 0, "subtree removed");
+        assert!(proj.relations.containments().is_empty());
+
+        exe.undo(&mut proj).unwrap();
+        assert_eq!(proj.objects.len(), 3, "subtree restored in one step");
+        assert_eq!(proj.objects.children_of(&container_id).len(), 2);
+    }
+
+    #[test]
+    fn test_assembly_transform_cascades_to_parts() {
+        let _guard = lock_library();
+        setup_library();
+        let mut proj = Project::new("Test");
+        let mut exe = Executor::new();
+        let result = exe.execute(
+            &create_assembly_instr(vec![
+                primitive_part("a", "box", 1.0, 1.0, 1.0, 0.0),
+                primitive_part("b", "box", 1.0, 1.0, 1.0, 2.0),
+            ]),
+            &mut proj,
+        );
+        assert!(result.success, "{}", result.message);
+        let container_id = result.created_ids[0].clone();
+        let child_ids: Vec<String> = proj
+            .objects
+            .children_of(&container_id)
+            .iter()
+            .map(|o| o.id.clone())
+            .collect();
+        let z_before: Vec<f64> = child_ids
+            .iter()
+            .map(|id| {
+                let geom = proj.objects.get(id).unwrap().geometry.as_ref().unwrap();
+                let mesh = omnim_model::geometry::geometry_to_mesh(geom).unwrap();
+                mesh.vertices[0].z
+            })
+            .collect();
+
+        let mut tr = make_instruction("asm-move", c::Action::TransformGeometry);
+        tr.operations.push(c::Operation {
+            op: Some(c::operation::Op::TransformGeometry(
+                c::TransformGeometryOperation {
+                    object_id: container_id.clone(),
+                    translation: Some(c::Point3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 1.0,
+                    }),
+                    rotation: None,
+                    scale: None,
+                    pivot: Some(c::Point3D {
+                        x: 0.0,
+                        y: 0.0,
+                        z: 0.0,
+                    }),
+                },
+            )),
+        });
+        let result = exe.execute(&tr, &mut proj);
+        assert!(result.success, "{}", result.message);
+        for (i, id) in child_ids.iter().enumerate() {
+            let geom = proj.objects.get(id).unwrap().geometry.as_ref().unwrap();
+            let mesh = omnim_model::geometry::geometry_to_mesh(geom).unwrap();
+            assert!(
+                (mesh.vertices[0].z - (z_before[i] + 1.0)).abs() < 1e-6,
+                "child {} moved by the container transform",
+                i
+            );
+        }
+
+        // One undo restores every child.
+        exe.undo(&mut proj).unwrap();
+        for (i, id) in child_ids.iter().enumerate() {
+            let geom = proj.objects.get(id).unwrap().geometry.as_ref().unwrap();
+            let mesh = omnim_model::geometry::geometry_to_mesh(geom).unwrap();
+            assert!((mesh.vertices[0].z - z_before[i]).abs() < 1e-6);
         }
     }
 }

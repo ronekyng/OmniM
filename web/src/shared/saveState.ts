@@ -44,13 +44,17 @@ export function formatClock(ms: number): string {
   return `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-/** Status-bar / title text for the current state. */
+/** Status-bar / title text for the current state.
+ *  Note (UI/UX audit F1): the dirty state used to read "Unsaved changes",
+ *  which was a false alarm when server-side auto-persist is on — every
+ *  mutation is already on disk. The copy states that fact and points at the
+ *  explicit snapshot shortcut instead. */
 export function saveLabel(state: SaveState): string {
   switch (state.status) {
     case 'clean':
       return state.lastSavedAt ? `Saved ${formatClock(state.lastSavedAt)}` : 'Saved';
     case 'dirty':
-      return 'Unsaved changes';
+      return 'Auto-saved server-side · Ctrl+S to snapshot';
     case 'saving':
       return 'Saving…';
     case 'failed':

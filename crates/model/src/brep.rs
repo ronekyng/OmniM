@@ -189,7 +189,19 @@ pub fn extrude_brep(
 ) -> Option<MeshGeometry> {
     let wire = profile_to_wire(profile)?;
     let face = builder::try_attach_plane(&[wire]).ok()?;
-    let vec = to_tv(&direction).normalize() * depth;
+    // Zero vector cannot be normalized (NaN sweep) — fall back to +Z
+    // (audit 2026-10-30: defensive lower bound).
+    let vec = if direction.x == 0.0 && direction.y == 0.0 && direction.z == 0.0 {
+        to_tv(&Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        })
+        .normalize()
+            * depth
+    } else {
+        to_tv(&direction).normalize() * depth
+    };
     let solid: Solid = builder::tsweep(&face, vec);
     Some(solid_to_mesh(&solid, tolerance))
 }
@@ -210,7 +222,18 @@ pub fn revolve_brep(
 ) -> Option<MeshGeometry> {
     let wire = profile_to_wire(profile)?;
     let face = builder::try_attach_plane(&[wire]).ok()?;
-    let axis = to_tv(&axis_direction).normalize();
+    // Zero axis cannot be normalized (NaN sweep) — fall back to +Z
+    // (audit 2026-10-30: defensive lower bound).
+    let axis = if axis_direction.x == 0.0 && axis_direction.y == 0.0 && axis_direction.z == 0.0 {
+        to_tv(&Vector3D {
+            x: 0.0,
+            y: 0.0,
+            z: 1.0,
+        })
+        .normalize()
+    } else {
+        to_tv(&axis_direction).normalize()
+    };
     let origin = to_tp(&axis_origin);
     let total_angle = if angle.abs() < 1e-10 {
         2.0 * PI

@@ -20,10 +20,9 @@ This guide gets you from a fresh clone to an interactive session with OmniM in r
 | npm | Ships with Node | Only needed for the web UI. |
 | Optional: `protoc` | Not required as a separate install | `crates/core/build.rs` uses `prost-build`, which bundles its own protobuf codegen. |
 
-No database, no external services. State lives in memory and can be written to a plain JSON file — but **saving is off by default** (see the warning below).
+No database, no external services. State lives in memory and can be written to a plain JSON file — **mutations save by default** (see the note below).
 
-> ⚠️ **Persistence warning — the default launch does NOT save mutations.**
-> ⚠️ **Persistence warning — updated 2026-10-28.**
+> ⚠️ **Persistence note — updated 2026-10-28.**
 > Persistence now defaults **on**: the server writes `$OMNIM_PROJECT` (or `project.omnim` in the server's working directory) after every executor-path mutation, and anywhere in between you can force a save with `POST /api/project/save`.
 > Escape hatch: `OMNIM_EPHEMERAL=1` (or `true`/`yes`) runs the server fully in memory.
 > Coverage: every mutating endpoint now saves and is undoable (objects, properties, materials, sketches, components, catalog definitions, series, lifecycle, measurements, administrative/breakdown, catalog instantiation, IFC import). The two documented exceptions are `.omnimlib` import into the global library and the `section_handler` cache lock. See [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
@@ -32,7 +31,7 @@ No database, no external services. State lives in memory and can be written to a
 
 ### 1. Build and run the server
 
-The server binary is **`omnim`** (crate `omnim-server`, in `crates/server`). It starts an Axum HTTP server on `0.0.0.0:3000`.
+The server binary is **`omnim`** (crate `omnim-server`, in `crates/server`). It starts an Axum HTTP server on `127.0.0.1:3000` (loopback by default — the API is unauthenticated; set `OMNIM_HOST=0.0.0.0` or any address to publish deliberately).
 
 ```bash
 cargo run -p omnim-server --bin omnim

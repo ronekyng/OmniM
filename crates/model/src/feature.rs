@@ -659,10 +659,10 @@ mod tests {
 
     #[test]
     fn test_new_revolve() {
-        let f = Feature::new_revolve("rev1", "sketch-1", "axis-1", 3.14159);
+        let f = Feature::new_revolve("rev1", "sketch-1", "axis-1", 2.5);
         assert_eq!(f.name, "rev1");
         assert_eq!(f.feature_type, FeatureType::Revolve);
-        assert_eq!(f.angle, 3.14159);
+        assert_eq!(f.angle, 2.5);
         assert_eq!(f.axis_sketch_id, "axis-1");
     }
 

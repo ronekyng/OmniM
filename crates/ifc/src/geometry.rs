@@ -519,19 +519,31 @@ fn extract_composite_profile(doc: &IfcDocument, profile: &IfcEntity) -> Option<V
 // 几何实体转换 (Geometry Entity Conversion)
 // ============================================================
 
-/// 主入口：将 IFC 几何表示项 (Representation Item) 转换为 OmniM Geometry
+/// 主入口：将 IFC 几何表示项 (Representation Item) 转换为 OmniM Geometry。
+/// 深度上限收敛自引用结构（如 #N 的 IFCBOOLEANRESULT operand 又指向 #N），
+/// 防止手写/损坏文件爆栈（审计 2026-10-30）。
 pub fn convert_ifc_item(doc: &IfcDocument, item_id: u64) -> Option<c::Geometry> {
+    convert_ifc_item_at(doc, item_id, 0)
+}
+
+/// 深度上限：真实模型的表示项树不会超过十几层；超过 48 层时按"无几何"处理。
+const MAX_ITEM_DEPTH: usize = 48;
+
+fn convert_ifc_item_at(doc: &IfcDocument, item_id: u64, depth: usize) -> Option<c::Geometry> {
+    if depth > MAX_ITEM_DEPTH {
+        return None;
+    }
     let item = doc.get(item_id)?;
     match item.entity_type.as_str() {
         "IFCEXTRUDEDAREASOLID" | "IFCEXTRUDEDAREASOLIDTAPERED" => {
             convert_extruded_area_solid(doc, item)
         }
         "IFCREVOLVEDAREASOLID" => convert_revolved_area_solid(doc, item),
-        "IFCMAPPEDITEM" => convert_mapped_item(doc, item),
+        "IFCMAPPEDITEM" => convert_mapped_item(doc, item, depth),
         "IFCFACETEDBREP" => convert_faceted_brep(doc, item),
-        "IFCBOOLEANRESULT" | "IFCBOOLEANCLIPPINGRESULT" => convert_boolean_result(doc, item),
+        "IFCBOOLEANRESULT" | "IFCBOOLEANCLIPPINGRESULT" => convert_boolean_result(doc, item, depth),
         "IFCSWEPTDISKAREASOLID" => convert_swept_disk_solid(doc, item),
-        "IFCCSGSOLID" => convert_csg_solid(doc, item),
+        "IFCCSGSOLID" => convert_csg_solid(doc, item, depth),
         _ => None,
     }
 }
@@ -716,7 +728,7 @@ fn convert_revolved_area_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c:
 /// IfcRepresentationMap: arg[0] = RepresentedDefinition (MappedRepresentation type),
 ///                       arg[1] = MappingOrigin (Axis2Placement)
 /// IfcMappedItem: arg[0] = MappingSource, arg[1] = MappingTarget
-fn convert_mapped_item(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometry> {
+fn convert_mapped_item(doc: &IfcDocument, item: &IfcEntity, depth: usize) -> Option<c::Geometry> {
     // Get MappingSource
     let map_source_ref = doc.get_ref(item, 0)?;
     let map_source = doc.get(map_source_ref)?;
@@ -740,7 +752,7 @@ fn convert_mapped_item(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometr
     if let Some(IfcValue::List(items)) = rep_def.args.get(3) {
         for item_ref in items {
             if let IfcValue::Ref(child_id) = item_ref {
-                if let Some(geom) = convert_ifc_item(doc, *child_id) {
+                if let Some(geom) = convert_ifc_item_at(doc, *child_id, depth + 1) {
                     // Apply mapping transformation
                     return apply_mapping_transform(doc, item, geom);
                 }
@@ -752,7 +764,7 @@ fn convert_mapped_item(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometr
     if let Some(IfcValue::List(items)) = rep_def.args.get(3) {
         for item_ref in items {
             if let IfcValue::Ref(child_id) = item_ref {
-                if let Some(geom) = convert_ifc_item(doc, *child_id) {
+                if let Some(geom) = convert_ifc_item_at(doc, *child_id, depth + 1) {
                     return apply_mapping_transform(doc, item, geom);
                 }
             }
@@ -994,7 +1006,11 @@ fn extract_poly_loop(doc: &IfcDocument, loop_entity: &IfcEntity) -> Vec<c::Point
 /// - UNION: 简单合并两个 mesh
 /// - DIFFERENCE/CLIPPING: 使用 boolean_subtract 引擎进行网格差集
 /// - INTERSECTION: 使用 AABB 筛选重叠区域的三角形
-fn convert_boolean_result(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometry> {
+fn convert_boolean_result(
+    doc: &IfcDocument,
+    item: &IfcEntity,
+    depth: usize,
+) -> Option<c::Geometry> {
     use omnim_model::gen_rule::boolean_subtract;
     use omnim_model::gen_rule::BooleanSubtractInput;
 
@@ -1016,8 +1032,8 @@ fn convert_boolean_result(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geom
         _ => return None,
     };
 
-    let first_geom = convert_ifc_item(doc, first_ref)?;
-    let second_geom = convert_ifc_item(doc, second_ref)?;
+    let first_geom = convert_ifc_item_at(doc, first_ref, depth + 1)?;
+    let second_geom = convert_ifc_item_at(doc, second_ref, depth + 1)?;
 
     let first_mesh = omnim_model::geometry::geometry_to_mesh(&first_geom)?;
     let second_mesh = omnim_model::geometry::geometry_to_mesh(&second_geom)?;
@@ -1308,10 +1324,10 @@ fn extract_curve_points(doc: &IfcDocument, curve: &IfcEntity) -> Vec<c::Point3D>
 ///
 /// IFCCSGSOLID 包含一个 IfcCsgTreeRoot (通常是 IfcBooleanResult)
 /// 递归处理即可
-fn convert_csg_solid(doc: &IfcDocument, item: &IfcEntity) -> Option<c::Geometry> {
+fn convert_csg_solid(doc: &IfcDocument, item: &IfcEntity, depth: usize) -> Option<c::Geometry> {
     // arg[0] = TreeRootExpression (IfcBooleanResult)
     let root_ref = doc.get_ref(item, 0)?;
-    convert_ifc_item(doc, root_ref)
+    convert_ifc_item_at(doc, root_ref, depth + 1)
 }
 
 // ============================================================
@@ -1330,6 +1346,20 @@ pub(crate) fn extract_placement_enhanced(
 
 /// 递归构建放置链 (跟踪 PlacementRelTo)
 fn build_placement_chain(doc: &IfcDocument, placement_id: u64) -> Option<c::Transform> {
+    build_placement_chain_at(doc, placement_id, 0)
+}
+
+/// 深度上限：真实楼层/轴网放置链只有几层；自引用的放置链循环只能拒绝。
+const MAX_PLACEMENT_DEPTH: usize = 32;
+
+fn build_placement_chain_at(
+    doc: &IfcDocument,
+    placement_id: u64,
+    depth: usize,
+) -> Option<c::Transform> {
+    if depth > MAX_PLACEMENT_DEPTH {
+        return None;
+    }
     let placement = doc.get(placement_id)?;
     if placement.entity_type != "IFCLOCALPLACEMENT" {
         return None;
@@ -1343,7 +1373,7 @@ fn build_placement_chain(doc: &IfcDocument, placement_id: u64) -> Option<c::Tran
 
     // Check for parent placement (PlacementRelTo)
     let parent_transform = match placement.args.get(0) {
-        Some(IfcValue::Ref(parent_id)) => build_placement_chain(doc, *parent_id),
+        Some(IfcValue::Ref(parent_id)) => build_placement_chain_at(doc, *parent_id, depth + 1),
         _ => None,
     };
 

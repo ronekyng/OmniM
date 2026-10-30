@@ -35,7 +35,7 @@ evidence: "2026-10-29 对照 web/src 评分；需求计数来自 REQUIREMENTS_RE
 | 2 | 性能效率 | **2.0** | 4 | 持续渲染循环、每次变更全量重载、预算未强制（[WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.zh-CN.md) §5） |
 | 3 | 兼容性 | **1.0** | 3 | 无浏览器矩阵、无 WebGL2 门控、无 DPI 策略（[COMPATIBILITY](../specification/ui/COMPATIBILITY.zh-CN.md)） |
 | 4 | 易用性 | **3.0** | 4 | 属性停靠、标题/状态栏、自动命名与项目首页（新建/打开/最近/示例）落地；中英混排与主题仍缺（[WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.zh-CN.md) §8） |
-| 5 | 可靠性 | **2.0** | 4 | 面板/路由错误边界、显式保存与另存为、脏状态拦截已落地；自动保存与崩溃恢复仍缺（[DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md)） |
+| 5 | 可靠性 | **2.0** | 4 | 面板/路由错误边界、显式保存与另存为、脏状态拦截已落地；崩溃恢复仍缺。口径注记（2026-10-30 UI/UX 审计 F1）：服务端每次变更已默认落盘——前端"脏状态"现仅表示**快照分级**（Untitled 是否已 Ctrl+S 显式快照），状态栏文案已改为 "Auto-saved server-side · Ctrl+S to snapshot"；真正的"前端自动保存定时器"依然不需要（见 [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md)） |
 | 6 | 安全性 | **1.0** | 3 | 无鉴权披露、无路径限制、无角色模型（[SECURITY_PRIVACY](../specification/ui/SECURITY_PRIVACY.zh-CN.md)） |
 | 7 | 可维护性 | **2.5** | 3 | 布局/保存/命名拆为纯模块并有单测；仍有 4,110 行样式表、1,823 行 `ThreeViewer.tsx`，无 lint/format |
 | 8 | 可移植性 | **2.0** | 3 | 仅浏览器、未定打包方案、无最小尺寸策略 |

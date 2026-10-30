@@ -1244,9 +1244,9 @@ mod tests {
             Some(c::property_value::ValueType::IntValue(42))
         ));
 
-        let f = json_to_property_value(&serde_json::json!(3.14));
+        let f = json_to_property_value(&serde_json::json!(2.5));
         assert!(
-            matches!(f.value_type, Some(c::property_value::ValueType::DoubleValue(v)) if (v - 3.14).abs() < 1e-10)
+            matches!(f.value_type, Some(c::property_value::ValueType::DoubleValue(v)) if (v - 2.5).abs() < f64::EPSILON)
         );
 
         let b = json_to_property_value(&serde_json::json!(true));

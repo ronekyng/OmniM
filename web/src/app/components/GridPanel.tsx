@@ -28,6 +28,9 @@ export function GridPanel() {
   const markDirty = useAppStore((s) => s.markDirty);
   const [lines, setLines] = useState<GridLine[]>([]);
   const [draft, setDraft] = useState<Draft>(EMPTY);
+  // F3 (UI/UX audit): a semantic toggle for the "extends through the
+  // viewport" case instead of teaching users the 0/0 sentinel.
+  const [fullSpan, setFullSpan] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,6 +60,7 @@ export function GridPanel() {
       else await api.createGrid(body());
       markDirty();
       setDraft(EMPTY);
+      setFullSpan(true);
       await refresh();
       reloadScene();
     } catch (e) {
@@ -83,6 +87,7 @@ export function GridPanel() {
   };
 
   const edit = (line: GridLine) => {
+    setFullSpan(line.extent_min === 0 && line.extent_max === 0);
     setDraft({
       id: line.id,
       label: line.label,
@@ -143,10 +148,24 @@ export function GridPanel() {
           />
         </label>
         <div className="grid-form-extent">
+          <label className="grid-fullspan-toggle">
+            <input
+              type="checkbox"
+              checked={fullSpan}
+              disabled={busy}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setFullSpan(on);
+                if (on) setDraft({ ...draft, extent_min: '0', extent_max: '0' });
+              }}
+            />
+            <span>贯通整个视图（±20 m）</span>
+          </label>
           <label>
             <span>From (m)</span>
             <input
               placeholder="0"
+              disabled={fullSpan}
               value={draft.extent_min}
               onChange={(e) => setDraft({ ...draft, extent_min: e.target.value })}
             />
@@ -155,6 +174,7 @@ export function GridPanel() {
             <span>To (m)</span>
             <input
               placeholder="0"
+              disabled={fullSpan}
               value={draft.extent_max}
               onChange={(e) => setDraft({ ...draft, extent_max: e.target.value })}
             />
@@ -168,7 +188,10 @@ export function GridPanel() {
             {draft.id ? 'Save changes' : 'Add grid line'}
           </button>
         </div>
-        <p className="grid-hint">0 / 0 extends the line across the viewport (±20 m).</p>
+        {/* B2 (UI/UX audit): implementation detail → semantic copy. */}
+        <p className="grid-hint">
+          起止坐标填 0（或 0/0）表示该轴线贯通整个视图（±20 m）；其余数字为普通工程坐标（m）。
+        </p>
         {error && <div className="grid-error">{error}</div>}
       </form>
     </div>

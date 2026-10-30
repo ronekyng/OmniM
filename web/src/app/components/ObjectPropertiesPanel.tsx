@@ -107,24 +107,26 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
     setSaving(true);
     setError(null);
     const form = new FormData(event.currentTarget);
-    const response = await api.updateProperties(object.id, {
-      name: String(form.get('name') ?? ''),
-      description: String(form.get('description') ?? ''),
-      ifc_class: String(form.get('ifc_class') ?? ''),
-    });
-    setSaving(false);
-    if (!response.ok) {
-      setError(`${response.status} ${response.statusText}`);
+    try {
+      await api.updateProperties(object.id, {
+        name: String(form.get('name') ?? ''),
+        description: String(form.get('description') ?? ''),
+        ifc_class: String(form.get('ifc_class') ?? ''),
+      });
+    } catch (err) {
+      setSaving(false);
+      setError(err instanceof Error ? err.message : String(err));
       return;
     }
+    setSaving(false);
     onSaved();
   }
 
   async function saveGeoParam(key: string, value: string) {
     if (!object) return;
     try {
-      const res = await api.setProperty(object.id, { name: key, value });
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+      // requestVoid throws on non-ok — the single error contract
+      await api.setProperty(object.id, { name: key, value });
       // Optimistic update — next poll will confirm
       onSaved();
     } catch (err) {

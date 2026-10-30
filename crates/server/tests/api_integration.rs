@@ -598,6 +598,122 @@ async fn test_genrule_assembly() {
 }
 
 // ---------------------------------------------------------------------------
+// Assembly container (2026-10-30, docs/specification/ASSEMBLY.md)
+// ---------------------------------------------------------------------------
+
+fn find_tree_node<'a>(nodes: &'a serde_json::Value, id: &str) -> Option<&'a serde_json::Value> {
+    let arr = nodes.as_array()?;
+    for node in arr {
+        if node["id"].as_str() == Some(id) {
+            return Some(node);
+        }
+        if let Some(found) = find_tree_node(&node["children"], id) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+#[tokio::test]
+async fn test_assembly_container_create_transform_and_subtree_delete() {
+    let port = start_test_server().await;
+    let client = reqwest::Client::new();
+
+    let resp = client
+        .post(api_url(port, "/api/assemblies"))
+        .json(&serde_json::json!({
+            "name": "Skid-1",
+            "skip_series_gate": true,
+            "parts": [
+                {
+                    "name": "base",
+                    "shape": "box",
+                    "p1": 2.0, "p2": 1.0, "p3": 0.2,
+                    "position": { "x": 0.0, "y": 0.0, "z": 0.0 }
+                },
+                {
+                    "name": "pump",
+                    "shape": "cylinder",
+                    "p1": 0.3, "p2": 1.0, "p3": 0.0,
+                    "position": { "x": 0.0, "y": 0.0, "z": 0.3 }
+                }
+            ]
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let body: serde_json::Value = resp.json().await.unwrap();
+    let assembly_id = body["assembly_id"].as_str().unwrap().to_string();
+    assert_eq!(body["part_count"], 2);
+    assert_eq!(body["parts"].as_array().unwrap().len(), 2);
+
+    // Object tree exposes the container with two children.
+    let tree: serde_json::Value = client
+        .get(api_url(port, "/api/tree"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    let node = find_tree_node(&tree, &assembly_id).expect("assembly in tree");
+    assert_eq!(node["object_type"], "Assembly");
+    assert_eq!(node["children"].as_array().unwrap().len(), 2);
+
+    // Moving the container cascades to its parts (children keep geometry).
+    let resp = client
+        .put(api_url(
+            port,
+            &format!("/api/objects/{}/transform", assembly_id),
+        ))
+        .json(&serde_json::json!({
+            "origin": { "x": 0.0, "y": 0.0, "z": 0.0 },
+            "translation": { "x": 1.0, "y": 0.0, "z": 0.0 },
+            "rotation": null,
+            "scale": { "x": 1.0, "y": 1.0, "z": 1.0 }
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+
+    // Deleting the container removes the whole subtree by default.
+    let resp = client
+        .delete(api_url(port, &format!("/api/objects/{}", assembly_id)))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let objects: serde_json::Value = client
+        .get(api_url(port, "/api/objects"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(objects.as_array().unwrap().len(), 0, "subtree removed");
+
+    // One undo restores the container and both parts.
+    let resp = client
+        .post(api_url(port, "/api/undo"))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 200);
+    let objects: serde_json::Value = client
+        .get(api_url(port, "/api/objects"))
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(objects.as_array().unwrap().len(), 3, "subtree restored");
+}
+
+// ---------------------------------------------------------------------------
 // Mesh endpoint
 // ---------------------------------------------------------------------------
 
@@ -1309,7 +1425,7 @@ async fn test_feature_pipeline_revolve() {
         .json(&serde_json::json!({
             "feature_type": "revolve",
             "sketch_id": sketch_id,
-            "angle": 3.14159,
+            "angle": 2.5,
             "axis_direction_x": 0.0,
             "axis_direction_y": 0.0,
             "axis_direction_z": 1.0
@@ -1403,7 +1519,7 @@ async fn test_sketch_revolve_endpoint_uses_brep() {
             &format!("/api/sketches/{}/revolve", sketch_id),
         ))
         .json(&serde_json::json!({
-            "angle": 3.14159,
+            "angle": 2.5,
             "axis_origin_x": 0.0,
             "axis_origin_y": 0.0,
             "axis_origin_z": 0.0,

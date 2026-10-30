@@ -1,6 +1,10 @@
 use c::{FaceIndices, Point3D, Vector3D};
 use omnim_core as c;
 
+/// Segment-count cap for primitive meshes (audit 2026-10-30): requests like
+/// `segments: 1e9` would OOM; realistically-shaded primitives need <= 256.
+pub const MAX_SEGMENTS: i32 = 256;
+
 type MeshData = (Vec<Point3D>, Vec<Vector3D>, Vec<FaceIndices>);
 
 fn tri(a: i32, b: i32, c: i32) -> FaceIndices {
@@ -93,8 +97,10 @@ pub fn box_mesh(b: &c::Box) -> MeshData {
 }
 
 pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
-    let segs = if c.segments > 3 {
+    let segs = if c.segments > 3 && c.segments <= MAX_SEGMENTS {
         c.segments as usize
+    } else if c.segments > MAX_SEGMENTS {
+        MAX_SEGMENTS as usize
     } else {
         16
     };
@@ -163,13 +169,23 @@ pub fn cylinder_mesh(c: &c::Cylinder) -> MeshData {
 }
 
 pub fn sphere_mesh(s: &c::Sphere) -> MeshData {
-    let segs = if s.segments > 3 {
+    // Defensive caps (see MAX_SEGMENTS at module scope, audit 2026-10-30):
+    // segments without a ceiling let a 1e9-segment request OOM the renderer;
+    // radius 0 produced NaN normals.
+    let segs = if s.segments > 3 && s.segments <= MAX_SEGMENTS {
         s.segments as usize
+    } else if s.segments > MAX_SEGMENTS {
+        MAX_SEGMENTS as usize
     } else {
         16
     };
     let rings = segs / 2 + 1;
-    let r = s.radius;
+    let r = if s.radius.is_finite() && s.radius != 0.0 {
+        s.radius
+    } else {
+        // Degenerate sphere: emit a zero-size but finite shell.
+        f64::MIN_POSITIVE
+    };
     let mut v = Vec::new();
     let mut n = Vec::new();
     let mut f = Vec::new();
@@ -206,8 +222,10 @@ pub fn sphere_mesh(s: &c::Sphere) -> MeshData {
 }
 
 pub fn cone_mesh(cone: &c::Cone) -> MeshData {
-    let segs = if cone.segments > 3 {
+    let segs = if cone.segments > 3 && cone.segments <= MAX_SEGMENTS {
         cone.segments as usize
+    } else if cone.segments > MAX_SEGMENTS {
+        MAX_SEGMENTS as usize
     } else {
         16
     };
@@ -477,7 +495,7 @@ pub fn rebar_cage_mesh(
         let bar_segs = 6usize;
         let r = diameter / 2.0;
         for k in 0..n_stirrups {
-            let _z = k as f64 * stirrup_spacing;
+            let centre_z = k as f64 * stirrup_spacing;
             let base = v.len() as i32;
             for s in 0..ring_segs {
                 let a = 2.0 * std::f64::consts::PI * s as f64 / ring_segs as f64;
@@ -488,7 +506,7 @@ pub fn rebar_cage_mesh(
                     v.push(Point3D {
                         x: (stirrup_radius + r * ct) * ca,
                         y: (stirrup_radius + r * ct) * sa,
-                        z: r * st,
+                        z: centre_z + r * st,
                     });
                     n.push(Vector3D {
                         x: ct * ca,
@@ -861,6 +879,31 @@ mod tests {
         assert!(!v.is_empty());
         assert_eq!(v.len(), n.len());
         assert!(!f.is_empty());
+    }
+
+    #[test]
+    fn test_rebar_cage_stirrups_spread_along_length() {
+        let (v, n, _) = rebar_cage_mesh(
+            200.0,  // bar ring radius
+            8,      // main bars
+            3000.0, // length
+            16.0,   // bar diameter
+            200.0,  // stirrup spacing
+            190.0,  // stirrup radius
+        );
+        assert_eq!(v.len(), n.len());
+        // Stirrups are rings spaced along the bar: ring k centres at z = k*200,
+        // so vertices must span the member length, not collapse near z = 0.
+        let max_z = v.iter().map(|p| p.z).fold(f64::NEG_INFINITY, f64::max);
+        let min_z = v.iter().map(|p| p.z).fold(f64::INFINITY, f64::min);
+        assert!(
+            max_z > 1500.0,
+            "stirrups did not reach far end of the bar, max z = {max_z}"
+        );
+        assert!(
+            min_z < 8.0 + f64::EPSILON,
+            "stirrups did not start at z = 0, min z = {min_z}"
+        );
     }
 
     #[test]

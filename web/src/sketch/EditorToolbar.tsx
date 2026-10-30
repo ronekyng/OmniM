@@ -39,26 +39,26 @@ type Props = {
   onUpdateFeatureAngle: (a: number) => void;
 };
 
-const CONSTRAINTS: { key: SketchConstraintType; label: string }[] = [
-  { key: 'Horizontal', label: 'H' },
-  { key: 'Vertical', label: 'V' },
-  { key: 'Coincident', label: '⦿' },
-  { key: 'Parallel', label: '∥' },
-  { key: 'Perpendicular', label: '⊥' },
-  { key: 'Length', label: 'L=' },
-  { key: 'Distance', label: 'D=' },
-  { key: 'Angle', label: '∠' },
-  { key: 'Radius', label: 'R' },
-  { key: 'Diameter', label: 'Ø' },
-  { key: 'Fixed', label: '⚓' },
-  { key: 'Tangent', label: '⌒' },
-  { key: 'AtMidpoint', label: '◉' },
-  { key: 'EqualLength', label: 'L≃' },
-  { key: 'EqualRadius', label: 'R≃' },
-  { key: 'Symmetric', label: '↔' },
-  { key: 'PtOnLine', label: '⊞' },
-  { key: 'PtOnCircle', label: '⊟' },
-  { key: 'SameOrientation', label: '↗' },
+const CONSTRAINTS: { key: SketchConstraintType; label: string; title: string }[] = [
+  { key: 'Horizontal', label: 'H', title: '水平' },
+  { key: 'Vertical', label: 'V', title: '垂直' },
+  { key: 'Coincident', label: '⦿', title: '重合' },
+  { key: 'Parallel', label: '∥', title: '平行' },
+  { key: 'Perpendicular', label: '⊥', title: '正交' },
+  { key: 'Length', label: 'L=', title: '长度' },
+  { key: 'Distance', label: 'D=', title: '距离' },
+  { key: 'Angle', label: '∠', title: '角度' },
+  { key: 'Radius', label: 'R', title: '半径' },
+  { key: 'Diameter', label: 'Ø', title: '直径' },
+  { key: 'Fixed', label: '⚓', title: '固定' },
+  { key: 'Tangent', label: '⌒', title: '相切' },
+  { key: 'AtMidpoint', label: '◉', title: '中点' },
+  { key: 'EqualLength', label: 'L≃', title: '等长' },
+  { key: 'EqualRadius', label: 'R≃', title: '等半径' },
+  { key: 'Symmetric', label: '↔', title: '对称' },
+  { key: 'PtOnLine', label: '⊞', title: '点在线上' },
+  { key: 'PtOnCircle', label: '⊟', title: '点在圆上' },
+  { key: 'SameOrientation', label: '↗', title: '同向' },
 ];
 
 const TOOLS = [
@@ -146,7 +146,8 @@ export function EditorToolbar({
               className="sketch-tool-btn sketch-constraint-btn"
               onClick={() => onSelectConstraint(c.key)}
               disabled={!hasSelection || !!creatingFeature}
-              title={c.key}
+              title={`${c.title} (${c.key})`}
+              aria-label={`${c.title}约束`}
             >
               {c.label}
             </button>
@@ -218,6 +219,8 @@ export function EditorToolbar({
                 className="sketch-tool-btn danger"
                 onClick={onDeleteEntity}
                 disabled={!hasSelection}
+                title="删除选中图元 (Del)"
+                aria-label="删除选中图元"
               >
                 Del
               </button>
@@ -256,6 +259,7 @@ export function EditorToolbar({
                 disabled={!hasSelection}
                 title="Offset selected line"
               >∥</button>
+              <label style={{ color: '#888', fontSize: 11 }}>偏移 (m):</label>
               <input
                 type="number"
                 step="0.1"
@@ -268,6 +272,8 @@ export function EditorToolbar({
                 className="sketch-tool-btn danger"
                 onClick={onDeleteEntity}
                 disabled={!hasSelection}
+                title="删除选中图元 (Del)"
+                aria-label="删除选中图元"
               >
                 Del
               </button>

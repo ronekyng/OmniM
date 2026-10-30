@@ -1,9 +1,9 @@
 ---
 title: "OmniM Keyboard Map"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/"
-evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx, OmniPanel.tsx, ObjectTree.tsx, AiChat.tsx on 2026-10-29"
+evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx, OmniPanel.tsx, ObjectTree.tsx, AiChat.tsx on 2026-10-30"
 ---
 # OmniM Keyboard Map
 
@@ -26,7 +26,7 @@ evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx,
 
 | Shortcut | Command | Scope | Status |
 |---|---|---|---|
-| `Ctrl/Cmd+S` | Save project | global | 📅 |
+| `Ctrl/Cmd+S` | Save project | global | ✅ |
 | `Ctrl/Cmd+Shift+S` | Save as | global | 📅 |
 | `Ctrl/Cmd+Z` | Undo | global | 🔀 |
 | `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | Redo | global | 🔀 |
@@ -38,6 +38,8 @@ evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx,
 | `F1` | Shortcut help | global | 📅 |
 | `F6` | Cycle regions | global | 📅 |
 | `?` | Contextual help for focused control | global | 📅 |
+
+> Note: `Ctrl/Cmd+S` maps to the title-bar **Save** button. The "Save as" command is not a shortcut yet (📅) — today `Ctrl/Cmd+Shift+S` falls into the same handler as `Ctrl+S` and triggers a plain save; use the title-bar **Save as** button instead.
 
 ## 3. Viewport Shortcuts
 

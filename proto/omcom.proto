@@ -144,6 +144,10 @@ enum Action {
   // Validation
   VALIDATE = 90;
 
+  // Assembly operations (2026-10-30, ASSEMBLY contract)
+  ASSEMBLY_CREATE = 130;        // container + Component/Part children, one undo step
+  DELETE_OBJECT_SUBTREE = 131;  // delete a container and every descendant as one undo step
+
   // Catalog operations
   DEFINE_COMPONENT = 200;
   ADD_COMPONENT_PARAM = 201;
@@ -283,6 +287,8 @@ message Operation {
     CreateGridLineOperation create_grid_line = 74;
     UpdateGridLineOperation update_grid_line = 75;
     DeleteGridLineOperation delete_grid_line = 76;
+    // 2026-10-30 assembly container (see docs/specification/ASSEMBLY.md)
+    CreateAssemblyOperation create_assembly = 77;
   }
 }
 
@@ -979,6 +985,10 @@ message InstantiateCatalogOperation {
   optional Point3D position = 4;
   double rotation_z = 5;
   bool skip_series_gate = 6;
+  // Optional local rotation applied before `position` translation. Linear
+  // components extrude along local +Z; callers use this to lay the length
+  // axis along a picked segment (2026-10-30 beam orientation fix).
+  optional Rotation rotation = 7;
 }
 
 // 2026-10-29 P8-S1: grid datum operations (axes are datum curves, not objects)
@@ -1008,4 +1018,42 @@ message UpdateGridLineOperation {
 
 message DeleteGridLineOperation {
   string grid_line_id = 1;
+}
+
+// === Assembly container (2026-10-30, docs/specification/ASSEMBLY.md) ===
+//
+// An Assembly is a container object whose direct children are ordinary
+// objects: catalog Components (catalog_ref + baked feature-tree geometry) or
+// primitive Parts (baked box/cylinder/sphere/cone mesh). Creation is one
+// undoable CreateBatch; deletion of the container can cascade the subtree.
+
+message ComponentPart {
+  string component_def_id = 1;
+  map<string, double> params = 2;
+  optional Point3D position = 3;   // metres
+  double rotation_z = 4;           // radians, about the position point
+}
+
+message PrimitivePart {
+  string shape = 1;                // "box" | "cylinder" | "sphere" | "cone"
+  double p1 = 2;
+  double p2 = 3;
+  double p3 = 4;
+  optional Point3D position = 5;   // metres
+  double rotation_z = 6;           // radians
+}
+
+message AssemblyPart {
+  string name = 1;
+  oneof source {
+    ComponentPart component = 2;
+    PrimitivePart primitive = 3;
+  }
+}
+
+message CreateAssemblyOperation {
+  string name = 1;
+  string parent_id = 2;            // empty = root
+  bool skip_series_gate = 3;
+  repeated AssemblyPart parts = 4;
 }

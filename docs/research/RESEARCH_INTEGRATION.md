@@ -1,6 +1,6 @@
 ---
 title: "跨平台调研整合分析 — 选择与实施策略"
-status: research
+status: archived  # research snapshot; not a contract doc, unmaintained since 2026-08
 last_updated: 2026-08-07
 applies_to: "n/a (research)"
 evidence: "n/a (background research)"

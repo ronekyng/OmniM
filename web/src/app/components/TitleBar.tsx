@@ -58,7 +58,7 @@ export function TitleBar() {
   return (
     <div className="title-bar">
       <button type="button" className="title-project" title="Back to projects" onClick={() => void openProjects()}>
-        {dirty && <span className="dirty-dot" aria-label="Unsaved changes" />}
+        {dirty && <span className="dirty-dot" aria-label="Edits auto-saved server-side, snapshot pending" />}
         <strong>{name}</strong>
       </button>
       <nav className="breadcrumb" aria-label="Breadcrumb">

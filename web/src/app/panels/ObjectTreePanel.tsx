@@ -76,8 +76,8 @@ export function ObjectTreePanel() {
   }, [tree, markDirty, refresh, reloadScene]);
 
   const handleDelete = useCallback(async (id: string) => {
-    const response = await api.deleteObject(id);
-    if (!response.ok) throw new Error(`Delete failed: ${response.status} ${response.statusText}`);
+    // requestVoid throws on failure; keep the same external contract.
+    await api.deleteObject(id);
     if (selectedIds.includes(id)) {
       setSelectedIds((prev) => prev.filter((prevId) => prevId !== id));
     }

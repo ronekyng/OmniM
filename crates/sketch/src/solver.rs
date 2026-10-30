@@ -112,31 +112,36 @@ pub fn solve(sketch: &mut Sketch) -> SolveResult {
 
     let success = matches!(result, slvs::system::SolveResult::Ok { .. });
 
-    for (entity_idx, built) in built_entities.iter().enumerate() {
-        for (pt_idx, pt_handle) in built.points.iter().enumerate() {
-            if let Ok(pt_data) = system.entity_data(pt_handle) {
-                match pt_data {
-                    slvs::entity::Point::In3d { coords, .. } => {
-                        sketch.set_solved_point(
-                            entity_idx,
-                            pt_idx,
-                            c::Point3D {
-                                x: coords[0],
-                                y: coords[1],
-                                z: coords[2],
-                            },
-                        );
-                    }
-                    slvs::entity::Point::OnWorkplane { coords, .. } => {
-                        sketch.set_solved_point(
-                            entity_idx,
-                            pt_idx,
-                            c::Point3D {
-                                x: coords[0],
-                                y: coords[1],
-                                z: 0.0,
-                            },
-                        );
+    // Write solved coordinates back only on an actually-solved system: a
+    // failed solve returns garbage/partial coords that would deform the
+    // sketch the user drew (audit 2026-10-30).
+    if success {
+        for (entity_idx, built) in built_entities.iter().enumerate() {
+            for (pt_idx, pt_handle) in built.points.iter().enumerate() {
+                if let Ok(pt_data) = system.entity_data(pt_handle) {
+                    match pt_data {
+                        slvs::entity::Point::In3d { coords, .. } => {
+                            sketch.set_solved_point(
+                                entity_idx,
+                                pt_idx,
+                                c::Point3D {
+                                    x: coords[0],
+                                    y: coords[1],
+                                    z: coords[2],
+                                },
+                            );
+                        }
+                        slvs::entity::Point::OnWorkplane { coords, .. } => {
+                            sketch.set_solved_point(
+                                entity_idx,
+                                pt_idx,
+                                c::Point3D {
+                                    x: coords[0],
+                                    y: coords[1],
+                                    z: 0.0,
+                                },
+                            );
+                        }
                     }
                 }
             }

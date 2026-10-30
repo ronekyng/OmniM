@@ -123,7 +123,7 @@ omnim-renderer: 2026-10-27 已删除(原本仅依赖 omnim-core + omnim-model,
 | `omnim-omcom` | ~3,650 | 命令层。`Validator::validate(&OmniCommand, &Project)` 返回错误列表;`Executor::execute(&OmniCommand, &mut Project)` 返回 `ExecutionResult`,内含**完整的撤销/重做栈与事务分组**。项目的一切合法变更都是一条 `OmniCommand`。 |
 | `omnim-ifc` | ~1,590 | **手写的** STEP/IFC 文件解析器(不依赖任何 IFC crate),支持导入与导出,**部分覆盖** IFC 2x3 与 IFC 4;含 IFC 几何映射。 |
 | `omnim-amir` | ~2,300 | AI 意图引擎("AMIR"):自然语言 → 意图 → `OmniCommand` 生成(`generator.rs`,约 1,018 行)、提示词解析、上下文构建、**反向描述**(把已有模型描述成自然语言,`reverse.rs`)、模板、反馈。通过 reqwest 的 HTTP 调用 LLM 供应商:**OpenAI / Anthropic / Mock**。 |
-| `omnim-server` | ~3,700 | Axum HTTP 服务器。`/api/*` 下 **79** 条去重 REST 路由,`AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + 保存路径。所有变更请求都构造 `OmniCommand` 并走 Executor（Wave 1，2026-10-28）；`mutation::persist` 负责原子落盘。持久化**默认开启**（`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`）；executor 组端点与 5 个遗留 handler 会保存，其余 handler 暂不保存——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。为 `web/` 构建产物提供静态文件服务。默认监听 `0.0.0.0:3000`(可用 `OMNIM_HOST`/`OMNIM_PORT` 覆盖)。**没有 WebSocket、没有数据库。** |
+| `omnim-server` | ~3,700 | Axum HTTP 服务器。`/api/*` 下 **87** 条去重 REST 路由,`AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + 保存路径。所有变更请求都构造 `OmniCommand` 并走 Executor（Wave 1，2026-10-28）；`mutation::persist` 负责原子落盘。持久化**默认开启**（`project.omnim`，逃生开关 `OMNIM_EPHEMERAL=1`）；executor 组端点与 5 个遗留 handler 会保存，其余 handler 暂不保存——见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)。为 `web/` 构建产物提供静态文件服务。默认监听 `127.0.0.1:3000`（回环地址；API 无认证，如需公开请用 `OMNIM_HOST`/`OMNIM_PORT` 显式指定）。**没有 WebSocket、没有数据库。** |
 *`omnim-renderer`(自包含的原生 wgpu/winit 查看器)已于 2026-10-27 作为无人依赖的死底料从 workspace 删除;如需原生查看器将以 RFC 形式重新立项。*
 
 > 说明:`omnim-core` 提供清单类型(共享枚举、`Version` 等);具体的 `Project` 与其持久化
@@ -248,7 +248,8 @@ protobuf 二进制编码。
 - **信任边界:** LLM 生成的命令与 executor 路径的用户命令走**同一个** `Validator`,因此 AI 路径无法绕过领域校验——
   这是一个重要的结构安全性。但这**不**意味着每条 REST 路由都被校验:许多 handler 直接写 `Project`
   (见 [WRITE_PATHS.zh-CN.md](WRITE_PATHS.zh-CN.md)),所以 ADR-0006 的不变量是目标,而非当前保证。
-- **CORS / 出站流量:** 默认绑定 `0.0.0.0:3000`(个人机器上合理,但在现阶段会把 LAN 面暴露出来);
+- **CORS / 出站流量:** 默认绑定 `127.0.0.1:3000`(安全默认;只有显式设置 `OMNIM_HOST` 才会暴露到
+  局域网面,且 API 本身仍无认证,建议保持回环);
   `omnim-amir` 通过 `reqwest` 对外发起 HTTPS 调用 LLM 供应商。
 
 ---

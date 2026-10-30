@@ -157,7 +157,7 @@ OmniM 支持 50+ 种对象类型，按工程领域分组。
 | 枚举值 | 中文 | 英文 | 说明 |
 |--------|------|------|------|
 | `OBJECT_TYPE_PART` (400) | 零件 | Part | 机械零件 |
-| `OBJECT_TYPE_ASSEMBLY` (401) | 组件 | Assembly | 机械组件 |
+| `OBJECT_TYPE_ASSEMBLY` (401) | 装配 / 装配容器 | Assembly / Assembly container | 容器对象：子件为 `Component`（catalog_ref）或 `Part`，自身无几何；见 [ASSEMBLY](../specification/ASSEMBLY.zh-CN.md) |
 | `OBJECT_TYPE_FASTENER` (402) | 紧固件 | Fastener | 螺栓/螺母/垫片 |
 | `OBJECT_TYPE_GEAR` (403) | 齿轮 | Gear | 传动齿轮 |
 | `OBJECT_TYPE_SHAFT` (404) | 轴 | Shaft | 传动轴 |
@@ -165,6 +165,7 @@ OmniM 支持 50+ 种对象类型，按工程领域分组。
 | `OBJECT_TYPE_MOTOR` (406) | 电机 | Motor | 驱动电机 |
 | `OBJECT_TYPE_SPRING` (407) | 弹簧 | Spring | 弹性元件 |
 | `OBJECT_TYPE_SEAL` (408) | 密封件 | Seal | 密封装置 |
+| — | 物料清单 / BOM | Bill of Materials | 装配子件按 `catalog_ref` 汇总（端点规划中，见 ROADMAP） |
 
 ### 2.6 其他
 

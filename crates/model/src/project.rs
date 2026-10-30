@@ -50,6 +50,28 @@ pub struct LevelExtentChange {
     pub after: OmniObject,
 }
 
+/// Reversible reference-cleanup data produced by [`Project::delete_object`].
+/// Undo restores every piece in one step: re-parented children, removed
+/// containment/connection edges and detached lifecycle/breakdown references.
+#[derive(Clone, Default)]
+pub struct DeleteCascade {
+    /// Children of the deleted object promoted to the deleted object's own
+    /// parent; snapshots hold their pre-delete `parent_id`.
+    pub promoted_children: Vec<OmniObject>,
+    /// Descendants removed together with the object (subtree delete, e.g. an
+    /// Assembly container with its parts). Restored by the same undo step.
+    pub deleted_children: Vec<OmniObject>,
+    /// Containment edges removed (the object as child, and as parent for the
+    /// promoted children / deleted subtree).
+    pub removed_containments: Vec<c::Containment>,
+    /// Connections the object took part in.
+    pub removed_connections: Vec<c::Connection>,
+    /// (lifecycle record id, object id) pairs detached from records.
+    pub lifecycle_refs: Vec<(String, String)>,
+    /// (breakdown node id, object id) pairs detached from nodes.
+    pub breakdown_refs: Vec<(String, String)>,
+}
+
 /// Reference to an external series (file or Library-provided).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SeriesRef {
@@ -84,6 +106,267 @@ impl Project {
         self.objects.insert(obj)
     }
 
+    /// Delete an object with reference cleanup (audit 2026-10-30: a plain
+    /// `ObjectStore::remove` leaves children invisible and relations,
+    /// lifecycle and breakdown references dangling):
+    /// - children are re-parented to the deleted object's own parent;
+    /// - containment edges (as child and as parent) are removed;
+    /// - connections the object took part in are removed;
+    /// - lifecycle/breakdown `related_object_ids` pointing at it are detached.
+    /// A storey still anchoring objects (`level_id`/`bottom_level_id`/
+    /// `top_level_id`) is rejected, matching the server guard.
+    /// Returns the removed object plus the reversible [`DeleteCascade`].
+    pub fn delete_object(
+        &mut self,
+        object_id: &str,
+    ) -> Result<(OmniObject, DeleteCascade), String> {
+        let anchored = self
+            .objects
+            .list()
+            .iter()
+            .filter(|o| {
+                o.id != object_id
+                    && (o.level_id.as_deref() == Some(object_id)
+                        || o.bottom_level_id.as_deref() == Some(object_id)
+                        || o.top_level_id.as_deref() == Some(object_id))
+            })
+            .count();
+        if anchored > 0 {
+            return Err(format!(
+                "object '{}' is a level referenced by {} object(s); detach them first",
+                object_id, anchored
+            ));
+        }
+        let parent_of_removed = self
+            .objects
+            .get(object_id)
+            .and_then(|o| o.parent_id.clone());
+        let promoted_children: Vec<OmniObject> = self
+            .objects
+            .children_of(object_id)
+            .into_iter()
+            .cloned()
+            .collect();
+        let mut cascade = DeleteCascade {
+            promoted_children,
+            ..Default::default()
+        };
+        let obj = self
+            .objects
+            .remove(object_id)
+            .ok_or_else(|| format!("object '{}' not found", object_id))?;
+        for child in &cascade.promoted_children {
+            if let Some(o) = self.objects.get_mut(&child.id) {
+                o.parent_id = parent_of_removed.clone();
+            }
+        }
+        self.objects.rebuild_children();
+
+        // Containment: the object as child, then as parent for promoted
+        // children (index lookups must run before each removal rebuild).
+        if let Some(cont) = self.relations.parent_of(object_id) {
+            let parent_id = cont.parent_id.clone();
+            let child_id = cont.child_id.clone();
+            if let Some(removed) = self.relations.remove_containment(&parent_id, &child_id) {
+                cascade.removed_containments.push(removed);
+            }
+        }
+        let as_parent_edges: Vec<c::Containment> = self
+            .relations
+            .children_of(object_id)
+            .into_iter()
+            .cloned()
+            .collect();
+        for cont in as_parent_edges {
+            if let Some(removed) = self
+                .relations
+                .remove_containment(&cont.parent_id, &cont.child_id)
+            {
+                cascade.removed_containments.push(removed);
+            }
+        }
+        // Connections: remove every edge the object took part in.
+        let conns: Vec<c::Connection> = self
+            .relations
+            .connections_of(object_id)
+            .into_iter()
+            .cloned()
+            .collect();
+        for conn in conns {
+            if let Some(removed) = self
+                .relations
+                .remove_connection(&conn.from_object_id, &conn.to_object_id)
+            {
+                cascade.removed_connections.push(removed);
+            }
+        }
+        // Lifecycle / breakdown references.
+        cascade.lifecycle_refs = self.lifecycle.detach_object(object_id);
+        cascade.breakdown_refs = self.breakdown.detach_object(object_id);
+        Ok((obj, cascade))
+    }
+
+    /// Delete an object **and every descendant** (subtree delete), used for
+    /// Assembly containers and exposed as `DELETE_OBJECT_SUBTREE`. All removed
+    /// objects, their containment/connection edges and detached
+    /// lifecycle/breakdown references are captured in one [`DeleteCascade`],
+    /// so undo restores the whole subtree in a single step.
+    pub fn delete_object_subtree(
+        &mut self,
+        object_id: &str,
+    ) -> Result<(OmniObject, DeleteCascade), String> {
+        if !self.objects.contains(object_id) {
+            return Err(format!("object '{}' not found", object_id));
+        }
+        // Collect the subtree breadth-first (children before grandchildren).
+        let mut removed_ids: Vec<String> = Vec::new();
+        let mut queue: Vec<String> = vec![object_id.to_string()];
+        while let Some(id) = queue.pop() {
+            if removed_ids.iter().any(|x| x == &id) {
+                continue;
+            }
+            removed_ids.push(id.clone());
+            for child in self.objects.children_of(&id) {
+                queue.push(child.id.clone());
+            }
+        }
+        let removed_set: std::collections::HashSet<&str> =
+            removed_ids.iter().map(|s| s.as_str()).collect();
+        // Reject when an object **outside** the subtree anchors a removed one
+        // as a level (same guard as single delete).
+        let anchored = self
+            .objects
+            .list()
+            .iter()
+            .filter(|o| {
+                !removed_set.contains(o.id.as_str())
+                    && (o
+                        .level_id
+                        .as_deref()
+                        .map(|l| removed_set.contains(l))
+                        .unwrap_or(false)
+                        || o.bottom_level_id
+                            .as_deref()
+                            .map(|l| removed_set.contains(l))
+                            .unwrap_or(false)
+                        || o.top_level_id
+                            .as_deref()
+                            .map(|l| removed_set.contains(l))
+                            .unwrap_or(false))
+            })
+            .count();
+        if anchored > 0 {
+            return Err(format!(
+                "subtree contains a level referenced by {} object(s); detach them first",
+                anchored
+            ));
+        }
+
+        let deleted_children: Vec<OmniObject> = removed_ids
+            .iter()
+            .skip(1)
+            .filter_map(|id| self.objects.get(id).cloned())
+            .collect();
+        let mut cascade = DeleteCascade {
+            deleted_children,
+            ..Default::default()
+        };
+        let obj = self
+            .objects
+            .remove(object_id)
+            .ok_or_else(|| format!("object '{}' not found", object_id))?;
+        for id in removed_ids.iter().skip(1) {
+            self.objects.remove(id);
+        }
+        self.objects.rebuild_children();
+
+        // Snapshot every containment edge touching the subtree.
+        let conts: Vec<c::Containment> = self
+            .relations
+            .containments()
+            .iter()
+            .filter(|cont| {
+                removed_set.contains(cont.parent_id.as_str())
+                    || removed_set.contains(cont.child_id.as_str())
+            })
+            .cloned()
+            .collect();
+        for cont in conts {
+            if let Some(removed) = self
+                .relations
+                .remove_containment(&cont.parent_id, &cont.child_id)
+            {
+                cascade.removed_containments.push(removed);
+            }
+        }
+        // Snapshot every connection touching the subtree.
+        let conns: Vec<c::Connection> = self
+            .relations
+            .connections()
+            .iter()
+            .filter(|conn| {
+                removed_set.contains(conn.from_object_id.as_str())
+                    || removed_set.contains(conn.to_object_id.as_str())
+            })
+            .cloned()
+            .collect();
+        for conn in conns {
+            if let Some(removed) = self
+                .relations
+                .remove_connection(&conn.from_object_id, &conn.to_object_id)
+            {
+                cascade.removed_connections.push(removed);
+            }
+        }
+        // Detach lifecycle / breakdown references for every removed id.
+        for id in &removed_ids {
+            cascade
+                .lifecycle_refs
+                .extend(self.lifecycle.detach_object(id));
+            cascade
+                .breakdown_refs
+                .extend(self.breakdown.detach_object(id));
+        }
+        Ok((obj, cascade))
+    }
+
+    /// Restore a previously deleted object together with its cascade (undo of
+    /// the delete): re-insert, re-parent children to their pre-delete
+    /// parents, re-add relations and re-attach lifecycle/breakdown refs.
+    pub fn restore_deleted(&mut self, object: OmniObject, cascade: &DeleteCascade) {
+        self.objects.insert(object);
+        for child in &cascade.promoted_children {
+            if let Some(o) = self.objects.get_mut(&child.id) {
+                o.parent_id = child.parent_id.clone();
+            }
+        }
+        // Subtree delete: re-insert descendants with their original parents.
+        for child in &cascade.deleted_children {
+            self.objects.insert(child.clone());
+        }
+        self.objects.rebuild_children();
+        for cont in &cascade.removed_containments {
+            let _ = self.relations.add_containment(cont.clone());
+        }
+        for conn in &cascade.removed_connections {
+            self.relations.add_connection(conn.clone());
+        }
+        for (record_id, object_id) in &cascade.lifecycle_refs {
+            if let Some(record) = self.lifecycle.get_mut(record_id) {
+                if !record.related_object_ids.contains(object_id) {
+                    record.related_object_ids.push(object_id.clone());
+                }
+            }
+        }
+        for (node_id, object_id) in &cascade.breakdown_refs {
+            if let Some(node) = self.breakdown.get_mut(node_id) {
+                if !node.related_object_ids.contains(object_id) {
+                    node.related_object_ids.push(object_id.clone());
+                }
+            }
+        }
+    }
+
     pub fn set_parent(&mut self, child_id: &str, parent_id: &str) -> Result<(), String> {
         if !self.objects.contains(child_id) {
             return Err(format!("object '{}' not found", child_id));
@@ -91,17 +374,37 @@ impl Project {
         if !self.objects.contains(parent_id) {
             return Err(format!("parent '{}' not found", parent_id));
         }
-        if let Some(obj) = self.objects.get_mut(child_id) {
-            obj.parent_id = Some(parent_id.to_string());
+        // Cycle guard: the parent must not be a descendant of the child.
+        let mut cursor = Some(parent_id.to_string());
+        while let Some(id) = cursor {
+            if id == child_id {
+                return Err(format!(
+                    "reparent would create a cycle: '{}' is already an ancestor of '{}'",
+                    child_id, parent_id
+                ));
+            }
+            cursor = self.objects.get(&id).and_then(|o| o.parent_id.clone());
         }
-        self.objects.rebuild_children();
-        self.relations
-            .add_containment(c::Containment {
-                parent_id: parent_id.to_string(),
-                child_id: child_id.to_string(),
-                r#type: c::ContainmentType::Spatial as i32,
-            })
-            .map(|_| ())
+        // Remove the previous containment first, so an existing-child error
+        // from `add_containment` cannot leave the tree re-parented while the
+        // relation store still holds the stale old parent (audit: half
+        // transaction on reparent).
+        if let Some(old) = self.relations.parent_of(child_id).map(|c| c.clone()) {
+            self.relations
+                .remove_containment(&old.parent_id, &old.child_id);
+        }
+        let added = self.relations.add_containment(c::Containment {
+            parent_id: parent_id.to_string(),
+            child_id: child_id.to_string(),
+            r#type: c::ContainmentType::Spatial as i32,
+        });
+        if added.is_ok() {
+            if let Some(obj) = self.objects.get_mut(child_id) {
+                obj.parent_id = Some(parent_id.to_string());
+            }
+            self.objects.rebuild_children();
+        }
+        added.map(|_| ())
     }
 
     /// Series Gate: verify that a ComponentDef is reachable from at least one
@@ -254,6 +557,7 @@ impl Project {
             position,
             rotation_angle,
             true,
+            None,
         )
     }
 
@@ -274,6 +578,54 @@ impl Project {
             position,
             rotation_angle,
             false,
+            None,
+        )
+    }
+
+    /// Catalog instantiation with an explicit local rotation quaternion.
+    ///
+    /// `rotation` is applied to the template geometry **before** the position
+    /// translation (same local frame as `rotation_angle`). Linear components
+    /// (beam/pipe/duct) extrude along local +Z, so callers use this to lay the
+    /// length axis along a picked segment instead of leaving it vertical.
+    pub fn instantiate_catalog_component_oriented(
+        &mut self,
+        component_def_id: &str,
+        instance_name: &str,
+        param_overrides: &std::collections::HashMap<String, f64>,
+        position: Option<c::Point3D>,
+        rotation_angle: f64,
+        rotation: Option<c::Rotation>,
+    ) -> Result<String, String> {
+        self.instantiate_catalog_component_impl(
+            component_def_id,
+            instance_name,
+            param_overrides,
+            position,
+            rotation_angle,
+            true,
+            rotation,
+        )
+    }
+
+    /// [`Self::instantiate_catalog_component_oriented`] without the series gate.
+    pub fn instantiate_catalog_component_oriented_skip_gate(
+        &mut self,
+        component_def_id: &str,
+        instance_name: &str,
+        param_overrides: &std::collections::HashMap<String, f64>,
+        position: Option<c::Point3D>,
+        rotation_angle: f64,
+        rotation: Option<c::Rotation>,
+    ) -> Result<String, String> {
+        self.instantiate_catalog_component_impl(
+            component_def_id,
+            instance_name,
+            param_overrides,
+            position,
+            rotation_angle,
+            false,
+            rotation,
         )
     }
 
@@ -285,6 +637,7 @@ impl Project {
         position: Option<c::Point3D>,
         rotation_angle: f64,
         check_gate: bool,
+        rotation: Option<c::Rotation>,
     ) -> Result<String, String> {
         let library = LIBRARY.read().unwrap();
         let library = library.as_ref().expect("LIBRARY not initialized");
@@ -453,15 +806,16 @@ impl Project {
         // Rebuild the component to generate geometry
         self.rebuild_component(&component_id)?;
 
-        // Apply the requested position — rebuild_component merged the feature
-        // geometry at the sketch origin, so translate the resulting mesh.
-        // Also apply rotation around Z if requested.
-        if let Some(pos) = position {
+        // Apply the requested placement — rebuild_component merged the feature
+        // geometry at the sketch origin, so rotate (Z yaw, then any explicit
+        // local quaternion) and translate the resulting mesh.
+        let has_rotation = rotation_angle != 0.0 || rotation.is_some();
+        if position.is_some() || has_rotation {
             let obj = self.objects.get_mut(&component_id).unwrap();
             if let Some(ref mut geom) = obj.geometry {
                 if let Some(c::geometry::Representation::Mesh(ref mut m)) = &mut geom.representation
                 {
-                    // Rotate around Z axis
+                    // Rotate around Z axis (plan yaw)
                     if rotation_angle != 0.0 {
                         let (sin, cos) = rotation_angle.sin_cos();
                         for v in &mut m.vertices {
@@ -471,27 +825,29 @@ impl Project {
                             v.y = y;
                         }
                     }
-                    // Translate to position (metres → mm)
-                    for v in &mut m.vertices {
-                        v.x += pos.x * 1000.0;
-                        v.y += pos.y * 1000.0;
-                        v.z += pos.z * 1000.0;
+                    // Explicit local rotation (e.g. lay a +Z-extruded beam
+                    // along a picked segment) — same frame as the yaw above.
+                    if let Some(rot) = rotation {
+                        *m = crate::geometry::transform_mesh(
+                            m,
+                            &c::Transform {
+                                matrix: Vec::new(),
+                                translation: None,
+                                rotation: Some(rot),
+                                scale: None,
+                            },
+                        );
                     }
-                    // Update bbox
-                    if let Some(ref mut bb) = geom.bbox {
-                        let (mut mn, mut mx) = (pos.clone(), pos.clone());
-                        for v in &m.vertices {
-                            mn.x = mn.x.min(v.x);
-                            mn.y = mn.y.min(v.y);
-                            mn.z = mn.z.min(v.z);
-                            mx.x = mx.x.max(v.x);
-                            mx.y = mx.y.max(v.y);
-                            mx.z = mx.z.max(v.z);
+                    // Translate to position (metres → mm)
+                    if let Some(pos) = position {
+                        for v in &mut m.vertices {
+                            v.x += pos.x * 1000.0;
+                            v.y += pos.y * 1000.0;
+                            v.z += pos.z * 1000.0;
                         }
-                        *bb = c::BoundingBox {
-                            min: Some(mn),
-                            max: Some(mx),
-                        };
+                    }
+                    if geom.bbox.is_some() {
+                        geom.bbox = Some(crate::geometry::compute_bbox(m));
                     }
                 }
             }
@@ -1769,11 +2125,33 @@ impl Project {
                             let cx = obj.features[feature_idx].pattern_count_x.unwrap_or(1);
                             let cy = obj.features[feature_idx].pattern_count_y.unwrap_or(1);
                             let cz = obj.features[feature_idx].pattern_count_z.unwrap_or(1);
+                            // Instance cap (audit 2026-10-30): a 1e9-count
+                            // pattern would clone the base mesh per element
+                            // and OOM before the user sees anything. Over-cap
+                            // patterns are scaled down proportionally.
+                            const MAX_PATTERN_INSTANCES: usize = 10_000;
+                            let (cx, cy, cz) =
+                                (cx.max(1) as usize, cy.max(1) as usize, cz.max(1) as usize);
+                            let total = cx * cy * cz;
+                            let (cx, cy, cz) = if total > MAX_PATTERN_INSTANCES {
+                                eprintln!(
+                                    "[WARN] pattern capped: {} requested instances > limit {}",
+                                    total, MAX_PATTERN_INSTANCES
+                                );
+                                let scale = (MAX_PATTERN_INSTANCES as f64 / total as f64).cbrt();
+                                (
+                                    (cx as f64 * scale).max(1.0) as usize,
+                                    (cy as f64 * scale).max(1.0) as usize,
+                                    (cz as f64 * scale).max(1.0) as usize,
+                                )
+                            } else {
+                                (cx, cy, cz)
+                            };
                             let sx = depth;
                             let sy = direction.y;
                             let sz = direction.z;
                             let mut result = base_mesh.clone();
-                            for ix in 0..cx.max(1) {
+                            for ix in 0..cx {
                                 for iy in 0..cy.max(1) {
                                     for iz in 0..cz.max(1) {
                                         if ix == 0 && iy == 0 && iz == 0 {
@@ -2292,6 +2670,170 @@ mod tests {
             crate::seed_materials::seed_default_materials_len() + 1
         );
         assert_eq!(stats.containment_count, 2);
+    }
+
+    #[test]
+    fn test_set_parent_replaces_and_cycle_guards() {
+        setup_library();
+        let mut proj = Project::new("TestProject");
+        let site_id = proj.create_object(c::ObjectType::Site, "S").id.clone();
+        let bldg_id = proj.create_object(c::ObjectType::Building, "B").id.clone();
+        let room_id = proj.create_object(c::ObjectType::Space, "R").id.clone();
+        proj.set_parent(&bldg_id, &site_id).unwrap();
+        proj.set_parent(&room_id, &bldg_id).unwrap();
+        assert_eq!(
+            proj.relations.parent_of(&room_id).unwrap().parent_id,
+            bldg_id
+        );
+
+        // Reparent to another parent: the old containment edge must be gone,
+        // not duplicated (the half-transaction hole this fixes).
+        proj.set_parent(&room_id, &site_id).unwrap();
+        assert_eq!(
+            proj.relations.parent_of(&room_id).unwrap().parent_id,
+            site_id
+        );
+        assert_eq!(proj.relations.children_of(&bldg_id).len(), 0);
+        assert_eq!(proj.relations.children_of(&site_id).len(), 2);
+        assert_eq!(
+            proj.objects.get(&room_id).unwrap().parent_id.as_deref(),
+            Some(site_id.as_str())
+        );
+        assert_eq!(proj.stats().containment_count, 2);
+
+        // Cycle guard: reparenting an ancestor under a descendant is refused.
+        assert!(proj.set_parent(&site_id, &room_id).is_err());
+        assert_eq!(proj.objects.get(&site_id).unwrap().parent_id, None);
+    }
+
+    #[test]
+    fn test_delete_object_cascade_and_restore() {
+        setup_library();
+        let mut proj = Project::new("TestProject");
+        let site_id = proj.create_object(c::ObjectType::Site, "S").id.clone();
+        let bldg_id = proj.create_object(c::ObjectType::Building, "B").id.clone();
+        let b2_id = proj.create_object(c::ObjectType::Building, "B2").id.clone();
+        proj.set_parent(&bldg_id, &site_id).unwrap();
+        proj.set_parent(&b2_id, &site_id).unwrap();
+        // awaitable connection + lifecycle + breakdown links
+        proj.connect(&bldg_id, &b2_id, c::ConnectionType::Structural)
+            .unwrap();
+        let record = c::ProjectLifecycleRecord {
+            id: "lc-1".into(),
+            phase: c::LifecyclePhase::Design as i32,
+            record_type: "note".into(),
+            name: "note".into(),
+            description: String::new(),
+            related_object_ids: vec![bldg_id.clone()],
+            related_document_ids: Vec::new(),
+            ..Default::default()
+        };
+        proj.add_lifecycle_record(record);
+
+        let (obj, cascade) = proj.delete_object(&bldg_id).unwrap();
+        assert_eq!(obj.id, bldg_id);
+        // Child edges gone, promoted children keep the site visible.
+        assert!(proj.objects.get(&bldg_id).is_none());
+        assert!(proj.objects.get(&b2_id).is_some());
+        assert!(proj.relations.parent_of(&bldg_id).is_none());
+        assert!(
+            proj.relations.connections().is_empty(),
+            "connections cleaned"
+        );
+        assert_eq!(
+            proj.lifecycle.get("lc-1").unwrap().related_object_ids.len(),
+            0
+        );
+        assert_eq!(cascade.removed_containments.len(), 1);
+        assert_eq!(cascade.removed_connections.len(), 1);
+        assert_eq!(cascade.lifecycle_refs.len(), 1);
+
+        // Also refuse deleting a storey that still anchors objects.
+        let storey_id = proj
+            .create_object(c::ObjectType::Floor, "Storey")
+            .id
+            .clone();
+        let wall_id = proj.create_object(c::ObjectType::Wall, "W").id.clone();
+        proj.objects.get_mut(&wall_id).unwrap().level_id = Some(storey_id.clone());
+        assert!(proj.delete_object(&storey_id).is_err());
+        proj.objects.get_mut(&wall_id).unwrap().level_id = None;
+
+        // One-step undo restores object, children, edges and references.
+        proj.restore_deleted(obj, &cascade);
+        assert!(proj.objects.get(&bldg_id).is_some());
+        assert_eq!(
+            proj.relations.parent_of(&bldg_id).unwrap().parent_id,
+            site_id
+        );
+        assert_eq!(proj.relations.connections().len(), 1);
+        assert_eq!(
+            proj.lifecycle.get("lc-1").unwrap().related_object_ids.len(),
+            1
+        );
+        assert_eq!(proj.stats().containment_count, 2);
+    }
+
+    #[test]
+    fn test_delete_subtree_removes_and_restores_all_descendants() {
+        let mut proj = Project::new("TestProject");
+        let site_id = proj.create_object(c::ObjectType::Site, "S").id.clone();
+        let asm_id = proj.create_object(c::ObjectType::Assembly, "A").id.clone();
+        let p1 = proj
+            .create_object(c::ObjectType::Component, "P1")
+            .id
+            .clone();
+        let p2 = proj.create_object(c::ObjectType::Part, "P2").id.clone();
+        proj.set_parent(&asm_id, &site_id).unwrap();
+        proj.set_parent(&p1, &asm_id).unwrap();
+        proj.set_parent(&p2, &asm_id).unwrap();
+        proj.connect(&p1, &p2, c::ConnectionType::Structural)
+            .unwrap();
+
+        let (obj, cascade) = proj.delete_object_subtree(&asm_id).unwrap();
+        assert_eq!(obj.id, asm_id);
+        assert_eq!(cascade.deleted_children.len(), 2);
+        assert_eq!(cascade.removed_containments.len(), 3); // site→A, A→P1, A→P2
+        assert_eq!(cascade.removed_connections.len(), 1);
+        assert!(proj.objects.get(&asm_id).is_none());
+        assert!(proj.objects.get(&p1).is_none());
+        assert!(proj.objects.get(&p2).is_none());
+        assert!(
+            proj.objects.get(&site_id).is_some(),
+            "outside parent survives"
+        );
+        assert!(proj.relations.connections().is_empty());
+
+        proj.restore_deleted(obj, &cascade);
+        assert!(proj.objects.get(&asm_id).is_some());
+        assert!(proj.objects.get(&p1).is_some());
+        assert!(proj.objects.get(&p2).is_some());
+        assert_eq!(
+            proj.relations.parent_of(&asm_id).unwrap().parent_id,
+            site_id
+        );
+        assert_eq!(proj.relations.parent_of(&p1).unwrap().parent_id, asm_id);
+        assert_eq!(proj.relations.children_of(&asm_id).len(), 2);
+        assert_eq!(proj.relations.connections().len(), 1);
+        assert_eq!(proj.stats().containment_count, 3);
+    }
+
+    #[test]
+    fn test_delete_subtree_rejects_anchored_level() {
+        let mut proj = Project::new("TestProject");
+        let storey = proj
+            .create_object(c::ObjectType::Floor, "Storey")
+            .id
+            .clone();
+        // Anchored from OUTSIDE the subtree: deleting the storey would leave a
+        // dangling datum reference, so it must be refused.
+        let outside = proj
+            .create_object(c::ObjectType::Wall, "W-outside")
+            .id
+            .clone();
+        proj.objects.get_mut(&outside).unwrap().level_id = Some(storey.clone());
+        assert!(proj.delete_object_subtree(&storey).is_err());
+        assert!(proj.objects.get(&storey).is_some());
+        assert!(proj.objects.get(&outside).is_some());
     }
 
     #[test]

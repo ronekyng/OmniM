@@ -1026,7 +1026,7 @@ message GenRule {
 | 1. Primitive | Plant, Mechanical | Tank, Pump, Valve, Gear | Maps type parameters directly to a single primitive (Body components) |
 | 2. LayerExtrusion | Building | Wall, Slab, Floor, Roof | Expands the surface boundary + layer structure into multiple Extrusions; the primary GenRule for **Surface** components |
 | 3. LinearComponent | Building, Civil, Plant | Beam, Column, Road, Bridge, Pipe, CableTray | Path + variable cross-section + external constraints; the GenRule for **Linear** components |
-| 4. Assembly | Mechanical, Plant | Equipment, Assemblies | Composes multiple primitives into one object (Body components) |
+| 4. Assembly | Mechanical, Plant | Equipment, Assemblies | Composes primitives into one merged object (legacy); **since 2026-10-30** also a container form: `/api/assemblies` creates an `Assembly` container with `Component`/`Part` children (see [ASSEMBLY](ASSEMBLY.md)) |
 | 5. BooleanSubtract | All | Openings, SNO | Performs boolean subtraction on existing geometry |
 
 ### 6.3 Domain GenRule Mapping
@@ -1202,7 +1202,7 @@ These sampling node types should be added to the `LinearComponentGen` input as a
 
 **Flowchart-style VariationRule (SAC pattern)**: The current `VariationRule` supports simple interpolation (constant/linear/smooth). Future enhancement should support Civil3D Subassembly Composer-style flowchart logic — `Sequence`, `Decision`, `Switch` nodes — enabling conditional geometry generation based on parameters, targets, and external conditions.
 
-> **Design Specification**: The TerrainModel, LogicalObject, BooleanSubtract Enhancement, Assembly Enhancement, and Constraint System (§6.8-§6.12) are design specifications. Their protobuf messages are defined in this document but may not yet be implemented in the codebase/proto files.
+> **Design Specification**: The TerrainModel, LogicalObject, BooleanSubtract Enhancement and Constraint System (§6.8-§6.12) are design specifications; their protobuf messages are defined in this document but may not yet be implemented in the codebase/proto files. **Assembly Enhancement is partially delivered** (2026-10-30): container object + parts via `CreateAssemblyOperation` (see [ASSEMBLY](ASSEMBLY.md)); kinematic joints and nested assemblies remain specification.
 
 ### 6.8 TerrainModel (TIN Surface)
 

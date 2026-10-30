@@ -111,6 +111,7 @@ describe the actual mutations. Surveyed from `proto/omcom.proto`:
 | **Import/Export** | `IMPORT_FILE`, `EXPORT_FILE`, `PARSE_TO_OMCOM` | — |
 | **Catalog (元件库)** | `DEFINE_COMPONENT`, `ADD_COMPONENT_PARAM`, `ADD_CONNECTOR`, `ADD_COMPONENT_FEATURE`*, `PUBLISH_COMPONENT`, `LIST_CATALOG`, `DELETE_COMPONENT_DEF` | `DefineComponentOperation`, `AddComponentParamOperation`, `AddConnectorOperation`, `PublishComponentOperation`, `DeleteComponentDefOperation` |
 | **Series (系列库)** | `CREATE_SERIES`, `ADD_SELECTOR`, `ADD_ANSWER`, `ADD_SPEC_COMPONENT`, `ADD_PARAM_CONSTRAINT`, `LIST_SERIES`, `DELETE_SERIES`, `LOAD_SERIES` | `CreateSeriesOperation`, `AddSelectorOperation`, `AddAnswerOperation`, `AddSpecComponentOperation`, `AddParamConstraintOperation`, `LoadSeriesOperation` |
+| **Assembly (2026-10-30)** | `ASSEMBLY_CREATE`, `DELETE_OBJECT_SUBTREE` | `CreateAssemblyOperation` (container + `AssemblyPart`: `ComponentPart` with catalog_ref / `PrimitivePart`) |
 | **Validation** | `VALIDATE` | — |
 
 \* = reserved in the schema and in the `Action` enum; the operation message is documented as

@@ -270,7 +270,31 @@ commissioning_acceptance 5、asset 6、operation_maintenance 7、production 8、
 `RecordStatus`：unspecified 0、draft 1、open 2、in_progress 3、blocked 4、completed 5、
 approved 6、rejected 7、closed 8。
 
-### 3.10 暂无对应操作的动作族
+### 3.11 装配容器操作（2026-10-30）
+
+`ASSEMBLY_CREATE`（130）携带 `CreateAssemblyOperation`：
+
+```json
+{
+  "name": "Pump skid",
+  "parent_id": "",
+  "skip_series_gate": true,
+  "parts": [
+    { "name": "base", "primitive": { "shape": "box", "p1": 2, "p2": 1, "p3": 0.2,
+      "position": { "x": 0, "y": 0, "z": 0 }, "rotation_z": 0 } },
+    { "name": "pump", "component": { "component_def_id": "<ComponentDef id>",
+      "params": { "length": 1200 }, "position": { "x": 0, "y": 0, "z": 0.3 },
+      "rotation_z": 0 } }
+  ]
+}
+```
+
+- 容器为 `ObjectType::ASSEMBLY`，自身无几何；子件成为普通子对象（带 `catalog_ref` 的 `Component` 或 `Part`）。
+- 创建是**一条** `Command::CreateBatch`（含实例化草图）：单步撤销。
+- `DELETE_OBJECT_SUBTREE`（131）整树删除容器（单步撤销）；`DELETE_OBJECT` 保持"子件提升"语义。
+- 契约：[ASSEMBLY](../specification/ASSEMBLY.zh-CN.md)。
+
+### 3.12 暂无对应操作的动作族
 
 若干动作码尚无 `Operation` 变体；它们由执行器层预留，或由其他服务处理：
 
@@ -338,6 +362,8 @@ approved 6、rejected 7、closed 8。
 | 107 | `EXTRUDE_SKETCH` | 草图 → 体 |
 | 108 | `REVOLVE_SKETCH` | 草图 → 体 |
 | 110 | `CREATE_COMPONENT` | 组件 |
+| 130 | `ASSEMBLY_CREATE` | 装配（2026-10-30） |
+| 131 | `DELETE_OBJECT_SUBTREE` | 装配（2026-10-30） |
 | 111 | `ADD_FEATURE` | 组件 |
 | 112 | `REMOVE_FEATURE` | 组件 |
 | 113 | `REBUILD_FEATURES` | 组件 |

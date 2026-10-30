@@ -122,7 +122,7 @@ omnim-renderer: removed 2026-10-27 (was depending on omnim-core + omnim-model on
 | `omnim-omcom` | ~3,650 | The command layer. `Validator::validate(&OmniCommand, &Project)` → list of errors; `Executor::execute(&OmniCommand, &mut Project)` → `ExecutionResult`, with a **full undo/redo stack and transaction grouping**. Every legitimate mutation of the project is an `OmniCommand`. |
 | `omnim-ifc` | ~1,590 | **Hand-written** STEP/IFC file parser (no IFC crate dependency), import and export, partially covering **IFC 2x3 and IFC 4**. Includes IFC geometry mapping. |
 | `omnim-amir` | ~2,300 | AI intent engine ("AMIR"): natural-language → intent → `OmniCommand` generation (`generator.rs`, ~1,018 LOC), prompt parsing, context building, **reverse generation** (describe an existing model in NL, `reverse.rs`), templates, feedback. LLM providers via reqwest HTTP: **OpenAI / Anthropic / Mock**. |
-| `omnim-server` | ~3,700 | Axum HTTP server. **79** deduplicated REST routes under `/api/*`, `AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + save path. Every mutating request builds an `OmniCommand` and goes through the Executor (wave 1, 2026-10-28); `mutation::persist` saves atomically. Persistence defaults **on** (`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`); the executor-path endpoints and five legacy handlers save, other handlers do not — see [WRITE_PATHS.md](WRITE_PATHS.md). Serves the built `web/` static directory. Binds `0.0.0.0:3000` by default (`OMNIM_HOST`/`OMNIM_PORT` overridable). **No WebSocket, no database.** |
+| `omnim-server` | ~3,700 | Axum HTTP server. **87** deduplicated REST routes under `/api/*`, `AppState` = `Arc<RwLock<Project>>` + `Arc<RwLock<Executor>>` + save path. Every mutating request builds an `OmniCommand` and goes through the Executor (wave 1, 2026-10-28); `mutation::persist` saves atomically. Persistence defaults **on** (`project.omnim`, escape hatch `OMNIM_EPHEMERAL=1`); the executor-path endpoints and five legacy handlers save, other handlers do not — see [WRITE_PATHS.md](WRITE_PATHS.md). Persists atomically via `mutation::persist`. Serves the built `web/` static directory. Binds `127.0.0.1:3000` by default (loopback; the API is unauthenticated, publish deliberately via `OMNIM_HOST`/`OMNIM_PORT`). **No WebSocket, no database.** |
 *`omnim-renderer` (a standalone native wgpu/winit viewer) was removed from the workspace on 2026-10-27 as dead weight — it was depended on by nothing; a native viewer would be re-proposed via RFC.*
 
 > Note: `omnim-core` provides the manifest types (shared enums, `Version`, etc.); the concrete `Project` and its
@@ -252,7 +252,9 @@ These limits constrain OmniM to a **local/desktop-class** deployment today.
   commands, so the AI path cannot bypass domain validation — an important structural safety property.
   This does **not** mean every REST route is validated: many handlers write `Project` directly (see
   [WRITE_PATHS.md](WRITE_PATHS.md)), so the ADR-0006 invariant is a target, not a present guarantee.
-- **CORS/egress:** default bind is `0.0.0.0:3000` (fine for a personal machine, exposes a LAN surface today);
+- **CORS/egress:** default bind is `127.0.0.1:3000` (safe default; the LAN surface only appears
+  if `OMNIM_HOST` is set deliberately — the API itself is still unauthenticated, so prefer
+  loopback);
   `omnim-amir` makes outbound HTTPS calls LLM providers via `reqwest`.
 
 ---

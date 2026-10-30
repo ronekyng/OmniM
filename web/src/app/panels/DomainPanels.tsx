@@ -199,7 +199,7 @@ function DomainPanelContent({ domain }: { domain: string }) {
       comp.params.forEach((p) => { params[p.name] = p.default_value; });
       await quickInstantiate({
         component_def_id: comp.id,
-        instance_name: comp.name + '-' + Date.now(),
+        instance_name: nextAutoName(comp.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), objectNames),
         params,
       });
       const store = useAppStore.getState();

@@ -138,7 +138,12 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/omcom", post(execute_omcom))
         .route("/api/mesh", get(get_mesh))
         .route("/api/export/ifc", get(export_ifc))
-        .route("/api/import/ifc", post(import_ifc))
+        // The 100 MB ceiling is an IFC-import need only; keeping it global
+        // turned every JSON endpoint into a 100 MB bomb (`UI-SEC-04`).
+        .route(
+            "/api/import/ifc",
+            post(import_ifc).layer(DefaultBodyLimit::max(100 * 1024 * 1024)),
+        )
         .route("/api/genrule", post(genrule_create))
         .route("/api/undo", post(undo))
         .route("/api/redo", post(redo))
@@ -231,7 +236,8 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/series/{id}/select", post(select_from_series))
         .route("/api/catalog/instantiate", post(instantiate_from_catalog))
         .route("/api/catalog/preview", post(preview_catalog_component))
-        .layer(DefaultBodyLimit::max(100 * 1024 * 1024)) // 100MB for IFC import
+        // 2026-10-30 assembly container (docs/specification/ASSEMBLY.md)
+        .route("/api/assemblies", post(create_assembly_handler))
         .fallback_service(ServeDir::new("web"))
         .with_state(state)
 }
@@ -378,7 +384,170 @@ fn resolve_project_path(root: &FsPath, input: &str) -> Result<PathBuf, String> {
     if !resolved.starts_with(&canonical_root) {
         return Err("path is outside the allowed project root".into());
     }
+    // Reborrow check because the final component may itself be a symlink that
+    // points outside the canonical root (`UI-SEC-03` hardening).
+    if joined.is_symlink() || joined.exists() {
+        match joined.canonicalize() {
+            Ok(canonical_file) => {
+                if !canonical_file.starts_with(&canonical_root) {
+                    return Err("path escapes the project root via symlink".into());
+                }
+            }
+            Err(e) => return Err(format!("path is not resolvable: {}", e)),
+        }
+    }
     Ok(resolved)
+}
+
+/// Roots that import/read endpoints may read from (`UI-SEC-01`/`UI-SEC-02`).
+/// Covers the workspace projects root, the per-user `.omnim` directory, the
+/// server working directory and any extra `OMNIM_IMPORT_ROOTS` entries
+/// (colon-separated). Everything else is rejected, closing the arbitrary
+/// file-read primitive that import endpoints otherwise form.
+fn import_roots(state: &AppState) -> Vec<PathBuf> {
+    let mut roots = vec![state.projects_root.clone()];
+    if let Some(home) = dirs::home_dir() {
+        roots.push(home.join(".omnim"));
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        roots.push(cwd);
+    }
+    if let Ok(extra) = std::env::var("OMNIM_IMPORT_ROOTS") {
+        for part in extra.split(':').filter(|s| !s.trim().is_empty()) {
+            roots.push(PathBuf::from(part.trim()));
+        }
+    }
+    roots
+}
+
+/// Resolve a data-file path against the allowed import roots, rejecting
+/// traversal and symlink escapes. The file need not exist, but the extension
+/// must match and the canonical parent must canonicalize inside a root.
+fn resolve_import_path(
+    state: &AppState,
+    input: &str,
+    required_ext: &str,
+) -> Result<PathBuf, String> {
+    resolve_path_in_roots(input, required_ext, &import_roots(state))
+}
+
+/// Pure form of `resolve_import_path` so unit tests can pass explicit roots.
+fn resolve_path_in_roots(
+    input: &str,
+    required_ext: &str,
+    roots: &[PathBuf],
+) -> Result<PathBuf, String> {
+    let trimmed = input.trim();
+    if trimmed.is_empty() {
+        return Err("path is required".into());
+    }
+    let candidate = FsPath::new(trimmed);
+    if candidate.extension().and_then(|e| e.to_str()) != Some(required_ext.trim_start_matches('.'))
+    {
+        return Err(format!("path must end with {}", required_ext));
+    }
+    let file_name = candidate
+        .file_name()
+        .ok_or_else(|| "path must name a file".to_string())?;
+    for root in roots {
+        // Unavailable roots are skipped, not fatal: some (e.g. home) may not
+        // exist in CI sandboxes.
+        let Ok(canonical_root) = root.canonicalize() else {
+            continue;
+        };
+        let joined = if candidate.is_absolute() {
+            candidate.to_path_buf()
+        } else {
+            root.join(candidate)
+        };
+        let Some(parent) = joined.parent() else {
+            continue;
+        };
+        let Ok(canonical_parent) = parent.canonicalize() else {
+            continue;
+        };
+        let resolved = canonical_parent.join(file_name);
+        if !resolved.starts_with(&canonical_root) {
+            continue;
+        }
+        // The final component may itself be a symlink pointing outside the
+        // root; require the canonicalized file (when it exists) to stay
+        // inside, and reject dangling ones.
+        if joined.is_symlink() || joined.exists() {
+            match joined.canonicalize() {
+                Ok(canonical_file) => {
+                    if !canonical_file.starts_with(&canonical_root) {
+                        continue;
+                    }
+                }
+                Err(_) => continue,
+            }
+        }
+        return Ok(resolved);
+    }
+    Err(
+        "path is outside the allowed import roots (projects root, ~/.omnim, server cwd; add extra roots via colon-separated OMNIM_IMPORT_ROOTS env)".into(),
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_root(tag: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "omnim-import-{}-{}",
+            tag,
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .subsec_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn accepts_file_under_allowed_root() {
+        let root = temp_root("ok");
+        std::fs::create_dir_all(root.join("sub")).unwrap();
+        let resolved = resolve_path_in_roots("sub/lib.omnimlib", ".omnimlib", &[root.clone()])
+            .expect("nested file inside root resolves");
+        assert!(resolved.starts_with(root.canonicalize().unwrap()));
+        assert_eq!(resolved.file_name().unwrap(), "lib.omnimlib");
+        // Absolute variants resolve the same way.
+        let abs = root.join("lib.omnimlib");
+        let via_abs =
+            resolve_path_in_roots(abs.to_string_lossy().as_ref(), ".omnimlib", &[root.clone()])
+                .expect("absolute file inside root resolves");
+        assert_eq!(via_abs.file_name().unwrap(), "lib.omnimlib");
+    }
+
+    #[test]
+    fn rejects_missing_ext_and_traversal() {
+        let root = temp_root("ext");
+        // Wrong extension is rejected even inside the root.
+        assert!(resolve_path_in_roots("/etc/passwd", ".omnimlib", &[root.clone()]).is_err());
+        // Traversal escapes the canonical root.
+        let resolved = resolve_path_in_roots("../escape.omnimlib", ".omnimlib", &[root.clone()]);
+        assert!(resolved.is_err(), "traversal must be rejected");
+    }
+
+    #[test]
+    fn rejects_symlink_escape() {
+        let root = temp_root("symlink");
+        let outside = temp_root("outside");
+        let target_outside = outside.join("secret.omnimlib");
+        std::fs::write(&target_outside, "kept outside").unwrap();
+        std::os::unix::fs::symlink(&target_outside, root.join("swap.omnimlib")).unwrap();
+        let resolved = resolve_path_in_roots("swap.omnimlib", ".omnimlib", &[root.clone()]);
+        assert!(
+            resolved.is_err(),
+            "symlink to inside-root path escapes containment"
+        );
+        let _ = root;
+        let _ = outside;
+    }
 }
 
 #[derive(Serialize)]
@@ -583,6 +752,27 @@ async fn get_tree(State(state): State<SharedState>) -> Json<Vec<TreeNode>> {
 }
 
 fn build_tree_node(project: &Project, obj: &omnim_model::OmniObject) -> TreeNode {
+    build_tree_node_visited(project, obj, &mut std::collections::HashSet::new())
+}
+
+/// Depth/cycle guard (audit 2026-10-30): a parent loop (`A.parent=B`,
+/// `B.parent=A`) in hand-edited data must not loop the JSON tree builder
+/// forever; each node renders once.
+fn build_tree_node_visited(
+    project: &Project,
+    obj: &omnim_model::OmniObject,
+    visited: &mut std::collections::HashSet<String>,
+) -> TreeNode {
+    if !visited.insert(obj.id.clone()) {
+        return TreeNode {
+            id: obj.id.clone(),
+            name: obj.name.clone(),
+            object_type: obj.object_type_name().to_string(),
+            ifc_class: obj.ifc_class.clone(),
+            has_geometry: obj.geometry.is_some(),
+            children: Vec::new(),
+        };
+    }
     TreeNode {
         id: obj.id.clone(),
         name: obj.name.clone(),
@@ -593,7 +783,7 @@ fn build_tree_node(project: &Project, obj: &omnim_model::OmniObject) -> TreeNode
             .objects
             .children_of(&obj.id)
             .into_iter()
-            .map(|child| build_tree_node(project, child))
+            .map(|child| build_tree_node_visited(project, child, visited))
             .collect(),
     }
 }
@@ -731,14 +921,25 @@ async fn create_object(
         .ok_or_else(|| ApiError::internal("created object vanished"))?
         .clone();
 
-    // Apply extra fields not supported by Omcom CreateObject protocol
+    // Apply extra fields not supported by Omcom CreateObject protocol.
+    // The direct write is still recorded as a ModifyObject command so the
+    // create+extras pair is fully undo/redo-able (audit 2026-10-30: no
+    // path may bypass the undo stack).
     if req.ifc_class.is_some() || req.tags.is_some() {
-        if let Some(obj) = p.objects.get_mut(&obj_id) {
-            if let Some(ifc_class) = &req.ifc_class {
-                obj.ifc_class = ifc_class.clone();
+        let before = p.objects.get(&obj_id).cloned();
+        if before.is_some() {
+            if let Some(obj) = p.objects.get_mut(&obj_id) {
+                if let Some(ifc_class) = &req.ifc_class {
+                    obj.ifc_class = ifc_class.clone();
+                }
+                if let Some(tags) = req.tags.clone() {
+                    obj.add_tags(tags);
+                }
             }
-            if let Some(tags) = req.tags.clone() {
-                obj.add_tags(tags);
+            if let Some(after) = p.objects.get(&obj_id).cloned() {
+                let before = before.unwrap();
+                let object_id = after.id.clone();
+                exe.push_modify_command(&object_id, &before, after.clone(), Vec::new());
             }
         }
     }
@@ -833,36 +1034,59 @@ async fn update_properties(
     Ok(())
 }
 
+#[derive(Deserialize)]
+struct DeleteQuery {
+    /// Assembly containers: delete the whole subtree (UI sends true). Defaults
+    /// to true for containers, false (promote children) otherwise.
+    #[serde(default)]
+    cascade_children: Option<bool>,
+}
+
 async fn delete_object(
     State(state): State<SharedState>,
     Path(id): Path<String>,
+    Query(query): Query<DeleteQuery>,
 ) -> Result<(), ApiError> {
     let mut p = state.project.write().await;
-    let mut exe = state.executor.write().await;
     if !p.objects.contains(&id) {
         return Err(ApiError::not_found(format!("object '{}' not found", id)));
     }
-    // P8-S2: deleting a storey that still anchors objects would leave
-    // dangling datum references — reject and ask the caller to detach them.
-    let referenced = p
+    let is_container = p
         .objects
-        .list()
-        .iter()
-        .filter(|o| {
-            o.id != id
-                && (o.level_id.as_deref() == Some(id.as_str())
-                    || o.bottom_level_id.as_deref() == Some(id.as_str())
-                    || o.top_level_id.as_deref() == Some(id.as_str()))
-        })
-        .count();
-    if referenced > 0 {
-        return Err(ApiError::bad_request(format!(
-            "object '{}' is a level referenced by {} object(s); detach them first",
-            id, referenced
-        )));
+        .get(&id)
+        .map(|o| o.object_type == c::ObjectType::Assembly as i32)
+        .unwrap_or(false);
+    let cascade = query.cascade_children.unwrap_or(is_container);
+    if !cascade {
+        // P8-S2: deleting a storey that still anchors objects would leave
+        // dangling datum references — reject and ask the caller to detach them.
+        let referenced = p
+            .objects
+            .list()
+            .iter()
+            .filter(|o| {
+                o.id != id
+                    && (o.level_id.as_deref() == Some(id.as_str())
+                        || o.bottom_level_id.as_deref() == Some(id.as_str())
+                        || o.top_level_id.as_deref() == Some(id.as_str()))
+            })
+            .count();
+        if referenced > 0 {
+            return Err(ApiError::bad_request(format!(
+                "object '{}' is a level referenced by {} object(s); detach them first",
+                id, referenced
+            )));
+        }
     }
-    let obj = p.objects.remove(&id).expect("presence checked above");
-    exe.record_delete(&obj);
+    let mut exe = state.executor.write().await;
+    // Assembly containers cascade the whole subtree (ASSEMBLY contract §3);
+    // everything else keeps the promote-children cascade.
+    let _obj = if cascade {
+        exe.record_delete_object_subtree(&mut p, &id)
+    } else {
+        exe.record_delete_object(&mut p, &id)
+    }
+    .map_err(ApiError::bad_request)?;
     let save_path = state.save_path.read().await.clone();
     mutation::persist(&save_path, &p);
     Ok(())
@@ -1835,11 +2059,53 @@ async fn execute_omcom(
     State(state): State<SharedState>,
     Json(instr): Json<omnim_core::OmniCommand>,
 ) -> Result<Json<omnim_omcom::ExecutionResult>, StatusCode> {
+    // AMIR undo/redo: the AI layer emits sentinel commands ("amir-undo" /
+    // "amir-redo", Validate placeholder, no operations). They used to fall
+    // through as no-ops that even cleared the redo stack (`fake-success`).
+    // Route them to the executor's real undo/redo instead.
+    if instr.id == "amir-undo" || instr.id == "amir-redo" {
+        let mut p = state.project.write().await;
+        let mut exe = state.executor.write().await;
+        let outcome = if instr.id == "amir-undo" {
+            exe.undo(&mut p)
+        } else {
+            exe.redo(&mut p)
+        };
+        let ok = outcome.is_ok();
+        let mut outcome_message = outcome.unwrap_or_else(|e| e);
+        let save_path = state.save_path.read().await.clone();
+        if ok && !mutation::persist(&save_path, &p) {
+            outcome_message.push_str(
+                "; persist_failed: auto-save could not write the project file (see server log) ",
+            );
+        }
+        return Ok(Json(omnim_omcom::ExecutionResult {
+            success: ok,
+            message: outcome_message,
+            created_ids: Vec::new(),
+            warnings: Vec::new(),
+        }));
+    }
+    // File-reading operations must obey the import roots just like the
+    // dedicated REST handlers, otherwise /api/omcom would remain the
+    // arbitrary-read primitive the path-constrained handlers just lost.
+    for op_op in instr.operations.iter().filter_map(|op| op.op.as_ref()) {
+        if let c::operation::Op::LoadSeries(ls) = op_op {
+            if let Err(e) = resolve_import_path(&state, &ls.path, ".omnimseries") {
+                eprintln!("omcom load_series: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    }
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
-    let result = exe.execute(&instr, &mut p);
+    let mut result = exe.execute(&instr, &mut p);
     let save_path = state.save_path.read().await.clone();
-    mutation::persist(&save_path, &p);
+    if result.success && !mutation::persist(&save_path, &p) {
+        result.message.push_str(
+            "; persist_failed: auto-save could not write the project file (see server log) ",
+        );
+    }
     Ok(Json(result))
 }
 
@@ -4006,10 +4272,14 @@ async fn get_mesh(State(state): State<SharedState>) -> Json<MeshResponse> {
     for obj in p.objects.list() {
         if let Some(geom) = &obj.geometry {
             if let Some(mut mesh) = omnim_model::geometry::geometry_to_mesh(geom) {
-                // Catalog component geometry is authored in millimetres; the
-                // viewport is in metres, so scale it down for display.
-                let is_catalog = obj.catalog_ref.is_some();
-                if is_catalog {
+                // Only classic catalog Component instances are authored in
+                // millimetres. Domain-typed objects (Wall/Slab/Roof/Floor from
+                // the PathSweep/genrule kernels) also carry a `catalog_ref` for
+                // traceability but their geometry is already in metres — scaling
+                // those by 0.001 made new walls/slabs invisible.
+                let is_mm_catalog_component = obj.catalog_ref.is_some()
+                    && obj.object_type == omnim_core::ObjectType::Component as i32;
+                if is_mm_catalog_component {
                     mesh = omnim_model::geometry::scale_mesh(&mesh, 0.001);
                 }
                 let mut positions = Vec::new();
@@ -5464,19 +5734,34 @@ struct ExportCatalogResponse {
     component_count: usize,
 }
 
+/// Directory for server-generated export artifacts. Under the per-user
+/// `.omnim` dir rather than `/tmp`, with a nanosecond suffix so concurrent
+/// exports cannot collide on or predict a well-known path (symlink swaps).
+fn export_artifacts_dir() -> Result<PathBuf, String> {
+    let base = dirs::home_dir()
+        .map(|p| p.join(".omnim").join("exports"))
+        .ok_or_else(|| "cannot resolve home directory".to_string())?;
+    std::fs::create_dir_all(&base).map_err(|e| format!("export directory unavailable: {}", e))?;
+    Ok(base)
+}
+
 async fn export_catalog_handler() -> Result<Json<ExportCatalogResponse>, (StatusCode, String)> {
     let lib = LIBRARY.read().unwrap();
     let lib = lib.as_ref().unwrap();
     let ts = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
-    let path = format!("/tmp/omnimlib-{}.omnimlib", ts);
-    lib.save_to_file(&path)
+        .unwrap();
+    let path = export_artifacts_dir().map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let path = path.join(format!(
+        "omnimlib-{}-{}.omnimlib",
+        ts.as_secs(),
+        ts.subsec_nanos()
+    ));
+    lib.save_to_file(&path.to_string_lossy())
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
     let count = lib.catalog.len();
     Ok(Json(ExportCatalogResponse {
-        path,
+        path: path.to_string_lossy().into_owned(),
         component_count: count,
     }))
 }
@@ -5493,9 +5778,14 @@ struct ImportCatalogResponse {
 }
 
 async fn import_catalog_handler(
+    State(state): State<SharedState>,
     Json(req): Json<ImportCatalogRequest>,
 ) -> Result<Json<ImportCatalogResponse>, (StatusCode, String)> {
-    let imported = omnim_model::Library::load_from_file(&req.path)
+    // UI-SEC-01: reads are confined to the import roots, so the handler cannot
+    // be used as an arbitrary file-read primitive.
+    let path = resolve_import_path(&state, &req.path, ".omnimlib")
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    let imported = omnim_model::Library::load_from_file(&path.to_string_lossy())
         .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
     let mut library = LIBRARY.write().unwrap();
     let library = library.as_mut().unwrap();
@@ -6037,20 +6327,22 @@ async fn save_series_handler(
     State(state): State<SharedState>,
 ) -> Result<Json<SaveSeriesResponse>, (StatusCode, String)> {
     let p = state.project.read().await;
-    let path = format!(
-        "/tmp/omnimseries-{}.omnimseries",
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-    );
+    let ts = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap();
+    let dir = export_artifacts_dir().map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
+    let path = dir.join(format!(
+        "omnimseries-{}-{}.omnimseries",
+        ts.as_secs(),
+        ts.subsec_nanos()
+    ));
     let store = p.series.clone();
     store
-        .save_to_file(&path)
+        .save_to_file(&path.to_string_lossy())
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
     let count = store.len();
     Ok(Json(SaveSeriesResponse {
-        path,
+        path: path.to_string_lossy().into_owned(),
         saved_count: count,
     }))
 }
@@ -6060,8 +6352,11 @@ async fn load_series_handler(
     State(state): State<SharedState>,
     Json(req): Json<LoadSeriesRequest>,
 ) -> Result<Json<LoadSeriesResponse>, (StatusCode, String)> {
+    // UI-SEC-02: the same import-root confinement as catalog imports.
+    let path = resolve_import_path(&state, &req.path, ".omnimseries")
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
     let op = mutation::op(c::operation::Op::LoadSeries(c::LoadSeriesOperation {
-        path: req.path.clone(),
+        path: path.to_string_lossy().into_owned(),
         source: req.source.clone(),
     }));
     let result = mutation::apply(&state, c::Action::LoadSeries, vec![op])
@@ -6093,6 +6388,11 @@ pub struct InstantiateRequest {
     /// Rotation around Z axis (radians), applied about the position point.
     #[serde(default)]
     pub rotation_z: f64,
+    /// Optional local rotation quaternion applied before the position
+    /// translation. Linear components (beam/pipe/duct) extrude along local +Z;
+    /// the UI uses this to lay the length axis along the picked segment.
+    #[serde(default)]
+    pub rotation: Option<c::Rotation>,
     #[serde(default)]
     pub skip_series_gate: bool,
 }
@@ -6117,6 +6417,7 @@ async fn instantiate_from_catalog(
             position: req.position.clone(),
             rotation_z: req.rotation_z,
             skip_series_gate: req.skip_series_gate,
+            rotation: req.rotation.clone(),
         },
     ));
     let result = mutation::apply(&state, c::Action::InstantiateCatalog, vec![op])
@@ -6147,6 +6448,141 @@ async fn instantiate_from_catalog(
             c::ObjectType::try_from(obj.object_type).unwrap_or(c::ObjectType::Unspecified)
         ),
         name: obj.name.clone(),
+    }))
+}
+
+#[derive(Deserialize)]
+pub struct AssemblyPartRequest {
+    pub name: String,
+    /// Catalog part: id of a ComponentDef. When absent, a primitive part is
+    /// created from `shape` + `p1..p3`.
+    #[serde(default)]
+    pub component_def_id: Option<String>,
+    #[serde(default)]
+    pub shape: Option<String>,
+    #[serde(default)]
+    pub params: HashMap<String, f64>,
+    /// Metres.
+    pub position: Option<c::Point3D>,
+    /// Radians about the position point.
+    #[serde(default)]
+    pub rotation_z: f64,
+    #[serde(default)]
+    pub p1: f64,
+    #[serde(default)]
+    pub p2: f64,
+    #[serde(default)]
+    pub p3: f64,
+}
+
+#[derive(Deserialize)]
+pub struct CreateAssemblyRequest {
+    pub name: String,
+    #[serde(default)]
+    pub parent_id: Option<String>,
+    #[serde(default)]
+    pub skip_series_gate: bool,
+    pub parts: Vec<AssemblyPartRequest>,
+}
+
+#[derive(Serialize)]
+pub struct AssemblyPartResponse {
+    pub id: String,
+    pub name: String,
+    /// "component" (catalog_ref) or "part" (primitive).
+    pub kind: String,
+}
+
+#[derive(Serialize)]
+pub struct CreateAssemblyResponse {
+    pub assembly_id: String,
+    pub name: String,
+    pub parts: Vec<AssemblyPartResponse>,
+    pub part_count: usize,
+}
+
+/// POST /api/assemblies — create an Assembly container with Component/Part
+/// children in one undoable transaction (docs/specification/ASSEMBLY.md).
+async fn create_assembly_handler(
+    State(state): State<SharedState>,
+    Json(req): Json<CreateAssemblyRequest>,
+) -> Result<Json<CreateAssemblyResponse>, (StatusCode, String)> {
+    if req.name.trim().is_empty() {
+        return Err((StatusCode::BAD_REQUEST, "assembly name is required".into()));
+    }
+    if req.parts.is_empty() || req.parts.len() > 64 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "assembly requires 1..=64 parts".into(),
+        ));
+    }
+    let parts: Vec<c::AssemblyPart> = req
+        .parts
+        .iter()
+        .map(|part| {
+            let source = match &part.component_def_id {
+                Some(def_id) => Some(c::assembly_part::Source::Component(c::ComponentPart {
+                    component_def_id: def_id.clone(),
+                    params: part.params.clone(),
+                    position: part.position.clone(),
+                    rotation_z: part.rotation_z,
+                })),
+                None => Some(c::assembly_part::Source::Primitive(c::PrimitivePart {
+                    shape: part.shape.clone().unwrap_or_default(),
+                    p1: part.p1,
+                    p2: part.p2,
+                    p3: part.p3,
+                    position: part.position.clone(),
+                    rotation_z: part.rotation_z,
+                })),
+            };
+            c::AssemblyPart {
+                name: part.name.clone(),
+                source,
+            }
+        })
+        .collect();
+    let op = mutation::op(c::operation::Op::CreateAssembly(
+        c::CreateAssemblyOperation {
+            name: req.name.clone(),
+            parent_id: req.parent_id.clone().unwrap_or_default(),
+            skip_series_gate: req.skip_series_gate,
+            parts,
+        },
+    ));
+    let result = mutation::apply(&state, c::Action::AssemblyCreate, vec![op])
+        .await
+        .map_err(|e| (e.status, e.message))?;
+    if !result.success {
+        return Err((StatusCode::BAD_REQUEST, result.message));
+    }
+    let created = result.created_ids;
+    let assembly_id = created.first().cloned().ok_or_else(|| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "assembly id missing".into(),
+        )
+    })?;
+    let p = state.project.read().await;
+    let parts = p
+        .objects
+        .children_of(&assembly_id)
+        .into_iter()
+        .map(|obj| AssemblyPartResponse {
+            id: obj.id.clone(),
+            name: obj.name.clone(),
+            kind: if obj.catalog_ref.is_some() {
+                "component".into()
+            } else {
+                "part".into()
+            },
+        })
+        .collect();
+    Ok(Json(CreateAssemblyResponse {
+        assembly_id,
+        name: req.name,
+        parts,
+        part_count: created.len().saturating_sub(1),
     }))
 }
 

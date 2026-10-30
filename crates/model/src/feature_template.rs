@@ -561,6 +561,25 @@ fn resolve_param(expr: &str, params: &HashMap<String, f64>) -> f64 {
         return val;
     }
 
+    // `+`/`-` bind loosest: split there first so `1+2*3` resolves as 1 + (2*3),
+    // not (1+2)*3. `rfind` keeps `-` (and `/`) left-associative: 1-2-3 = (1-2)-3.
+    if let Some(pos) = expr.find('+') {
+        let lhs = expr[..pos].trim();
+        let rhs = expr[pos + 1..].trim();
+        let lv = resolve_param(lhs, params);
+        let rv = resolve_param(rhs, params);
+        return lv + rv;
+    }
+    if let Some(pos) = expr.rfind('-') {
+        // Skip a leading minus (negative literal like "-5").
+        if pos > 0 {
+            let lhs = expr[..pos].trim();
+            let rhs = expr[pos + 1..].trim();
+            let lv = resolve_param(lhs, params);
+            let rv = resolve_param(rhs, params);
+            return lv - rv;
+        }
+    }
     // Try simple arithmetic: "1.5 * DN"
     if let Some(pos) = expr.find('*') {
         let lhs = expr[..pos].trim();
@@ -569,30 +588,13 @@ fn resolve_param(expr: &str, params: &HashMap<String, f64>) -> f64 {
         let rv = resolve_param(rhs, params);
         return lv * rv;
     }
-    if let Some(pos) = expr.find('/') {
+    if let Some(pos) = expr.rfind('/') {
         let lhs = expr[..pos].trim();
         let rhs = expr[pos + 1..].trim();
         let lv = resolve_param(lhs, params);
         let rv = resolve_param(rhs, params);
         if rv.abs() > 1e-12 {
             return lv / rv;
-        }
-    }
-    if let Some(pos) = expr.find('+') {
-        let lhs = expr[..pos].trim();
-        let rhs = expr[pos + 1..].trim();
-        let lv = resolve_param(lhs, params);
-        let rv = resolve_param(rhs, params);
-        return lv + rv;
-    }
-    if let Some(pos) = expr.find('-') {
-        // Check for negative numbers
-        if pos > 0 {
-            let lhs = expr[..pos].trim();
-            let rhs = expr[pos + 1..].trim();
-            let lv = resolve_param(lhs, params);
-            let rv = resolve_param(rhs, params);
-            return lv - rv;
         }
     }
 
@@ -631,6 +633,23 @@ mod tests {
         let p = HashMap::new();
         let v = resolve_param("360", &p);
         assert!((v - 360.0).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_resolve_param_operator_precedence() {
+        let mut p = HashMap::new();
+        p.insert("DN".into(), 100.0);
+        // * binds tighter than +/-: 1+2*3 = 7, not 9.
+        assert!((resolve_param("1+2*3", &p) - 7.0).abs() < 1e-10);
+        // No operator split may shadow a product on the left: 2*3-1 = 5.
+        assert!((resolve_param("2*3-1", &p) - 5.0).abs() < 1e-10);
+        // - and / are left-associative: 10-2-3 = 5, 12/3/2 = 2.
+        assert!((resolve_param("10-2-3", &p) - 5.0).abs() < 1e-10);
+        assert!((resolve_param("12/3/2", &p) - 2.0).abs() < 1e-10);
+        // Mixed: 12/2+DN-50 = 6 + 100 - 50 = 56.
+        assert!((resolve_param("12/2+DN-50", &p) - 56.0).abs() < 1e-10);
+        // Plain negative literal still works.
+        assert!((resolve_param("-5", &p) - (-5.0)).abs() < 1e-10);
     }
 
     #[test]

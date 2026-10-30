@@ -113,7 +113,7 @@ Observations:
 
 | Item | State |
 |---|---|
-| Dev server | `vite --host 0.0.0.0 --port 5173` |
+| Dev server | `vite --port 5173` |
 | Build | `vite build` → `web/dist` |
 | Type check | `tsc --noEmit` passes |
 | Unit tests | Vitest, 5 files, 79 tests |

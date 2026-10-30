@@ -120,19 +120,31 @@ pub fn apply_locked(
 ) -> ExecutionResult {
     let result = exe.execute(&envelope(action, ops), project);
     if result.success {
-        persist(save_path, project);
+        let mut result = result;
+        if !persist(save_path, project) {
+            // First-wave audit item: a failed auto-save must be visible in
+            // the response, not only in the server log — the mutation exists,
+            // the next crash would lose it and the caller deserves to know.
+            result.message.push_str(
+                "; persist_failed: auto-save could not write the project file (see server log) ",
+            );
+        }
+        return result;
     }
     result
 }
 
 /// Persist the project if a save path is configured. Failures are logged and
-/// non-fatal (see [`apply`]).
-pub fn persist(save_path: &Option<String>, project: &Project) {
+/// non-fatal (see [`apply`]); the boolean return lets callers surface a
+/// `persist_failed` marker on the response.
+pub fn persist(save_path: &Option<String>, project: &Project) -> bool {
     if let Some(path) = save_path {
         if let Err(e) = project.save(path) {
             eprintln!("Auto-save failed: {}", e);
+            return false;
         }
     }
+    true
 }
 
 /// External id of the first object created by an [`apply`] call, if any.

@@ -113,7 +113,7 @@ web/src/
 
 | 项 | 状态 |
 |---|---|
-| 开发服务器 | `vite --host 0.0.0.0 --port 5173` |
+| 开发服务器 | `vite --port 5173` |
 | 构建 | `vite build` → `web/dist` |
 | 类型检查 | `tsc --noEmit` 通过 |
 | 单元测试 | Vitest，5 个文件，79 个测试 |

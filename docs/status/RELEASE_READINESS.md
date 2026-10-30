@@ -1,9 +1,9 @@
 ---
 title: "OmniM Frontend Release Readiness"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-30
 applies_to: "web/"
-evidence: "gate status assessed against REQUIREMENTS_REGISTER and FRONTEND_MATURITY on 2026-10-29"
+evidence: "gate status assessed against REQUIREMENTS_REGISTER and FRONTEND_MATURITY on 2026-10-30; includes the modeler UI/UX re-audit (G1 experience tier) scope note"
 ---
 # OmniM Frontend Release Readiness
 
@@ -79,6 +79,8 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | UI-DAT-06 Unsaved interception | 🔀 | `beforeunload` while dirty/failed; in-app navigation guard pending |
 
 **G1 verdict:** 📅 **not ready.** 3 of 25 complete (`UI-INT-02`, `UI-INT-09`, `UI-FBK-05`), 20 partial, 2 absent (`UI-DS-02`, `UI-FBK-02`).
+
+> **Acceptance record (2026-10-30, scope note).** The modeler UI/UX re-audit ([MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)) formally releases the **G1-tier UI/UX dimension**: both P0-UX findings (false save alarm, unit trap) are closed. This does not change the per-requirement gate status above — the 25 rows still follow `REQUIREMENTS_REGISTER` verification evidence; an experience acceptance does not upgrade a gate.
 
 ## 5. G2 Beta Readiness
 

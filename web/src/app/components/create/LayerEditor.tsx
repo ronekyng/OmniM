@@ -189,7 +189,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                 </div>
 
                 <div className="layer-card-field">
-                  <span className="layer-field-label">厚度</span>
+                  <span className="layer-field-label">厚度 (mm)</span>
                   <input
                     type="range"
                     className="layer-thickness-slider"

@@ -27,6 +27,21 @@ pub struct IfcDocument {
     project_name: String,
 }
 
+/// Index of the `;` that ends the next statement: apostrophes toggle a
+/// string-literal state (IFC escapes a literal apostrophe as `''`, where
+/// two toggles return to the same state, so a plain toggle scan works).
+fn find_statement_end(s: &str) -> Option<usize> {
+    let mut in_string = false;
+    for (idx, ch) in s.char_indices() {
+        if ch == '\'' {
+            in_string = !in_string;
+        } else if ch == ';' && !in_string {
+            return Some(idx);
+        }
+    }
+    None
+}
+
 impl IfcDocument {
     pub fn parse(content: &str) -> Result<Self, String> {
         let mut entities = HashMap::new();
@@ -36,10 +51,12 @@ impl IfcDocument {
         let data_start = content.find("DATA;").ok_or("IFC: no DATA section")?;
         let data_section = &content[data_start + 5..];
 
-        // Parse each line
+        // Parse each line — `;` inside a string literal does not terminate an
+        // entity (audit 2026-10-30: names containing ';' used to truncate the
+        // entity and silently drop it), so the scan is a tiny state machine.
         let mut remaining = data_section;
-        while let Some(line_end) = remaining.find(';') {
-            let line = &remaining[..line_end].trim();
+        while let Some(line_end) = find_statement_end(remaining) {
+            let line = remaining[..line_end].trim();
             remaining = &remaining[line_end + 1..];
 
             if line.starts_with("ENDSEC") || line.starts_with("END-ISO") {
@@ -151,19 +168,24 @@ fn tokenize(s: &str) -> Vec<String> {
                 i += 1;
             }
             '\'' => {
-                // String literal
+                // String literal. IFC escapes a literal apostrophe as '' —
+                // the scan must treat doubled apostrophes as escaped content,
+                // not as the closing quote (names cut off at `''with''`).
                 i += 1;
                 let mut s = String::new();
-                while i < chars.len() && chars[i] != '\'' {
-                    if chars[i] == '\'' && i + 1 < chars.len() && chars[i + 1] == '\'' {
-                        s.push('\'');
-                        i += 2;
-                    } else {
-                        s.push(chars[i]);
-                        i += 1;
+                while i < chars.len() {
+                    if chars[i] == '\'' {
+                        if i + 1 < chars.len() && chars[i + 1] == '\'' {
+                            s.push('\'');
+                            i += 2;
+                            continue;
+                        }
+                        i += 1; // closing quote
+                        break;
                     }
+                    s.push(chars[i]);
+                    i += 1;
                 }
-                i += 1; // skip closing '
                 tokens.push(format!("'{}'", s));
             }
             '.' => {
@@ -224,8 +246,20 @@ fn tokenize(s: &str) -> Vec<String> {
 }
 
 fn parse_value(tokens: &[String], pos: usize) -> (IfcValue, usize) {
+    parse_value_at(tokens, pos, 0)
+}
+
+/// Recursion cap for `parse_value`: a hand-crafted file with pathological
+/// nesting (or a self-referential IFCBOOLEANRESULT loop) must not blow the
+/// parser stack — depth beyond the cap degrades to `Null`.
+const MAX_VALUE_DEPTH: usize = 64;
+
+fn parse_value_at(tokens: &[String], pos: usize, depth: usize) -> (IfcValue, usize) {
     if pos >= tokens.len() {
         return (IfcValue::Null, pos);
+    }
+    if depth > MAX_VALUE_DEPTH {
+        return (IfcValue::Null, pos + 1);
     }
 
     let token = &tokens[pos];
@@ -250,7 +284,7 @@ fn parse_value(tokens: &[String], pos: usize) -> (IfcValue, usize) {
         let mut list = Vec::new();
         let mut p = pos + 1;
         while p < tokens.len() && tokens[p] != ")" {
-            let (val, next) = parse_value(tokens, p);
+            let (val, next) = parse_value_at(tokens, p, depth + 1);
             list.push(val);
             p = next;
             if p < tokens.len() && tokens[p] == "," {

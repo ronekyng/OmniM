@@ -31,7 +31,7 @@ evidence: "commands and paths verified in the repo 2026-10-27"
 
 ### 1. 构建并启动服务器
 
-服务器二进制为 **`omnim`**（crate 名 `omnim-server`，位于 `crates/server`）。它启动 Axum HTTP 服务，监听 `0.0.0.0:3000`。
+服务器二进制为 **`omnim`**（crate 名 `omnim-server`，位于 `crates/server`）。它启动 Axum HTTP 服务，默认监听 `127.0.0.1:3000`（回环地址——API 无认证；如需对外提供请显式设置 `OMNIM_HOST=0.0.0.0` 或其它地址）。
 
 ```bash
 cargo run -p omnim-server --bin omnim

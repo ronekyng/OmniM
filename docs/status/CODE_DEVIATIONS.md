@@ -187,7 +187,7 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 
 ## 7. Frontend UI Deviations — **Known** (2026-10-29)
 
-> **P9 update (2026-10-29).** 7.1, 7.2, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, a project home with new/open/recent/sample exists, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; 7.4 (panel states) and 7.8–7.11 remain open.
+> **P9 update (2026-10-29).** 7.1, 7.2, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, a project home with new/open/recent/sample exists, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; **P10 addendum (2026-10-30)**: 7.12/7.13 were filed from the UI/UX acceptance audit and closed the same day (single save-semantics story, same-screen unit labels); 7.4 (panel states) and 7.8–7.11 remain open.
 
 
 Audited against `web/src` on 2026-10-29. These are the gaps between the UI contracts in
@@ -208,6 +208,8 @@ Requirement IDs trace to [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTE
 | 7.10 | Trees and tables expose roles and ARIA state | 1 `aria-*` attribute, 0 `role` attributes | source scan | UI-A11Y-04 |
 
 | 7.11 | `Delete` is ignored during a picking session | `Delete` deletes the current selection; only `Backspace` is special-cased | `web/src/app/App.tsx:91-95` | UI-INT-02 |
+| 7.12 | Single save-semantics story (auto-persist vs "unsaved") | **Resolved (2026-10-30, UI/UX audit F1)**: the server persists every mutation by default while the explicit-save state machine showed "Unsaved changes" (false alarm). Dirty copy is now "Auto-saved server-side · Ctrl+S to snapshot", TitleBar aria aligned, and FRONTEND_MATURITY §5 reframed as snapshot tiering | `web/src/shared/saveState.ts`, `TitleBar.tsx`, `FRONTEND_MATURITY.md` | UI-DAT-02 |
+| 7.13 | Same-screen unit readability (mm/m dual units) | **Resolved (2026-10-30, UI/UX audit F4/D1/D2)**: Assembly panel dims/offsets labelled (m) with a mm/m note; LayerEditor thickness labelled (mm); catalog params already suffix units; a full-span toggle replaces the 0/0 grid incantation | `AssemblyPanel.tsx`, `LayerEditor.tsx`, `GridPanel.tsx` | UI-INT-09 |
 
 **Not deviations, for the record:** the picking state machine, viewport rendering quality
 (tone mapping, soft shadows, sectioning, measurement), and the catalog/series managers are
