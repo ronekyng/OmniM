@@ -86,19 +86,21 @@ npm run test:watch    # or: npx vitest
 
 Existing tests live in `web/src/__tests__/` (`stateMachine.test.ts` covers the creation-tool / interaction state machine used by the viewer). Vitest matches files like `__tests__/*.test.ts` by default.
 
-**Verification layers** (target structure; only the unit layer exists today):
+**Verification layers** (the unit and E2E layers exist today; the rest are planned):
 
 | Layer | Location | Command | Gate | Status |
 |---|---|---|---|---|
-| Unit | `web/src/__tests__/` | `npm test` | G1 | ✅ 5 files / 79 tests |
+| Unit | `web/src/__tests__/` | `npm test` | G1 | ✅ 12 files / 107 tests |
 | Component | co-located `*.test.tsx` | `npm test` | G2 | 📅 |
-| E2E | `web/tests/e2e/` | `npm run e2e` | G1 | 📅 |
+| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 1 spec: project home → workspace → theme → dock tabs → storey |
 | Visual regression | `web/tests/visual/` | `npm run visual` | G2 | 📅 |
 | Accessibility | `web/tests/a11y/` | `npm run a11y` | G2 | 📅 |
 | Performance | `web/tests/perf/` | `npm run perf` | G2 | 📅 |
 | Doc structure | `docs/` | `python3 scripts/check_docs.py` (links, fences, headings, front matter, bilingual parity) | G0 | ✅ |
 | UI contracts | `docs/`, `web/src/` | `python3 scripts/check_ui_contracts.py` | G0 | ✅ |
 | Keyboard map | `docs/reference/` | `python3 scripts/gen_keymap.py --check` | G2 | ✅ (consistency only) |
+
+E2E starts both the Rust server and the Vite dev server (Playwright `webServer`), writes projects under `/tmp/opencode/omnim-e2e`, and requires `npx playwright install --with-deps chromium` once. CI runs it in a dedicated job.
 
 The required paths and budgets are defined in [DEFINITION_OF_DONE](../process/DEFINITION_OF_DONE.md) §5 and [PERFORMANCE](../specification/ui/PERFORMANCE.md) §8. A test that cannot fail for the stated reason is not evidence.
 

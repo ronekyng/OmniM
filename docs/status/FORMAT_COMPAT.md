@@ -79,7 +79,7 @@ Phase 11 remains the owning roadmap phase ([ROADMAP.md](ROADMAP.md)). Suggested 
 2. **glTF/GLB export** — cheap win for three.js-based visualization; meshes already exist server-side.
 3. **DXF import** (basic 2D entities via an open-source crate) — feeds sketch workflows.
 4. **STEP AP242** — requires a proper CAD kernel boundary; evaluate existing crates before committing.
-5. **GIS (GeoJSON first, then Shapefile)** — deferred until Phase 8 civil-domain work.
+5. **GIS (GeoJSON first, then Shapefile)** — deferred until batch 8 civil-domain work.
 6. OBJ/FBX/STL — only on demand; not currently scheduled.
 
 ## 4. Proprietary BIM formats

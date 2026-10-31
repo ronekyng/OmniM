@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Release Readiness"
 status: current
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 applies_to: "web/"
 evidence: "gate status assessed against REQUIREMENTS_REGISTER and FRONTEND_MATURITY on 2026-10-30; includes the modeler UI/UX re-audit (G1 experience tier) scope note"
 ---
@@ -53,32 +53,32 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | Requirement | Status | Evidence / blocker |
 |---|---|---|
 | UI-SHL-01 Three application levels | 🔀 | `/projects` + workspace + editors; route-matrix e2e pending |
-| UI-SHL-02 Seven fixed regions | 🔀 | Regions exist but not as a stable seven-zone shell |
-| UI-SHL-03 Properties docked right | 🔀 | Docked by default; width persisted (`layout.ts`); no resize e2e |
-| UI-SHL-04 Left dock tabs | 🔀 | Left sidebar exists; no tab groups |
+| UI-SHL-02 Seven fixed regions | ✅ | `web/e2e/shell.spec.ts` asserts left/title/toolbar/viewport/right/bottom/status |
+| UI-SHL-03 Properties docked right | ✅ | Docked 260–600 px; `layout.spec.ts` resize + reload persistence |
+| UI-SHL-04 Left dock tabs | ✅ | Objects / Grids / Catalog tabs; `layout.spec.ts` asserts 240–400 px |
 | UI-SHL-05 Bottom dock collapsed and tabbed | 🔀 | Console is always mounted, no tabs |
-| UI-SHL-06 Layout persistence and reset | 🔀 | `omnim.layout.v1` (right width/mode) + Reset layout; reload e2e pending |
+| UI-SHL-06 Layout persistence and reset | ✅ | `layout.spec.ts`: resize → reload restores → Reset layout back to 340 px |
 | UI-SHL-07 Contextual ribbon | 🔀 | Flat toolbar, not discipline-scoped |
-| UI-SHL-08 Status bar readouts | 🔀 | Coordinates, selection, units, save state; FPS behind developer mode |
+| UI-SHL-08 Status bar readouts | ✅ | `web/e2e/shell.spec.ts` asserts coordinates/selection/units/save; FPS under developer mode |
 | UI-SHL-10 Title and breadcrumb | 🔀 | Workspace title/breadcrumb + document title; editor breadcrumbs pending |
-| UI-DS-02 Dark/light switch | 📅 | No theme provider or `data-theme` |
+| UI-DS-02 Dark/light switch | 🔀 | `data-theme` + `localStorage` persistence + OS default; title-bar toggle; semantic token migration (UI-DS-04) and screenshots pending |
 | UI-INT-01 Five selection gestures | 🔀 | Click / Ctrl-click / box select exist; Esc clears tool first |
 | UI-INT-02 Picking state machine | ✅ | `stateMachine.test.ts` |
-| UI-INT-04 No shortcuts while typing | 🔀 | `App.tsx` guards input/textarea; not yet registry-wide |
+| UI-INT-04 No shortcuts while typing | ✅ | `web/e2e/shell.spec.ts` presses Delete in the name input and the object survives; registry unification is UI-INT-03 |
 | UI-INT-09 Auto-naming | ✅ | `naming.ts` + 4 unit tests; wired to create/quick-create/child/duplicate |
-| UI-FBK-01 Panel three states | 🔀 | Loading mostly; empty/error partial |
-| UI-FBK-02 Skeleton timing | 📅 | No skeletons |
+| UI-FBK-01 Panel three states | 🔀 | Properties and catalog panels now have a loading skeleton, error + retry and an empty state; other panels pending |
+| UI-FBK-02 Skeleton timing | 🔀 | 400 ms threshold is unit-tested (`delayedVisibility.test.ts`); wired into properties/catalog panels, per-panel coverage pending |
 | UI-FBK-05 No native dialogs | ✅ | `ConfirmDialog` + `notify`; `check_ui_contracts` dialogs = 0 |
 | UI-FBK-06 Error boundaries | 🔀 | Application, workspace and every panel slot; throwing-panel test pending |
 | UI-FBK-07 Typed toasts, errors persist | 🔀 | Typed toasts exist; errors auto-dismiss |
 | UI-FBK-08 Dismissible, non-blocking feedback | 🔀 | Toasts are dismissible; placement overlaps chrome |
 | UI-FBK-09 Empty states with action | 🔀 | Some panels only |
-| UI-DAT-01 Project home | 🔀 | `/projects` with new/open/recent/sample; server list/new/open + allowed-root; first-run e2e pending |
+| UI-DAT-01 Project home | 🔀 | `/projects` with new/open/recent/sample; server list/new/open + allowed-root; E2E covers sample → workspace |
 | UI-DAT-02 Explicit save | 🔀 | Save button + Ctrl/Cmd+S + Save as… (`/api/project/save-as`); round-trip e2e pending |
 | UI-DAT-03 Dirty state | 🔀 | `saveState.ts` + title/status indicators; state e2e pending |
 | UI-DAT-06 Unsaved interception | 🔀 | `beforeunload` while dirty/failed; in-app navigation guard pending |
 
-**G1 verdict:** 📅 **not ready.** 3 of 25 complete (`UI-INT-02`, `UI-INT-09`, `UI-FBK-05`), 20 partial, 2 absent (`UI-DS-02`, `UI-FBK-02`).
+**G1 verdict:** 📅 **not ready.** 9 of 25 complete (`UI-SHL-02/03/04/06/08`, `UI-INT-02/04/09`, `UI-FBK-05`), 16 partial, 0 absent.
 
 > **Acceptance record (2026-10-30, scope note).** The modeler UI/UX re-audit ([MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)) formally releases the **G1-tier UI/UX dimension**: both P0-UX findings (false save alarm, unit trap) are closed. This does not change the per-requirement gate status above — the 25 rows still follow `REQUIREMENTS_REGISTER` verification evidence; an experience acceptance does not upgrade a gate.
 

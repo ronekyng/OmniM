@@ -62,6 +62,18 @@ export type UpdatePropertiesRequest = {
   properties?: Record<string, string>;
 };
 
+/** Fields accepted by `PUT /api/objects/{id}` (datum-aware update). */
+export type UpdateObjectRequest = {
+  name?: string;
+  description?: string;
+  ifc_class?: string;
+  tags?: string[];
+  elevation?: number;
+  level_id?: string;
+  bottom_level_id?: string;
+  top_level_id?: string;
+};
+
 /** Grid datum line (轴网), P8-S1/S3. `axis` is the direction the line runs. */
 export type GridLine = {
   id: string;

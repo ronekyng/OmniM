@@ -43,9 +43,9 @@ At the core of OmniM are three layers:
 
 ## Project Status
 
-&gt; **Current Stage: Phase 8 — Domain Extensions**
+&gt; **Current status: frontend productization (batch 7b) is the active main line; kernels 1–6 are delivered and domain extensions (batch 8) are partially delivered.**
 &gt;
-&gt; OmniM is in active development. Phases 1–7 are delivered, with **Phase 1 partial** (the typed `OmniCommand` schema + executor exist; the nom-based Omcom text DSL does not). Phase 8 (domain extensions) is in progress; Phase 9 (AMIR) has been partially delivered ahead of schedule. See [status/ROADMAP.md](docs/status/ROADMAP.md) and [status/CHANGELOG.md](docs/status/CHANGELOG.md). The server currently exposes **79** deduplicated REST routes; **no WebSocket and no database**. Mutations persist by default to `project.omnim` (or `$OMNIM_PROJECT`); set `OMNIM_EPHEMERAL=1` to run fully in memory. Undo/redo covers every mutating endpoint ([WRITE_PATHS.md](docs/architecture/WRITE_PATHS.md)).
+&gt; OmniM is in active development. Batch numbers are stable labels, not calendar order; the [roadmap](docs/status/ROADMAP.md) is the single source of truth for status, gates and dependencies, and historical delivery records live in the [changelog](docs/status/CHANGELOG.md). The kernel's only undelivered item is the nom-based Omcom text DSL (RFC-0001 draft). The server currently exposes **87** deduplicated REST routes; **no WebSocket and no database**. Mutations persist by default to `project.omnim` (or `$OMNIM_PROJECT`); set `OMNIM_EPHEMERAL=1` to run fully in memory. Undo/redo covers every mutating endpoint ([WRITE_PATHS.md](docs/architecture/WRITE_PATHS.md)).
 
 ---
 
@@ -257,18 +257,12 @@ See the detailed [Roadmap document](docs/status/ROADMAP.md) for the complete pha
 
 ### Current Status
 
-- **Phase 1**: Core Data Model & Omcom DSL — 🔀 Partial (typed commands + executor; text DSL not implemented)
-- **Phase 2**: Constraint Solver & Sketch System — ✅ Complete
-- **Phase 3**: Feature Engine & BRep Kernel — ✅ Complete
-- **Phase 4**: Component Catalog & Series Library — ✅ Complete
-- **Phase 5**: Catalog Component Modeling — ✅ Complete
-- **Phase 6**: GenRule Refactoring & Default Templates — ✅ Complete
-- **Phase 7**: User Interface — ✅ Complete (one noted gap)
-- **Phase 8**: Domain Extensions — 🔄 In Progress
-- **Phase 9**: AMIR AI Compilation — 🔄 Partial (delivered early; gaps remain)
-- **Phase 10**: Multi-User / Cloud — 📅 Planned
-- **Phase 11**: IFC/STEP Format Compatibility — 🔀 Partial
-- **Phase 12**: Analysis & Ecosystem — 📅 Planned
+- **Kernel & geometry (batches 1–6)**: ✅ delivered; the only gap is the nom-based Omcom text DSL ([RFC-0001](docs/RFC/README.md) draft).
+- **Workspace prototype (batch 7)**: ✅ main flows work; this is not a product-grade UI.
+- **Frontend productization (batch 7b)**: 🔄 the active main line; G1 not yet passed.
+- **Domain extensions (batch 8)**: 🔄 partially delivered; the domain-frontend item is blocked on 7b G2.
+- **AI compilation / format interoperability**: 9 🔀, 11 🔀.
+- **Cloud & collaboration / analysis & ecosystem**: 10 🔀 (REST + file subset only), 12 📅.
 
 [Read full Roadmap →](docs/status/ROADMAP.md)
 

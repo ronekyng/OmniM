@@ -856,6 +856,19 @@ async fn create_object(
     let mut p = state.project.write().await;
     let mut exe = state.executor.write().await;
 
+    let object_type = parse_type(&req.object_type);
+    // Datum/container types are pure hierarchy nodes: a storey must never
+    // carry a primitive box. Clients used to send one because `storey` fell
+    // through the primitive branch, which made levels render as 5×0.3×3 slabs.
+    let geometry = if matches!(
+        object_type,
+        c::ObjectType::BuildingStorey | c::ObjectType::Building | c::ObjectType::Site
+    ) {
+        None
+    } else {
+        req.geometry.clone()
+    };
+
     let parent_id = req.parent_id.clone().unwrap_or_default();
     let instr = c::OmniCommand {
         version: "1.0".into(),
@@ -871,10 +884,10 @@ async fn create_object(
         target: None,
         operations: vec![c::Operation {
             op: Some(c::operation::Op::CreateObject(c::CreateObjectOperation {
-                r#type: parse_type(&req.object_type) as i32,
+                r#type: object_type as i32,
                 name: req.name.clone(),
                 description: req.description.clone().unwrap_or_default(),
-                geometry: req.geometry.clone(),
+                geometry: geometry.clone(),
                 properties: vec![],
                 parent_id,
                 elevation: req.elevation,
@@ -2479,6 +2492,86 @@ fn str_prop(v: &str) -> c::PropertyValue {
     }
 }
 
+fn prop_string(obj: &omnim_model::OmniObject, name: &str) -> Option<String> {
+    match obj.get_property(name)?.value.as_ref()?.value_type.as_ref()? {
+        c::property_value::ValueType::StringValue(value) => Some(value.clone()),
+        _ => None,
+    }
+}
+
+fn prop_f64(obj: &omnim_model::OmniObject, name: &str) -> Option<f64> {
+    match obj.get_property(name)?.value.as_ref()?.value_type.as_ref()? {
+        c::property_value::ValueType::DoubleValue(value) => Some(*value),
+        c::property_value::ValueType::IntValue(value) => Some(*value as f64),
+        c::property_value::ValueType::StringValue(value) => value.parse().ok(),
+        _ => None,
+    }
+}
+
+/// Build a hosted door/window leaf in the wall's own frame.
+///
+/// New walls record `path_points` (world metres) when they are created, so the
+/// panel is placed at the exact distance along the wall and rotated with it.
+/// Legacy walls created before that metadata existed fall back to their
+/// bounding box: longest horizontal axis as the wall run, shortest as the
+/// thickness. That fallback is approximate by construction.
+fn build_hosted_fill(
+    wall: &omnim_model::OmniObject,
+    opening_width: f64,
+    opening_height: f64,
+    position_x: f64,
+    position_z: f64,
+) -> c::MeshGeometry {
+    use omnim_model::gen_rule::door;
+
+    let path = prop_string(wall, "path_points")
+        .and_then(|raw| serde_json::from_str::<Vec<[f64; 3]>>(&raw).ok());
+
+    let bbox = wall.geometry.as_ref().and_then(|g| g.bbox.as_ref());
+    let min = bbox.and_then(|b| b.min.as_ref()).map(|p| [p.x, p.y, p.z]);
+    let max = bbox.and_then(|b| b.max.as_ref()).map(|p| [p.x, p.y, p.z]);
+
+    let bbox_size = match (min, max) {
+        (Some(a), Some(b)) => Some([(b[0] - a[0]).abs(), (b[1] - a[1]).abs(), (b[2] - a[2]).abs()]),
+        _ => None,
+    };
+
+    let thickness = prop_f64(wall, "wall_thickness")
+        .or_else(|| {
+            prop_f64(wall, "core_thickness").map(|core| {
+                core + 2.0
+                    * prop_f64(wall, "finish_thickness").unwrap_or(0.0)
+            })
+        })
+        .or_else(|| bbox_size.map(|s| s[0].min(s[1])))
+        .unwrap_or(0.2)
+        .clamp(0.06, 0.6);
+
+    let (base, direction) = path
+        .as_deref()
+        .and_then(|points| door::frame_at_path(points, position_x))
+        .or_else(|| {
+            // Legacy fallback: assume the wall runs along the longer horizontal
+            // bbox axis and is centred on the shorter one.
+            let (a, b) = (min?, max?);
+            let size = bbox_size?;
+            let along_x = size[0] >= size[1];
+            let run = if along_x { size[0] } else { size[1] }.max(1e-6);
+            let t = (position_x / run).clamp(0.0, 1.0);
+            let point = if along_x {
+                [a[0] + (b[0] - a[0]) * t, (a[1] + b[1]) / 2.0, a[2]]
+            } else {
+                [(a[0] + b[0]) / 2.0, a[1] + (b[1] - a[1]) * t, a[2]]
+            };
+            let direction = if along_x { [1.0, 0.0] } else { [0.0, 1.0] };
+            Some((point, direction))
+        })
+        .unwrap_or(([0.0, 0.0, 0.0], [1.0, 0.0]));
+
+    let panel = door::build_opening_panel(opening_width, opening_height, thickness);
+    door::place_panel(&panel, [base[0], base[1], base[2] + position_z], direction)
+}
+
 #[derive(Deserialize)]
 struct AssemblyComponentDef {
     name: String,
@@ -2871,22 +2964,8 @@ async fn genrule_create(
                 .objects
                 .get(wall_id)
                 .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
-            let bb = wall
-                .geometry
-                .as_ref()
-                .and_then(|g| g.bbox.as_ref())
-                .map(|b| {
-                    let mn = b.min.as_ref().expect("bbox min must exist");
-                    let mx = b.max.as_ref().expect("bbox max must exist");
-                    (mx.x - mn.x, mx.z - mn.z, (mx.y - mn.y).abs())
-                })
-                .unwrap_or((5.0, 3.0, 0.3));
-            let _ = wall;
-
-            let mesh = omnim_model::gen_rule::boolean_subtract::build_door_opening(
-                bb.0,
-                bb.1,
-                bb.2,
+            let mesh = build_hosted_fill(
+                wall,
                 *opening_width,
                 *opening_height,
                 *position_x,
@@ -2903,6 +2982,11 @@ async fn genrule_create(
                 .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.parent_id = Some(wall_id.clone());
+            obj.set_property("host_wall_id", str_prop(wall_id));
+            obj.set_property("opening_width", str_prop(&format!("{}", opening_width)));
+            obj.set_property("opening_height", str_prop(&format!("{}", opening_height)));
+            obj.set_property("position_x", str_prop(&format!("{}", position_x)));
+            obj.set_property("position_z", str_prop(&format!("{}", position_z)));
             obj.clone()
         }
         GenRuleRequest::Window {
@@ -2918,22 +3002,8 @@ async fn genrule_create(
                 .objects
                 .get(wall_id)
                 .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
-            let bb = wall
-                .geometry
-                .as_ref()
-                .and_then(|g| g.bbox.as_ref())
-                .map(|b| {
-                    let mn = b.min.as_ref().expect("bbox min must exist");
-                    let mx = b.max.as_ref().expect("bbox max must exist");
-                    (mx.x - mn.x, mx.z - mn.z, (mx.y - mn.y).abs())
-                })
-                .unwrap_or((5.0, 3.0, 0.3));
-            let _ = wall;
-
-            let mesh = omnim_model::gen_rule::boolean_subtract::build_door_opening(
-                bb.0,
-                bb.1,
-                bb.2,
+            let mesh = build_hosted_fill(
+                wall,
                 *opening_width,
                 *opening_height,
                 *position_x,
@@ -2950,6 +3020,11 @@ async fn genrule_create(
                 .expect("genrule object was just created");
             obj.geometry = Some(geom);
             obj.parent_id = Some(wall_id.clone());
+            obj.set_property("host_wall_id", str_prop(wall_id));
+            obj.set_property("opening_width", str_prop(&format!("{}", opening_width)));
+            obj.set_property("opening_height", str_prop(&format!("{}", opening_height)));
+            obj.set_property("position_x", str_prop(&format!("{}", position_x)));
+            obj.set_property("position_z", str_prop(&format!("{}", position_z)));
             obj.clone()
         }
         GenRuleRequest::Opening {
@@ -3226,6 +3301,19 @@ async fn genrule_create(
                     obj.set_property("genesis_class", str_prop(cf.class.as_str()));
                     obj.set_property("genesis_form", str_prop(cf.form));
                 }
+                // Hosted fills (door/window) need the wall's real centreline and
+                // thickness; a world AABB is not a wall frame. Record both so
+                // doors can be placed along the path instead of by bbox.
+                let total_thickness: f64 = layer_defs.iter().map(|l| l.thickness).sum();
+                obj.set_property(
+                    "path_points",
+                    str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
+                );
+                obj.set_property(
+                    "path_closed",
+                    str_prop(if spec.closed { "true" } else { "false" }),
+                );
+                obj.set_property("wall_thickness", str_prop(&format!("{}", total_thickness)));
                 if let Some(pid) = parent_id {
                     if !pid.is_empty() {
                         obj.parent_id = Some(pid.to_string());

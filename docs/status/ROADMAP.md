@@ -1,275 +1,226 @@
 ---
 title: "OmniM Development Roadmap"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "repo"
-evidence: "audited against code 2026-10-27"
+evidence: "Reconciled against code, CHANGELOG and the gate board; every status carries an evidence link"
 ---
 # OmniM Development Roadmap
 
-**Last updated: 2026-10-27**
+> This document answers three questions: **what exists today, what comes next, and what is blocking**.
+>
+> - **Dates are not commitments.** This roadmap is ordered by dependencies and gates, not by calendar; historical delivery dates live only in [CHANGELOG](CHANGELOG.md).
+> - **Single source of truth.** Capability status comes from `status/` and `architecture/`; design intent comes from `specification/` and `RFC/`. Any mismatch must be recorded explicitly in [CODE_DEVIATIONS](CODE_DEVIATIONS.md).
+> - **Numbers are labels, not order.** `7b`, `8` and `P8-S1` are stable labels other documents can reference. They do not require serial execution and do not encode calendar order.
 
-> ### Current Phase: Phase 8 — Domain Extensions & Production-Grade Components
->
-> Completed: Phases 1–7 (Phase 1 partially — see note below). Phase 9 partially delivered in advance (AMIR AI engine).
->
-> ### Honest-status note
->
-> Earlier revisions of this document marked the Omcom **text DSL / nom parser** as part of the completed Phase 1. That is **not accurate**: what is shipped today is the unified data model, the typed `OmniCommand` schema, and a full typed command executor. The Omcom console in the Web UI executes **JSON commands plus a handful of ad-hoc text shortcuts** — there is **no nom-based text grammar parser**. The text DSL is a draft RFC: [RFC-0001: Omcom Text DSL](../RFC/README.md). Phase 1 is therefore marked **🔀 Partial**.
+## 1. How to Read This Document
 
-## Status legend
+### 1.1 Status Legend
 
 | Mark | Meaning |
-|------|---------|
-| ✅ Done | Implemented and verified in the codebase |
-| 🔄 In progress | Active work, some deliverables landed |
-| 🔀 Partial | Substantially delivered, with specific named gaps |
-| 📅 Planned | Not started |
+|---|---|
+| ✅ Done | Implemented, with code or test evidence |
+| 🔄 In progress | Active work, some slices delivered |
+| 🔀 Partial | Substantially delivered, with named gaps |
+| 📅 Planned | Not started, or intent only |
 
----
+### 1.2 Three Easily Confused Terms
 
-## Phase 1: Core Data Model & Omcom DSL (2026 Q1-Q2) — 🔀 Partial
+| Term | What it is | What it is not |
+|---|---|---|
+| Batch / phase | A delivery-stream label (1–12, 7b) | A calendar quarter, or a mandatory serial number |
+| Gate | G0–G3, release-quality gates | A feature batch |
+| Slice | One acceptance-sized delivery inside a batch (e.g. P8-S1) | A standalone phase |
 
-**Goal**: Establish the foundational object model, the typed command/command-executor layer, and the Omcom text DSL.
+## 2. Current State Snapshot
 
-### Delivered ✅
+| Workstream | Batch | Status | Usable today | Named gaps | Evidence |
+|---|---|---|---|---|---|
+| Kernel & geometry | 1–6 | ✅ main body (batch 1 🔀) | Unified data model, typed commands with undo/redo, sketch + slvs, features + truck-BRep, catalog/series, GenRule and default templates | The nom-based Omcom text DSL ([RFC-0001](../RFC/README.md)) | `crates/model/`, `crates/omcom/`, [CAPABILITY_MATRIX](../CAPABILITY_MATRIX.md) |
+| Workspace prototype | 7 | ✅ | Viewport, sketch editor, feature tree, catalog panel, properties panel, Omcom console, AI chat, Library/Series Manager | A functional prototype only, not a product-grade UI; AI command preview belongs to batch 9 | `web/src/`, [CHANGELOG](CHANGELOG.md) |
+| Frontend productization | 7b | 🔄 | Project home, docked shell, save/save-as, error boundaries, shared dialogs, auto-naming | G1 not passed; G2/G3 not started; no e2e, visual or performance baseline | [RELEASE_READINESS](RELEASE_READINESS.md) |
+| Domain extensions | 8 | 🔄 | Production catalog data; storey elevation/grid/storey view/openings; assembly container; pipe routing and connectors | Full building IFC/MEP/quantities, civil terrain/alignment, plant branch piping, mechanical BOM; domain frontend | [CAPABILITY_MATRIX](../CAPABILITY_MATRIX.md) |
+| AI compilation | 9 | 🔀 | AMIR providers, natural language→command, multi-turn chat, reverse model description | Multi-step planning, validation explanation, confidence, human-in-the-loop preview, multi-agent, RAG | `crates/amir/` |
+| Format interoperability | 11 | 🔀 | IFC 2x3 / IFC 4 subset import/export (hand-written parser/writer) | Incomplete entity coverage; STEP/DXF/DWG/GIS/glTF/OBJ/FBX unimplemented | [FORMAT_COMPAT](FORMAT_COMPAT.md) |
+| Cloud & collaboration | 10 | 🔀 (subset only) | Axum REST, JSON-file persistence, undo/redo on every mutating endpoint | PostgreSQL/PostGIS, version history, WebSocket, multi-user collaboration | [API](../reference/API.md), [WRITE_PATHS](../architecture/WRITE_PATHS.md) |
+| Analysis & ecosystem | 12 | 📅 | None | Structural analysis, clash detection, quantities, cost, plugin ecosystem | — |
 
-1. **Unified Data Model** — `OmniObject`, core hierarchy (SpatialElement / Element / System), Property + PropertySet system, material definitions, ObjectType enum covering all 4 domains. Protobuf/serde types are used as the internal schema (`.proto` files act purely as the serde-JSON type declaration source; **no protobuf runtime/wire encoding is used**).
-   *Evidence: `crates/model/` (incl. `crates/model/src/proto/`), `crates/core/`.*
-2. **Typed command layer** — `OmniCommand` message types + a full typed command executor with complete undo/redo.
-   *Evidence: `crates/omcom/src/lib.rs`, executor in `crates/server/src/lib.rs`.*
-3. **Project lifecycle model**, **administrative division hierarchy** (World→…→Parcel, GeoBoundary), **project breakdown structure** (Program→…→Part), and the **relationship system** (containment / connection / spatial).
-   *Evidence: `crates/model/src/`.*
+## 3. Delivered Batches (1–7)
 
-### Not delivered 📅
+### 3.1 Kernel & Geometry (1–6)
 
-- **Omcom text DSL with nom parser** (`crates/omcom-parser`, EBNF grammar, text→OmniCommand mapping, usage-hint errors). The interactive "console" is JSON + a few ad-hoc shortcuts only.
-  *Design proposal: [RFC-0001: Omcom Text DSL](../RFC/README.md) (Draft).*
+- **Batch 1 🔀**: unified data model, typed `OmniCommand` plus executor, lifecycle/administrative/breakdown hierarchies and the relationship system. One gap only: the text DSL is still a draft RFC.
+- **Batch 2 ✅**: sketch data model, 11 constraint types, slvs solver, sketch editor, Extrude/Revolve pipeline.
+- **Batch 3 ✅**: feature engine (9 feature types), truck-BRep, parameter system, component editor.
+- **Batch 4 ✅**: ComponentDef/ParamDef/ConnectorDef, Series selectors, `.omnimlib` / `.omnimseries`.
+- **Batch 5 ✅**: steel sections, piping and concrete building component catalog plus the instantiation pipeline.
+- **Batch 6 ✅**: GenRule refactor, Library/SeriesStore/Project split, series gate, CatalogRef, default templates.
 
-### Exit criteria (revised)
-- ✅ Data model + typed executor handle create/command flows for all object types
-- ✅ Undo/redo of every executed command
-- 📅 Text grammar parses all `create wall/beam/…` commands (blocked on RFC-0001 acceptance)
+Evidence entry points: `crates/model/`, `crates/sketch/`, `crates/omcom/`, [ARCHITECTURE_MAP](../guides/ARCHITECTURE_MAP.md).
 
----
+### 3.2 Workspace Prototype (7) ✅
 
-## Phase 2: Constraint Solver & Sketch System (2026 Q2-Q3) — ✅ Done
+Project Workspace, sketch editor, feature tree, catalog panel, properties panel, Omcom console, AI chat, and the Library/Series Manager are all usable.
 
-- **Sketch data model**: SketchPlane, SketchEntity (line/arc/circle/spline), 11 constraint types, SketchStore in Project.
-- **Constraint solver**: slvs-based solver integrated (crate: `slvs`); sketch→solve→solved-sketch pipeline, DOF analysis, over/under-constrained detection and reporting.
-- **Omcom (JSON) sketch commands**: `sketch new/add/constr/solve`, `component create`, `feature add/remove`, `EXTRUDE_SKETCH (107)` / `REVOLVE_SKETCH (108)` — all with executor undo/redo.
-- **Sketch Editor frontend**: `/sketch-editor` page, 2D canvas with grid/axes/entities, Line/Circle/Arc tools, constraint toolbar (11 kinds), Solve button, Extrude/Revolve dialogs, round-trip navigation to the main view.
+**Boundary note:** batch 7's ✅ means "the main flows work in a prototype", not "product-grade UI". Productization is batch 7b and cannot substitute for it.
 
-### Evidence
-`crates/sketch/`, solve pipeline in `crates/server/src/lib.rs` (`/api/sketches/*`), `web/src/app/sketch-editor/`.
+## 4. Main Line A: Frontend Productization (7b) 🔄
 
----
+### 4.1 Exit Definition
 
-## Phase 3: Feature Engine & BRep Kernel (2026 Q3-Q4) — ✅ Done
+| Exit | Contains | Criterion |
+|---|---|---|
+| Engineering exit | G1 + G2 | Frontend engineering is closable and every requirement has evidence |
+| Release exit | G3 | Compatibility, security, telemetry and external review |
 
-- **Feature as first-class entity**: cached MeshGeometry, dirty-flag automatic rebuild, feature dependency ordering, rollback & suppression.
-- **9 feature types**: Extrude, Revolve, Sweep, Loft, Boolean (union/subtract/intersect), Chamfer, Fillet, Pattern, Shell.
-- **truck-BRep kernel** (`truck-modeling` / `truck-polymesh`): extrude/revolve/sweep/loft from sketches, booleans on BRep solids, tessellation to triangle meshes for rendering.
-- **Parameter system**: named parameter store, meval expression engine, feature parameter references.
-- **Component Editor UI (Revit-style)**: Feature Panel with drag-to-reorder, Feature Ribbon (9 type icons), click-feature→auto-sketch→draw→Done→dialog workflow, AddFeatureDialog, Feature Card double-click editing, `+ Component` button, object-tree "Edit" context menu, Rebuild All button.
+> Current position: **7b's engineering finish line is G2**; G3 belongs to pre-release. G3 includes an external security review and ACR/VPAT, which are not pure code work. This position needs product sign-off (see Q2 and Q4 in §10).
 
-### Evidence
-`crates/model/` (BRep→mesh; the legacy `crates/renderer/` demo crate was removed 2026-10-27), feature engine in `crates/server/src/lib.rs` + `crates/model/`, `web/src/app/components/component-editor/`.`
+### 4.2 Gate Board
 
----
+| Gate | Scope | Status | Today | Exit condition |
+|---|---|---|---|---|
+| G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
+| G1 | Alpha | 📅 Not passed | 9 ✅ / 16 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
+| G2 | Beta | 📅 Not started | 0 / 37 | Design system, i18n, A11Y, performance all met |
+| G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 
-## Phase 4: Component Library & Series Library (2027 Q1) — ✅ Done
+Full list: [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md); judgement rules: [RELEASE_READINESS](RELEASE_READINESS.md).
 
-PARAGON-style **component catalog** + SPECON-style **series library**, delivered ahead of the original schedule:
+### 4.3 Execution Order (Dependency-Ordered, Not Calendar-Ordered)
 
-- **ComponentDef** with ParamDef (Length/Angle/Integer/Choice + defaults/domains/formulas), ConnectorDef (position/direction expressions, bore, type codes), Category hierarchy.
-- **Series**: selector decision trees (Question→Answer→Selector/SpecComponent), SpecComponent parameter constraints, numeric range matching (e.g. DN=50..200).
-- **Selection engine** and **connector type-code compatibility** ("FAA", "BW", …).
-- Catalog/series stored in project or external `.omnimlib` / `.omnimseries` JSON files.
+| Step | Content | Completion criterion |
+|---|---|---|
+| 0 Governance | G0 signatures; close O4/O6; confirm the §4.1 exit position; issue the freeze order | Decisions recorded, freeze scope listed |
+| 1 Test infrastructure | Playwright, screenshot baselines, axe, performance reference machine, CI job | CI runs on PRs; baselines are comparable |
+| 2 G1 close-out | Fill missing features first (theme provider, skeleton screens), then shell/panels/data integrity, then evidence item by item | 25 / 25 |
+| 3 G2 close-out | Semantic tokens, i18n, accessibility, performance budgets, remaining feedback and data-integrity items | 37 / 37 |
+| 4 G3 preparation | Compatibility matrix, security disclosure, telemetry dictionary, ACR/VPAT draft, release and support handbook | 34 / 34 + external review outcome |
 
-### Evidence
-`crates/model/src/catalog.rs`, `crates/model/src/series_store.rs`.
+### 4.4 Waves & Requirement Domains
 
----
-
-## Phase 5: Catalog Component Modeling (2027 Q2) — ✅ Done
-
-- **Structural**: IPE/HEA/HEB/CHS/SHS/Angle families, parameterized profile sketch → extrude.
-- **Piping**: straight pipe, long-radius elbow, tee, reducers, weld-neck flange, valves — with P-point connectors and type codes.
-- **Building**: concrete beam/column/wall, door, window templates.
-- **Series definitions**: CS150, SS300, Concrete-C30, Steel-Q355, Highway-GB.
-- **Infrastructure**: profile section library (I/box/annulus/rect/L), ASME B36.10M wall-thickness table, FeatureTemplate + FeatureTreeRegistry, instantiation pipeline (ComponentDef→Feature→Sketch→BRep→Mesh), REST endpoints `POST /api/catalog/instantiate`, `POST /api/catalog/preview`.
-
-### Evidence
-Built-in catalog seed data + `instantiate_from_series()` in `crates/model/`; handlers in `crates/server/src/lib.rs`.
-
----
-
-## Phase 6: GenRule Refactoring & Default Templates (2027 Q3) — ✅ Done
-
-- **Library ↔ SeriesStore ↔ Project split**: Library is a session-level global static (`static LIBRARY: RwLock<Library>`); SeriesStore is an independent module referenced by Project; Project holds objects + private SeriesStore + `external_series_refs`, no Library field.
-- **Series gate** `check_series_gate()`: reject components not reachable from any loaded series; open mode when no series loaded.
-- **GenRule → catalog**: all GenRule generators (LayerExtrusion, LinearComponent, Assembly, BooleanSubtract, Primitive) route through feature trees referencing catalog ComponentDefs. `POST /api/genrule` uses `create_object_from_default_template()` / `instantiate_from_series()`.
-- **CatalogRef** on every instantiated object (`component_def_id`, `series_id`, `selector_path`, `param_values`).
-- **Default template registry**: `create wall`→Concrete-Wall, `create beam`→Concrete-Beam-Rect, etc.; type-parameter validation against catalog domains.
-
-### Phase 6b (Library & SeriesStore infrastructure) — ✅ Done
-`.omnimlib` / `.omnimseries` JSON file load/save, series resolution priority (project-private > external file > built-in seed), session auto-load from `~/.omnim/library.omnimlib`.
-
-### Evidence
-`crates/model/src/gen_rule/mod.rs`, `crates/model/src/library.rs`, `crates/model/src/series_store.rs`.
-
----
-
-## Phase 7: User Interface (2027 Q4) — ✅ Done (one noted gap)
-
-- **Project Workspace**: 3D viewport (orbit/pan/zoom, selection, section cuts, measure tools, wireframe/shaded/x-ray/edge-only view modes), sketch editor, feature tree, Available Components Panel (series-filtered, parameter sliders, drag-to-place), Property Panel (catalog ref, material), Omcom Console (syntax highlighting, history, tab completion, validation errors), AI chat (natural language).
-- **Library Manager** at `/library-manager`: ComponentDef tree, parameter definition editor, feature-tree template assignment, 3D preview, `.omnimlib` import/export.
-- **SeriesStore Manager** at `/series-manager`: decision-tree editor, built-in seed viewer, external `.omnimseries` load/save, drag-to-map ComponentDefs, parameter constraint editor.
-- **UI architecture**: Zustand store, React Query data layer, PanelRegistry panel slots, resizable AppLayout, CSS Modules, `ThreeViewerContext`.
-
-### Known gap → RESOLVED (2026-10-27)
-
-~~Interactive 3D creation supports 1–2 point picking for `PICKING_TYPES` only.~~ Superseded: the N-point picking pipeline is implemented end-to-end — polyline picking for wall center-lines (`path[]` → `build_layered_path`), closed-polygon footprints for slab/roof/floor (`boundary[]` → `build_layered_slab_path`, close by returning to the first point or double-click/Enter), and N-point alignment for featureLine/contourLine (`line` genrule). Verified in `web/src/app/components/ThreeViewer.tsx`, `Picking.ts`, `Markers.ts`, `crates/server/src/lib.rs` (`GenRuleRequest::Layered/Line`).
-
-**Residue** (fixed same day, 2026-10-27): picked-point z elevation is now preserved (`base_z`), roof extrusion mode generates a genuine profile, road consumes picked `alignment`, and segment bends are mitered. Remaining: bridge/tunnel still use start/end only (road-family `alignment` lands later or via Phase 8 corridor work).
-
-(Earlier versions listed "command preview before application" here; the AI command preview/accept workflow was **not** delivered and remains a Phase-9 item that itself only partially exists today.)
-
----
-
-## Phase 7b: Frontend Productization (2026 Q4 – 2027 Q1) — 🔄 Contracts drafted
-
-Phase 7 delivered a working UI; it did not deliver a commercial one. Phase 7b closes the gap between "feature prototype" and "supportable product" in four waves, gated G0–G3.
-
-| Wave | Scope | Gate | Requirements |
+| Wave | Scope | Requirement domains | Target gate |
 |---|---|---|---|
-| A | Shell, docking, status bar, dual themes, icon and component system | G1 → G2 | UI-SHL, UI-DS |
-| B | Project home, new/open/save/save-as, dirty state, error boundaries, dialogs, auto-naming | G1 | UI-DAT, UI-FBK, UI-INT |
-| C | Command registry, feedback states, i18n, accessibility, undo history | G2 | UI-INT, UI-I18N, UI-A11Y |
-| D | On-demand rendering, instancing, virtualization, e2e, visual regression, CI gates | G2 → G3 | UI-PRF, UI-CMP, UI-SEC, UI-TLM |
+| A | Shell, docking, status bar, dual themes, icon and component system | SHL, DS | G1 → G2 |
+| B | Project lifecycle, dirty state, error boundaries, dialogs, auto-naming | DAT, FBK, INT | G1 |
+| C | Command registry, feedback states, i18n, accessibility, undo history | INT, I18N, A11Y | G2 |
+| D | On-demand rendering, instancing, virtualization, e2e, visual regression, CI gates | PRF, CMP, SEC, TLM | G2 → G3 |
 
-**Contracts**: [PRD_FRONTEND](../product/PRD_FRONTEND.md) · [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md) · [IA_SHELL](../specification/ui/IA_SHELL.md) · [DESIGN_SYSTEM](../specification/ui/DESIGN_SYSTEM.md) · [INTERACTION](../specification/ui/INTERACTION.md) · [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.md)
+## 5. Main Line B: Domain Extensions (8) 🔄
 
-**Evidence**: [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md) scores the frontend at 1.7/5 today; [FRONTEND_BASELINE](../status/FRONTEND_BASELINE.md) records the "before" measurements; [RELEASE_READINESS](../status/RELEASE_READINESS.md) tracks the gates.
+### 5.1 Delivered Slices
 
-**Known blockers**: floating properties panel (UI-SHL-03), no project home and no open/new endpoints (UI-DAT-01); `POST /api/project/save` exists but the client never calls it (UI-DAT-02), no error boundary (UI-FBK-06), native dialogs (UI-FBK-05), timestamp naming (UI-INT-09), 731 hex + 61 rgb/hsl color literals (UI-DS-04), no i18n (UI-I18N-01), no accessibility semantics (UI-A11Y-04).
+- Production catalog data: steel sections (EN 10365 / GB/T 706), pipe schedules (ASME B36.10), concrete templates, real material standards, BRep correctness checks.
+- Building datum: storey `elevation`, grid panel, `bottom_level_id`/`top_level_id` single-step cascade, storey view and section linkage.
+- Standalone opening object (`IfcOpeningElement`).
+- Assembly container (`POST /api/assemblies`; container plus Component/Part children, whole-tree delete in one undo step).
+- Pipe routing: N-point polyline sweep, elbow placeholders, instance connectors with bore/type compatibility checks.
 
----
+Evidence: [CAPABILITY_MATRIX](../CAPABILITY_MATRIX.md), [CHANGELOG](CHANGELOG.md).
 
-## Phase 8: Domain Extensions & Production-Grade Components (2028 Q1-Q2) — 🔄 In progress
+### 5.2 Not Delivered
 
-**Current status**: production-grade catalog data largely landed (steel sections per EN 10365/GB/T 706, pipe schedules per ASME B36.10, concrete templates, connector definitions with flange ratings); material assignments mapped to real standards; components validated through BRep correctness checks. Domain-specific work remains:
+| Item | Status | Prerequisite | Note |
+|---|---|---|---|
+| 8-1 Building: full IFC element coverage, MEP, quantities | 📅 | Kernel ✅ | Doors/windows are host fills (leaf + frame); frame types, sill/head constraints and schedules are still missing; the host is not re-cut |
+| 8-2 Civil: terrain fitting, earthwork, alignment/profile | 📅 | Kernel ✅ | Bridges/tunnels still use start/end only |
+| 8-3 Plant: branch piping, P&ID | 📅 | Pipe routing ✅ | Branches, fittings and feature-tree templates not covered |
+| 8-4 Mechanical: BOM, quantities, kinematic joints | 🔀 | Assembly container ✅ | Container delivered; BOM/joints not started |
+| 8-5 Frontend: domain panels, filters, domain-aware drag-to-place | 📅 | **7b G2** | Must wait for the shell and design system to settle |
 
-1. 📅 Building: complete IFC element coverage, MEP systems, quantity take-off
-2. 📅 Civil: terrain fitting & earthwork, alignment/profile editing
-3. 📅 Plant: pipe routing with branches, P&ID integration
-4. 🔀 Mechanical: parts ✅; assembly container + parts ✅ (2026-10-30, `POST /api/assemblies`); BOM/quantity and kinematic joints 📅
-5. 📅 Frontend: domain-specific panels, filters, domain-aware drag-to-place
+### 5.3 Dependency on 7b
 
-Partial exit criteria already met (steel IPE/HEA/HEB series, CS150/SS304 DN coverage, BRep validation).
+[ADR-0008](../architecture/DECISIONS.md) states explicitly that "the shell rewrite must precede panel polish"; [ADR-0009](../architecture/DECISIONS.md)'s panel registry exists precisely as the extension point for domain panels. Therefore:
 
-**Audit residuals (2026-10-30 audit-cycle close-out)**: the P0/P1/P2 actionable findings of all three audits (code / modeler-docs / UI-UX) are remediated; the residual items below are registered by gate ownership so closing an audit never means forgetting its debt.
+- **8-5 does not start before 7b G2.**
+- 8-5 must use `PanelRegistration`, semantic tokens, `t(key)` and the unified command registry; otherwise it is booked as new debt.
+- 8-1 to 8-4 are backend/geometry work; whether they may run alongside 7b is covered in §7.2.
 
-| Owner | Residual item | Source |
+## 6. Other Workstreams (9–12)
+
+- **9 AI compilation 🔀**: engine, providers, translation and chat delivered; multi-step planning, validation explanation, confidence, human-in-the-loop and RAG missing.
+- **11 Format interoperability 🔀**: IFC subset only; other formats unimplemented, see the matrix in [FORMAT_COMPAT](FORMAT_COMPAT.md).
+- **10 Cloud & collaboration 🔀 (subset only)**: REST + JSON files delivered; database, version history, WebSocket and collaboration not implemented.
+- **12 Analysis & ecosystem 📅**: structural analysis, clash, quantities, cost and plugins not started.
+
+## 7. Dependencies, Parallelism, and Freeze Rules
+
+### 7.1 Dependencies
+
+- Kernel (1–6) → 9, 11, 8-1…8-4.
+- 7b (shell, design system, command registry, i18n) → 8-5 domain frontend.
+- 7b → the collaboration UI of 10.
+- 8-5 may not precede 7b G2; the other domain backend items have no code dependency on 7b.
+
+### 7.2 Parallelism Rules
+
+1. **One writing stream per file domain at a time.** `web/src/` belongs to 7b; `crates/` belongs to the backend stream.
+2. Cross-stream changes land the contract first, then the code.
+3. New UI must use the panel registry, semantic tokens, `t(key)` and the unified command registry; bypassing them is booked as new debt.
+4. Whether 8-1 to 8-4 backend work may proceed during the 7b freeze is Q7 in §10; the default is frozen.
+
+### 7.3 Current Freeze & Exceptions
+
+| Frozen | Exception |
+|---|---|
+| New features in 8-1 to 8-4 | Regression fixes for already-delivered capabilities |
+| 8-5 domain frontend | — |
+| New object types, new REST routes | Security or data-loss fixes |
+
+**Closed regression fixes (not 8-1 feature work):**
+
+- Door geometry: doors/windows are now leaf/frame panels placed from the wall's `path_points`; no more world-AABB thickness and no more floating at the origin. See [CODE_DEVIATIONS §6.5](CODE_DEVIATIONS.md).
+- Storey creation: `storey` no longer carries a box geometry and is a datum-only container; the server likewise discards container geometry.
+
+Both ship with tests (`crates/server/tests/opening.rs`, `datum.rs`).
+
+## 8. Current Non-Goals
+
+1. Photorealistic rendering.
+2. Offline-first architecture.
+3. Mobile AR/VR and mobile apps.
+4. Full CAM/CNC.
+5. Desktop packaging (Tauri).
+6. A WASM-shared core in the production web build.
+
+The text DSL is not a non-goal; it is batch 1's undelivered item, waiting on [RFC-0001](../RFC/README.md).
+
+## 9. Technical-Debt Ledger
+
+| Item | Owner | Evidence |
 |---|---|---|
-| G2 frontend gate | Full token migration (712 hard-coded colours, `CODE_DEVIATIONS` 7.8), i18n (7.9), A11Y (7.10), editor visual unification (UI-UX E1/F2), icon-system rework (E2) | MODELER_UIUX_AUDIT_2026-10-30 |
-| G2 feedback/perf | Error-code presentation (`ERROR_CODES` codes still reserved/unemitted), performance budgets (TLM 0%, not enforced in CI) | MODELER_UIUX_REAUDIT_2026-10-30 §5 |
-| Frontend perf/architecture | `App.tsx` whole-store subscription (20 Hz re-renders), react-query hooks enable-or-remove, `ThreeViewer` split, `OmniPanel dangerouslySetInnerHTML` → token rendering | CODE_AUDIT_2026-10-30 P2/P3 |
-| Server security/concurrency | Token middleware, `TimeoutLayer` + concurrency limits, persist off the write lock (`spawn_blocking`), `list_projects` full parse / `get_project` full clone | CODE_AUDIT_2026-10-30 P1/P2 |
-| Structural refactor | omcom single-file split + executor `Result` branches, `project.rs`/`seed_catalog.rs` split by domain, shared `IndexedStore<T>` | CODE_AUDIT_2026-10-30 §5-wave2/long-term |
-| Geometry kernel | Real triangle-mesh CSG / truck boolean replacing the AABB approximation (approximate kernel already warns) | CODE_AUDIT_2026-10-30 long-term |
-| Quality baseline | Clear the 212 clippy warnings and enable `-D warnings`, make sketch constraint build `let _ =` explicit, make `resolve_param` fail loudly on unknown params | CODE_AUDIT_2026-10-30 acceptance record |
----
+| Hard-coded colours bypass semantic tokens | G2 | [CODE_DEVIATIONS](CODE_DEVIATIONS.md) 7.8 |
+| UI strings not externalized (31 files) | G2 | CODE_DEVIATIONS 7.9 |
+| Accessibility semantics missing | G2 | CODE_DEVIATIONS 7.10 |
+| `App.tsx` whole-store subscription, unsplit `ThreeViewer`, react-query unused | G2 | [CODE_AUDIT](CODE_AUDIT_2026-10-30.zh-CN.md) P2/P3 |
+| Error codes reserved but never emitted | G2 | [ERROR_CODES](../reference/ERROR_CODES.md) |
+| Performance budgets not enforced in CI (TLM 0%) | G2 | [MODELER_UIUX_REAUDIT](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md) §5 (zh-CN) |
+| No e2e / visual / performance baseline | G1 prerequisite | §4.3 of this document |
+| Server token middleware, `TimeoutLayer`, persist off the write lock, full-list/full-clone reads | Pre-release or backend-parallel | CODE_AUDIT P1/P2 |
+| omcom single-file split, executor `Result` conversion, `project.rs` split, shared `IndexedStore` | Long term | CODE_AUDIT §5 |
+| Real triangle-mesh CSG replacing the AABB approximation | Long term | CODE_AUDIT |
+| clippy warning baseline not cleared; `-D warnings` not enabled | Quality baseline (before G2) | CODE_AUDIT acceptance record |
+| `sketch` constraint `let _ =`, `resolve_param` unknown parameters | Long term | CODE_AUDIT |
+| Tests sharing the global `LIBRARY` | Long term | [TESTING](../guides/TESTING.md) |
+| `eprintln!` not replaced by structured logging | Long term | CODE_AUDIT |
+| Door geometry and storey-creation regressions | Current exception fixes | §7.3 of this document |
 
-## Phase 9: AMIR AI Compilation (2028 Q3) — 🔄 Partial (delivered in advance, gaps remain)
+## 10. Open Questions
 
-**Delivered** ✅: AMIR AI engine with OpenAI / Anthropic / Mock providers; NL→OmniCommand translation; multi-turn chat; reverse "describe model" path. Integrated as the AI chat panel in the Project Workspace.
+| # | Question | Owner | Impact |
+|---|---|---|---|
+| Q1 | Is G1 a customer-visible milestone or internal only? | Product | G1 |
+| Q2 | Does G3 require an external security review? | Product / legal | G3 |
+| Q3 | Who signs G2 when design and engineering disagree? | Product | G2 |
+| Q4 | Is 7b's engineering exit confirmed as G1+G2, with G3 at release? | Product | 7b / G2 |
+| Q5 | Do storey view, section, measure and 8-5 domain panels get requirement IDs? | Product / frontend | G1 / G2 |
+| Q6 | Should hard-coded English UI strings be scanned too? | Frontend | G2 |
+| Q7 | May 8-1 to 8-4 backend work proceed independently during the freeze? | Tech lead | 7b / 8 |
 
-**Not yet delivered** 📅: structured multi-step planning for complex operations, natural-language validation error explanation with auto-correction suggestions, confidence scoring, human-in-the-loop accept/reject command preview, per-domain multi-agent system, RAG for standards lookup.
+## 11. Maintenance Rules
 
-### Evidence
-`crates/amir/` (providers, translate, chat, describe), `web/` AI chat panel.
-
----
-
-## Phase 10: Cloud Server & Collaboration (2029) — 📅 Planned
-
-**Reality today** ✅ (subset of this phase, done early): an **Axum REST server** (87 unique paths) with **JSON-file (`.omnim`) persistence** (default on; `OMNIM_EPHEMERAL=1` disables), undo/redo state history covering **all mutating endpoints**, and catalog/series file endpoints.
-
-**Not implemented** 📅: PostgreSQL + PostGIS storage, version history / audit trail (currently only JSON file save), WebSocket real-time notifications, geometry streaming, client cache layers, multi-user collaboration/Conflict resolution, presence, collaboration UI. There is **no WebSocket anywhere in the server**.
-
----
-
-## Phase 11: IFC/STEP Format Compatibility (2029) — 🔀 Partial
-
-- **IFC 2x3 / IFC 4**: import + export ✅ via a **hand-written parser/writer** (`crates/ifc/`) — **partial entity coverage**. Details in [FORMAT_COMPAT.md](FORMAT_COMPAT.md).
-- **STEP / DXF / DWG / GIS / glTF / OBJ / FBX**: ❌ not implemented (code contains only IFC + JSON paths). Plan in [FORMAT_COMPAT.md](FORMAT_COMPAT.md).
-
----
-
-## Phase 12: Analysis & Ecosystem (2029+) — 📅 Planned
-
-Not started: structural analysis, clash detection, cost estimation, plugin ecosystem.
-
-## Accepted Designs Pending Implementation
-
-Designs agreed and documented as contracts (in the specification) but not yet implemented. Ordering below is practical (dependency-first), not calendar-based. Status marks follow the legend above.
-
-### 1. Path / Genesis abstraction（路径 + 创成分类）— ✅ Implemented (2026-10-28, Wave 2)
-
-**Contract**: [DATA_MODEL §1 — dual-axis model & governance](../specification/DATA_MODEL.md) (agreed 2026-10-27). Multi-point picking unifies as `Path { points, closed }`; genesis class binds to the per-instance creation method, not the object name; genrule dispatch consults an `(objectType, class/form)` authorization matrix.
-
-| # | Deliverable | Est. |
-|---|---|---|
-| 1.1 | Front-end `CreationForm.form` field (per-type default + wall form dropdown), `form → pickMode/preview` lookup replaces scattered per-type switches; state-machine tests migrated | 0.75d |
-| 1.2 | Server `path { points, closed }` contract + legacy `path[]`/`boundary[]`/`alignment[]` alias normalization; `(objectType, form)` dispatch with 400 + reason; module-head authorization comments in `layer_extrusion.rs` / `linear_component.rs` (§6.4 boundary note) | 0.75d |
-| 1.3 | Unified preview `addPathPreview` by form (panel → per-segment layer ghost + miter incl. closed loop; region → outline + fan fill) | 0.5d |
-| 1.4 | Shared pure-geometry layer below classes (`iter_segments`/`merge_collinear`/`validate_path` dispatch by open/closed) — refactor only, behavior-preserving | 0.25d |
-| 1.5 | Seed API cases locking the multi-class semantics: surface-panel wall, body wall (boolean/sculpted), linear retaining wall (alignment + terrain target placeholder) | 0.25d |
-| 1.6 | Docs: API.md genrule section gains the authorization matrix (as design note until 1.2 lands); GLOSSARY already updated (Path/Genesis/Form/authorization matrix) | — |
-| | **Total** | **~2.5d** |
-
-Elbow / pipe routing: **delivered as an API slice (2026-10-29)** — `genrule: "pipe"` with `path` sweeps a circular section along the picked polyline through the LinearComponent kernel (continuous/mitered bends, route stored as `route_points`). Branches, fittings and a feature-tree template remain out of scope.
-
-## Technical-Debt Backlog
-
-Unplanned-widow items recorded during development; pick up opportunistically, no scheduled phase:
-
-- **Frontend productization（前端产品化）** — scheduled as **Phase 7b** above, not an unscheduled backlog item. Contract set and baseline: [PRD_FRONTEND](../product/PRD_FRONTEND.md), [FRONTEND_MATURITY](../status/FRONTEND_MATURITY.md), [FRONTEND_BASELINE](../status/FRONTEND_BASELINE.md), [RELEASE_READINESS](../status/RELEASE_READINESS.md).
-- **Restore the single write path（恢复单一写入路径）** — ✅ **DONE 2026-10-28 (Wave 1)**. All 55 migrated handlers route through `mutation::apply` / `Executor`; direct writes went 42 → 0, undo/redo coverage is endpoint-tested (`crates/server/tests/write_paths.rs`, `instantiate_import.rs`), and `scripts/check_write_paths.py` enforces the invariant in CI. Exceptions: `section_handler` (cache-only lock), `import_ifc` (single whole-project command), `.omnimlib` import (global `LIBRARY`). See [WRITE_PATHS](../architecture/WRITE_PATHS.md).
-- **Persistence policy（持久化策略）** — ✅ **DONE 2026-10-28 (Wave 1)**. Persistence defaults on (`project.omnim` / `$OMNIM_PROJECT`), `OMNIM_EPHEMERAL=1` disables it, saves are atomic, and `POST /api/project/save` flushes explicitly. Every migrated handler persists; the only non-project write left is `.omnimlib` import into the global `LIBRARY`. Evidence: [WRITE_PATHS.md](../architecture/WRITE_PATHS.md).
-- **Converge geometry generation（收敛几何生成路径）** — *mostly landed 2026-10-28 (Wave 3)*: the genrule layered family instantiates path-driven feature trees (`Wall-Path`/`Slab-Path`/`Floor-Path`/`Roof-Path` templates, `FeatureType::PathSweep` → `gen_rule::path_sweep`) and produces the **domain object type** with `catalog_ref`/`param_values`, sharing the legacy kernel (exact-mesh parity tests). Remaining: rect parameter quick-forms (`wall`/`slab` variants), roof 2-point profiles, and catalog extrude-based pipe/road templates vs the `LinearComponent` engine. Evidence: CODE_DEVIATIONS §6.3.
-- **Series/connection enforcement（系列与连接强制性）** — *mostly landed 2026-10-28 (Wave 4)*: the gate locates the reachable `SpecComponent` and enforces `ParamConstraint` fixed/min/max (400 + reason) and applies the spec material; `connect()` rejects self/duplicate/unknown-type connections, takes `?connection_type=`, and checks connector `connection_type_code` compatibility; `ConnectorDef` gained `up_*_expr`. Remaining: resolved-value orientation checks at connect time, `step` enforcement, `from_point`/`to_point`. Evidence: CODE_DEVIATIONS §6.4.
-- **Test isolation refactor（测试隔离重构）** — model tests share the session-level global `static LIBRARY` (see [TESTING guide → Known Flaky Tests](../guides/TESTING.md)). One intermittent parallel-test failure has been observed (`test_find_and_rebuild_catalog_instances`); not reproducible under stress, but the shared-global dependency is a real risk as the test surface grows. Candidate fixes listed in the guide.
-- **Logging standardization（日志规范化）** — replace ad-hoc `eprintln!` in production paths with a structured logging crate (`tracing` or `log`). Current residual prints are error-path/startup probes only.
-
----
-
-## Non-Goals (Current Scope)
-
-1. **Photorealistic rendering**
-2. **Offline-first architecture**
-3. **Mobile AR/VR / mobile apps** (no mobile app is planned or built)
-4. **Full CAM/CNC capability**
-5. Also explicit non-goals right now: desktop packaging (Tauri), WASM-shared core in the production web build, nom text DSL execution (pending RFC-0001).
-
----
-
-## Milestone Summary
-
-| Milestone | Target | Key capability | Status |
-|-----------|--------|----------------|--------|
-| M1 | 2026 Q1–Q2 | Core data model + typed command executor | ✅ (text DSL → RFC-0001) |
-| M2 | 2026 Q3 | Constraint solver + sketch system | ✅ |
-| M3 | 2026 Q4 | Feature engine + truck-BRep kernel | ✅ |
-| M4 | 2027 Q1 | Component catalog + series library (PARAGON/SPECON) | ✅ |
-| M5 | 2027 Q2 | Catalog component modeling (20+ components) | ✅ |
-| M6 / M6b | 2027 Q3–Q4 | GenRule refactor, default templates, Library/SeriesStore infra | ✅ |
-| M7 | 2027 Q4 | UI: Workspace + Library Manager + SeriesStore Manager | ✅ |
-| M7b | 2026 Q4–2027 Q1 | Frontend productization: shell, project lifecycle, themes, i18n, performance, gates (G0–G3) | 🔄 |
-| M8 | 2028 Q1–Q2 | Domain extensions + production-grade components | 🔄 |
-| M9 | 2028 Q3 | AMIR AI compilation | 🔀 Partial |
-| M10 | 2029 | Cloud storage + collaboration | 📅 (REST+JSON-file server exists) |
-| M11 | 2029 | Format compatibility | 🔀 Partial (IFC only) |
-| M12 | 2029+ | Analysis + ecosystem | 📅 |
+1. **This file holds current state only.** History goes to [CHANGELOG](CHANGELOG.md), never copied here.
+2. **Every ✅ needs an evidence link; every 📅 must belong to a batch or gate.** Items without an acceptance artefact do not belong in the roadmap.
+3. **No calendar dates in the body.** Only the front-matter `last_updated` is kept; historical dates are CHANGELOG's job.
+4. **A status change updates three things in the same commit**: this snapshot, the gate board, and CHANGELOG.
+5. **Bilingual structure must match.** `check_docs.py` validates heading counts and numbering; the English file is a maintained translation, not an independent document.
+6. **Batch labels stay stable.** Renames require a mapping table so other documents do not break.

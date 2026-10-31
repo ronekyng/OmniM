@@ -1,7 +1,7 @@
 ---
 title: "OmniM 建模者手册"
 status: current
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,viewer}、web/src/app/{App,ProjectsPage,TitleBar}.tsx、docs/reference/API.zh-CN.md 与 docs/guides/GETTING_STARTED.zh-CN.md 核实，2026-10-30"
 ---
@@ -68,10 +68,10 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 1. 先创建一面**墙**（§2.1）。没有墙时，门窗面板会显示“请先创建一面墙体”。
 2. 点击 **Create**（或对象类型下拉）选择 **门** 或 **窗**。
 3. 在下拉中选择目标墙（列表只包含树中类型为 `Wall` 的对象），设置 **洞口宽/洞口高**、**水平位**、**离地高/窗台高**。
-4. 点击 **创建**。门窗会挂到墙上，洞口从墙的包围盒中布尔扣除。
+4. 点击 **创建**。门窗会以其**门扇/窗扇 + 边框**落在墙体中心线上（`position_x` 为沿墙路径的距离，`position_z` 为离地/窗台高）；宿主墙**不重剪**，需要洞体积时另建 `Opening` 对象。
 5. API：`POST /api/genrule`，`{"type":"door","wall_id":"...","opening_width":1.0,"opening_height":2.1,"position_x":0,"position_z":0}`；未知 `wall_id` 返回 404。
 
-限制：洞口是从墙的**包围盒**扣除，不是从分层实体扣除；没有洞口对象、框类型、窗台/过梁参数组、防火等级或明细表。建筑面板的 **门/窗** 快速按钮实例化的是目录 `Door-Single`/`Window-Fixed`，生成 **Component** 对象——那不是宿主门窗。
+限制：门窗几何是**宿主填充**（门扇 + 框），不再使用“整面墙 + 洞”的补片；宿主墙不重剪，洞口用独立 `Opening` 对象（`IfcOpeningElement`）表达。仍缺：框类型、窗台/过梁参数组、防火等级、门窗表。旧墙体（创建时未记录 `path_points`）会按包围盒回退放置，建议重建墙体以获得准确贴合。
 
 ### 2.4 草图 → 特征 → BRep（官方精确路径）
 1. 点击主工具栏 **+ Component**。这会创建构件并跳转到 `/component-editor?component=<id>`。
@@ -92,10 +92,10 @@ evidence: "任务流程已对照 web/src/app/components/{MainToolbar,create,view
 领域面板（**建筑/土木/工厂/机械**）还提供一键快速创建，绕过系列门禁并实例化目录构件。它们创建的是 `Component` 对象，不要指望得到语义化的 `Tank`/`Beam`/`Door` 对象。
 
 ### 2.6 建筑中尚不可用的能力
-- **楼层的标高**：已有基准标高（创建 storey 时可输入，`elevation` 单位为米，对应 `IfcBuildingStorey.Elevation`，P8-S1）；竖向范围可经 `bottom_level_id`/`top_level_id` 对路径驱动对象单步级联（P8-S2）；楼层视图（视口工具栏选择器，P8-S4）可按楼层过滤网格并置剖切面。仍缺：普通几何的 `level_id` 挂接仅 API，没有轴网对象。
-- **轴网对象**：没有轴网/轴线对象类型或 UI，只有视口网格。
+- **楼层与标高**：楼层是**纯标高容器**，创建时只输入 `elevation`（米，对应 `IfcBuildingStorey.Elevation`，P8-S1），不生成几何；竖向范围可经 `bottom_level_id`/`top_level_id` 对路径驱动对象单步级联（P8-S2）；楼层视图（P8-S4）可按楼层过滤网格并置剖切面。楼层管理在左停靠「轴网」页。仍缺：普通几何的 `level_id` 挂接仅 API。
+- **轴网**：✅ 左停靠「轴网」页支持轴线 CRUD（P8-S3a），视口绘制轴线与轴号；轴网是基准注记而非 `ObjectType`，IFC `IfcGrid` 导出仍未实现。
 - **墙类型**：没有 `WallType`/`FloorType`/`RoofType` 库对象；层栈按实例编辑。
-- **洞口对象**：门窗是对象，但扣洞是包围盒布尔；没有 `Opening` 元素、窗台/过梁约束或洞口明细。
+- **门窗与洞口**：门窗是宿主**填充**（门扇 + 框），落在墙体中心线上；宿主墙**不重剪**。独立 `Opening` 空腔对象（`IfcOpeningElement`）已可用。仍缺：框类型、窗台/过梁约束、洞口明细与门窗表。
 - **楼梯**：没有楼梯生成器；按钮生成基本体占位。**吊顶/幕墙/坡道** 仅计划。**碰撞、工程量统计、图纸/明细表**：任何层都没有实现。
 
 路线图与缺口记录：[ROADMAP Phase 8](status/ROADMAP.zh-CN.md)、[CODE_DEVIATIONS §3](status/CODE_DEVIATIONS.zh-CN.md)。

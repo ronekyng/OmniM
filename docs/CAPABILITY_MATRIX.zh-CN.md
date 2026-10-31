@@ -1,7 +1,7 @@
 ---
 title: "OmniM 能力矩阵"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、docs/status/FORMAT_COMPAT.md、docs/status/CODE_DEVIATIONS.md 与 crates/ifc/src/lib.rs 审计，2026-10-27"
 ---
@@ -36,9 +36,9 @@ evidence: "已对照 docs/reference/API.md、docs/specification/DOMAINS.md、doc
 | **楼板 Slab** | 面（region） | ✅ 建筑 → 楼板；Path 闭合，≥3 点 | ✅ LayerEditor 图层按 mm；系列可选 | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcSlab） | ✅ |
 | **屋顶 Roof** | 面（足迹 region 或两点剖面） | ✅ 建筑 → 屋顶；轮廓 / 坡屋面两种模式 | ✅ LayerEditor 图层按 mm | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / 🔀（导出为 proxy） | ✅ |
 | **楼面 Floor** | 面（region） | ❌ 菜单无入口；仅 `/api/genrule` 的 `mode:"floor"` | ✅ 通过 API 使用 mm 图层 | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ❌ / 🔀（导出为 proxy） | ✅ |
-| **门 Door** | —（宿主洞口） | ✅ 创建面板；必须先有墙体 | 🔀 仅洞口宽/高与偏移 | ✅* | ✅ 必须提供 `wall_id` | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcDoor） | ✅ |
+| **门 Door** | —（宿主填充：门扇 + 框） | ✅ 创建面板；必须先有墙体 | ✅ 洞口宽/高、沿墙距离、离地高；生成门扇 + 框 | ✅* | ✅ 必须提供 `wall_id`；落在墙中心线，宿主不重剪（洞口用 Opening） | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcDoor） | ✅ |
 | **洞口 Opening** | 体（宿主相对空腔体积） | ✅ 创建面板（建筑 → 洞口）；必须有宿主墙 | 🔀 仅宽/高/偏移；宿主网格不重剪 | ✅* | ✅ 父关系 + `host_wall_id`；宿主必须是墙 | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅（IfcOpeningElement） | ✅ |
-| **窗 Window** | —（宿主洞口） | ✅ 创建面板；必须先有墙体 | 🔀 仅洞口宽/高与窗台高 | ✅* | ✅ 必须提供 `wall_id` | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcWindow） | ✅ |
+| **窗 Window** | —（宿主填充：窗扇 + 框） | ✅ 创建面板；必须先有墙体 | ✅ 洞口宽/高、沿墙距离、窗台高；生成窗扇 + 框 | ✅* | ✅ 必须提供 `wall_id`；落在墙中心线，宿主不重剪（洞口用 Opening） | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcWindow） | ✅ |
 | **梁 Beam** | 线 | ✅ 目录路径（创建 Component）；对话框回退为盒体 | ✅ 目录参数按 mm；系列门禁 🔀 | ✅* | — | 🔀 仅 API | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcBeam） | ✅ |
 | **柱 Column** | 线 | ✅ 目录路径（创建 Component）；对话框回退为盒体 | ✅ 目录参数按 mm；系列门禁 🔀 | ✅* | — | 🔀 仅 API | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / ✅（IfcColumn） | ✅ |
 | **楼梯 Stair** | 体（基本体占位） | 🔀 无楼梯生成器；对话框创建基本体盒 | 🔀 基本体尺寸 | ✅* | — | — | ✅ 视口 | ✅ 视口 | ❌ | ❌ | ❌ | ✅ / 🔀（导出为 proxy） | ✅ |

@@ -1,7 +1,7 @@
 ---
 title: "OmniM REST API Reference"
 status: reference
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "crates/server, proto"
 evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
@@ -555,7 +555,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
   | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`; optional `alignment` (picked polyline as `Path(open)`, `[x,y,z]` in metres, default empty). With ≥ 2 points the road is generated per segment along the polyline (each segment `build_road`-meshed, rotated by its segment angle and translated to the segment start, using the same `width`/`thickness`); with < 2 points the single straight road of `length` is generated. The polyline may arrive as contract `path { points, closed: false }` or legacy `alignment[]` — see the path contract below. |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?` — legacy straight pipe; add `path` (`{ points, closed:false }`, ≥ 2 points) for **pipe routing** (P8): a circular section is swept along the polyline through the `Pipe-Path` feature tree, stored as a `PipePlant` object with `route_points`/`pipe_radius` properties and **two instance connectors** (`start`/`end`, bore = 2·radius, direction facing outward). Each internal bend also creates a `Fitting` elbow placeholder, all recorded as **one undo step**. `radius ≤ 0` → `400`. |
-  | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` (parented to the wall; boolean-subtracted opening from the wall bbox) |
+  | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` (parented to the wall; builds a leaf/sash + frame on the wall centreline, where `position_x` is the distance along the wall path and `position_z` is the floor/sill height; the host wall is not re-cut — use an `opening` object for the void) |
   | `opening` | `name`, `wall_id` (host **must** be a `Wall`), `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?` — creates an `ObjectType::Opening` void volume (IfcOpeningElement) parented to the wall; the host mesh is not re-cut |
   | `assembly` | `name`, `components[]` of `{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`, `parent_id?` |
   | `layered` | `name`, `mode` (`wall\|slab\|roof\|floor`), `length`, `width`, `height`, `layers[]` of `{ name, thickness, material_id, function }`, `path` / `boundary` (see the path contract below), `start_*`/`end_*`, `parent_id?`, `series_id?`, `bottom_level_id?`/`top_level_id?` (P8-S2 vertical extent — validated **before** creation, so an invalid pair cannot leave an orphan object; `series_id` is metadata only on this family) |

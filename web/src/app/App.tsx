@@ -25,6 +25,7 @@ import { registerDefaultPanels } from './panels/defaultPanels';
 import { AppLayout } from './layout/AppLayout';
 import { PanelSlot } from './panels/PanelRegistry';
 import { ThreeViewerContext } from './context/ThreeViewerContext';
+import { applyTheme } from '../shared/theme';
 
 export function App() {
   const toast = useToastApi();
@@ -47,6 +48,7 @@ export function App() {
     creationDispatch,
     refresh, reloadScene, markDirty, saveProject, saveState,
     setCursorWorld, setFps,
+    theme,
   } = useAppStore();
   const confirm = useConfirm();
 
@@ -88,6 +90,7 @@ export function App() {
   }, [saveState.status]);
 
   useEffect(() => { registerDefaultPanels(); }, []);
+  useEffect(() => { applyTheme(theme); }, [theme]);
   useEffect(() => {
     // UI-DAT-01: the workspace is only reachable after an explicit open/new.
     // The server tracks whether this session has one; a restart lands here.

@@ -7,9 +7,9 @@ evidence: "audited against code 2026-10-27"
 ---
 # Changelog
 
-All notable changes to the OmniM project are documented in this file. Substantive phase summaries only — this is not a commit log.
+All notable changes to the OmniM project are documented in this file. Substantive batch summaries only — this is not a commit log.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap phase.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap batch.
 
 **Last updated: 2026-10-30**
 
@@ -304,7 +304,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 8 — In Progress] (2028 Q1-Q2 target, started)
+> **About batch labels:** the historical entries below keep the commit labels used at the time. `P8-Sx` is a slice inside batch 8; `P9-Sx` is a slice inside the frontend-productization batch 7b (**not** Phase 9 / AMIR). Calendar targets are no longer maintained; see the [roadmap](ROADMAP.md) for current status, gates and dependencies.
+
+## [Phase 8 — In Progress] (batch label)
 
 ### Added
 - Production-grade catalog data: steel sections (IPE/HEA/HEB/CHS/SHS per EN 10365, GB/T 706), pipe schedules (CS150, SS300 / ASME B36.10), concrete wall/beam/column/slab templates, connector definitions with flange ratings.
@@ -318,7 +320,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 7 — User Interface] (2027 Q4) — Completed
+## [Phase 7 — User Interface] (batch label) — Completed
 
 ### Added
 - Project Workspace: three.js viewer (orbit/pan/zoom, selection, section cuts, measurement, wireframe/shaded/x-ray/edge view modes), feature tree, Available Components Panel (series-filtered, sliders, drag-to-place), property panel, Omcom Console (syntax highlighting, history, tab completion), AI chat panel.
@@ -331,7 +333,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 6 / 6b — GenRule Refactor & Library Infrastructure] (2027 Q3-Q4) — Completed
+## [Phase 6 / 6b — GenRule Refactor & Library Infrastructure] (batch label) — Completed
 
 ### Added
 - Library ↔ SeriesStore ↔ Project three-way split; Library as session-level global static; project-private SeriesStore + `external_series_refs`.
@@ -343,7 +345,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 5 — Catalog Component Modeling] (2027 Q2) — Completed
+## [Phase 5 — Catalog Component Modeling] (batch label) — Completed
 
 ### Added
 - 20+ parameterized catalog components across structural (IPE/HEA/HEB/CHS/SHS/Angle), piping (pipe, elbow, tee, reducers, flange, valves), and building (concrete/door/window) families; series definitions CS150, SS300, Concrete-C30, Steel-Q355, Highway-GB.
@@ -351,14 +353,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 4 — Component Catalog & Series Library] (2027 Q1) — Completed
+## [Phase 4 — Component Catalog & Series Library] (batch label) — Completed
 
 ### Added
 - PARAGON-style component catalog (ComponentDef/ParamDef/ConnectorDef, Category hierarchy) and SPECON-style series library (selector decision trees, SpecComponent constraints, numeric-range matching), selection engine, connector type-code compatibility, external file storage.
 
 ---
 
-## [Phase 3 — Feature Engine & BRep Kernel] (2026 Q3-Q4) — Completed
+## [Phase 3 — Feature Engine & BRep Kernel] (batch label) — Completed
 
 ### Added
 - Feature as first-class entity (cached MeshGeometry, dirty tracking, rebuild pipeline, rollback/suppression); 9 feature types (Extrude, Revolve, Sweep, Loft, Boolean, Chamfer, Fillet, Pattern, Shell).
@@ -367,14 +369,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [Phase 2 — Constraint Solver & Sketch] (2026 Q2-Q3) — Completed
+## [Phase 2 — Constraint Solver & Sketch] (batch label) — Completed
 
 ### Added
 - Sketch data model (SketchPlane, entities, 11 constraint types, SketchStore); slvs-based constraint solver with DOF analysis and over/under-constraint reporting; sketch/feature/component commands with undo/redo; standalone Sketch Editor web page; `EXTRUDE_SKETCH` / `REVOLVE_SKETCH` to 3D meshes.
 
 ---
 
-## [Phase 1 — Core Data Model & Command Layer — Partial] (2026 Q1-Q2)
+## [Phase 1 — Core Data Model & Command Layer — Partial] (batch label)
 
 ### Added
 - Unified data model (OmniObject hierarchy, properties/property sets, materials, ObjectType across 4 domains), project lifecycle & breakdown structures, administrative-division hierarchy, relationship system.

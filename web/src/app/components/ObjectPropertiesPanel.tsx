@@ -6,6 +6,8 @@ import type { CreationForm, CreationPhase } from '../../shared/types/creation';
 import { CATALOG_TYPES } from '../../shared/catalog';
 import { CatalogParams } from './create/CatalogParams';
 import { PropertyDefPanel } from './PropertyDefPanel';
+import { SkeletonLines } from './Loading';
+import { useDelayedLoading } from '../../shared/useDelayedLoading';
 
 type ObjectPropertiesPanelProps = {
   selectedIds?: readonly string[];
@@ -32,6 +34,8 @@ const BODY_TYPES = new Set(['tank', 'pump', 'valve', 'gear', 'equipment', 'part'
 export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingForm, creationPhase, onSaved, onClose, onExtraChange, onChangeForm, onSubmitCreate, panelMode = 'floating', onToggleMode, onGetMaterial, onSetMaterial }: ObjectPropertiesPanelProps) {
   const [object, setObject] = useState<OmniObject | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [saving, setSaving] = useState(false);
   const [propertyDefs, setPropertyDefs] = useState<ObjectPropertyDef[]>([]);
   const [localIfc, setLocalIfc] = useState('');
@@ -40,15 +44,20 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
 
   const selectedCount = selectedIds?.length ?? 0;
   const primaryId = selectedCount === 1 ? selectedIds![0] : null;
+  const showSkeleton = useDelayedLoading(loading);
 
   // Load object + property defs when single selection changes
   useEffect(() => {
     if (!primaryId) {
       setObject(null);
       setPropertyDefs([]);
+      setLoading(false);
+      setError(null);
       return;
     }
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     async function load() {
       try {
         const [next, defs] = await Promise.all([
@@ -67,6 +76,8 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     void load();
@@ -81,7 +92,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
     }, 2000);
 
     return () => { cancelled = true; clearInterval(interval); };
-  }, [primaryId, meshInfo?.type]);
+  }, [primaryId, meshInfo?.type, reloadKey]);
 
   useEffect(() => {
     if (creatingForm) {
@@ -272,7 +283,31 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
   }
 
   // === NORMAL MODE: single object ===
-  if (!object) return <section className="properties-panel">Loading...</section>;
+  if (!object) {
+    if (error) {
+      return (
+        <section className="properties-panel">
+          <div className="panel-state panel-state--error" role="alert">
+            <p>{error}</p>
+            <button type="button" onClick={() => setReloadKey((k) => k + 1)}>Retry</button>
+          </div>
+        </section>
+      );
+    }
+    if (showSkeleton) {
+      return (
+        <section className="properties-panel" aria-busy="true" aria-label="Loading properties">
+          <SkeletonLines count={8} />
+        </section>
+      );
+    }
+    if (loading) return <section className="properties-panel" aria-busy="true" />;
+    return (
+      <section className="properties-panel">
+        <div className="panel-state">Select an object to inspect its properties.</div>
+      </section>
+    );
+  }
 
   const bbox = meshInfo?.bbox || [[0, 0, 0], [0, 0, 0]];
   const size = [
@@ -304,7 +339,13 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
           <button className="close-btn" onClick={onClose} title="Close">✕</button>
         </div>
       </div>
-      {error && <p className="error">{error}</p>}
+      {loading && <div className="panel-loading-line" aria-hidden="true" />}
+      {error && (
+        <div className="panel-state panel-state--error" role="alert">
+          <p>{error}</p>
+          <button type="button" onClick={() => setReloadKey((k) => k + 1)}>Retry</button>
+        </div>
+      )}
 
       <form onSubmit={(event) => void save(event)}>
         <div className="prop-row"><span className="prop-label">Type</span><input className="prop-value" readOnly value={typeName} /></div>

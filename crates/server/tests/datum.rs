@@ -120,6 +120,35 @@ async fn storey_elevation_is_editable_and_undoable() {
     assert_eq!(obj["elevation"], 0.0, "undo must restore the old elevation");
 }
 
+#[tokio::test]
+async fn storey_creation_discards_primitive_geometry() {
+    let (port, _) = test_server().await;
+    // Regression: the create panel used to send a Box because `storey` fell
+    // through the primitive branch, turning a datum into a 5×0.3×3 slab.
+    let (status, body) = create_object(
+        port,
+        serde_json::json!({
+            "object_type": "storey",
+            "name": "F3",
+            "elevation": 7.8,
+            "geometry": {
+                "operations": [{
+                    "operation": { "Box": { "length": 5.0, "width": 0.3, "height": 3.0 } }
+                }]
+            }
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "{}", body);
+    let id = json_of(&body)["id"].as_str().unwrap().to_string();
+    let obj = get_json(port, &format!("/api/objects/{}", id)).await;
+    assert!(
+        obj["geometry"].is_null(),
+        "a storey must be a datum-only container, got {:?}",
+        obj["geometry"]
+    );
+}
+
 // ── level attachment ─────────────────────────────────────────────────────────
 
 #[tokio::test]

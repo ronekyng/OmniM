@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CreationForm, CreationPhase, ObjectType, GeometryType } from '../../../shared/types/creation';
 import { withGenesisForm, EXTENT_TYPES, storeyOptions, type StoreyOption } from '../../../shared/types/creation';
-import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, objectTypeLabel } from '../../../shared/catalog';
+import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, DATUM_TYPES, objectTypeLabel } from '../../../shared/catalog';
 import { ParentSelector } from './ParentSelector';
 import { SeriesSelector } from './SeriesSelector';
 import { CatalogParams } from './CatalogParams';
@@ -108,7 +108,8 @@ export function CreatePanel({
     return ['长', '宽', '高'];
   };
 
-  const isPrimitive = !GENRULE_TYPES.has(form.objectType) && !CATALOG_TYPES.has(form.objectType) && !LINE_GENRULE_TYPES.has(form.objectType);
+  const isPrimitive = !GENRULE_TYPES.has(form.objectType) && !CATALOG_TYPES.has(form.objectType) && !LINE_GENRULE_TYPES.has(form.objectType) && !DATUM_TYPES.has(form.objectType);
+  const isDatum = DATUM_TYPES.has(form.objectType);
   const isLayeredSurface = LAYERED_TYPES.has(form.objectType);
   const isGenrule = GENRULE_TYPES.has(form.objectType);
   const isLinear = LINEAR_TYPES.has(form.objectType);
@@ -241,6 +242,13 @@ export function CreatePanel({
             <span className="field-label">标高</span>
             <input placeholder="m（可为负）" value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
             {errors.elevation && <span className="field-error">{errors.elevation}</span>}
+            <small className="hint">楼层是标高容器，不生成几何。</small>
+          </div>
+        )}
+
+        {isDatum && form.objectType !== 'storey' && (
+          <div className="create-row">
+            <span className="hint">容器对象只承载层级，不生成几何。</span>
           </div>
         )}
 
@@ -306,7 +314,7 @@ export function CreatePanel({
             </div>
           </>
         ) : (
-          !isGenrule && (
+          !isGenrule && !isDatum && (
             <div className="create-row create-row--labeled">
               <span className="field-label">位置</span>
               <input placeholder="X" value={form.posX} onChange={(e) => handleChange({ posX: e.target.value })} />

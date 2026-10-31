@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { ObjectTreePanel } from '../panels/ObjectTreePanel';
 import { GridPanel } from '../components/GridPanel';
+import { AvailableComponentsPanel } from '../components/AvailableComponentsPanel';
 import { useAppStore } from '../store/appStore';
 
-type LeftTab = 'objects' | 'grids';
+type LeftTab = 'objects' | 'grids' | 'catalog';
 
-/** Left dock with tab groups (IA_SHELL §3.4): the object tree and the datum
- *  grid editor no longer compete for the same vertical space. */
+/** Left dock with tab groups (IA_SHELL §3.4): the object tree, the datum
+ *  grid/level editor and the catalog browser no longer compete for the same
+ *  vertical space. */
 export function LeftDock() {
   const [tab, setTab] = useState<LeftTab>('objects');
   const objectCount = useAppStore((s) => s.stats?.object_count ?? 0);
@@ -32,9 +34,20 @@ export function LeftDock() {
         >
           Grids
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'catalog'}
+          className={tab === 'catalog' ? 'active' : ''}
+          onClick={() => setTab('catalog')}
+        >
+          构件库
+        </button>
       </div>
-      <div className="dock-body">
-        {tab === 'objects' ? <ObjectTreePanel /> : <GridPanel />}
+      <div className="dock-body" role="tabpanel">
+        {tab === 'objects' && <ObjectTreePanel />}
+        {tab === 'grids' && <GridPanel />}
+        {tab === 'catalog' && <AvailableComponentsPanel embedded />}
       </div>
     </div>
   );

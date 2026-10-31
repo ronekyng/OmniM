@@ -9,7 +9,7 @@ evidence: "audited against code 2026-10-27"
 
 本文件记录 OmniM 项目的所有重要变更。仅包含阶段性实质性摘要——这不是提交日志。
 
-格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图阶段组织。
+格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图批次组织。
 
 **最后更新：2026-10-30**
 
@@ -304,7 +304,9 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 8 — 进行中]（目标 2028 Q1-Q2，已启动）
+> **关于批次标签：** 以下历史条目保留当时的提交标签。`P8-Sx` 是批次 8 内的切片编号；`P9-Sx` 是前端产品化批次 7b 内的切片编号（**不是** Phase 9 / AMIR）。日历目标不再维护，当前状态、门禁与依赖见[路线图](ROADMAP.zh-CN.md)。
+
+## [Phase 8 — 进行中]（批次标签）
 
 ### 新增
 - 生产级目录数据：钢型材（IPE/HEA/HEB/CHS/SHS，按 EN 10365、GB/T 706）、管道等级（CS150、SS300 / ASME B36.10）、混凝土墙/梁/柱/板模板、带法兰等级的连接点定义。
@@ -318,7 +320,7 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 7 — 用户界面]（2027 Q4）— 完成
+## [Phase 7 — 用户界面]（批次标签）— 完成
 
 ### 新增
 - Project Workspace：three.js 视口（轨道/平移/缩放、选择、剖切、测量、线框/着色/X 光/仅边线视图模式）、特征树、可用构件面板（系列筛选/滑块/拖拽放置）、属性面板、Omcom 控制台（语法高亮/历史/Tab 补全）、AI 聊天面板。
@@ -331,7 +333,7 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 6 / 6b — GenRule 重构与 Library 基础设施]（2027 Q3-Q4）— 完成
+## [Phase 6 / 6b — GenRule 重构与 Library 基础设施]（批次标签）— 完成
 
 ### 新增
 - Library ↔ SeriesStore ↔ Project 三层分离；Library 为 session 级全局静态；项目私有 SeriesStore + `external_series_refs`。
@@ -343,7 +345,7 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 5 — 目录构件建模]（2027 Q2）— 完成
+## [Phase 5 — 目录构件建模]（批次标签）— 完成
 
 ### 新增
 - 覆盖结构（IPE/HEA/HEB/CHS/SHS/角钢）、管道（直管、弯头、三通、大小头、法兰、阀门）、建筑（混凝土/门/窗）族别的 20+ 参数化目录构件；系列定义 CS150、SS300、Concrete-C30、Steel-Q355、Highway-GB。
@@ -351,14 +353,14 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 4 — 元件目录与系列库]（2027 Q1）— 完成
+## [Phase 4 — 元件目录与系列库]（批次标签）— 完成
 
 ### 新增
 - PARAGON 风格元件目录（ComponentDef/ParamDef/ConnectorDef、Category 层级）与 SPECON 风格系列库（选择器决策树、SpecComponent 约束、数值范围匹配）、选择引擎、连接点类型码兼容性、外部文件存储。
 
 ---
 
-## [Phase 3 — 特征引擎与 BRep 内核]（2026 Q3-Q4）— 完成
+## [Phase 3 — 特征引擎与 BRep 内核]（批次标签）— 完成
 
 ### 新增
 - Feature 作为一等实体（缓存 MeshGeometry、脏跟踪、重建管线、回滚/抑制）；9 种特征类型（Extrude、Revolve、Sweep、Loft、Boolean、Chamfer、Fillet、Pattern、Shell）。
@@ -367,14 +369,14 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [Phase 2 — 约束求解器与草图]（2026 Q2-Q3）— 完成
+## [Phase 2 — 约束求解器与草图]（批次标签）— 完成
 
 ### 新增
 - 草图数据模型（SketchPlane、图元、11 种约束类型、SketchStore）；基于 slvs 的约束求解器，带自由度分析与过/欠约束报告；草图/特征/构件命令带撤销/重做；独立 Sketch Editor 网页；`EXTRUDE_SKETCH` / `REVOLVE_SKETCH` 生成 3D 网格。
 
 ---
 
-## [Phase 1 — 核心数据模型与命令层 — 部分完成]（2026 Q1-Q2）
+## [Phase 1 — 核心数据模型与命令层 — 部分完成]（批次标签）
 
 ### 新增
 - 统一数据模型（OmniObject 层级、属性/属性集、材质、覆盖 4 领域的 ObjectType）、项目生命周期与分解结构、行政分区层级、关系系统。

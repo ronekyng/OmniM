@@ -1,7 +1,7 @@
 ---
 title: "Code-Level Deviations from Documented Model"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "repo"
 evidence: "audited against code 2026-10-27; §7 audited 2026-10-29"
 ---
@@ -184,6 +184,16 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 - `instantiate_from_series()` only fills `ParamConstraint.default_value`; it does not enforce `min/max/fixed`, and it does **not apply** `SpecComponent.material` (`crates/model/src/project.rs:368-386`).
 - `Project::connect()` only checks that both objects exist; it does not validate connector points, type codes, bore, or pressure rating, and does not write `from_point`/`to_point` (`crates/model/src/project.rs:105-121`).
 - `ConnectorDef` has only `direction`; there is no `up`/axis, so flange bolt-hole or valve-stem orientation cannot be determined (`proto/omnim.proto:506-518`).
+
+### 6.5 Hosted-fill geometry — **RESOLVED**
+
+**Documented model**: doors/windows are host fills; their geometry should equal the opening and sit on the wall.
+
+**Before**: a Door/Window object carried the *entire host wall with a hole* as its own mesh; the wall thickness was taken from the world AABB Y span and the patch was never transformed, so the door's AABB equalled the wall and the patch floated at the origin.
+
+**Fix**: doors/windows are now leaf/sash + frame panels (`crates/model/src/gen_rule/door.rs`), placed and rotated using the wall's recorded `path_points`; `position_x` is the distance along the wall path and `position_z` is the floor/sill height. The host wall is still not re-cut (use a standalone `Opening` for the void). Legacy walls without `path_points` fall back to bounding-box placement, a documented approximation.
+
+**Evidence**: `crates/server/tests/opening.rs` (opening size, rotated-wall placement, sill height) and the `crates/model/src/gen_rule/door.rs` unit tests.
 
 ## 7. Frontend UI Deviations — **Known** (2026-10-29)
 

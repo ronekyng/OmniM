@@ -1,7 +1,7 @@
 ---
 title: "OmniM REST API 参考"
 status: reference
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "crates/server, proto"
 evidence: "audited against crates/server/src/lib.rs route table 2026-10-27"
 ---
@@ -555,7 +555,7 @@ curl -sS -X POST "$BASE/api/series/ser-1/select" -H 'Content-Type: application/j
   | `slab` | `name`, `length`, `width`, `structural_thickness`, `finish_thickness`, `parent_id?`, `series_id?` |
   | `road` | `name`, `length`, `width`, `thickness`, `parent_id?`, `series_id?`；可选 `alignment`（拾取的折线，即 Path（开放），`[x,y,z]`，米，默认空）。`alignment` ≥ 2 点时沿折线逐段生成道路（每段按 `build_road` 生成网格、按段角旋转并平移到段起点，统一使用 `width`/`thickness`）；少于 2 点时退化为 `length` 的单段直路。道路的拾取折线放 `alignment` —— `path` 保留给 `layered` 的墙体语义。 |
   | `pipe` | `name`, `length`, `radius`, `parent_id?`, `series_id?`——遗留直管；追加 `path`（`{ points, closed:false }`，≥ 2 点）启用**管道路由**（P8）：圆形截面经 `Pipe-Path` 特征树沿折线扫掠，产出 `PipePlant` 对象并记录 `route_points`/`pipe_radius` 属性与 **两个实例连接器**（`start`/`end`，口径 = 2×radius，方向朝外）。每个内部弯点另生成 `Fitting` 弯头占位，全部作为**单步撤销**记录。`radius ≤ 0` → `400`。 |
-  | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；从墙包围盒布尔减去开洞） |
+  | `door` / `window` | `name`, `wall_id`, `opening_width`, `opening_height`, `position_x`, `position_z`, `parent_id?`（父级为墙；门扇/窗扇 + 边框落在墙体中心线，`position_x` 为沿墙路径距离、`position_z` 为离地/窗台高；宿主墙不重剪，洞口用 `opening` 对象） |
   | `opening` | `name`, `wall_id`（宿主**必须是** `Wall`）、`opening_width`、`opening_height`、`position_x`、`position_z`、`parent_id?`——创建挂到墙上的 `ObjectType::Opening` 空腔体积（IfcOpeningElement）；宿主网格不重剪 |
   | `assembly` | `name`, `components[]`（`{ name, shape: box\|cylinder\|sphere\|cone, p1, p2, p3, tx, ty, tz }`）, `parent_id?` |
   | `layered` | `name`, `mode`（`wall\|slab\|roof\|floor`）, `length`, `width`, `height`, `layers[]`（`{ name, thickness, material_id, function }`）, `path` / `boundary`（见下方路径契约）, `start_*`/`end_*`, `parent_id?`, `series_id?`, `bottom_level_id?`/`top_level_id?`（P8-S2 竖向范围——**创建前**校验，非法组合不会留下孤儿对象；该族 `series_id` 仅作元数据） |

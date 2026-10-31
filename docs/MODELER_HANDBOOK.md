@@ -1,7 +1,7 @@
 ---
 title: "OmniM Modeler Handbook"
 status: current
-last_updated: 2026-10-30
+last_updated: 2026-10-31
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "task flows checked against web/src/app/components/{MainToolbar,create,viewer}, web/src/app/{App,ProjectsPage,TitleBar}.tsx, docs/reference/API.md and docs/guides/GETTING_STARTED.md 2026-10-30"
 ---
@@ -68,10 +68,10 @@ All three remain **region-form** surface objects: a closed boundary plus layers,
 1. Create a **Wall** first (§2.1). Without one, the door/window panel shows “请先创建一面墙体”.
 2. Click **Create** (or the object-type dropdown) and choose **门** or **窗**.
 3. Pick the target wall from the dropdown (it lists objects whose tree type is `Wall`), set **洞口宽/洞口高**, **水平位** and **离地高/窗台高**.
-4. Click **创建**. The door/window is parented to the wall, and the opening is boolean-subtracted from the wall's bounding box.
+4. Click **Create**. The door/window lands on the wall centreline as a **leaf + frame panel** (`position_x` is the distance along the wall path; `position_z` is the floor/sill height). The host wall is **not re-cut**; add a separate `Opening` object when you need a void volume.
 5. API: `POST /api/genrule` `{"type":"door","wall_id":"...","opening_width":1.0,"opening_height":2.1,"position_x":0,"position_z":0}`; an unknown `wall_id` returns 404.
 
-Limits: the opening is cut from the wall **bbox**, not from the layered solid, and there is no opening object, frame type, sill/head parameter set, fire rating or schedule. The quick-action **门/窗** buttons in the 建筑 panel instantiate catalog `Door-Single`/`Window-Fixed` as **Component** objects — those are not hosted doors/windows.
+Limits: the door/window geometry is a **host fill** (leaf + frame), no longer a “whole wall with a hole” patch; the host wall is not re-cut and the void is expressed by a standalone `Opening` object (`IfcOpeningElement`). Still missing: frame types, sill/head parameter sets, fire rating and schedules. Legacy walls created without `path_points` fall back to bounding-box placement — recreate the wall for an exact fit.
 
 ### 2.4 Sketch → feature → BRep (the official precise path)
 1. Click **+ Component** in the main toolbar. This creates a component and navigates to `/component-editor?component=<id>`.
@@ -92,10 +92,10 @@ This path creates real `Component` objects with a feature tree; it is not the sa
 Domain panels (**建筑/土木/工厂/机械**) also offer one-click quick actions that bypass the series gate and instantiate catalog components. They create `Component` objects, so do not expect a semantic `Tank`/`Beam`/`Door` object from them.
 
 ### 2.6 What is not available in Building
-- **Levels/elevation on storeys**: a base elevation exists — settable when creating a storey (`elevation` in metres, mapped to `IfcBuildingStorey.Elevation`, P8-S1); vertical extents cascade one step via `bottom_level_id`/`top_level_id` on path-driven objects (P8-S2); the floor view selector (P8-S4) filters meshes by level and places the section plane. Still missing: `level_id` attachment for ordinary geometry is API-only, and there is no grid/axis object.
-- **Grid objects**: no grid/axis object type or UI; only the viewport grid.
+- **Levels/elevation**: a storey is a **datum-only container** created with an `elevation` in metres (mapped to `IfcBuildingStorey.Elevation`, P8-S1) and generates no geometry; vertical extents cascade one step via `bottom_level_id`/`top_level_id` on path-driven objects (P8-S2); the floor view selector (P8-S4) filters meshes by level and places the section plane. Levels are managed in the left-dock **Grids** tab. Still missing: `level_id` attachment for ordinary geometry is API-only.
+- **Grids**: ✅ the left-dock **Grids** tab supports axis CRUD (P8-S3a) and the viewport draws axis lines and labels; grids are datum annotations, not an `ObjectType`, and `IfcGrid` export is still unimplemented.
 - **Wall types**: no `WallType`/`FloorType`/`RoofType` library object; layers are edited per instance.
-- **Opening objects**: doors/windows are objects, but the cut is a bbox boolean; there is no `Opening` element, sill/head constraints or opening schedule.
+- **Doors, windows and openings**: doors/windows are **host fills** (leaf + frame) placed on the wall centreline; the host wall is **not re-cut**. A standalone `Opening` void object (`IfcOpeningElement`) is available. Still missing: frame types, sill/head constraints, opening schedules and door/window schedules.
 - **Stairs**: no stair generator; the button produces a primitive placeholder. **Ceiling/CurtainWall/Ramp** are planned-only. **Clash, quantity take-off, drawings/schedules**: no implementation at any layer.
 
 Roadmap and gap ledger: [ROADMAP Phase 8](status/ROADMAP.md), [CODE_DEVIATIONS §3](status/CODE_DEVIATIONS.md).

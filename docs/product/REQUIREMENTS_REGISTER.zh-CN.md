@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端需求登记册（RTM）"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -48,13 +48,13 @@ evidence: "n/a (product requirement)"
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-SHL-01 | 三层应用结构（项目、工作区、编辑器） | IA_SHELL §2 | e2e 路由矩阵 | G1 | 🔀 |
-| UI-SHL-02 | 工作区七个固定区域 | IA_SHELL §3 | 截图集 `shell` | G1 | 🔀 |
-| UI-SHL-03 | 属性面板右停靠，260–600 px | IA_SHELL §4 | 截图 + 调宽 e2e | G1 | 🔀 |
-| UI-SHL-04 | 左停靠标签页，240–400 px | IA_SHELL §4 | 标签切换 e2e | G1 | 🔀 |
+| UI-SHL-02 | 工作区七个固定区域 | IA_SHELL §3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
+| UI-SHL-03 | 属性面板右停靠，260–600 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
+| UI-SHL-04 | 左停靠标签页，240–400 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-05 | 底停靠默认折叠、带标签、≤40% 高 | IA_SHELL §4 | 截图 `bottom-collapsed` | G1 | 🔀 |
-| UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | 刷新 e2e | G1 | 🔀 |
+| UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-07 | 按专业切换的上下文功能区 | IA_SHELL §3.3 | 命令集快照测试 | G1 | 🔀 |
-| UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | 截图 + 轮询 e2e | G1 | 🔀 |
+| UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | `web/e2e/shell.spec.ts`（含开发者 FPS） | G1 | ✅ |
 | UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e | G2 | 🔀 |
 | UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | 路由矩阵断言 | G1 | 🔀 |
 | UI-SHL-11 | 低于 1280 px 折叠为图标条 | IA_SHELL §7 | 1024×768 截图 | G2 | 📅 |
@@ -65,7 +65,7 @@ evidence: "n/a (product requirement)"
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-DS-01 | 三层令牌，无原始令牌泄漏 | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
-| UI-DS-02 | 深/浅主题切换不重载 | DESIGN_SYSTEM §3 | 主题 e2e + 截图 | G1 | 📅 |
+| UI-DS-02 | 深/浅主题切换不重载 | DESIGN_SYSTEM §3 | `theme.test.ts` + 主题截图待补 | G1 | 🔀 |
 | UI-DS-03 | 跟随系统默认，选择持久化 | DESIGN_SYSTEM §3.2 | 媒体模拟测试 | G2 | 📅 |
 | UI-DS-04 | 用户界面样式零硬编码颜色 | DESIGN_SYSTEM §2.4 | 颜色扫描 | G2 | 📅 |
 | UI-DS-05 | 完整语义状态矩阵 | DESIGN_SYSTEM §4 | 令牌矩阵评审 | G3 | 📅 |
@@ -84,7 +84,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-01 | 五种选择手势 | INTERACTION §3 | 交互 e2e | G1 | 🔀 |
 | UI-INT-02 | 拾取状态机契约 | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
-| UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | 键盘 e2e | G1 | 🔀 |
+| UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | 上下文菜单且可键盘唤起 | INTERACTION §6 | 菜单 e2e | G2 | 🔀 |
 | UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | 焦点陷阱测试 | G2 | 📅 |
 | UI-INT-07 | 破坏性确认并说明影响 | INTERACTION §7.3 | 删除父对象 e2e | G2 | 📅 |
@@ -99,7 +99,7 @@ evidence: "n/a (product requirement)"
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-FBK-01 | 每个面板三态齐全 | FEEDBACK_ERRORS §3 | 面板清单 | G1 | 🔀 |
-| UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | 时序测试 | G1 | 📅 |
+| UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | `web/src/__tests__/delayedVisibility.test.ts` | G1 | 🔀 |
 | UI-FBK-03 | 超过 1 秒显示进度并可取消 | FEEDBACK_ERRORS §4 | 导入 e2e | G2 | 📅 |
 | UI-FBK-04 | 带码错误、原因与恢复动作 | FEEDBACK_ERRORS §5 | 错误目录比对 | G3 | 📅 |
 | UI-FBK-05 | 无原生 alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` 扫描 | G1 | ✅ |

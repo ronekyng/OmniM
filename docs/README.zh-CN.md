@@ -71,7 +71,7 @@ evidence: "verified against the docs tree 2026-10-27"
 - [术语表](reference/GLOSSARY.zh-CN.md)
 
 ### 📊 我想知道项目真实进度
-- [路线图](status/ROADMAP.zh-CN.md) — 各阶段状态，附代码佐证
+- [路线图](status/ROADMAP.zh-CN.md) — 工作流状态、门禁与依赖，附代码佐证
 - [格式兼容性](status/FORMAT_COMPAT.zh-CN.md) — 如实的导入/导出支持矩阵
 - [代码偏差记录](status/CODE_DEVIATIONS.zh-CN.md)
 - [变更日志](status/CHANGELOG.zh-CN.md)

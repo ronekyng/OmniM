@@ -86,19 +86,21 @@ npm run test:watch    # 或：npx vitest
 
 现有测试在 `web/src/__tests__/`（`stateMachine.test.ts` 覆盖视图器所用的创建工具/交互状态机）。Vitest 默认匹配 `__tests__/*.test.ts` 之类的文件。
 
-**验证层次**（目标结构；目前只有单元层）：
+**验证层次**（目前已有单元层与 E2E 层；其余为计划）：
 
 | 层次 | 位置 | 命令 | 门禁 | 状态 |
 |---|---|---|---|---|
-| 单元 | `web/src/__tests__/` | `npm test` | G1 | ✅ 5 文件 / 79 测试 |
+| 单元 | `web/src/__tests__/` | `npm test` | G1 | ✅ 12 文件 / 107 测试 |
 | 组件 | 同目录 `*.test.tsx` | `npm test` | G2 | 📅 |
-| E2E | `web/tests/e2e/` | `npm run e2e` | G1 | 📅 |
+| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 1 条：项目首页 → 工作区 → 主题 → 停靠标签 → 楼层 |
 | 视觉回归 | `web/tests/visual/` | `npm run visual` | G2 | 📅 |
 | 可访问性 | `web/tests/a11y/` | `npm run a11y` | G2 | 📅 |
 | 性能 | `web/tests/perf/` | `npm run perf` | G2 | 📅 |
 | 文档结构 | `docs/` | `python3 scripts/check_docs.py`（链接、围栏、标题、front matter、双语对齐） | G0 | ✅ |
 | 界面契约 | `docs/`、`web/src/` | `python3 scripts/check_ui_contracts.py` | G0 | ✅ |
 | 快捷键表 | `docs/reference/` | `python3 scripts/gen_keymap.py --check` | G2 | ✅（仅一致性） |
+
+E2E 由 Playwright `webServer` 同时启动 Rust 服务与 Vite 开发服务，项目写入 `/tmp/opencode/omnim-e2e`；首次运行需 `npx playwright install --with-deps chromium`。CI 有独立任务。
 
 要求的路径与预算见 [DEFINITION_OF_DONE](../process/DEFINITION_OF_DONE.zh-CN.md) §5 与 [PERFORMANCE](../specification/ui/PERFORMANCE.zh-CN.md) §8。无法因所述原因失败的测试不是证据。
 

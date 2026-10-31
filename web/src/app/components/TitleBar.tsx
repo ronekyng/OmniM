@@ -14,6 +14,8 @@ export function TitleBar() {
   const saveProject = useAppStore((s) => s.saveProject);
   const saveProjectAs = useAppStore((s) => s.saveProjectAs);
   const resetLayout = useAppStore((s) => s.resetLayout);
+  const theme = useAppStore((s) => s.theme);
+  const setTheme = useAppStore((s) => s.setTheme);
   const transformMode = useAppStore((s) => s.transformMode);
   const creationPhase = useAppStore((s) => s.creationPhase);
   const creationObjectType = useAppStore((s) => s.creationObjectType);
@@ -70,6 +72,14 @@ export function TitleBar() {
         {saveState.status === 'clean' ? '' : saveLabel(saveState)}
       </span>
       <div className="title-actions">
+        <button
+          type="button"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+        >
+          {theme === 'dark' ? '☀' : '☾'}
+        </button>
         <button type="button" onClick={() => void saveProject()} disabled={saveState.status === 'saving'} title="Save (Ctrl/Cmd+S)">
           Save
         </button>

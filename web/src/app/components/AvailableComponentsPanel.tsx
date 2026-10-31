@@ -8,10 +8,12 @@ import { useAppStore } from '../store/appStore';
 import { useCatalog, ensureCatalogLoaded, isFavorite, toggleFavorite } from '../../shared/catalog';
 import { ComponentParamPanel } from './create/ComponentParamPanel';
 import { MaterialBrowser } from './create/MaterialBrowser';
+import { SkeletonLines } from './Loading';
+import { useDelayedLoading } from '../../shared/useDelayedLoading';
 
 type ParamValues = Record<string, number>;
 
-export function AvailableComponentsPanel() {
+export function AvailableComponentsPanel({ embedded = false }: { embedded?: boolean } = {}) {
   const setCatalogPanelOpen = useAppStore((s) => s.setCatalogPanelOpen);
   const panelMode = useAppStore((s) => s.panelMode);
   const markDirty = useAppStore((s) => s.markDirty);
@@ -21,6 +23,8 @@ export function AvailableComponentsPanel() {
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const { status, catalog, error: catalogError } = useCatalog();
   const [loading, setLoading] = useState(true);
+  const [catalogReload, setCatalogReload] = useState(0);
+  const showSkeleton = useDelayedLoading(loading);
   const [error, setError] = useState('');
   const [selectedSeries, setSelectedSeries] = useState<string>('');
   const [searchText, setSearchText] = useState('');
@@ -38,7 +42,7 @@ export function AvailableComponentsPanel() {
     api.listObjects()
       .then((list) => setObjectNames(list.map((o) => o.name)))
       .catch(() => { /* names only power auto-naming; keep last list */ });
-    ensureCatalogLoaded()
+    ensureCatalogLoaded(catalogReload > 0)
       .then(() => setLoading(false))
       .catch(() => setLoading(false));
     api.listSeries()
@@ -46,7 +50,7 @@ export function AvailableComponentsPanel() {
       .catch((err: unknown) =>
         notify.error(`系列列表加载失败: ${err instanceof Error ? err.message : String(err)}`),
       );
-  }, []);
+  }, [catalogReload]);
 
   const DOMAIN_LABELS: Record<string, string> = {
     structural: '建筑结构',
@@ -126,7 +130,9 @@ export function AvailableComponentsPanel() {
     setInstantiating(false);
   };
 
-  const modeClass = panelMode === 'floating' ? 'avail-comp--floating' : 'avail-comp--docked';
+  const modeClass = embedded
+    ? 'avail-comp--embedded'
+    : panelMode === 'floating' ? 'avail-comp--floating' : 'avail-comp--docked';
   const loadError = error || catalogError || '';
 
   return (
@@ -141,7 +147,9 @@ export function AvailableComponentsPanel() {
           >
             材料库
           </button>
-          <button onClick={() => setCatalogPanelOpen(false)}><IcoClose /></button>
+          {!embedded && (
+            <button onClick={() => setCatalogPanelOpen(false)}><IcoClose /></button>
+          )}
         </div>
       </div>
 
@@ -151,8 +159,17 @@ export function AvailableComponentsPanel() {
         />
       ) : (
         <>
-          {loading && <div className="avail-comp-loading">加载中...</div>}
-          {loadError && <div className="avail-comp-error">{loadError}</div>}
+          {loading && showSkeleton && (
+            <div aria-busy="true" aria-label="Loading catalog">
+              <SkeletonLines count={6} />
+            </div>
+          )}
+          {loadError && (
+            <div className="avail-comp-error" role="alert">
+              <span>{loadError}</span>
+              <button type="button" onClick={() => setCatalogReload((n) => n + 1)}>Retry</button>
+            </div>
+          )}
 
           {!loading && !loadError && (
             <div className="avail-comp-body">

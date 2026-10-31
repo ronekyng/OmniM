@@ -79,7 +79,7 @@ Phase 11 为归属路线阶段（[ROADMAP.md](ROADMAP.md)）。建议顺序：
 2. **glTF/GLB 导出** — 面向 three.js 可视化的低成本收益；网格已存在于服务端。
 3. **DXF 导入**（通过开源 crate 支持基础 2D 实体）— 供草图工作流使用。
 4. **STEP AP242** — 需要正确的 CAD 内核边界；在承诺之前评估现有 crate。
-5. **GIS（先 GeoJSON，再 Shapefile）** — 推迟至 Phase 8 土木领域工作之后。
+5. **GIS（先 GeoJSON，再 Shapefile）** — 推迟至批次 8 土木领域工作之后。
 6. OBJ/FBX/STL — 仅按需；当前未排期。
 
 ## 4. 专有 BIM 格式

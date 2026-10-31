@@ -73,7 +73,7 @@ This is the entry point to the OmniM documentation. It is organized by audience 
 - [Glossary](reference/GLOSSARY.md) ([中文](reference/GLOSSARY.zh-CN.md))
 
 ### 📊 I want to know where the project really is
-- [Roadmap](status/ROADMAP.md) — phase status with code evidence ([中文](status/ROADMAP.zh-CN.md))
+- [Roadmap](status/ROADMAP.md) — workstream status, gates and dependencies with code evidence ([中文](status/ROADMAP.zh-CN.md))
 - [Format Compatibility](status/FORMAT_COMPAT.md) — honest import/export matrix ([中文](status/FORMAT_COMPAT.zh-CN.md))
 - [Code Deviations](status/CODE_DEVIATIONS.md) — ledger of spec-vs-code gaps ([中文](status/CODE_DEVIATIONS.zh-CN.md))
 - [Audit & acceptance records (2026-10-30)](status/CODE_AUDIT_2026-10-30.zh-CN.md) — code audit; [modeler docs audit](status/MODELER_DOCS_AUDIT_2026-10-30.zh-CN.md) / [re-audit](status/MODELER_DOCS_REAUDIT_2026-10-30.zh-CN.md); [UI/UX audit](status/MODELER_UIUX_AUDIT_2026-10-30.zh-CN.md) / [re-audit](status/MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md) (zh-CN snapshots)

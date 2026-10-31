@@ -43,9 +43,9 @@ OmniM 的核心由三层构成：
 
 ## 项目状态
 
-&gt; **当前阶段：第八阶段 — 领域扩展**
+&gt; **当前状态：前端产品化（批次 7b）是当前主线；内核 1–6 已交付，领域扩展（批次 8）部分交付。**
 &gt;
-&gt; OmniM 正在活跃开发中。第 1–7 阶段已交付，其中**第一阶段为部分完成**（类型化 `OmniCommand` schema 与执行器已存在；基于 nom 的 Omcom 文本 DSL 不存在）。第 8 阶段（领域扩展）进行中；第 9 阶段（AMIR）已提前部分交付。参见[路线图](docs/status/ROADMAP.zh-CN.md)与[变更日志](docs/status/CHANGELOG.zh-CN.md)。服务器当前提供 **79** 条去重 REST 路由；**无 WebSocket、无数据库**。变更默认落盘到 `project.omnim`（或 `$OMNIM_PROJECT`）；设置 `OMNIM_EPHEMERAL=1` 可完全内存运行。撤销/重做覆盖全部变更端点（[WRITE_PATHS.zh-CN.md](docs/architecture/WRITE_PATHS.zh-CN.md)）。
+&gt; OmniM 正在活跃开发中。批次编号是稳定标签，不代表日历顺序；完整状态、门禁与依赖关系以[路线图](docs/status/ROADMAP.zh-CN.md)为单一真值，历史交付记录见[变更日志](docs/status/CHANGELOG.zh-CN.md)。内核唯一的未交付项是基于 nom 的 Omcom 文本 DSL（RFC-0001 草案）。服务器当前提供 **87** 条去重 REST 路由；**无 WebSocket、无数据库**。变更默认落盘到 `project.omnim`（或 `$OMNIM_PROJECT`）；设置 `OMNIM_EPHEMERAL=1` 可完全内存运行。撤销/重做覆盖全部变更端点（[WRITE_PATHS.zh-CN.md](docs/architecture/WRITE_PATHS.zh-CN.md)）。
 
 ---
 
@@ -259,18 +259,12 @@ Object
 
 ### 当前状态
 
-- **第 1 阶段**：核心数据模型 & Omcom DSL — 🔀 部分完成（类型化命令 + 执行器；文本 DSL 未实现）
-- **第 2 阶段**：约束求解器 & 草图系统 — ✅ 完成
-- **第 3 阶段**：特征引擎 & BRep 内核 — ✅ 完成
-- **第 4 阶段**：元件库 & 系列库 — ✅ 完成
-- **第 5 阶段**：目录元件建模 — ✅ 完成
-- **第 6 阶段**：GenRule 重构与默认模板 — ✅ 完成
-- **第 7 阶段**：用户界面 — ✅ 完成（有一项已知缺口）
-- **第 8 阶段**：领域扩展 — 🔄 进行中
-- **第 9 阶段**：AMIR AI 编译 — 🔄 部分完成（提前交付，仍有缺口）
-- **第 10 阶段**：多用户 / 云端 — 📅 计划中
-- **第 11 阶段**：IFC/STEP 格式兼容 — 🔀 部分完成
-- **第 12 阶段**：分析与生态 — 📅 计划中
+- **内核与几何（批次 1–6）**：✅ 已交付；唯一缺口是基于 nom 的 Omcom 文本 DSL（[RFC-0001](docs/RFC/README.zh-CN.md) 草案）。
+- **工作台原型（批次 7）**：✅ 主流程可走通；它不等于产品级界面。
+- **前端产品化（批次 7b）**：🔄 当前主线，G1 尚未通过。
+- **领域扩展（批次 8）**：🔄 部分交付；领域前端项阻塞在 7b G2。
+- **AI 编译 / 格式互操作**：9 🔀、11 🔀。
+- **云与协作 / 分析生态**：10 🔀（仅 REST + 文件子集）、12 📅。
 
 [查看完整路线图 →](docs/status/ROADMAP.zh-CN.md)
 

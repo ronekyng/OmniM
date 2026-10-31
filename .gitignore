@@ -6,6 +6,9 @@ node_modules/
 web/node_modules/
 web/dist/
 web/.vite/
+web/test-results/
+web/playwright-report/
+web/blob-report/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -46,3 +49,6 @@ Thumbs.db
 # Python bytecode
 __pycache__/
 *.pyc
+
+# E2E sample project (never commit runtime projects)
+/sample-project.omnim

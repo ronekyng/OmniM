@@ -1,276 +1,226 @@
 ---
 title: "OmniM 开发路线图"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "repo"
-evidence: "audited against code 2026-10-27"
+evidence: "对照代码、CHANGELOG 与门禁看板复核；每条状态附证据链接"
 ---
 # OmniM 开发路线图
 
-**最后更新：2026-10-27**
+> 本文回答三个问题：**今天有什么、下一步做什么、什么在阻塞**。
+>
+> - **日期不是承诺。** 本文不按日历排期，按依赖与门禁排序；历史交付日期只保留在 [CHANGELOG](CHANGELOG.zh-CN.md)。
+> - **单一真值。** 能力现状以 `status/` 与 `architecture/` 为准，设计意图以 `specification/` 与 `RFC/` 为准；两者不一致时必须在 [CODE_DEVIATIONS](CODE_DEVIATIONS.zh-CN.md) 显式登记。
+> - **编号是标签，不是顺序。** `7b`、`8`、`P8-S1` 是可被其他文档引用的稳定标签，不代表必须串行，也不代表日历先后。
 
-> ### 当前阶段：第八阶段 — 领域扩展与生产级构件库
->
-> 已完成：第一至七阶段（第一阶段为部分完成，见下方说明）。第九阶段提前部分交付（AMIR AI 引擎）。
->
-> ### 状态诚实性说明
->
-> 本文档早期版本将 Omcom **文本 DSL / nom 解析器**列为已完成的 Phase 1 交付物。这**不准确**：当前实际交付的是统一数据模型、类型化 `OmniCommand` schema 以及完整的类型化命令执行器。Web UI 中的 Omcom 控制台执行的是 **JSON 命令加少量临时文本捷径**——**没有基于 nom 的文本语法解析器**。文本 DSL 目前是草案 RFC：[RFC-0001: Omcom Text DSL](../RFC/README.md)。因此第一阶段标记为 **🔀 部分完成**。
+## 1. 阅读约定
 
-## 状态图例
+### 1.1 状态标记
 
 | 标记 | 含义 |
-|------|------|
-| ✅ 完成 | 已实现并在代码库中验证 |
-| 🔄 进行中 | 活跃开发，部分交付物已落地 |
-| 🔀 部分完成 | 主体已交付，存在明确的缺口 |
-| 📅 计划中 | 尚未开始 |
+|---|---|
+| ✅ 完成 | 已实现，且有代码或测试证据 |
+| 🔄 进行中 | 活跃开发，部分切片已交付 |
+| 🔀 部分完成 | 主体已交付，存在点名的缺口 |
+| 📅 计划中 | 未开始，或仅有意向 |
 
----
+### 1.2 三组容易混淆的词
 
-## Phase 1：核心数据模型 & Omcom DSL (2026 Q1-Q2) — 🔀 部分完成
+| 词 | 指什么 | 不是什么 |
+|---|---|---|
+| 批次 / 阶段 | 交付流标签（1–12、7b） | 日历季度，也不是必须串行的序号 |
+| 门禁 | G0–G3，发布质量闸门 | 功能批次 |
+| 切片 | 批次内一次可验收的交付（如 P8-S1） | 独立阶段 |
 
-**目标**：建立基础对象模型、类型化命令/命令执行器层，以及 Omcom 文本 DSL。
+## 2. 当前状态快照
 
-### 已交付 ✅
+| 工作流 | 批次 | 状态 | 今天真实可用 | 明确缺口 | 证据 |
+|---|---|---|---|---|---|
+| 内核与几何 | 1–6 | ✅ 主体（批次 1 🔀） | 统一数据模型、类型化命令与撤销/重做、草图 + slvs、特征 + truck-BRep、目录/系列、GenRule 与默认模板 | 基于 nom 的 Omcom 文本 DSL（[RFC-0001](../RFC/README.zh-CN.md)） | `crates/model/`、`crates/omcom/`、[CAPABILITY_MATRIX](../CAPABILITY_MATRIX.zh-CN.md) |
+| 工作台原型 | 7 | ✅ | 视口、草图编辑器、特征树、目录面板、属性面板、Omcom 控制台、AI 聊天、Library/Series Manager | 仅为功能原型，不是产品级界面；AI 命令预览归批次 9 | `web/src/`、[CHANGELOG](CHANGELOG.zh-CN.md) |
+| 前端产品化 | 7b | 🔄 | 项目首页、停靠外壳、保存/另存为、错误边界、共享弹窗、自动命名 | G1 未通过；G2/G3 未开始；无 e2e、视觉与性能基线 | [RELEASE_READINESS](RELEASE_READINESS.zh-CN.md) |
+| 领域扩展 | 8 | 🔄 | 生产级目录数据；楼层标高/轴网/楼层视图/洞口；装配容器；管道路由与连接器 | 建筑完整 IFC/MEP/算量、土木地形路线、工厂分支管道、机械 BOM；领域前端 | [CAPABILITY_MATRIX](../CAPABILITY_MATRIX.zh-CN.md) |
+| AI 编译 | 9 | 🔀 | AMIR 提供方、自然语言→命令、多轮聊天、反向描述模型 | 多步规划、校验解释、置信度、人在回路预览、多智能体、RAG | `crates/amir/` |
+| 格式互操作 | 11 | 🔀 | IFC 2x3 / IFC 4 子集导入导出（手写解析器/写出器） | 实体覆盖不完整；STEP/DXF/DWG/GIS/glTF/OBJ/FBX 未实现 | [FORMAT_COMPAT](FORMAT_COMPAT.zh-CN.md) |
+| 云与协作 | 10 | 🔀（仅子集） | Axum REST、JSON 文件持久化、全变更端点撤销/重做 | PostgreSQL/PostGIS、版本历史、WebSocket、多用户协作 | [API](../reference/API.zh-CN.md)、[WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md) |
+| 分析与生态 | 12 | 📅 | 无 | 结构分析、碰撞检测、工程量、成本、插件生态 | — |
 
-1. **统一数据模型** — `OmniObject`、核心层级（SpatialElement / Element / System）、Property + PropertySet 系统、材质定义、覆盖 4 个领域的 ObjectType 枚举。Protobuf/serde 类型作为内部 schema（`.proto` 文件纯粹作为 serde-JSON 类型声明来源；**未使用 protobuf 运行时/线上编码**）。
-   *代码证据：`crates/model/`（含 `crates/model/src/proto/`）、`crates/core/`。*
-2. **类型化命令层** — `OmniCommand` 消息类型 + 完整的类型化命令执行器，支持完整撤销/重做。
-   *代码证据：`crates/omcom/src/lib.rs`、`crates/server/src/lib.rs` 中的执行器。*
-3. **项目生命周期模型**、**行政分区层级**（世界→…→地块，GeoBoundary）、**项目分解结构**（项目群→…→零件）、**关系系统**（包含 / 连接 / 空间关系）。
-   *代码证据：`crates/model/src/`。*
+## 3. 已交付批次（1–7）
 
-### 未交付 📅
+### 3.1 内核与几何（1–6）
 
-- **基于 nom 的 Omcom 文本 DSL**（`crates/omcom-parser`、EBNF 语法、文本→OmniCommand 映射、带用法提示的错误消息）。当前交互式“控制台”仅为 JSON + 少量临时捷径。
-  *设计提案：[RFC-0001: Omcom 文本 DSL](../RFC/README.md)（草案）。*
+- **批次 1 🔀**：统一数据模型、类型化 `OmniCommand` 与执行器、生命周期/行政区划/分解结构/关系系统。缺口只有一项：文本 DSL 仍是草案 RFC。
+- **批次 2 ✅**：草图数据模型、11 类约束、slvs 求解器、草图编辑器、Extrude/Revolve 管线。
+- **批次 3 ✅**：特征引擎（9 类特征）、truck-BRep、参数系统、组件编辑器。
+- **批次 4 ✅**：ComponentDef/ParamDef/ConnectorDef、Series 选择器、`.omnimlib` / `.omnimseries`。
+- **批次 5 ✅**：钢型材、管道、混凝土建筑构件目录与实例化管线。
+- **批次 6 ✅**：GenRule 重构、Library/SeriesStore/Project 分离、系列门禁、CatalogRef、默认模板。
 
-### 完成标准（修订版）
-- ✅ 数据模型 + 类型化执行器处理所有对象类型的创建/命令流程
-- ✅ 每条已执行命令可撤销/重做
-- 📅 文本语法解析所有 `create wall/beam/…` 命令（待 RFC-0001 获得采纳）
+证据入口：`crates/model/`、`crates/sketch/`、`crates/omcom/`、[ARCHITECTURE_MAP](../guides/ARCHITECTURE_MAP.zh-CN.md)。
 
----
+### 3.2 工作台原型（7）✅
 
-## Phase 2：约束求解器 & 草图系统 (2026 Q2-Q3) — ✅ 完成
+Project Workspace、草图编辑器、特征树、目录面板、属性面板、Omcom 控制台、AI 聊天，以及 Library/Series Manager 均已可用。
 
-- **草图数据模型**：SketchPlane、SketchEntity（直线/弧/圆/样条）、11 种约束类型、项目中的 SketchStore。
-- **约束求解器**：集成 slvs 求解器（crate：`slvs`）；草图→求解→已求解草图管线，自由度分析、过/欠约束检测与报告。
-- **Omcom（JSON）草图命令**：`sketch new/add/constr/solve`、`component create`、`feature add/remove`、`EXTRUDE_SKETCH (107)` / `REVOLVE_SKETCH (108)`——均带执行器撤销/重做。
-- **草图编辑器前端**：`/sketch-editor` 页面、2D 画布（网格/坐标轴/图元）、Line/Circle/Arc 工具、约束工具栏（11 种）、Solve 按钮、Extrude/Revolve 对话框、与主视图往返导航。
+**边界说明：** 批次 7 的 ✅ 只表示“功能原型可走通主流程”，不表示产品级界面。产品化由批次 7b 承担，两者不可互相替代。
 
-### 代码证据
-`crates/sketch/`、`crates/server/src/lib.rs` 中的求解管线（`/api/sketches/*`）、`web/src/app/sketch-editor/`。
+## 4. 主线 A：前端产品化（7b）🔄
 
----
+### 4.1 出口定义
 
-## Phase 3：特征引擎 & BRep 内核 (2026 Q3-Q4) — ✅ 完成
+| 出口 | 包含 | 判定 |
+|---|---|---|
+| 工程出口 | G1 + G2 | 前端工程可闭环，全部需求有证据 |
+| 发布出口 | G3 | 含兼容性、安全、遥测与外部评审 |
 
-- **Feature 作为一等实体**：缓存 MeshGeometry、脏标记自动重建、特征依赖排序、回滚与抑制。
-- **9 种特征类型**：Extrude、Revolve、Sweep、Loft、Boolean（并/差/交）、Chamfer、Fillet、Pattern、Shell。
-- **truck-BRep 内核**（`truck-modeling` / `truck-polymesh`）：从草图拉伸/旋转/扫掠/放样、BRep 实体布尔运算、三角网格细分以供渲染。
-- **参数系统**：命名参数存储、meval 表达式引擎、特征参数引用。
-- **Component Editor UI（Revit 风格）**：可拖拽排序的 Feature Panel、Feature Ribbon（9 种类型图标）、点击特征→自动建草图→绘制→Done→对话框工作流、AddFeatureDialog、Feature Card 双击编辑、`+ Component` 按钮、对象树“Edit”右键菜单、Rebuild All 按钮。
+> 当前口径：**7b 的工程完成线定在 G2**，G3 归发布前。G3 含外部安全评审与 ACR/VPAT，不是纯代码工作。此口径需产品签字确认（见 §10 的 Q2、Q4）。
 
-### 代码证据
-`crates/model/`（BRep→网格；旧 `crates/renderer/` 演示 crate 已于 2026-10-27 移除）、`crates/server/src/lib.rs` + `crates/model/` 中的特征引擎、`web/src/app/components/component-editor/`。
+### 4.2 门禁看板
 
----
+| 门禁 | 范围 | 状态 | 今天 | 退出条件 |
+|---|---|---|---|---|
+| G0 | 契约与需求 | 🔀 | 草案完成，签字栏待填 | 产品/设计/前端三方签字 |
+| G1 | Alpha | 📅 未通过 | 25 条中 9 ✅ / 16 🔀 / 0 📅 | 25 条全部 ✅ 且证据可点开 |
+| G2 | Beta | 📅 未开始 | 0 / 37 | 设计系统、i18n、A11Y、性能全部达标 |
+| G3 | GA | 📅 未开始 | 0 / 34 | 兼容/安全/遥测/ACR/发布手册 + 外部评审 |
 
-## Phase 4：元件库 & 系列库 (2027 Q1) — ✅ 完成
+完整清单：[REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md)；判定规则：[RELEASE_READINESS](RELEASE_READINESS.zh-CN.md)。
 
-借鉴 PDMS PARAGON 的**元件目录**与 SPECON 风格的**系列库**，超前于原计划交付：
+### 4.3 执行顺序（按依赖，不按日期）
 
-- **ComponentDef** 带 ParamDef（长度/角度/整数/选择 + 默认值/取值域/公式）、ConnectorDef（位置/方向表达式、口径、类型码）、Category 层级。
-- **Series**：选择器决策树（问题→答案→Selector/SpecComponent）、SpecComponent 参数约束、数值范围匹配（如 DN=50..200）。
-- **选择引擎**与**连接点类型码兼容性**（"FAA"、"BW" 等）。
-- 目录/系列可存于项目内或外部 `.omnimlib` / `.omnimseries` JSON 文件。
+| 步骤 | 内容 | 完成判据 |
+|---|---|---|
+| 0 治理 | G0 签字；关闭 O4/O6；确认 §4.1 出口口径；发布冻结令 | 决策有记录，冻结范围有清单 |
+| 1 测试基建 | Playwright、截图基线、axe、性能参考机、CI 任务 | CI 在 PR 上运行；基线可比较 |
+| 2 G1 收口 | 先补缺失功能（主题 Provider、骨架屏），再补外壳/面板/数据完整性，最后逐条补证据 | 25 / 25 |
+| 3 G2 收口 | 语义令牌、i18n、可访问性、性能预算、剩余反馈与数据完整性 | 37 / 37 |
+| 4 G3 预备 | 兼容矩阵、安全披露、遥测字典、ACR/VPAT 草稿、发布与支持手册 | 34 / 34 + 外部评审结论 |
 
-### 代码证据
-`crates/model/src/catalog.rs`、`crates/model/src/series_store.rs`。
+### 4.4 波次与需求域
 
----
-
-## Phase 5：目录构件建模 (2027 Q2) — ✅ 完成
-
-- **结构**：IPE/HEA/HEB/CHS/SHS/角钢族，参数化截面草图→拉伸。
-- **管道**：直管、长半径弯头、三通、大小头、对焊法兰、阀门——带 P-point 连接点与类型码。
-- **建筑**：混凝土梁/柱/墙、门、窗模板。
-- **系列定义**：CS150、SS300、Concrete-C30、Steel-Q355、Highway-GB。
-- **基础设施**：截面库（I/箱形/圆环/矩形/L 形）、ASME B36.10M 壁厚表、FeatureTemplate + FeatureTreeRegistry、实例化管线（ComponentDef→Feature→Sketch→BRep→Mesh）、REST 端点 `POST /api/catalog/instantiate`、`POST /api/catalog/preview`。
-
-### 代码证据
-`crates/model/` 中的内置目录种子数据 + `instantiate_from_series()`；`crates/server/src/lib.rs` 中的处理器。
-
----
-
-## Phase 6：GenRule 重构 & 默认模板 (2027 Q3) — ✅ 完成
-
-- **Library ↔ SeriesStore ↔ Project 三层分离**：Library 为 session 级全局静态（`static LIBRARY: RwLock<Library>`）；SeriesStore 为被 Project 引用的独立模块；Project 持有对象 + 私有 SeriesStore + `external_series_refs`，不再持有 Library 字段。
-- **系列关卡** `check_series_gate()`：拒绝不在任何已加载系列可达范围内的构件；未加载系列时为开放模式。
-- **GenRule → 目录**：所有 GenRule 生成器（LayerExtrusion、LinearComponent、Assembly、BooleanSubtract、Primitive）经由引用目录 ComponentDef 的特征树创建对象。`POST /api/genrule` 使用 `create_object_from_default_template()` / `instantiate_from_series()`。
-- **CatalogRef**：每个实例化对象携带 `component_def_id`、`series_id`、`selector_path`、`param_values`。
-- **默认模板注册中心**：`create wall`→Concrete-Wall、`create beam`→Concrete-Beam-Rect 等；按目录取值域做类型参数验证。
-
-### Phase 6b（Library & SeriesStore 基础设施）— ✅ 完成
-`.omnimlib` / `.omnimseries` JSON 文件加载/保存、系列解析优先级（项目私有 > 外部文件 > 内置种子）、session 启动时从 `~/.omnim/library.omnimlib` 自动加载。
-
-### 代码证据
-`crates/model/src/gen_rule/mod.rs`、`crates/model/src/library.rs`、`crates/model/src/series_store.rs`。
-
----
-
-## Phase 7：用户界面 (2027 Q4) — ✅ 完成（含一项已知缺口）
-
-- **Project Workspace**：3D 视口（轨道/平移/缩放、选择、剖切、测量、线框/着色/X 光/仅边线视图模式）、草图编辑器、特征树、可用构件面板（系列筛选/参数滑块/拖拽放置）、属性面板（目录引用/材质）、Omcom 控制台（语法高亮/历史/Tab 补全/验证错误）、AI 聊天（自然语言）。
-- **Library Manager**（`/library-manager`）：ComponentDef 树、参数定义编辑器、特征树模板分配、3D 预览、`.omnimlib` 导入/导出。
-- **SeriesStore Manager**（`/series-manager`）：决策树编辑器、内置种子查看器、外部 `.omnimseries` 加载/保存、拖拽映射 ComponentDef、参数约束编辑器。
-- **UI 架构**：Zustand、React Query 数据层、PanelRegistry 可插拔面板、可调整布局、CSS Modules、`ThreeViewerContext`。
-
-### 已知缺口 → 已解决 (2026-10-27)
-
-~~交互式 3D 创建仅对 `PICKING_TYPES` 支持 1–2 点点选。~~ 已被取代：N 点拾取链路已端到端实现——墙中心线的折线拾取（`path[]` → `build_layered_path`）、slab/roof/floor 的闭合多边形底面（`boundary[]` → `build_layered_slab_path`，回到首点或双击/回车闭合）、featureLine/contourLine 的 N 点对齐线（`line` genrule）。佐证：`web/src/app/components/ThreeViewer.tsx`、`Picking.ts`、`Markers.ts`、`crates/server/src/lib.rs`（`GenRuleRequest::Layered/Line`）。
-
-**残留项**（同日已修复，2026-10-27）：拾取点 z 标高现已保留（`base_z`）、roof 挤出模式生成真实剖面、道路消费拾取 `alignment`、段转角已 miter。剩余：bridge/tunnel 仍只用首末点（road 家族 `alignment` 后续接入或随 Phase 8 corridor 工作）。
-
-（早期版本在此列出“应用前命令预览”；该 AI 命令预览/接受工作流**未交付**，仍属 Phase 9 事项，且今天也只是部分存在。）
-
----
-
-## Phase 7b：前端产品化 (2026 Q4 – 2027 Q1) — 🔄 契约已起草
-
-Phase 7 交付了可用的界面，但没有交付商用界面。Phase 7b 用四个波次、G0–G3 门禁，补齐"功能原型"与"可支持产品"之间的差距。
-
-| 波次 | 范围 | 门禁 | 需求 |
+| 波次 | 范围 | 需求域 | 目标门禁 |
 |---|---|---|---|
-| A | 外壳、停靠、状态栏、双主题、图标与组件体系 | G1 → G2 | UI-SHL、UI-DS |
-| B | 项目首页、新建/打开/保存/另存为、脏状态、错误边界、弹窗、自动命名 | G1 | UI-DAT、UI-FBK、UI-INT |
-| C | 命令注册表、反馈三态、i18n、可访问性、撤销历史 | G2 | UI-INT、UI-I18N、UI-A11Y |
-| D | 按需渲染、实例化、虚拟化、e2e、视觉回归、CI 门禁 | G2 → G3 | UI-PRF、UI-CMP、UI-SEC、UI-TLM |
+| A | 外壳、停靠、状态栏、双主题、图标与组件体系 | SHL、DS | G1 → G2 |
+| B | 项目生命周期、脏状态、错误边界、弹窗、自动命名 | DAT、FBK、INT | G1 |
+| C | 命令注册表、反馈三态、i18n、可访问性、撤销历史 | INT、I18N、A11Y | G2 |
+| D | 按需渲染、实例化、虚拟化、e2e、视觉回归、CI 门禁 | PRF、CMP、SEC、TLM | G2 → G3 |
 
-**契约**：[PRD_FRONTEND](../product/PRD_FRONTEND.zh-CN.md) · [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md) · [IA_SHELL](../specification/ui/IA_SHELL.zh-CN.md) · [DESIGN_SYSTEM](../specification/ui/DESIGN_SYSTEM.zh-CN.md) · [INTERACTION](../specification/ui/INTERACTION.zh-CN.md) · [DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.zh-CN.md)
+## 5. 主线 B：领域扩展（8）🔄
 
-**证据**：[FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md) 当前给前端 1.7/5；[FRONTEND_BASELINE](../status/FRONTEND_BASELINE.zh-CN.md) 记录"改前"测量；[RELEASE_READINESS](../status/RELEASE_READINESS.zh-CN.md) 跟踪门禁。
+### 5.1 已交付切片
 
-**已知阻塞项**：属性面板浮动（UI-SHL-03）、无项目首页与 open/new 端点（UI-DAT-01）；`POST /api/project/save` 已存在但客户端从不调用（UI-DAT-02）、无错误边界（UI-FBK-06）、原生弹窗（UI-FBK-05）、时间戳命名（UI-INT-09）、731 hex + 61 rgb/hsl 颜色字面量（UI-DS-04）、无 i18n（UI-I18N-01）、无可访问性语义（UI-A11Y-04）。
+- 生产级目录数据：钢型材（EN 10365 / GB/T 706）、管道等级（ASME B36.10）、混凝土模板、真实材料标准、BRep 正确性校验。
+- 建筑基准：楼层 `elevation`、轴网面板、`bottom_level_id`/`top_level_id` 单步级联、楼层视图与剖切联动。
+- 独立洞口对象（`IfcOpeningElement`）。
+- 装配容器（`POST /api/assemblies`，容器 + Component/Part 子件，整树删除一次撤销）。
+- 管道路由：N 点折线扫掠、弯头占位、实例连接器与口径/类型兼容校验。
 
----
+证据：[CAPABILITY_MATRIX](../CAPABILITY_MATRIX.zh-CN.md)、[CHANGELOG](CHANGELOG.zh-CN.md)。
 
-## Phase 8：领域扩展 & 生产级构件库 (2028 Q1-Q2) — 🔄 进行中
+### 5.2 未完成项
 
-**当前状态**：生产级目录数据已大量落地（钢型材按 EN 10365/GB/T 706，管道等级按 ASME B36.10，混凝土模板，带法兰等级的连接点定义）；材料映射到真实标准；构件通过 BRep 正确性检查验证。领域专项工作仍待完成：
+| 项 | 状态 | 前置 | 说明 |
+|---|---|---|---|
+| 8-1 建筑：完整 IFC 元素、MEP、工程量 | 📅 | 内核 ✅ | 门窗为宿主填充（门扇 + 框），仍缺框类型、窗台/过梁与门窗表；宿主不重剪 |
+| 8-2 土木：地形拟合、土方、路线/纵断面 | 📅 | 内核 ✅ | 桥/隧仍只用首末点 |
+| 8-3 工厂：分支管道、P&ID | 📅 | 管道路由 ✅ | 分支、管件、特征模板未覆盖 |
+| 8-4 机械：BOM、算量、运动副 | 🔀 | 装配容器 ✅ | 容器已交付，BOM/运动副未开始 |
+| 8-5 前端：领域面板、筛选器、领域感知拖拽 | 📅 | **7b G2** | 必须等外壳与设计系统定稿 |
 
-1. 📅 建筑：完整 IFC 元素覆盖、MEP 系统、工程量统计
-2. 📅 土木：地形拟合与土方、路线/纵断面编辑
-3. 📅 工厂：带分支管道布线、P&ID 集成
-4. 🔀 机械：零件 ✅；装配容器 + 子件 ✅（2026-10-30，`POST /api/assemblies`）；BOM/算量与运动副 📅
-5. 📅 前端：领域专属面板、筛选器、领域感知拖拽放置
+### 5.3 与 7b 的依赖
 
-部分完成标准已达（钢 IPE/HEA/HEB 系列、CS150/SS304 DN 覆盖、BRep 验证）。
+[ADR-0008](../architecture/DECISIONS.zh-CN.md) 明确规定“壳体重写必须先于面板美化”；[ADR-0009](../architecture/DECISIONS.zh-CN.md) 的面板注册表就是为领域面板预留的扩展点。因此：
 
-**审计残余跟踪（2026-10-30 审计周期收尾）**：三份审计（代码 / 建模师文档 / UI-UX）的 P0/P1/P2 可落地项已整改；以下为登记的残余项，按门禁归属分批：
+- **8-5 在 7b G2 之前不启动。**
+- 8-5 落地时必须走 `PanelRegistration`、语义令牌、`t(key)` 与统一命令注册表；否则按新债处理。
+- 8-1 至 8-4 属于后端/几何域，是否与 7b 并行见 §7.2。
 
-| 归属 | 残余项 | 来源 |
+## 6. 其他工作流（9–12）
+
+- **9 AI 编译 🔀**：引擎、提供方、翻译与聊天已交付；缺多步规划、校验解释、置信度、人在回路与 RAG。
+- **11 格式互操作 🔀**：只有 IFC 子集；其余格式未实现，矩阵见 [FORMAT_COMPAT](FORMAT_COMPAT.zh-CN.md)。
+- **10 云与协作 🔀（仅子集）**：REST + JSON 文件已交付；数据库、版本历史、WebSocket、协作均未实现。
+- **12 分析与生态 📅**：结构分析、碰撞、算量、成本、插件均未开始。
+
+## 7. 依赖、并行与冻结规则
+
+### 7.1 依赖关系
+
+- 内核（1–6）→ 9、11、8-1…8-4。
+- 7b（外壳、设计系统、命令注册表、i18n）→ 8-5 领域前端。
+- 7b → 10 的协作 UI。
+- 8-5 不得早于 7b G2；其余领域后端项与 7b 无代码依赖。
+
+### 7.2 并行规则
+
+1. **同一文件域同一时间只有一个流写入。** `web/src/` 归 7b；`crates/` 归后端流。
+2. 跨流改动必须先落契约，再改代码。
+3. 新增 UI 必须使用面板注册表、语义令牌、`t(key)`、统一命令注册表；绕过即记为新债。
+4. 8-1 至 8-4 的后端工作是否允许在 7b 冻结期内推进，见 §10 的 Q7；默认冻结。
+
+### 7.3 当前冻结与例外
+
+| 冻结 | 例外 |
+|---|---|
+| 8-1 至 8-4 的新功能 | 已交付能力的回归修复 |
+| 8-5 领域前端 | — |
+| 新对象类型、新 REST 路由 | 安全或数据丢失类修复 |
+
+**已关闭的回归修复（不计入 8-1 新功能）：**
+
+- 门几何：门/窗改为门扇/框面板，按墙体 `path_points` 定位；不再用世界 AABB 当墙厚，也不再漂在原点。见 [CODE_DEVIATIONS §6.5](CODE_DEVIATIONS.zh-CN.md)。
+- 楼层创建：`storey` 不再附带 box 几何，成为纯标高容器；服务端同样丢弃容器几何。
+
+两项均已带测试（`crates/server/tests/opening.rs`、`datum.rs`）。
+
+## 8. 当前非目标
+
+1. 照片级渲染。
+2. 离线优先架构。
+3. 移动 AR/VR 与移动应用。
+4. 完整 CAM/CNC。
+5. 桌面打包（Tauri）。
+6. 生产 Web 构建中的 WASM 共享内核。
+
+文本 DSL 不属于非目标；它是批次 1 的未交付项，等待 [RFC-0001](../RFC/README.zh-CN.md) 定稿。
+
+## 9. 技术债账本
+
+| 项 | 归属 | 证据 |
 |---|---|---|
-| G2 前端门禁 | 完整 token 迁移（712 处硬编码颜色，`CODE_DEVIATIONS` 7.8）、i18n（7.9）、A11Y（7.10）、组件编辑器视觉统一（UI-UX E1/F2）、图标体系重做（E2） | MODELER_UIUX_AUDIT_2026-10-30 |
-| G2 反馈/性能 | 错误码呈现（`ERROR_CODES` 保留码尚未发射）、性能预算（TLM 0%，预算未进 CI） | MODELER_UIUX_REAUDIT_2026-10-30 §5 |
-| 前端性能/架构 | `App.tsx` 全量 store 订阅（20Hz 重渲染）、react-query hooks 启用或移除、`ThreeViewer` 拆分、`OmniPanel dangerouslySetInnerHTML` 改 token 渲染 | CODE_AUDIT_2026-10-30 P2/P3 |
-| server 安全/并发 | token 中间件、`TimeoutLayer` 与并发限制、persist 移出写锁（`spawn_blocking`）、`list_projects` 全量解析/`get_project` 全量克隆 | CODE_AUDIT_2026-10-30 P1/P2 |
-| 结构重构 | omcom 单文件拆分 + executor 分支 `Result` 化、`project.rs`/`seed_catalog.rs` 按域拆分、共享 `IndexedStore<T>` | CODE_AUDIT_2026-10-30 §5-第二波/长期 |
-| 几何内核 | 真三角网格 CSG/truck 布尔替代 AABB 近似（当前近似内核已带 warning） | CODE_AUDIT_2026-10-30 长期 |
-| 质量基线 | 212 条 clippy 警告清零并启用 `-D warnings`、`sketch` 约束构建 `let _ =` 语义化、`resolve_param` 未知参数显式失败 | CODE_AUDIT_2026-10-30 验收记录 |
+| 硬编码颜色未走语义令牌 | G2 | [CODE_DEVIATIONS](CODE_DEVIATIONS.zh-CN.md) 7.8 |
+| 界面文案未外置（31 文件） | G2 | CODE_DEVIATIONS 7.9 |
+| 可访问性语义缺失 | G2 | CODE_DEVIATIONS 7.10 |
+| `App.tsx` 全量 store 订阅、`ThreeViewer` 未拆分、react-query 未启用 | G2 | [CODE_AUDIT](CODE_AUDIT_2026-10-30.zh-CN.md) P2/P3 |
+| 错误码保留但未发射 | G2 | [ERROR_CODES](../reference/ERROR_CODES.zh-CN.md) |
+| 性能预算未进 CI（TLM 0%） | G2 | [MODELER_UIUX_REAUDIT](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md) §5 |
+| 无 e2e / 视觉 / 性能基线 | G1 前置 | 本文 §4.3 |
+| server token 中间件、`TimeoutLayer`、persist 移出写锁、列表/读取全量克隆 | 发布前或后端并行 | CODE_AUDIT P1/P2 |
+| omcom 单文件拆分、executor `Result` 化、`project.rs` 拆分、共享 `IndexedStore` | 长期 | CODE_AUDIT §5 |
+| 真三角网格 CSG 替代 AABB 近似 | 长期 | CODE_AUDIT |
+| clippy 警告基线未清零，`-D warnings` 未启用 | 质量基线（G2 前） | CODE_AUDIT 验收记录 |
+| `sketch` 约束 `let _ =`、`resolve_param` 未知参数 | 长期 | CODE_AUDIT |
+| 测试共享全局 `LIBRARY` | 长期 | [TESTING](../guides/TESTING.zh-CN.md) |
+| `eprintln!` 未换结构化日志 | 长期 | CODE_AUDIT |
+| 门几何与楼层创建回归 | 当前例外修复 | 本文 §7.3 |
 
----
+## 10. 待定问题
 
-## Phase 9：AMIR AI 编译 (2028 Q3) — 🔄 部分完成（提前交付，仍有缺口）
+| # | 问题 | 责任人 | 影响 |
+|---|---|---|---|
+| Q1 | G1 是对外里程碑还是仅内部？ | 产品 | G1 |
+| Q2 | G3 是否需要外部安全评审？ | 产品 / 法务 | G3 |
+| Q3 | 设计与工程不一致时谁签 G2？ | 产品 | G2 |
+| Q4 | 7b 工程出口是否确认为 G1+G2、G3 归发布？ | 产品 | 7b / G2 |
+| Q5 | 楼层视图、剖切、测量、8-5 领域面板是否分配需求 ID？ | 产品 / 前端 | G1 / G2 |
+| Q6 | 英文硬编码界面字符串是否纳入扫描？ | 前端 | G2 |
+| Q7 | 冻结期内 8-1 至 8-4 的后端是否允许独立推进？ | 技术负责人 | 7b / 8 |
 
-**已交付** ✅：AMIR AI 引擎，含 OpenAI / Anthropic / Mock 提供方；自然语言→OmniCommand 翻译；多轮聊天；逆向“描述模型”路径。已作为 Project Workspace 中的 AI 聊天面板集成。
+## 11. 维护规则
 
-**未交付** 📅：复杂操作的结构化多步规划、自然语言验证错误解释与自动修正建议、置信度评分、人在回路接受/拒绝命令预览、按领域的多智能体系统、标准规范 RAG 查询。
-
-### 代码证据
-`crates/amir/`（提供方、translate、chat、describe）、`web/` AI 聊天面板。
-
----
-
-## Phase 10：云服务器 & 协作 (2029) — 📅 计划中
-
-**今日现实** ✅（本阶段子集，提前完成）：**Axum REST 服务器**（87 条唯一路径），**JSON 文件（`.omnim`）持久化**（默认开启；`OMNIM_EPHEMERAL=1` 关闭），撤销/重做状态历史**覆盖全部变更端点**，目录/系列文件端点。
-
-**未实现** 📅：PostgreSQL + PostGIS 存储、版本历史/审计追踪（目前仅 JSON 文件保存）、WebSocket 实时通知、几何流式传输、客户端缓存层、多用户协作/冲突解决、在线状态、协作 UI。服务器中**没有任何 WebSocket**。
-
----
-
-## Phase 11：IFC/STEP 格式兼容 (2029) — 🔀 部分完成
-
-- **IFC 2x3 / IFC 4**：导入 + 导出 ✅，通过**手写的解析器/写出器**（`crates/ifc/`）——**实体覆盖不完整**。详见 [FORMAT_COMPAT.md](FORMAT_COMPAT.md)。
-- **STEP / DXF / DWG / GIS / glTF / OBJ / FBX**：❌ 未实现（代码中仅有 IFC + JSON 路径）。计划见 [FORMAT_COMPAT.md](FORMAT_COMPAT.md)。
-
----
-
-## Phase 12：分析与生态 (2029+) — 📅 计划中
-
-尚未开始：结构分析、碰撞检测、成本估算、插件生态。
-
-## 已定稿待实现的设计（Accepted Designs Pending Implementation）
-
-已议定并作为契约写入规范（specification），但尚未实现的设计。顺序按依赖关系而非日历排期，状态标记沿用上方图例。
-
-### 1. Path / 创成分类抽象—— ✅ 已实现（2026-10-28，Wave 2）
-
-**契约**：[数据模型 §1 —— 双轴模型与治理规则](../specification/DATA_MODEL.zh-CN.md)（2026-10-27 议定）。多点拾取统一为 `Path { points, closed }`；创成分类绑定实例的创建方式而非对象名；genrule 分派查询 `(objectType, 分类/形态)` 授权矩阵。
-
-| # | 交付项 | 估时 |
-|---|---|---|
-| 1.1 | 前端 `CreationForm.form` 字段（按类型默认 + 墙形态下拉），`form → 拾取模式/预览` 查表化取代逐类型散判断；状态机测试迁移 | 0.75d |
-| 1.2 | 服务端 `path { points, closed }` 契约 + 旧 `path[]`/`boundary[]`/`alignment[]` 别名归一；`(objectType, form)` 分派（400 带原因）；`layer_extrusion.rs` / `linear_component.rs` 模块头授权注释（§6.4 边界说明） | 0.75d |
-| 1.3 | 统一预览 `addPathPreview` 按形态选样式（panel → 逐段层盒 ghost + miter 含闭环；region → 轮廓 + 扇面填充） | 0.5d |
-| 1.4 | 分类之下的共享纯几何层（`iter_segments`/`merge_collinear`/按 open·closed 分派 `validate_path`）——纯重构，行为不变 | 0.25d |
-| 1.5 | 锁定多分类语义的种子 API 用例：面板墙（面·panel）、体量墙（体·布尔/雕刻）、挡土墙（线性·对齐 + 地形目标占位） | 0.25d |
-| 1.6 | 文档：API.md genrule 章节加入授权矩阵（1.2 落地前以设计注记出现）；GLOSSARY 已更新（路径/创成/形态/授权矩阵） | — |
-| | **合计** | **~2.5 天** |
-
-弯头/管道布线：**已交付 API 切片（2026-10-29）**——`genrule: "pipe"` 带 `path` 时经 LinearComponent 内核沿拾取折线扫掠圆形截面（弯头连续/斜接，路由以 `route_points` 记录）。分支、管件与特征树模板仍不在范围内。
-
-## 技术债待办
-
-在开发过程中记录的零散事项；按时机捡起，不排阶段：
-
-- **前端产品化（Frontend productization）** — 已排期为上文 **Phase 7b**，不是无排期技术债。契约集与基线：[PRD_FRONTEND](../product/PRD_FRONTEND.zh-CN.md)、[FRONTEND_MATURITY](../status/FRONTEND_MATURITY.zh-CN.md)、[FRONTEND_BASELINE](../status/FRONTEND_BASELINE.zh-CN.md)、[RELEASE_READINESS](../status/RELEASE_READINESS.zh-CN.md)。
-- **恢复单一写入路径** — ✅ **2026-10-28 完成（Wave 1）**。55 个已迁移 handler 全部走 `mutation::apply` / `Executor`；直写端点 42 → 0，撤销/重做有端点级测试（`crates/server/tests/write_paths.rs`、`instantiate_import.rs`），`scripts/check_write_paths.py` 已接入 CI 强制执行。例外：`section_handler`（仅缓存刷新）、`import_ifc`（单条整项目命令）、`.omnimlib` 导入（全局 `LIBRARY`）。见 [WRITE_PATHS](../architecture/WRITE_PATHS.zh-CN.md)。
-- **持久化策略** — ✅ **2026-10-28 完成（Wave 1）**。默认落盘（`project.omnim` / `$OMNIM_PROJECT`），`OMNIM_EPHEMERAL=1` 可关闭，保存为原子写，`POST /api/project/save` 可显式落盘。所有已迁移 handler 都会持久化；唯一不写项目的路径是 `.omnimlib` 导入到全局 `LIBRARY`。证据：[WRITE_PATHS.zh-CN.md](../architecture/WRITE_PATHS.zh-CN.md)。
-- **收敛几何生成路径** — *2026-10-28 基本落地（Wave 3）*：genrule 的 layered 族实例化路径驱动特征树（`Wall-Path`/`Slab-Path`/`Floor-Path`/`Roof-Path` 模板，`FeatureType::PathSweep` → `gen_rule::path_sweep`），产出**领域对象类型**并携带 `catalog_ref`/`param_values`，与遗留内核共享实现（逐位 parity 测试）。剩余：矩形参数快速创建（`wall`/`slab` 变体）、屋顶两点坡向、目录 extrude 型 pipe/road 模板与 `LinearComponent` 引擎。证据：CODE_DEVIATIONS §6.3。
-- **系列与连接强制性** — *2026-10-28 基本落地（Wave 4）*：门禁定位可达 `SpecComponent` 并强制 fixed/min/max（400 + 理由）、应用规格材质；`connect()` 拒绝自连/重复/未知类型，支持 `?connection_type=`，检查连接器 `connection_type_code` 兼容性；`ConnectorDef` 新增 `up_*_expr`。剩余：连接时解析值朝向校验、`step` 强制、`from_point`/`to_point`。证据：CODE_DEVIATIONS §6.4。
-- **测试隔离重构** — model 测试共享 session 级全局 `static LIBRARY`（见[测试指南 → 已知不稳定测试](../guides/TESTING.zh-CN.md)）。已观察到一次并行测试偶发失败（`test_find_and_rebuild_catalog_instances`）；压力测试未能复现，但随着测试规模扩大，共享全局状态的依赖是真实风险。候选修复方案见测试指南。
-- **日志规范化** — 用结构化日志 crate（`tracing` 或 `log`）替换生产路径中零散的 `eprintln!`。当前残留输出仅为错误路径/启动探针。
-
----
-
-## 非目标（当前范围）
-
-1. **照片级渲染**
-2. **离线优先架构**
-3. **移动 AR/VR / 移动应用**（不计划、未构建移动应用）
-4. **完整 CAM/CNC 能力**
-5. 现阶段同样明确：桌面打包（Tauri）、生产 Web 构建中的 WASM 共享内核、nom 文本 DSL 执行（待 RFC-0001）。
-
----
-
-## 里程碑总结
-
-| 里程碑 | 目标 | 关键能力 | 状态 |
-|--------|------|----------|------|
-| M1 | 2026 Q1–Q2 | 核心数据模型 + 类型化命令执行器 | ✅（文本 DSL → RFC-0001） |
-| M2 | 2026 Q3 | 约束求解器 + 草图系统 | ✅ |
-| M3 | 2026 Q4 | 特征引擎 + truck-BRep 内核 | ✅ |
-| M4 | 2027 Q1 | 元件目录 + 系列库（PARAGON/SPECON） | ✅ |
-| M5 | 2027 Q2 | 目录构件建模（20+ 构件） | ✅ |
-| M6 / M6b | 2027 Q3–Q4 | GenRule 重构、默认模板、Library/SeriesStore 基础设施 | ✅ |
-| M7 | 2027 Q4 | UI：工作台 + Library Manager + SeriesStore Manager | ✅ |
-| M7b | 2026 Q4–2027 Q1 | 前端产品化：外壳、项目生命周期、主题、i18n、性能、门禁（G0–G3） | 🔄 |
-| M8 | 2028 Q1–Q2 | 领域扩展 + 生产级构件库 | 🔄 |
-| M9 | 2028 Q3 | AMIR AI 编译 | 🔀 部分完成 |
-| M10 | 2029 | 云存储 + 协作 | 📅（已有 REST+JSON 文件服务器） |
-| M11 | 2029 | 格式兼容 | 🔀 部分完成（仅 IFC） |
-| M12 | 2029+ | 分析 + 生态 | 📅 |
+1. **本文件只放当前状态。** 历史过程写入 [CHANGELOG](CHANGELOG.zh-CN.md)，不在此复制。
+2. **每条 ✅ 必须有证据链接；每条 📅 必须挂在某个批次或门禁上。** 无验收物的条目不得出现在路线图。
+3. **正文不写日历日期。** 只保留 front matter 的 `last_updated`；历史日期由 CHANGELOG 承担。
+4. **状态变更必须在同一次提交中更新**：本文件快照、门禁看板、CHANGELOG。
+5. **双语结构必须一致。** `check_docs.py` 校验标题数量与编号；英文版是同步维护的译文，不是独立文档。
+6. **批次标签保持稳定。** 重命名必须附映射表，避免其他文档断链。

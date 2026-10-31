@@ -192,6 +192,12 @@ export const DOMAIN_GROUPS: Record<string, { label: string; types: ObjectType[];
 
 export const CONTAINER_TYPES = new Set(['Site', 'Building', 'BuildingStorey', 'Storey', 'Space', 'building', 'storey', 'site', 'space']);
 
+/** Hierarchy-only types: they are datum/containers and own no geometry.
+ *  A storey is an elevation, a building/site is a container — none of them
+ *  should be created as a primitive box. `Space` is excluded on purpose: it
+ *  is a body object with a primitive volume today. */
+export const DATUM_TYPES = new Set<ObjectType>(['building', 'storey', 'site']);
+
 export const OBJECT_TYPE_DOMAIN: Record<string, string> = {
   wall: 'building', slab: 'building', beam: 'building', column: 'building',
   door: 'building', window: 'building', stair: 'building', roof: 'building',

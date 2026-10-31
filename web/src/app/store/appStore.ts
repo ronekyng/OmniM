@@ -10,6 +10,7 @@ import { creationReducer, initialCreationState, type CreationAction, type Creati
 import { DEFAULT_LAYOUT, loadLayout, resetLayout as resetPersistedLayout, saveLayout } from '../../shared/layout';
 import { beginSave, initialSaveState, markDirty as markDirtyState, saveFailed, saveSucceeded, type SaveState } from '../../shared/saveState';
 import { notify } from '../../shared/toast';
+import { applyTheme, loadTheme, saveTheme, type Theme } from '../../shared/theme';
 
 export type AppState = {
   selectedIds: string[];
@@ -22,6 +23,9 @@ export type AppState = {
   /** Active storey view filter (P8-S4); null = show every storey. */
   activeStoreyId: string | null;
   setActiveStorey: (id: string | null) => void;
+  /** UI theme (UI-DS-02); persisted to localStorage, applied as data-theme. */
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
   gridVisible: boolean;
   isOrtho: boolean;
   transformSpace: 'world' | 'local';
@@ -98,6 +102,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
     measureMode: 'none' as MeasureMode,
     reloadToken: 0,
     activeStoreyId: null,
+    theme: loadTheme(),
     gridVisible: true,
     isOrtho: false,
     transformSpace: 'world',
@@ -146,6 +151,11 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
     },
     reloadScene: () => set((s) => ({ reloadToken: s.reloadToken + 1 })),
     setActiveStorey: (id) => set({ activeStoreyId: id }),
+    setTheme: (theme) => {
+      saveTheme(theme);
+      applyTheme(theme);
+      set({ theme });
+    },
     setGridVisible: (v) => {
       if (typeof v === 'function') set((s) => ({ gridVisible: (v as (prev: boolean) => boolean)(s.gridVisible) }));
       else set({ gridVisible: v });

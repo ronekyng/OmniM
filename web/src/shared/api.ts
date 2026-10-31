@@ -1,4 +1,4 @@
-import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse } from './types';
+import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, UpdateObjectRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
@@ -91,7 +91,7 @@ export const api = {
   }),
   deleteGrid: (id: string) => requestVoid(`/api/grids/${id}`, { method: 'DELETE' }),
   deleteObject: (id: string) => requestVoid(`/api/objects/${id}`, { method: 'DELETE' }),
-  updateObject: (id: string, body: { name?: string; description?: string }) => requestVoid(`/api/objects/${id}`, {
+  updateObject: (id: string, body: UpdateObjectRequest) => requestVoid(`/api/objects/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -48,13 +48,13 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | e2e route matrix | G1 | 🔀 |
-| UI-SHL-02 | Seven fixed workspace regions | IA_SHELL §3 | screenshot set `shell` | G1 | 🔀 |
-| UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | screenshot + resize e2e | G1 | 🔀 |
-| UI-SHL-04 | Left dock tabs, 240–400 px | IA_SHELL §4 | e2e tab switch | G1 | 🔀 |
+| UI-SHL-02 | Seven fixed workspace regions | IA_SHELL §3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
+| UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
+| UI-SHL-04 | Left dock tabs, 240–400 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-05 | Bottom dock collapsed, tabbed, ≤40% height | IA_SHELL §4 | screenshot `bottom-collapsed` | G1 | 🔀 |
-| UI-SHL-06 | Layout persistence and reset | IA_SHELL §5 | reload e2e | G1 | 🔀 |
+| UI-SHL-06 | Layout persistence and reset | IA_SHELL §5 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-07 | Contextual ribbon per discipline | IA_SHELL §3.3 | command-set snapshot test | G1 | 🔀 |
-| UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | screenshot + polling e2e | G1 | 🔀 |
+| UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | `web/e2e/shell.spec.ts` (incl. developer FPS) | G1 | ✅ |
 | UI-SHL-09 | Floating panels with persisted geometry | IA_SHELL §4.4 | e2e drag/resize/reload | G2 | 🔀 |
 | UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | route matrix assertions | G1 | 🔀 |
 | UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot | G2 | 📅 |
@@ -65,7 +65,7 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-DS-01 | Three token layers, no primitive leakage | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
-| UI-DS-02 | Dark/light switch without reload | DESIGN_SYSTEM §3 | theme e2e + screenshots | G1 | 📅 |
+| UI-DS-02 | Dark/light switch without reload | DESIGN_SYSTEM §3 | `theme.test.ts` + theme screenshots pending | G1 | 🔀 |
 | UI-DS-03 | OS preference default, choice persisted | DESIGN_SYSTEM §3.2 | emulation test | G2 | 📅 |
 | UI-DS-04 | Zero hardcoded colors in user-facing styles | DESIGN_SYSTEM §2.4 | color scan | G2 | 📅 |
 | UI-DS-05 | Complete semantic state matrix | DESIGN_SYSTEM §4 | token matrix review | G3 | 📅 |
@@ -84,7 +84,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-01 | Five selection gestures | INTERACTION §3 | interaction e2e | G1 | 🔀 |
 | UI-INT-02 | Picking state machine contract | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
-| UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | keyboard e2e | G1 | 🔀 |
+| UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | Contextual and keyboard-invokable menus | INTERACTION §6 | menu e2e | G2 | 🔀 |
 | UI-INT-06 | One dialog family with focus management | INTERACTION §7 | focus-trap test | G2 | 📅 |
 | UI-INT-07 | Destructive confirmation with impact | INTERACTION §7.3 | delete-parent e2e | G2 | 📅 |
@@ -99,7 +99,7 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-FBK-01 | Loading/empty/error in every panel | FEEDBACK_ERRORS §3 | panel checklist | G1 | 🔀 |
-| UI-FBK-02 | Skeletons, no flash under 400 ms | FEEDBACK_ERRORS §3.2 | timing test | G1 | 📅 |
+| UI-FBK-02 | Skeletons, no flash under 400 ms | FEEDBACK_ERRORS §3.2 | `web/src/__tests__/delayedVisibility.test.ts` | G1 | 🔀 |
 | UI-FBK-03 | Progress and cancel over 1 s | FEEDBACK_ERRORS §4 | import e2e | G2 | 📅 |
 | UI-FBK-04 | Coded errors with cause and recovery | FEEDBACK_ERRORS §5 | error catalogue diff | G3 | 📅 |
 | UI-FBK-05 | No native alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` scan | G1 | ✅ |

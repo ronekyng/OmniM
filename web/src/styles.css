@@ -267,6 +267,8 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .grid-panel { display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%; }
+.grid-panel-section { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.grid-divider { height: 1px; background: var(--border); flex: 0 0 auto; }
 .grid-panel-list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; flex: 0 1 auto; max-height: 45%; }
 .grid-empty { color: var(--text-muted); font-size: var(--fs-sm); padding: 10px 4px; }
 .grid-line-row { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--border); }
@@ -2498,6 +2500,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border-left: 1px solid var(--border, #2a2d35);
 }
 
+.avail-comp-panel.avail-comp--embedded {
+  background: transparent;
+  border-left: 0;
+  min-height: 0;
+}
+
 .avail-comp-header {
   display: flex;
   align-items: center;
@@ -4291,4 +4299,35 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   font-size: 10px;
   color: #7fb0e8;
   margin-top: 3px;
+}
+
+/* Panel three-state (UI-FBK-01) + skeleton timing (UI-FBK-02) */
+.panel-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  padding: var(--sp-6);
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+.panel-state--error {
+  color: var(--danger);
+  border-left: 2px solid var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+.panel-state button {
+  align-self: flex-start;
+  padding: var(--sp-2) var(--sp-5);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.panel-state button:hover { border-color: var(--accent); }
+.panel-loading-line {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: skeleton-shimmer 1.4s ease infinite;
+  background-size: 200% 100%;
 }

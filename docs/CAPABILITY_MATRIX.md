@@ -1,7 +1,7 @@
 ---
 title: "OmniM Capability Matrix"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "web/, crates/server, crates/model, crates/ifc"
 evidence: "audited against docs/reference/API.md, docs/specification/DOMAINS.md, docs/status/FORMAT_COMPAT.md, docs/status/CODE_DEVIATIONS.md and crates/ifc/src/lib.rs 2026-10-27"
 ---
@@ -36,9 +36,9 @@ A modeler-facing, row-by-row snapshot of what actually works today. It is delibe
 | **Slab** | Surface (region) | ✅ 建筑 → 楼板; Path closed, ≥3 picks | ✅ LayerEditor layers in mm; series optional | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcSlab) | ✅ |
 | **Roof** | Surface (footprint region or 2-point profile) | ✅ 建筑 → 屋顶; 轮廓 or 坡屋面 modes | ✅ LayerEditor layers in mm | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / 🔀 (exports proxy) | ✅ |
 | **Floor** | Surface (region) | ❌ no menu entry; `/api/genrule` `mode:"floor"` only | ✅ layers in mm via API | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ❌ / 🔀 (exports proxy) | ✅ |
-| **Door** | — (hosted opening) | ✅ Create panel; requires an existing Wall | 🔀 opening width/height + offset only | ✅* | ✅ `wall_id` required | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcDoor) | ✅ |
+| **Door** | — (host fill: leaf + frame) | ✅ Create panel; requires an existing Wall | ✅ opening width/height, distance along wall, floor height; builds leaf + frame | ✅* | ✅ `wall_id` required; lands on the wall centreline, host is not re-cut (use Opening for the void) | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcDoor) | ✅ |
 | **Opening (洞口)** | Body (host-relative void volume) | ✅ Create panel (建筑 → 洞口); host wall required | 🔀 width/height/offset only; host mesh not re-cut | ✅* | ✅ parent + `host_wall_id`; host must be a Wall | — | — | — | ❌ | ❌ | ❌ | ✅ / ✅ (IfcOpeningElement) | ✅ |
-| **Window** | — (hosted opening) | ✅ Create panel; requires an existing Wall | 🔀 opening width/height + sill only | ✅* | ✅ `wall_id` required | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcWindow) | ✅ |
+| **Window** | — (host fill: sash + frame) | ✅ Create panel; requires an existing Wall | ✅ opening width/height, distance along wall, sill height; builds sash + frame | ✅* | ✅ `wall_id` required; lands on the wall centreline, host is not re-cut (use Opening for the void) | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcWindow) | ✅ |
 | **Beam** | Linear | ✅ catalog path (creates Component); dialog falls back to box | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcBeam) | ✅ |
 | **Column** | Linear | ✅ catalog path (creates Component); dialog falls back to box | ✅ catalog params in mm; series gate 🔀 | ✅* | — | 🔀 API only | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / ✅ (IfcColumn) | ✅ |
 | **Stair** | Body (primitive placeholder) | 🔀 no stair generator; dialog creates a primitive box | 🔀 primitive dimensions | ✅* | — | — | ✅ view | ✅ view | ❌ | ❌ | ❌ | ✅ / 🔀 (exports proxy) | ✅ |

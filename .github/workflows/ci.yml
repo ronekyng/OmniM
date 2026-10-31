@@ -42,6 +42,27 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: cargo build --quiet --bin omnim
+        working-directory: .
+      - run: npm run test:e2e
+
   docs:
     name: Docs + write-path guards
     runs-on: ubuntu-latest

@@ -1,7 +1,7 @@
 ---
 title: "代码与文档模型的偏差（Code-Level Deviations）"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-10-31
 applies_to: "repo"
 evidence: "2026-10-27 对照代码审计；§7 于 2026-10-29 审计"
 ---
@@ -62,9 +62,9 @@ evidence: "2026-10-27 对照代码审计；§7 于 2026-10-29 审计"
 | **Column** | Revit 中为 1 点（定位）；Tekla 中为 2 点（底/顶） | 2 次点击，按线构件处理 | ⚠️ 轻微——两种皆有效；Revit 风格的单点模式会更直观 |
 | **Pipe** | 2 点（连接点对连接点） | 2 次点击 ✅ | ✅ 一致 |
 | **Duct** | 2 点（连接点对连接点） | 2 次点击 ✅ | ✅ 一致 |
-| **Road** | 路线 + 纵断面 + 装配（多步 corridor 工作流） | 折线点经 `Road.alignment` 消费：沿折线逐段铺装滚放（`build_road_alignment`） | ✅ 管道一致；完整 corridor 工作流仍属 Phase 8 |
-| **Bridge** | 多步 subassembly corridor / 装配 | 仍只用首末点 | ⚠️ 待 Phase 8 corridor |
-| **Tunnel** | 多步 corridor 装配 | 仍只用首末点 | ⚠️ 待 Phase 8 corridor |
+| **Road** | 路线 + 纵断面 + 装配（多步 corridor 工作流） | 折线点经 `Road.alignment` 消费：沿折线逐段铺装滚放（`build_road_alignment`） | ✅ 管道一致；完整 corridor 工作流仍属批次 8 |
+| **Bridge** | 多步 subassembly corridor / 装配 | 仍只用首末点 | ⚠️ 待批次 8 corridor |
+| **Tunnel** | 多步 corridor 装配 | 仍只用首末点 | ⚠️ 待批次 8 corridor |
 
 ### 3.3 POINT TYPES（点构件）
 
@@ -188,6 +188,16 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 - `ConnectorDef` 只有 `direction`，没有 `up`/基准轴，无法确定法兰螺栓孔或阀杆朝向（`proto/omnim.proto:506-518`）。
 
 ---
+
+### 6.5 门窗宿主体几何 — **RESOLVED**
+
+**文档模型**：门窗是宿主填充，几何尺寸应等于洞口，并落在墙体上。
+
+**修复前**：Door/Window 对象直接携带“整面宿主墙 + 洞”的补片；墙厚取世界 AABB 的 Y 跨度且不做变换，导致门 AABB 等于整面墙、补片漂在原点。
+
+**修复**：门/窗改为门扇/窗扇 + 边框面板（`crates/model/src/gen_rule/door.rs`），按墙体创建时记录的 `path_points` 定位与旋转；`position_x` 为沿墙路径距离，`position_z` 为离地/窗台高。宿主墙仍不重剪（洞口用独立 `Opening`）。旧墙没有 `path_points` 时按包围盒回退，属已知近似。
+
+**证据**：`crates/server/tests/opening.rs`（洞口尺寸、斜墙定位、窗台高）与 `crates/model/src/gen_rule/door.rs` 单测。
 
 ## 7. 前端界面偏差 — **已知**（2026-10-29）
 

@@ -1,5 +1,6 @@
 /* ── Design System Tokens ── */
 :root {
+  color-scheme: dark;
   --bg-primary: #1a1d23;
   --bg-secondary: #14161c;
   --bg-tertiary: #1e2128;
@@ -49,6 +50,39 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Light theme (UI-DS-02). Token-level switch; panels that still use literal
+ * colours are tracked by UI-DS-04 and will converge on these tokens. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-primary: #f4f6f9;
+  --bg-secondary: #e9edf2;
+  --bg-tertiary: #ffffff;
+  --bg-elevated: rgba(255, 255, 255, 0.98);
+  --bg-overlay: rgba(248, 250, 252, 0.97);
+
+  --border: #d4dae2;
+  --border-light: #c2c9d3;
+  --border-accent: #2f6fb3;
+  --border-active: #1f5f9f;
+
+  --text-primary: #1c222b;
+  --text-secondary: #374151;
+  --text-muted: #667085;
+  --text-dim: #98a2b3;
+
+  --accent: #2f6fb3;
+  --accent-hover: #3b7fc7;
+  --accent-active: #1f5f9f;
+  --danger: #c62828;
+  --danger-hover: #d84343;
+  --success: #2e7d32;
+  --warning: #a15c00;
+
+  --shadow-sm: 0 1px 3px rgba(20, 30, 50, 0.12);
+  --shadow-md: 0 4px 12px rgba(20, 30, 50, 0.14);
+  --shadow-lg: 0 8px 24px rgba(20, 30, 50, 0.18);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

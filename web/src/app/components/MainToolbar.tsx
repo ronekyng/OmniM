@@ -11,7 +11,7 @@ import { CreatePanel } from './create/CreatePanel';
 import { AssemblyPanel } from './create/AssemblyPanel';
 import type { ObjectType, GeometryType, CreationForm } from '../../shared/types/creation';
 import { createInitialForm, validateForm, totalPolylineLength, type ValidationResult } from '../../shared/types/creation';
-import { CATALOG_TYPES, GENRULE_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, LINEAR_TYPES, SURFACE_TYPES, PICKING_TYPES, DOMAIN_GROUPS, defaultParamsForDef, ensureCatalogLoaded, getCatalogSnapshot, resolveDef } from '../../shared/catalog';
+import { CATALOG_TYPES, GENRULE_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, LINEAR_TYPES, SURFACE_TYPES, PICKING_TYPES, DATUM_TYPES, DOMAIN_GROUPS, defaultParamsForDef, ensureCatalogLoaded, getCatalogSnapshot, resolveDef } from '../../shared/catalog';
 
 function flattenTreeNames(nodes: TreeNode[]): string[] {
   const names: string[] = [];
@@ -281,7 +281,11 @@ export function MainToolbar({
         object_type: objectType,
         name,
         description: form.desc || '',
-        geometry: { operations: [{ operation: createOperation(form) }] },
+        // Datum/container types own no geometry (a storey is an elevation,
+        // not a 5×0.3×3 box). The server also strips it defensively.
+        ...(DATUM_TYPES.has(objectType)
+          ? {}
+          : { geometry: { operations: [{ operation: createOperation(form) }] } }),
         parent_id: parentId,
         // P8-S1: datum elevation on storey creation (m; may be negative).
         ...(objectType === 'storey' ? { elevation: parseFloat(form.elevation) || 0 } : {}),
@@ -320,7 +324,7 @@ export function MainToolbar({
         await api.setProperty(obj.id, { name: 'core_thickness', value: String(parseFloat(form.core) || 0.2) }).catch(warnField);
         await api.setProperty(obj.id, { name: 'finish_thickness', value: String(parseFloat(form.finish) || 0.02) }).catch(warnField);
       }
-    } else {
+    } else if (!DATUM_TYPES.has(objectType)) {
       const px = parseFloat(form.posX) || 0, py = parseFloat(form.posY) || 0, pz = parseFloat(form.posZ) || 0;
       if (px !== 0 || py !== 0 || pz !== 0) {
         await api.transformObject(obj.id, { origin: null, translation: { x: px, y: py, z: pz }, rotation: null, scale: { x: 1, y: 1, z: 1 } }).catch(warnField);

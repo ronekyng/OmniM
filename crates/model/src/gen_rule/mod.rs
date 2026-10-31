@@ -11,6 +11,7 @@
 
 pub mod assembly;
 pub mod boolean_subtract;
+pub mod door;
 pub mod fitting;
 pub mod layer_extrusion;
 pub mod linear_component;

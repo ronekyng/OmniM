@@ -132,6 +132,119 @@ async fn opening_is_a_host_relative_void_volume() {
 }
 
 #[tokio::test]
+async fn door_leaf_is_sized_to_the_opening_not_the_wall() {
+    let port = test_server().await;
+    let wall_id = make_wall(port).await;
+
+    let (status, body) = post_json(
+        port,
+        "/api/genrule",
+        serde_json::json!({
+            "genrule": "door",
+            "name": "D1",
+            "wall_id": wall_id,
+            "opening_width": 1.0,
+            "opening_height": 2.1,
+            "position_x": 2.5,
+            "position_z": 0.0
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "door create failed: {}", body);
+    let obj = json_of(&body);
+    assert_eq!(obj["object_type"], 104, "ObjectType::Door");
+    assert_eq!(obj["parent_id"], wall_id);
+
+    let (w, d, h) = bbox_size(&obj);
+    assert!((w - 1.0).abs() < 1e-6, "door width follows the opening: {}", w);
+    assert!((h - 2.1).abs() < 1e-6, "door height follows the opening: {}", h);
+    assert!(d < 0.4, "door depth is the wall thickness, not the bbox: {}", d);
+
+    let props = obj["properties"].as_array().unwrap();
+    assert!(props.iter().any(|p| p["name"] == "host_wall_id"));
+    assert!(props.iter().any(|p| p["name"] == "opening_width"));
+}
+
+#[tokio::test]
+async fn door_follows_a_rotated_wall_centreline() {
+    let port = test_server().await;
+    let (status, body) = post_json(
+        port,
+        "/api/genrule",
+        serde_json::json!({
+            "genrule": "layered",
+            "name": "Diagonal wall",
+            "mode": "wall",
+            "path": { "points": [[0.0, 0.0, 0.0], [10.0, 10.0, 0.0]], "closed": false },
+            "layers": [{ "name": "core", "thickness": 0.2 }],
+            "height": 3.0
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "wall create failed: {}", body);
+    let wall_id = json_of(&body)["id"].as_str().unwrap().to_string();
+
+    // Half of the 14.142 m diagonal.
+    let (status, body) = post_json(
+        port,
+        "/api/genrule",
+        serde_json::json!({
+            "genrule": "door",
+            "name": "D-diag",
+            "wall_id": wall_id,
+            "opening_width": 1.0,
+            "opening_height": 2.1,
+            "position_x": 7.0710678,
+            "position_z": 0.0
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "door create failed: {}", body);
+    let obj = json_of(&body);
+    let (w, d, h) = bbox_size(&obj);
+    assert!(w < 2.0 && d < 2.0, "rotated door is not wall-sized: {} x {}", w, d);
+    assert!((h - 2.1).abs() < 1e-6);
+
+    let mn = &obj["geometry"]["bbox"]["min"];
+    let mx = &obj["geometry"]["bbox"]["max"];
+    let cx = (mn["x"].as_f64().unwrap() + mx["x"].as_f64().unwrap()) / 2.0;
+    let cy = (mn["y"].as_f64().unwrap() + mx["y"].as_f64().unwrap()) / 2.0;
+    assert!(
+        (cx - 5.0).abs() < 1.0 && (cy - 5.0).abs() < 1.0,
+        "door centre follows the wall path, got ({}, {})",
+        cx,
+        cy
+    );
+}
+
+#[tokio::test]
+async fn window_uses_the_sill_height_as_its_base() {
+    let port = test_server().await;
+    let wall_id = make_wall(port).await;
+    let (status, body) = post_json(
+        port,
+        "/api/genrule",
+        serde_json::json!({
+            "genrule": "window",
+            "name": "W1",
+            "wall_id": wall_id,
+            "opening_width": 1.2,
+            "opening_height": 1.5,
+            "position_x": 2.5,
+            "position_z": 0.9
+        }),
+    )
+    .await;
+    assert_eq!(status, 200, "window create failed: {}", body);
+    let obj = json_of(&body);
+    let (w, _d, h) = bbox_size(&obj);
+    assert!((w - 1.2).abs() < 1e-6);
+    assert!((h - 1.5).abs() < 1e-6);
+    let min_z = obj["geometry"]["bbox"]["min"]["z"].as_f64().unwrap();
+    assert!((min_z - 0.9).abs() < 1e-6, "sill height: {}", min_z);
+}
+
+#[tokio::test]
 async fn opening_requires_an_existing_host() {
     let port = test_server().await;
     let (status, body) = post_json(
