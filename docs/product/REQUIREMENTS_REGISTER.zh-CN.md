@@ -114,11 +114,11 @@ evidence: "n/a (product requirement)"
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | 首启 e2e | G1 | 🔀 |
-| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | 保存往返 e2e | G1 | 🔀 |
-| UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | 状态 e2e | G1 | 🔀 |
+| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts`（Save） | G1 | 🔀 |
+| UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 | G2 | 📅 |
 | UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 | G2 | 📅 |
-| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | 三分支 e2e | G1 | 🔀 |
+| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts`（Stay/clean） | G1 | 🔀 |
 | UI-DAT-07 | 项目元信息可编辑并持久化 | DATA_INTEGRITY §2.3 | 重开断言 | G2 | 📅 |
 | UI-DAT-08 | 外部修改检测与只读 | DATA_INTEGRITY §6 | mtime 冲突测试 | G3 | 📅 |
 | UI-DAT-09 | 打开时缺失依赖报告 | DATA_INTEGRITY §2.4 | 夹具项目测试 | G3 | 📅 |

@@ -74,11 +74,11 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-FBK-08 可关闭且不遮挡 | 🔀 | 可关闭；位置会压住外壳 |
 | UI-FBK-09 空状态带操作 | 🔀 | 仅部分面板 |
 | UI-DAT-01 项目首页 | 🔀 | `/projects` 含新建/打开/最近/示例；服务端 list/new/open + 允许根目录；E2E 覆盖示例项目进入工作区 |
-| UI-DAT-02 显式保存 | 🔀 | 保存按钮 + Ctrl/Cmd+S + 另存为（`/api/project/save-as`）；往返 e2e 待补 |
-| UI-DAT-03 脏状态 | 🔀 | `saveState.ts` + 标题/状态栏指示；状态 e2e 待补 |
-| UI-DAT-06 未保存拦截 | 🔀 | 脏/失败时 `beforeunload`；应用内导航拦截待补 |
+| UI-DAT-02 显式保存 | 🔀 | `data.spec.ts` 覆盖 Save 清脏；另存为与失败重试待补 |
+| UI-DAT-03 脏状态 | ✅ | `data.spec.ts` 断言 dirty 文案与 Save 后 clean |
+| UI-DAT-06 未保存拦截 | 🔀 | `data.spec.ts` 覆盖 dirty→Stay 与 clean→离开；beforeunload 与 Leave 分支待补 |
 
-**G1 判定：** 📅 **未就绪。** 25 条中 9 条完成（`UI-SHL-02/03/04/06/08`、`UI-INT-02/04/09`、`UI-FBK-05`），16 条部分实现，0 条缺失。
+**G1 判定：** 📅 **未就绪。** 25 条中 10 条完成（`UI-SHL-02/03/04/06/08`、`UI-INT-02/04/09`、`UI-FBK-05`、`UI-DAT-03`），15 条部分实现，0 条缺失。
 
 > **验收记录（2026-10-30，口径区分）。** 建模师 UI/UX 复验（[MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)）以**可用原型（G1）档的 UI/UX 维度**正式放行：两个 P0-UX（保存假警报、单位陷阱）已关闭。这不改变上表按 RTM 逐条判定的门禁状态——25 条仍以 `REQUIREMENTS_REGISTER` 的验证证据为准，本看板不因"体验验收通过"而升级门禁。
 

@@ -74,11 +74,11 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | UI-FBK-08 Dismissible, non-blocking feedback | 🔀 | Toasts are dismissible; placement overlaps chrome |
 | UI-FBK-09 Empty states with action | 🔀 | Some panels only |
 | UI-DAT-01 Project home | 🔀 | `/projects` with new/open/recent/sample; server list/new/open + allowed-root; E2E covers sample → workspace |
-| UI-DAT-02 Explicit save | 🔀 | Save button + Ctrl/Cmd+S + Save as… (`/api/project/save-as`); round-trip e2e pending |
-| UI-DAT-03 Dirty state | 🔀 | `saveState.ts` + title/status indicators; state e2e pending |
-| UI-DAT-06 Unsaved interception | 🔀 | `beforeunload` while dirty/failed; in-app navigation guard pending |
+| UI-DAT-02 Explicit save | 🔀 | `data.spec.ts` covers Save clearing dirty; save-as and failure retry pending |
+| UI-DAT-03 Dirty state | ✅ | `data.spec.ts` asserts dirty copy and clean after Save |
+| UI-DAT-06 Unsaved interception | 🔀 | `data.spec.ts` covers dirty→Stay and clean→leave; beforeunload and Leave branch pending |
 
-**G1 verdict:** 📅 **not ready.** 9 of 25 complete (`UI-SHL-02/03/04/06/08`, `UI-INT-02/04/09`, `UI-FBK-05`), 16 partial, 0 absent.
+**G1 verdict:** 📅 **not ready.** 10 of 25 complete (`UI-SHL-02/03/04/06/08`, `UI-INT-02/04/09`, `UI-FBK-05`, `UI-DAT-03`), 15 partial, 0 absent.
 
 > **Acceptance record (2026-10-30, scope note).** The modeler UI/UX re-audit ([MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)) formally releases the **G1-tier UI/UX dimension**: both P0-UX findings (false save alarm, unit trap) are closed. This does not change the per-requirement gate status above — the 25 rows still follow `REQUIREMENTS_REGISTER` verification evidence; an experience acceptance does not upgrade a gate.
 

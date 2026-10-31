@@ -114,11 +114,11 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | first-run e2e | G1 | 🔀 |
-| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | save round-trip e2e | G1 | 🔀 |
-| UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | state e2e | G1 | 🔀 |
+| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts` (Save) | G1 | 🔀 |
+| UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace | G2 | 📅 |
 | UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill | G2 | 📅 |
-| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | three-branch e2e | G1 | 🔀 |
+| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts` (Stay/clean) | G1 | 🔀 |
 | UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion | G2 | 📅 |
 | UI-DAT-08 | External change detection and read-only | DATA_INTEGRITY §6 | mtime conflict test | G3 | 📅 |
 | UI-DAT-09 | Missing dependency report on open | DATA_INTEGRITY §2.4 | fixture project test | G3 | 📅 |
