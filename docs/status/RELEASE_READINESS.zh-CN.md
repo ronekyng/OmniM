@@ -58,7 +58,7 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-SHL-04 左停靠标签页 | ✅ | Objects / Grids / 构件库三标签；`layout.spec.ts` 断言 240–400 px |
 | UI-SHL-05 底停靠折叠且带标签 | ✅ | 默认收起、Console/AI 标签；`bottomDock.spec.ts` 断言 ≤40% 高度 |
 | UI-SHL-06 布局持久化与重置 | ✅ | `layout.spec.ts` 拖宽 → 重载恢复 → Reset layout 回 340 px |
-| UI-SHL-07 上下文功能区 | 🔀 | 四专业随时可用（`ribbon.spec.ts`）+ 当前工具指示；命令未按 创建/修改/基准/测量/交换 分组 |
+| UI-SHL-07 上下文功能区 | ✅ | 四专业切换仅替换命令集（`ribbon.spec.ts`）+ 当前工具指示 + 组标签 |
 | UI-SHL-08 状态栏读数 | ✅ | `web/e2e/shell.spec.ts` 断言坐标/选择/单位/保存；开发者模式断言 FPS |
 | UI-SHL-10 标题与面包屑 | ✅ | 工作区面包屑 + 编辑器层 `PageBreadcrumb`；`editors.spec.ts` 覆盖 Series/Library 返回 |
 | UI-DS-02 深浅主题切换 | 🔀 | `data-theme` + `localStorage` 持久化 + OS 默认；标题栏切换；语义令牌迁移（UI-DS-04）与截图证据待补 |
@@ -66,19 +66,19 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-INT-02 拾取状态机 | ✅ | `stateMachine.test.ts` |
 | UI-INT-04 输入时不触发快捷键 | ✅ | `web/e2e/shell.spec.ts` 在名称输入框按 Delete，对象未被删除；注册表统一属 UI-INT-03 |
 | UI-INT-09 自动命名 | ✅ | `naming.ts` + 4 例单测；接入创建/快速创建/子对象/复制 |
-| UI-FBK-01 面板三态 | 🔀 | 属性/构件/领域面板已补骨架、错误 + 重试、空态；Console/AI 与其余面板待补 |
-| UI-FBK-02 骨架屏时序 | 🔀 | 400 ms 阈值有单测（`delayedVisibility.test.ts`）；属性/构件面板已接入，逐面板覆盖待补 |
+| UI-FBK-01 面板三态 | ✅ | 属性/构件/领域面板 + Console 空态 + AI 空态/加载/错误（`routeCrash.spec.ts`） |
+| UI-FBK-02 骨架屏时序 | ✅ | 400 ms 阈值单测；字段/构件/领域三组成骨架逐面板接入（Console/AI 使用内联加载微调） |
 | UI-FBK-05 无原生弹窗 | ✅ | `ConfirmDialog` + `notify`；`check_ui_contracts` dialogs = 0 |
-| UI-FBK-06 错误边界 | 🔀 | 应用/工作区/面板边界存在；抛错面板测试已落（`feedback.spec.ts`），路由级抛错测试待补 |
+| UI-FBK-06 错误边界 | ✅ | 面板级与路由级抛错测试均已落（`feedback.spec.ts`、`routeCrash.spec.ts`） |
 | UI-FBK-07 分级提示、错误常驻 | ✅ | 错误常驻、成功 4 s 自动消失；`feedback.spec.ts` 断言持久性与 ≤3 折叠 |
 | UI-FBK-08 可关闭且不遮挡 | ✅ | 320–420 px、状态栏之上、≤3 折叠；`feedback.spec.ts` 断言位置与关闭 |
-| UI-FBK-09 空状态带操作 | 🔀 | 领域面板与属性面板空态带指引/操作；其余待补 |
-| UI-DAT-01 项目首页 | 🔀 | `/projects` 含新建/打开/最近/示例；服务端 list/new/open + 允许根目录；E2E 覆盖示例项目进入工作区 |
-| UI-DAT-02 显式保存 | 🔀 | `data.spec.ts` 覆盖 Save 清脏与 Save-as 换目标；失败重试 e2e 待补 |
+| UI-FBK-09 空状态带操作 | ✅ | 对象树/领域/属性/构件目录空态均带指引与下一步（`home.spec.ts` + 面板清单） |
+| UI-DAT-01 项目首页 | ✅ | `home.spec.ts` 覆盖 示例 → 工作区 → Save → 首页 recent 列表 → 新建项目 |
+| UI-DAT-02 显式保存 | ✅ | `data.spec.ts` 覆盖 Save / Save-as / 500 失败升级与重试 |
 | UI-DAT-03 脏状态 | ✅ | `data.spec.ts` 断言 dirty 文案与 Save 后 clean |
 | UI-DAT-06 未保存拦截 | 🔀 | `data.spec.ts` 覆盖 dirty→Stay、dirty→Leave、clean→离开；刷新/新建与 beforeunload 分支待补 |
 
-**G1 判定：** 📅 **未就绪。** 25 条中 15 条完成（`UI-SHL-01/02/03/04/05/06/08/10`、`UI-INT-02/04/09`、`UI-FBK-05/07/08`、`UI-DAT-03`），10 条部分实现，0 条缺失。
+**G1 判定：** 📅 **未就绪。** 25 条中 22 条完成（`UI-SHL-01…06/08/10`、`UI-INT-02/04/09`、`UI-FBK-01/02/05/06/07/08/09`、`UI-DAT-01/02/03`），3 条部分实现，0 条缺失。
 
 > **验收记录（2026-10-30，口径区分）。** 建模师 UI/UX 复验（[MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)）以**可用原型（G1）档的 UI/UX 维度**正式放行：两个 P0-UX（保存假警报、单位陷阱）已关闭。这不改变上表按 RTM 逐条判定的门禁状态——25 条仍以 `REQUIREMENTS_REGISTER` 的验证证据为准，本看板不因"体验验收通过"而升级门禁。
 

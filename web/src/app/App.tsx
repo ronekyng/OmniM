@@ -25,13 +25,22 @@ import { registerDefaultPanels } from './panels/defaultPanels';
 import { AppLayout } from './layout/AppLayout';
 import { PanelSlot } from './panels/PanelRegistry';
 import { ThreeViewerContext } from './context/ThreeViewerContext';
+import type { ReactNode } from 'react';
 import { applyTheme } from '../shared/theme';
 
-export function App() {
-  const toast = useToastApi();
+/** Dev/e2e aid (UI-FBK-06): workspace route crash for boundary tests. */
+function CrashRoutePanel(): ReactNode {
+  throw new Error('crash-test fixture: route threw while rendering');
+}
+
+export function App() {  const toast = useToastApi();
   const navigate = useNavigate();
   const location = useLocation();
   const isMain = location.pathname === '/' || location.pathname === '';
+  const crashRoute =
+    isMain &&
+    typeof window !== 'undefined' &&
+    window.sessionStorage.getItem('omnim.crashTest') === 'route';
   const viewerRef = useRef<ThreeViewerHandle>(null);
 
   const {
@@ -196,6 +205,9 @@ export function App() {
       <Route path="/library-manager" element={<LibraryManagerPage />} />
       <Route path="*" element={
         <ThreeViewerContext.Provider value={viewerRef}>
+          {/* Dev/e2e aid (UI-FBK-06): throw inside the workspace route to
+              exercise its error boundary without touching AppLayout. */}
+          {crashRoute && <CrashRoutePanel />}
           <AppLayout
             titleBar={<TitleBar />}
             statusBar={<StatusBar />}

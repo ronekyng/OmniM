@@ -105,17 +105,23 @@ export function ObjectTreePanel() {
         </div>
       )}
       {error && <p className="error">{error}</p>}
-      <ObjectTree
-        nodes={tree}
-        selectedIds={selectedIds}
-        onSelectionChanged={handleSelectionChanged}
-        onDoubleClick={(id) => viewerRef.current?.focusObject(id)}
-        onCreateChild={handleCreateChild}
-        onDuplicate={handleDuplicate}
-        onDelete={handleDelete}
-        onReparent={handleReparent}
-        onEditComponent={handleEditComponent}
-      />
+      {tree.length === 0 ? (
+        <div className="panel-state">
+          模型为空 — 用工具栏「Create」添加对象，或使用 Catalog 放置标准构件。
+        </div>
+      ) : (
+        <ObjectTree
+          nodes={tree}
+          selectedIds={selectedIds}
+          onSelectionChanged={handleSelectionChanged}
+          onDoubleClick={(id) => viewerRef.current?.focusObject(id)}
+          onCreateChild={handleCreateChild}
+          onDuplicate={handleDuplicate}
+          onDelete={handleDelete}
+          onReparent={handleReparent}
+          onEditComponent={handleEditComponent}
+        />
+      )}
     </>
   );
 }

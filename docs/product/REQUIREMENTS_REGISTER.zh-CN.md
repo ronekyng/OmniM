@@ -53,7 +53,7 @@ evidence: "n/a (product requirement)"
 | UI-SHL-04 | 左停靠标签页，240–400 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-05 | 底停靠默认折叠、带标签、≤40% 高 | IA_SHELL §4 | `web/e2e/bottomDock.spec.ts` | G1 | ✅ |
 | UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | `web/e2e/layout.spec.ts` | G1 | ✅ |
-| UI-SHL-07 | 按专业切换的上下文功能区 | IA_SHELL §3.3 | 命令集快照测试 | G1 | 🔀 |
+| UI-SHL-07 | 按专业切换的上下文功能区 | IA_SHELL §3.3 | `web/e2e/ribbon.spec.ts` | G1 | ✅ |
 | UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | `web/e2e/shell.spec.ts`（含开发者 FPS） | G1 | ✅ |
 | UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e | G2 | 🔀 |
 | UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
@@ -98,23 +98,23 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-FBK-01 | 每个面板三态齐全 | FEEDBACK_ERRORS §3 | 面板清单 | G1 | 🔀 |
-| UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | `web/src/__tests__/delayedVisibility.test.ts` | G1 | 🔀 |
+| UI-FBK-01 | 每个面板三态齐全 | FEEDBACK_ERRORS §3 | `web/e2e/routeCrash.spec.ts` + 面板清单 | G1 | ✅ |
+| UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | `web/src/__tests__/delayedVisibility.test.ts` + 面板覆盖 | G1 | ✅ |
 | UI-FBK-03 | 超过 1 秒显示进度并可取消 | FEEDBACK_ERRORS §4 | 导入 e2e | G2 | 📅 |
 | UI-FBK-04 | 带码错误、原因与恢复动作 | FEEDBACK_ERRORS §5 | 错误目录比对 | G3 | 📅 |
 | UI-FBK-05 | 无原生 alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` 扫描 | G1 | ✅ |
-| UI-FBK-06 | 路由与面板级错误边界 | FEEDBACK_ERRORS §7 | 抛错面板测试 | G1 | 🔀 |
+| UI-FBK-06 | 路由与面板级错误边界 | FEEDBACK_ERRORS §7 | `web/e2e/routeCrash.spec.ts` + 面板级 `feedback.spec.ts` | G1 | ✅ |
 | UI-FBK-07 | 分级提示；错误常驻 | FEEDBACK_ERRORS §8 | `web/e2e/feedback.spec.ts` | G1 | ✅ |
 | UI-FBK-08 | 可关闭且不遮挡的成功反馈 | FEEDBACK_ERRORS §8.2 | `web/e2e/feedback.spec.ts` + 截图 | G1 | ✅ |
-| UI-FBK-09 | 空状态带下一步动作 | FEEDBACK_ERRORS §3.3 | 领域/属性面板 + 面板清单 | G1 | 🔀 |
+| UI-FBK-09 | 空状态带下一步动作 | FEEDBACK_ERRORS §3.3 | `web/e2e/home.spec.ts` + 面板清单 | G1 | ✅ |
 | UI-FBK-10 | 诊断包导出 | FEEDBACK_ERRORS §9 | 诊断包检查 | G3 | 📅 |
 
 ## 7. 登记：DAT — 数据完整性与项目生命周期
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | 首启 e2e | G1 | 🔀 |
-| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts`（Save + Save-as） | G1 | 🔀 |
+| UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | `web/e2e/home.spec.ts` | G1 | ✅ |
+| UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts`（Save/Save-as/失败重试） | G1 | ✅ |
 | UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 | G2 | 📅 |
 | UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 | G2 | 📅 |

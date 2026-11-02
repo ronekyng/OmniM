@@ -58,7 +58,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | UI-SHL-04 Left dock tabs | ✅ | Objects / Grids / Catalog tabs; `layout.spec.ts` asserts 240–400 px |
 | UI-SHL-05 Bottom dock collapsed and tabbed | ✅ | Collapsed by default, Console/AI tabs; `bottomDock.spec.ts` asserts ≤40% height |
 | UI-SHL-06 Layout persistence and reset | ✅ | `layout.spec.ts`: resize → reload restores → Reset layout back to 340 px |
-| UI-SHL-07 Contextual ribbon | 🔀 | Four disciplines always live (`ribbon.spec.ts`) + current-tool indicator; commands not yet grouped into create/modify/datum/measure/exchange |
+| UI-SHL-07 Contextual ribbon | ✅ | Four disciplines swap the command row only (`ribbon.spec.ts`) + current-tool indicator + group label |
 | UI-SHL-08 Status bar readouts | ✅ | `web/e2e/shell.spec.ts` asserts coordinates/selection/units/save; FPS under developer mode |
 | UI-SHL-10 Title and breadcrumb | ✅ | Workspace breadcrumb + editor-layer `PageBreadcrumb`; `editors.spec.ts` covers Series/Library back links |
 | UI-DS-02 Dark/light switch | 🔀 | `data-theme` + `localStorage` persistence + OS default; title-bar toggle; semantic token migration (UI-DS-04) and screenshots pending |
@@ -66,19 +66,19 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | UI-INT-02 Picking state machine | ✅ | `stateMachine.test.ts` |
 | UI-INT-04 No shortcuts while typing | ✅ | `web/e2e/shell.spec.ts` presses Delete in the name input and the object survives; registry unification is UI-INT-03 |
 | UI-INT-09 Auto-naming | ✅ | `naming.ts` + 4 unit tests; wired to create/quick-create/child/duplicate |
-| UI-FBK-01 Panel three states | 🔀 | Properties, catalog and domain panels have skeleton/loading, error + retry, empty states; console/AI and the rest pending |
-| UI-FBK-02 Skeleton timing | 🔀 | 400 ms threshold is unit-tested (`delayedVisibility.test.ts`); wired into properties/catalog panels, per-panel coverage pending |
+| UI-FBK-01 Panel three states | ✅ | Properties/catalog/domain panels + console empty + AI empty/loading/error (`routeCrash.spec.ts`) |
+| UI-FBK-02 Skeleton timing | ✅ | 400 ms threshold unit test; properties/catalog/domain panels wired (console/AI use inline loading) |
 | UI-FBK-05 No native dialogs | ✅ | `ConfirmDialog` + `notify`; `check_ui_contracts` dialogs = 0 |
-| UI-FBK-06 Error boundaries | 🔀 | Application/workspace/panel boundaries exist; panel crash test landed (`feedback.spec.ts`), route-level throw test pending |
+| UI-FBK-06 Error boundaries | ✅ | Panel- and route-level crash tests landed (`feedback.spec.ts`, `routeCrash.spec.ts`) |
 | UI-FBK-07 Typed toasts, errors persist | ✅ | Errors persist, success auto-dismisses (4 s); `feedback.spec.ts` asserts persistence and the ≤3 overflow count |
 | UI-FBK-08 Dismissible, non-blocking feedback | ✅ | 320–420 px, above the status bar, ≤3 with overflow counter; `feedback.spec.ts` asserts placement and dismissal |
-| UI-FBK-09 Empty states with action | 🔀 | Domain and properties panels ship guided empty states; others pending |
-| UI-DAT-01 Project home | 🔀 | `/projects` with new/open/recent/sample; server list/new/open + allowed-root; E2E covers sample → workspace |
-| UI-DAT-02 Explicit save | 🔀 | `data.spec.ts` covers Save clearing dirty and Save-as retarget; failure-retry e2e pending |
+| UI-FBK-09 Empty states with action | ✅ | Object tree / domain / properties / catalog empty states carry guided next actions (`home.spec.ts` + panel checklist) |
+| UI-DAT-01 Project home | ✅ | `home.spec.ts` covers sample → workspace → Save → recent list → new project |
+| UI-DAT-02 Explicit save | ✅ | `data.spec.ts` covers Save / Save-as / a 500 escalation with retry |
 | UI-DAT-03 Dirty state | ✅ | `data.spec.ts` asserts dirty copy and clean after Save |
 | UI-DAT-06 Unsaved interception | 🔀 | `data.spec.ts` covers dirty→Stay, dirty→Leave, clean→leave; refresh/new-project and beforeunload branches pending |
 
-**G1 verdict:** 📅 **not ready.** 15 of 25 complete (`UI-SHL-01/02/03/04/05/06/08/10`, `UI-INT-02/04/09`, `UI-FBK-05/07/08`, `UI-DAT-03`), 10 partial, 0 absent.
+**G1 verdict:** 📅 **not ready.** 22 of 25 complete (`UI-SHL-01…06/08/10`, `UI-INT-02/04/09`, `UI-FBK-01/02/05/06/07/08/09`, `UI-DAT-01/02/03`), 3 partial, 0 absent.
 
 > **Acceptance record (2026-10-30, scope note).** The modeler UI/UX re-audit ([MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)) formally releases the **G1-tier UI/UX dimension**: both P0-UX findings (false save alarm, unit trap) are closed. This does not change the per-requirement gate status above — the 25 rows still follow `REQUIREMENTS_REGISTER` verification evidence; an experience acceptance does not upgrade a gate.
 

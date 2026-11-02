@@ -480,7 +480,8 @@ export function MainToolbar({
       </div>
 
       {activeDomain && (
-        <div className="domain-toolbar">
+        <div className="domain-toolbar" role="toolbar" aria-label={`${DOMAIN_GROUPS[activeDomain].label} 命令组`}>
+          <span className="ribbon-group-label">创建</span>
           {DOMAIN_GROUPS[activeDomain]?.types.map((t) => (
             <button
               key={t}

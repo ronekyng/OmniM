@@ -37,10 +37,24 @@ test('dirty state, explicit save and leave guard', async ({ page }) => {
   await page.locator('.confirm-dialog button[type="submit"]').click();
   await expect(page.locator('.status-save')).toContainText('Saved');
 
+  // Data-integrity §3.4: a failed save escalates and is retryable.
+  await page.route('**/api/project/save', (route) => route.fulfill({ status: 500, body: 'boom' }));
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.locator('.status-save')).toContainText('Save failed');
+  await expect(page.locator('.toast-item', { hasText: 'Save failed' }).first()).toBeVisible();
+  await page.unroute('**/api/project/save');
+  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.locator('.status-save')).toContainText('Saved');
+
   // While dirty, the "Leave" choice navigates to the project home.
   await page.getByLabel('Name').fill('Leave-Level');
   await page.getByRole('button', { name: 'Add storey' }).click();
   await expect(page.locator('.status-save')).toContainText('Auto-saved server-side');
+
+  // While dirty, the "Leave" choice navigates to the project home.
+  // NOTE: the refresh/beforeunload branch stays pending — headless Chromium
+  // does not surface `beforeunload` on programmatic reload without a prior
+  // user gesture, so it cannot be covered here reliably.
   await page.locator('.title-project').click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
   await page.getByRole('button', { name: 'Leave' }).click();
