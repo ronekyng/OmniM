@@ -1,7 +1,7 @@
 ---
 title: "测试指南"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -92,7 +92,7 @@ npm run test:watch    # 或：npx vitest
 |---|---|---|---|---|
 | 单元 | `web/src/__tests__/` | `npm test` | G1 | ✅ 12 文件 / 107 测试 |
 | 组件 | 同目录 `*.test.tsx` | `npm test` | G2 | 📅 |
-| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 1 条：项目首页 → 工作区 → 主题 → 停靠标签 → 楼层 |
+| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 8 条：首页→工作区、外壳/七区、数据完整性、停靠、功能区、编辑器、反馈、主题/楼层 |
 | 视觉回归 | `web/tests/visual/` | `npm run visual` | G2 | 📅 |
 | 可访问性 | `web/tests/a11y/` | `npm run a11y` | G2 | 📅 |
 | 性能 | `web/tests/perf/` | `npm run perf` | G2 | 📅 |

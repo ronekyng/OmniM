@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -47,16 +47,16 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | e2e route matrix | G1 | 🔀 |
+| UI-SHL-01 | Three application levels (project, workspace, editor) | IA_SHELL §2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
 | UI-SHL-02 | Seven fixed workspace regions | IA_SHELL §3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-SHL-03 | Properties docked right, 260–600 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-04 | Left dock tabs, 240–400 px | IA_SHELL §4 | `web/e2e/layout.spec.ts` | G1 | ✅ |
-| UI-SHL-05 | Bottom dock collapsed, tabbed, ≤40% height | IA_SHELL §4 | screenshot `bottom-collapsed` | G1 | 🔀 |
+| UI-SHL-05 | Bottom dock collapsed, tabbed, ≤40% height | IA_SHELL §4 | `web/e2e/bottomDock.spec.ts` | G1 | ✅ |
 | UI-SHL-06 | Layout persistence and reset | IA_SHELL §5 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-07 | Contextual ribbon per discipline | IA_SHELL §3.3 | command-set snapshot test | G1 | 🔀 |
 | UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | `web/e2e/shell.spec.ts` (incl. developer FPS) | G1 | ✅ |
 | UI-SHL-09 | Floating panels with persisted geometry | IA_SHELL §4.4 | e2e drag/resize/reload | G2 | 🔀 |
-| UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | route matrix assertions | G1 | 🔀 |
+| UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
 | UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot | G2 | 📅 |
 | UI-SHL-12 | Command palette | IA_SHELL §8 | e2e command coverage | G2 | 📅 |
 
@@ -104,9 +104,9 @@ evidence: "n/a (product requirement)"
 | UI-FBK-04 | Coded errors with cause and recovery | FEEDBACK_ERRORS §5 | error catalogue diff | G3 | 📅 |
 | UI-FBK-05 | No native alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` scan | G1 | ✅ |
 | UI-FBK-06 | Route- and panel-scoped error boundaries | FEEDBACK_ERRORS §7 | throwing-panel test | G1 | 🔀 |
-| UI-FBK-07 | Typed toasts; errors persist | FEEDBACK_ERRORS §8 | toast e2e | G1 | 🔀 |
-| UI-FBK-08 | Dismissible, non-blocking success feedback | FEEDBACK_ERRORS §8.2 | screenshot review | G1 | 🔀 |
-| UI-FBK-09 | Empty states with a next action | FEEDBACK_ERRORS §3.3 | panel checklist | G1 | 🔀 |
+| UI-FBK-07 | Typed toasts; errors persist | FEEDBACK_ERRORS §8 | `web/e2e/feedback.spec.ts` | G1 | ✅ |
+| UI-FBK-08 | Dismissible, non-blocking success feedback | FEEDBACK_ERRORS §8.2 | `web/e2e/feedback.spec.ts` + screenshot | G1 | ✅ |
+| UI-FBK-09 | Empty states with a next action | FEEDBACK_ERRORS §3.3 | domain/properties panels + panel checklist | G1 | 🔀 |
 | UI-FBK-10 | Diagnostics bundle export | FEEDBACK_ERRORS §9 | bundle inspection | G3 | 📅 |
 
 ## 7. Register: DAT — Data Integrity and Project Lifecycle
@@ -114,11 +114,11 @@ evidence: "n/a (product requirement)"
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | first-run e2e | G1 | 🔀 |
-| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts` (Save) | G1 | 🔀 |
+| UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts` (Save + Save-as) | G1 | 🔀 |
 | UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace | G2 | 📅 |
 | UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill | G2 | 📅 |
-| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts` (Stay/clean) | G1 | 🔀 |
+| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts` (Stay/Leave/clean) | G1 | 🔀 |
 | UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion | G2 | 📅 |
 | UI-DAT-08 | External change detection and read-only | DATA_INTEGRITY §6 | mtime conflict test | G3 | 📅 |
 | UI-DAT-09 | Missing dependency report on open | DATA_INTEGRITY §2.4 | fixture project test | G3 | 📅 |

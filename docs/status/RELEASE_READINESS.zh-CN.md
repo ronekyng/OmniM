@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端发布就绪度"
 status: current
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "2026-10-30 依据 REQUIREMENTS_REGISTER 与 FRONTEND_MATURITY 评估门禁状态；并入建模师 UI/UX 复验（G1 体验档）口径区分"
 ---
@@ -52,33 +52,33 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 
 | 需求 | 状态 | 证据 / 阻塞 |
 |---|---|---|
-| UI-SHL-01 三层应用结构 | 🔀 | `/projects` + 工作区 + 编辑器；路由矩阵 e2e 待补 |
+| UI-SHL-01 三层应用结构 | ✅ | `editors.spec.ts` 覆盖项目/工作区/三个编辑器层路由 |
 | UI-SHL-02 七个固定区域 | ✅ | `web/e2e/shell.spec.ts` 断言左/标题/工具栏/视口/右/底/状态七区 |
 | UI-SHL-03 属性面板右停靠 | ✅ | 默认右停靠 260–600 px；`layout.spec.ts` 拖宽 + 重载持久化 |
 | UI-SHL-04 左停靠标签页 | ✅ | Objects / Grids / 构件库三标签；`layout.spec.ts` 断言 240–400 px |
-| UI-SHL-05 底停靠折叠且带标签 | 🔀 | 控制台常驻，无标签 |
+| UI-SHL-05 底停靠折叠且带标签 | ✅ | 默认收起、Console/AI 标签；`bottomDock.spec.ts` 断言 ≤40% 高度 |
 | UI-SHL-06 布局持久化与重置 | ✅ | `layout.spec.ts` 拖宽 → 重载恢复 → Reset layout 回 340 px |
-| UI-SHL-07 上下文功能区 | 🔀 | 扁平工具栏，未按专业切换 |
+| UI-SHL-07 上下文功能区 | 🔀 | 四专业随时可用（`ribbon.spec.ts`）+ 当前工具指示；命令未按 创建/修改/基准/测量/交换 分组 |
 | UI-SHL-08 状态栏读数 | ✅ | `web/e2e/shell.spec.ts` 断言坐标/选择/单位/保存；开发者模式断言 FPS |
-| UI-SHL-10 标题与面包屑 | 🔀 | 工作区标题/面包屑 + 文档标题；编辑器面包屑待补 |
+| UI-SHL-10 标题与面包屑 | ✅ | 工作区面包屑 + 编辑器层 `PageBreadcrumb`；`editors.spec.ts` 覆盖 Series/Library 返回 |
 | UI-DS-02 深浅主题切换 | 🔀 | `data-theme` + `localStorage` 持久化 + OS 默认；标题栏切换；语义令牌迁移（UI-DS-04）与截图证据待补 |
 | UI-INT-01 五种选择手势 | 🔀 | 单击/Ctrl/框选已有；Esc 先取消工具 |
 | UI-INT-02 拾取状态机 | ✅ | `stateMachine.test.ts` |
 | UI-INT-04 输入时不触发快捷键 | ✅ | `web/e2e/shell.spec.ts` 在名称输入框按 Delete，对象未被删除；注册表统一属 UI-INT-03 |
 | UI-INT-09 自动命名 | ✅ | `naming.ts` + 4 例单测；接入创建/快速创建/子对象/复制 |
-| UI-FBK-01 面板三态 | 🔀 | 属性面板与构件面板已补加载骨架、错误 + 重试、空态；其余面板待补 |
+| UI-FBK-01 面板三态 | 🔀 | 属性/构件/领域面板已补骨架、错误 + 重试、空态；Console/AI 与其余面板待补 |
 | UI-FBK-02 骨架屏时序 | 🔀 | 400 ms 阈值有单测（`delayedVisibility.test.ts`）；属性/构件面板已接入，逐面板覆盖待补 |
 | UI-FBK-05 无原生弹窗 | ✅ | `ConfirmDialog` + `notify`；`check_ui_contracts` dialogs = 0 |
-| UI-FBK-06 错误边界 | 🔀 | 应用、工作区与每个面板槽位；抛错面板测试待补 |
-| UI-FBK-07 分级提示、错误常驻 | 🔀 | 已分级；错误会自动消失 |
-| UI-FBK-08 可关闭且不遮挡 | 🔀 | 可关闭；位置会压住外壳 |
-| UI-FBK-09 空状态带操作 | 🔀 | 仅部分面板 |
+| UI-FBK-06 错误边界 | 🔀 | 应用/工作区/面板边界存在；抛错面板测试已落（`feedback.spec.ts`），路由级抛错测试待补 |
+| UI-FBK-07 分级提示、错误常驻 | ✅ | 错误常驻、成功 4 s 自动消失；`feedback.spec.ts` 断言持久性与 ≤3 折叠 |
+| UI-FBK-08 可关闭且不遮挡 | ✅ | 320–420 px、状态栏之上、≤3 折叠；`feedback.spec.ts` 断言位置与关闭 |
+| UI-FBK-09 空状态带操作 | 🔀 | 领域面板与属性面板空态带指引/操作；其余待补 |
 | UI-DAT-01 项目首页 | 🔀 | `/projects` 含新建/打开/最近/示例；服务端 list/new/open + 允许根目录；E2E 覆盖示例项目进入工作区 |
-| UI-DAT-02 显式保存 | 🔀 | `data.spec.ts` 覆盖 Save 清脏；另存为与失败重试待补 |
+| UI-DAT-02 显式保存 | 🔀 | `data.spec.ts` 覆盖 Save 清脏与 Save-as 换目标；失败重试 e2e 待补 |
 | UI-DAT-03 脏状态 | ✅ | `data.spec.ts` 断言 dirty 文案与 Save 后 clean |
-| UI-DAT-06 未保存拦截 | 🔀 | `data.spec.ts` 覆盖 dirty→Stay 与 clean→离开；beforeunload 与 Leave 分支待补 |
+| UI-DAT-06 未保存拦截 | 🔀 | `data.spec.ts` 覆盖 dirty→Stay、dirty→Leave、clean→离开；刷新/新建与 beforeunload 分支待补 |
 
-**G1 判定：** 📅 **未就绪。** 25 条中 10 条完成（`UI-SHL-02/03/04/06/08`、`UI-INT-02/04/09`、`UI-FBK-05`、`UI-DAT-03`），15 条部分实现，0 条缺失。
+**G1 判定：** 📅 **未就绪。** 25 条中 15 条完成（`UI-SHL-01/02/03/04/05/06/08/10`、`UI-INT-02/04/09`、`UI-FBK-05/07/08`、`UI-DAT-03`），10 条部分实现，0 条缺失。
 
 > **验收记录（2026-10-30，口径区分）。** 建模师 UI/UX 复验（[MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)）以**可用原型（G1）档的 UI/UX 维度**正式放行：两个 P0-UX（保存假警报、单位陷阱）已关闭。这不改变上表按 RTM 逐条判定的门禁状态——25 条仍以 `REQUIREMENTS_REGISTER` 的验证证据为准，本看板不因"体验验收通过"而升级门禁。
 

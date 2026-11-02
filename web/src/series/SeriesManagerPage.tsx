@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
+import { PageBreadcrumb } from '../app/components/PageBreadcrumb';
 import type { Series, Selector, Answer, SpecComponent, ComponentDef, ParamConstraint } from '../shared/types';
 
 export function SeriesManagerPage() {
@@ -225,6 +226,7 @@ export function SeriesManagerPage() {
 
   return (
     <div className="series-mgr-page">
+      <PageBreadcrumb trail={['项目', '编辑器', 'Series Manager']} />
       <div className="series-mgr-header">
         <h1>SeriesStore Manager</h1>
         <div className="series-mgr-header-actions">

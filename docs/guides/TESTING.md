@@ -1,7 +1,7 @@
 ---
 title: "Testing Guide"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "repo"
 evidence: "commands and paths verified in the repo 2026-10-27"
 ---
@@ -92,7 +92,7 @@ Existing tests live in `web/src/__tests__/` (`stateMachine.test.ts` covers the c
 |---|---|---|---|---|
 | Unit | `web/src/__tests__/` | `npm test` | G1 | ✅ 12 files / 107 tests |
 | Component | co-located `*.test.tsx` | `npm test` | G2 | 📅 |
-| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 1 spec: project home → workspace → theme → dock tabs → storey |
+| E2E | `web/e2e/` | `npm run test:e2e` | G1 | ✅ 8 specs: home→workspace, shell/regions, data integrity, docks, ribbon, editors, feedback, theme/storey |
 | Visual regression | `web/tests/visual/` | `npm run visual` | G2 | 📅 |
 | Accessibility | `web/tests/a11y/` | `npm run a11y` | G2 | 📅 |
 | Performance | `web/tests/perf/` | `npm run perf` | G2 | 📅 |

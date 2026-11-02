@@ -5,6 +5,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
+import { PageBreadcrumb } from '../app/components/PageBreadcrumb';
 import type { ComponentDef, ParamDef, CatalogPreviewMesh } from '../shared/types';
 
 export function LibraryManagerPage() {
@@ -245,6 +246,7 @@ export function LibraryManagerPage() {
 
   return (
     <div className="library-mgr-page">
+      <PageBreadcrumb trail={['项目', '编辑器', 'Library Manager']} />
       <div className="library-mgr-header">
         <h1>Library Manager</h1>
         <div className="library-mgr-header-actions">

@@ -1,4 +1,5 @@
 import { panelRegistry } from './PanelRegistry';
+import type { ReactNode } from 'react';
 import { PropertiesPanel } from './PropertiesPanel';
 import { OmniPanelBottom } from './OmniPanelBottom';
 import { AvailableComponentsPanel } from '../components/AvailableComponentsPanel';
@@ -64,4 +65,23 @@ export function registerDefaultPanels() {
       title: 'Console',
     },
   ]);
+
+  // Dev/e2e aid for the panel error boundary (UI-FBK-06): a panel that always
+  // throws while rendering, gated by `sessionStorage['omnim.crashTest']`.
+  const crashTest = typeof window !== 'undefined'
+    ? window.sessionStorage.getItem('omnim.crashTest') === 'panel'
+    : false;
+  if (crashTest && !panelRegistry.getRegistrations().some((p) => p.id === 'crash-test')) {
+    function CrashPanel(): ReactNode {
+      throw new Error('crash-test fixture: panel threw while rendering');
+    }
+    panelRegistry.register({
+      id: 'crash-test',
+      position: 'bottom',
+      component: CrashPanel,
+      visible: () => true,
+      order: 1,
+      title: 'Crash test',
+    });
+  }
 }

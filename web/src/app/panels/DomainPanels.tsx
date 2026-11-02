@@ -5,6 +5,8 @@ import { notify } from '../../shared/toast';
 import { nextAutoName } from '../../shared/naming';
 import type { ComponentDef } from '../../shared/types';
 import { IcoClose } from '../components/Icons';
+import { SkeletonLines } from '../components/Loading';
+import { useDelayedLoading } from '../../shared/useDelayedLoading';
 
 // Domain quick-create always bypasses the series gate (components are built-in).
 function quickInstantiate(body: { component_def_id: string; instance_name: string; params: Record<string, number> }) {
@@ -37,6 +39,8 @@ function DomainPanelContent({ domain }: { domain: string }) {
   const [catalog, setCatalog] = useState<ComponentDef[]>([]);
   const [objectNames, setObjectNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const showSkeleton = useDelayedLoading(loading);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -48,7 +52,7 @@ function DomainPanelContent({ domain }: { domain: string }) {
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [reloadKey]);
 
   const filtered = useMemo(() => catalog.filter((c) => c.domain === domain), [catalog, domain]);
 
@@ -243,9 +247,22 @@ function DomainPanelContent({ domain }: { domain: string }) {
           内置构件 ({filtered.length})
         </label>
         <div className="domain-panel-list">
-          {loading && <div className="muted">加载中…</div>}
-          {error && <div className="error-text">{error}</div>}
-          {!loading && !error && filtered.length === 0 && <div className="muted">暂无构件</div>}
+          {loading && showSkeleton && (
+            <div aria-busy="true" aria-label="Loading components">
+              <SkeletonLines count={4} />
+            </div>
+          )}
+          {error && (
+            <div className="panel-state panel-state--error" role="alert">
+              <p>{error}</p>
+              <button type="button" onClick={() => setReloadKey((n) => n + 1)}>Retry</button>
+            </div>
+          )}
+          {!loading && !error && filtered.length === 0 && (
+            <div className="panel-state">
+              该专业暂无内置构件。可先用上方「快速创建」，或在 Catalog / Component 中添加定义。
+            </div>
+          )}
           {filtered.map((c) => (
             <div className="domain-panel-item" key={c.id} draggable onDragStart={(e) => handleDragStart(e, c)}>
               <div className="domain-panel-item-info">

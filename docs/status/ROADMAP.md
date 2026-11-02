@@ -1,7 +1,7 @@
 ---
 title: "OmniM Development Roadmap"
 status: current
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 applies_to: "repo"
 evidence: "Reconciled against code, CHANGELOG and the gate board; every status carries an evidence link"
 ---
@@ -80,7 +80,7 @@ Project Workspace, sketch editor, feature tree, catalog panel, properties panel,
 | Gate | Scope | Status | Today | Exit condition |
 |---|---|---|---|---|
 | G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
-| G1 | Alpha | 📅 Not passed | 10 ✅ / 15 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
+| G1 | Alpha | 📅 Not passed | 15 ✅ / 10 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
 | G2 | Beta | 📅 Not started | 0 / 37 | Design system, i18n, A11Y, performance all met |
 | G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 

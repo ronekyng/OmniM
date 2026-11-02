@@ -53,6 +53,9 @@ export function MainToolbar({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
+  // Ribbon contract (IA_SHELL §3.3): start scoped to the building discipline
+  // so the contextual command row is real from the first second.
+  useEffect(() => { setActiveDomain((d) => d ?? 'building'); }, []);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   const catalogOpen = useAppStore((s) => s.catalogPanelOpen);
@@ -470,10 +473,10 @@ export function MainToolbar({
         <button onClick={() => navigate('/series-manager')} title="Series Manager"><IcoSeries /><span className="btn-label">Series</span></button>
         <button onClick={() => navigate('/library-manager')} title="Library Manager"><IcoCatalog /><span className="btn-label">Library</span></button>
         <span className="separator" />
-        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'building' ? null : 'building')} title="建筑"><IcoGrid /><span className="btn-label">建筑</span></button>
-        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'civil' ? null : 'civil')} title="土木"><IcoGrid /><span className="btn-label">土木</span></button>
-        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'plant' ? null : 'plant')} title="工厂"><IcoGrid /><span className="btn-label">工厂</span></button>
-        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => setActiveDomain(activeDomain === 'mechanical' ? null : 'mechanical')} title="机械"><IcoGrid /><span className="btn-label">机械</span></button>
+        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => setActiveDomain('building')} title="建筑" aria-pressed={activeDomain === 'building'}><IcoGrid /><span className="btn-label">建筑</span></button>
+        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => setActiveDomain('civil')} title="土木" aria-pressed={activeDomain === 'civil'}><IcoGrid /><span className="btn-label">土木</span></button>
+        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => setActiveDomain('plant')} title="工厂" aria-pressed={activeDomain === 'plant'}><IcoGrid /><span className="btn-label">工厂</span></button>
+        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => setActiveDomain('mechanical')} title="机械" aria-pressed={activeDomain === 'mechanical'}><IcoGrid /><span className="btn-label">机械</span></button>
       </div>
 
       {activeDomain && (
@@ -488,6 +491,9 @@ export function MainToolbar({
               {DOMAIN_GROUPS[activeDomain]?.labels[t] || t}
             </button>
           ))}
+          {creationObjectType && (
+            <span className="domain-tool-indicator">当前：{DOMAIN_GROUPS[activeDomain]?.labels[creationObjectType] || creationObjectType} · Esc 取消</span>
+          )}
         </div>
       )}
 

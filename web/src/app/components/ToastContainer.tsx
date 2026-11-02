@@ -1,3 +1,4 @@
+import type { Toast } from '../../shared/toast';
 import { useToast } from '../../shared/toast';
 
 const typeColors: Record<string, { bg: string; border: string; dot: string }> = {
@@ -7,28 +8,41 @@ const typeColors: Record<string, { bg: string; border: string; dot: string }> = 
   warning: { bg: '#2e2a1a', border: '#4a3a1a', dot: '#ff9800' },
 };
 
+/** Feedback container (FEEDBACK_ERRORS §8 / UI-FBK-07·08):
+ *  bottom-right above the status bar, ≤3 visible with an overflow count,
+ *  320–420 px, dismissible, errors persist. */
 export function ToastContainer() {
-  const { toasts, removeToast } = useToast();
+  const { removeToast, toasts } = useToast();
 
   if (toasts.length === 0) return null;
 
+  const visible = toasts.slice(-3);
+  const overflow = Math.max(0, toasts.length - 3);
+
   return (
     <div className="toast-container">
-      {toasts.map((t) => {
-        const c = typeColors[t.type] ?? typeColors.info;
+      {overflow > 0 && <div className="toast-more">+{overflow} more</div>}
+      {visible.map((toast: Toast) => {
+        const c = typeColors[toast.type] ?? typeColors.info;
         return (
           <div
-            key={t.id}
-            className="toast-item"
+            key={toast.id}
+            className={`toast-item ${toast.type}`}
             style={{
               background: c.bg,
               borderColor: c.border,
             }}
-            onClick={() => removeToast(t.id)}
           >
             <span className="toast-dot" style={{ background: c.dot }} />
-            <span className="toast-message">{t.message}</span>
-            <span className="toast-close">✕</span>
+            <span className="toast-message">{toast.message}</span>
+            <button
+              type="button"
+              className="toast-close"
+              onClick={() => removeToast(toast.id)}
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
           </div>
         );
       })}
