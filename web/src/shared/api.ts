@@ -1,4 +1,4 @@
-import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, UpdateObjectRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse } from './types';
+import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, UpdateObjectRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse, BomResponse, JointItem, OpeningsScheduleRow } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
@@ -262,6 +262,17 @@ export const api = {
     request<{ success: boolean }>(`/api/components/${componentId}/rebuild`, { method: 'POST' }),
   getSectionLines: (componentId: string, planeZ?: number) =>
     request<{ x1: number; y1: number; x2: number; y2: number }[]>(`/api/components/${componentId}/section?plane_z=${planeZ ?? 0}`),
+
+  // Phase 8-4 (ASSEMBLY §1): BOM / quantity rows for an Assembly subtree.
+  objectBom: (id: string) => request<BomResponse>(`/api/objects/${id}/bom`),
+
+  // Phase 8-4 (ASSEMBLY §9): motion joints, optionally filtered by endpoint.
+  listJoints: (objectId?: string) =>
+    request<JointItem[]>(`/api/joints${objectId ? `?object_id=${encodeURIComponent(objectId)}` : ''}`),
+
+  // Phase 8-1: grouped door/window schedule (whole project or a subtree).
+  openingsSchedule: (rootId?: string) =>
+    request<OpeningsScheduleRow[]>(`/api/schedules/openings${rootId ? `?root_id=${encodeURIComponent(rootId)}` : ''}`),
 
   // ── Material endpoints ──
   listMaterials: () => request<Material[]>('/api/materials'),

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ThreeViewerHandle, ViewName } from './ThreeViewer';
+import { IcoChevronDown, IcoChevronLeft, IcoChevronRight, IcoChevronUp } from './Icons';
 
 type Props = {
   viewer: React.RefObject<ThreeViewerHandle | null>;
@@ -61,10 +62,10 @@ export function ViewCube3D({ viewer }: Props) {
     <div className="viewcube-container">
       {showArrows && (
         <>
-          <button className="vc-arrow vc-arrow-up" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.up); }} title={arrows.up}>▼</button>
-          <button className="vc-arrow vc-arrow-down" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.down); }} title={arrows.down}>▲</button>
-          <button className="vc-arrow vc-arrow-left" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.left); }} title={arrows.left}>▶</button>
-          <button className="vc-arrow vc-arrow-right" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.right); }} title={arrows.right}>◀</button>
+          <button className="vc-arrow vc-arrow-up" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.up); }} title={arrows.up}><IcoChevronDown /></button>
+          <button className="vc-arrow vc-arrow-down" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.down); }} title={arrows.down}><IcoChevronUp /></button>
+          <button className="vc-arrow vc-arrow-left" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.left); }} title={arrows.left}><IcoChevronRight /></button>
+          <button className="vc-arrow vc-arrow-right" onClick={(e) => { e.stopPropagation(); viewer.current?.setView(arrows.right); }} title={arrows.right}><IcoChevronLeft /></button>
         </>
       )}
     </div>

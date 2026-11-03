@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Maturity"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "scored against web/src on 2026-10-29; requirement counts derived from REQUIREMENTS_REGISTER"
 ---
@@ -34,10 +34,10 @@ The overall score is the arithmetic mean, reported to one decimal. It is **not**
 | 1 | Functional suitability | **3.0** | 4 | Creation, catalog, sketch, console, measure, section work; project lifecycle missing (UI-DAT-01/02) |
 | 2 | Performance efficiency | **2.0** | 4 | Continuous render loop, full scene reload per mutation, no budgets enforced ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §5) |
 | 3 | Compatibility | **1.0** | 3 | No browser matrix, no WebGL2 gating, no DPI policy ([COMPATIBILITY](../specification/ui/COMPATIBILITY.md)) |
-| 4 | Usability | **3.0** | 4 | Docked properties, title/status bars, auto-naming and a project home (new/open/recent/sample) landed; mixed zh/en and theme remain ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §8) |
+| 4 | Usability | **3.0** | 4 | Docked properties, title/status bars, auto-naming and a project home (new/open/recent/sample) landed; mixed zh/en remains; dual themes and semantic tokens have landed ([WEB_ARCHITECTURE](../architecture/WEB_ARCHITECTURE.md) §8) |
 | 5 | Reliability | **2.0** | 4 | Panel/route error boundaries, explicit save + save-as, dirty interception; crash recovery still missing. Unit note (2026-10-30 UI/UX audit F1): the server auto-persists after every mutation — the frontend "dirty" state now means **snapshot tiering** only (whether the session has been Ctrl+S snapshotted), the status-bar copy reads "Auto-saved server-side · Ctrl+S to snapshot"; a frontend autosave timer is genuinely not needed ([DATA_INTEGRITY](../specification/ui/DATA_INTEGRITY.md)) |
 | 6 | Security | **1.0** | 3 | No auth disclosure, no path restriction, no role model ([SECURITY_PRIVACY](../specification/ui/SECURITY_PRIVACY.md)) |
-| 7 | Maintainability | **2.5** | 3 | Pure modules for layout/save/naming with unit tests; still a 4,110-line stylesheet, a 1,823-line `ThreeViewer.tsx`, and no lint/format |
+| 7 | Maintainability | **2.5** | 3 | Pure modules for layout/save/naming with unit tests; still a 4,321-line stylesheet, a 1,824-line `ThreeViewer.tsx`, and no lint/format |
 | 8 | Portability | **2.0** | 3 | Browser-only, no packaging decision, no minimum-size policy |
 | 9 | Supportability | **1.0** | 3 | No error codes, no diagnostics bundle, no telemetry or help surfaces ([TELEMETRY](../specification/ui/TELEMETRY.md)) |
 | | **Overall** | **1.9** | **3.4** | |
@@ -50,20 +50,20 @@ Counts are derived from [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER
 
 | Area | Total | ✅ | 🔀 | 📅 | Coverage |
 |---|---|---|---|---|---|
-| SHL Shell and layout | 12 | 0 | 10 | 2 | 42% |
-| DS Design system | 12 | 0 | 2 | 10 | 8% |
-| INT Interaction | 12 | 2 | 6 | 4 | 42% |
-| FBK Feedback and errors | 10 | 1 | 5 | 4 | 35% |
-| DAT Data integrity | 10 | 0 | 4 | 6 | 20% |
-| A11Y Accessibility | 8 | 0 | 0 | 8 | 0% |
+| SHL Shell and layout | 12 | 10 | 1 | 1 | 88% |
+| DS Design system | 12 | 5 | 2 | 5 | 50% |
+| INT Interaction | 12 | 6 | 4 | 2 | 67% |
+| FBK Feedback and errors | 10 | 7 | 0 | 3 | 70% |
+| DAT Data integrity | 10 | 3 | 1 | 6 | 35% |
+| A11Y Accessibility | 8 | 4 | 0 | 4 | 50% |
 | I18N Internationalization | 7 | 0 | 0 | 7 | 0% |
 | PRF Performance | 8 | 0 | 0 | 8 | 0% |
 | CMP Compatibility | 6 | 0 | 0 | 6 | 0% |
 | SEC Security and privacy | 5 | 0 | 0 | 5 | 0% |
 | TLM Telemetry and support | 6 | 0 | 0 | 6 | 0% |
-| **Total** | **96** | **3** | **27** | **66** | **17%** |
+| **Total** | **96** | **35** | **8** | **53** | **41%** |
 
-Coverage counts `✅` as complete and `🔀` as half. The result (17%) is the honest distance from "commercial", independent of code quality.
+Coverage counts `✅` as complete and `🔀` as half. The result (41%) is the honest distance from "commercial", independent of code quality.
 
 ## 4. Evidence Index
 
@@ -77,11 +77,11 @@ Coverage counts `✅` as complete and `🔀` as half. The result (17%) is the ho
 | `web/src/shared/api.ts` | file | REST surface used by the client |
 | `web/src/__tests__/*.test.ts` | 9 files / 94 tests | Unit-level verification |
 | `wc -l web/src/**` | 21,801 lines | Size and concentration |
-| Color scan | 731 hex + 61 rgb/hsl across all CSS | Design-system debt |
+| Color scan | 0 literals outside the token file (2026-11-02; `globals.css` is canonical) | Design-system debt closed |
 | CJK literal scan | 854 runs across 31 files | i18n debt |
 | Icon scan | 63 emoji occurrences, 25 used as panel icons | Icon-system debt |
 | Dialog scan | 0 native dialogs; shared `ConfirmDialog` + `notify` | Feedback debt closed |
-| A11y scan | 1 `aria-*` (plus dialog roles), 0 table/tree roles | Accessibility debt |
+| A11y scan | 73 `aria-*`, 70 `role` (2026-11-02 semantics slice) | Semantics debt closing |
 | Save-call scan | `saveProject` / `saveProjectAs` wired to toolbar + Ctrl/Cmd+S | Project lifecycle debt reduced |
 
 ## 5. Trend and Targets

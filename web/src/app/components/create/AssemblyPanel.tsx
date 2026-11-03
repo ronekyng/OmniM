@@ -10,6 +10,7 @@ import type {
   TreeNode,
 } from '../../../shared/types';
 import { useToastApi } from '../../../shared/toast';
+import { IcoClose } from '../Icons';
 
 type PartSource = 'component' | 'primitive';
 
@@ -242,7 +243,7 @@ export function AssemblyPanel({
                 onClick={() => setParts(parts.filter((_, j) => j !== i))}
                 title="移除子件"
               >
-                ✕
+                <IcoClose />
               </button>
             </div>
           ))}

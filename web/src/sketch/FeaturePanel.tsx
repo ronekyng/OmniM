@@ -3,6 +3,7 @@ import type { FeatureItem, SketchResponse } from '../shared/types';
 import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
+import { Glyph, IcoDelete, IcoEdit, IcoRefresh, IcoVolumeOff, IcoVolumeOn, type GlyphName } from '../app/components/Icons';
 
 type Props = {
   componentId: string;
@@ -12,11 +13,6 @@ type Props = {
   onEditFeature: (feature: FeatureItem) => void;
   onSelectSketch: (sketchId: string) => void;
   onRebuilt?: () => void;
-};
-
-const FEATURE_ICONS: Record<string, string> = {
-  extrude: '⬍', revolve: '↻', sweep: '⟿', loft: 'ℳ',
-  boolean: '⊖', chamfer: '⊿', fillet: '⌒', pattern: '⊞', shell: '⊡',
 };
 
 export function FeaturePanel({ componentId, features, sketches, onRefresh, onEditFeature, onSelectSketch, onRebuilt }: Props) {
@@ -137,7 +133,7 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
               <div className="feature-card-header">
                 <span className="feature-drag-handle">≡</span>
                 <span className="feature-type-icon">
-                  {FEATURE_ICONS[feature.feature_type] || '?'}
+                  <Glyph name={feature.feature_type as GlyphName} />
                 </span>
                 <span className="feature-name">{feature.name}</span>
                 <div className="feature-actions">
@@ -145,17 +141,19 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
                     className="feature-action-btn"
                     onClick={() => handleToggleSuppress(feature)}
                     title={feature.suppressed ? '取消抑制' : '抑制'}
-                  >{feature.suppressed ? '🔇' : '🔊'}</button>
+                  >{feature.suppressed ? <IcoVolumeOff /> : <IcoVolumeOn />}</button>
                   <button
                     className="feature-action-btn"
                     onClick={() => onEditFeature(feature)}
                     title="编辑"
-                  >✏️</button>
+                    aria-label="编辑"
+                  ><IcoEdit /></button>
                   <button
                     className="feature-action-btn danger"
                     onClick={() => handleDeleteFeature(feature.id)}
                     title="删除"
-                  >🗑️</button>
+                    aria-label="删除"
+                  ><IcoDelete /></button>
                 </div>
               </div>
               <div className="feature-card-body">
@@ -198,7 +196,7 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
 
       <div className="feature-rebuild-section">
         <button className="feature-rebuild-btn" onClick={handleRebuild}>
-          🔄 Rebuild All
+          <IcoRefresh /> Rebuild All
         </button>
       </div>
     </div>

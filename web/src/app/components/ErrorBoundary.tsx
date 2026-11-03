@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, createRef, type ErrorInfo, type ReactNode } from 'react';
 
 type Props = {
   children: ReactNode;
@@ -19,6 +19,7 @@ type State = { error: Error | null; info: string | null };
  */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null, info: null };
+  private headingRef = createRef<HTMLHeadingElement>();
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     return { error };
@@ -27,10 +28,12 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     this.setState({ info: info.componentStack ?? null });
     console.error(`[${this.props.scope ?? 'ui'}] uncaught render error`, error, info);
+    // A11Y §4: the fallback heading announces and receives focus after commit.
+    setTimeout(() => this.headingRef.current?.focus(), 0);
   }
 
-  componentDidUpdate(prev: Props) {
-    if (prev.resetKey !== this.props.resetKey && this.state.error) {
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.error) {
       this.setState({ error: null, info: null });
     }
   }
@@ -46,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
     const scope = this.props.scope ?? 'This panel';
     return (
       <div className="error-boundary" role="alert">
-        <h3>{scope} crashed</h3>
+        <h3 ref={this.headingRef} tabIndex={-1}>{scope} crashed</h3>
         <p>The rest of the workspace is still usable. Retry to remount this area.</p>
         <p className="error-boundary-code">
           {error.name}: {error.message}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { api } from '../../shared/api';
 import { notify } from '../../shared/toast';
 import type { AmirChatResponse } from '../../shared/types';
+import { IcoClose } from './Icons';
 
 type ChatMessage = {
   id: string;
@@ -208,7 +209,7 @@ export function AiChat({ onExecuted }: { onExecuted: () => void }) {
         onClick={() => setShowAiChat(!showAiChat)}
         title="AI Assistant"
       >
-        {showAiChat ? '✕' : 'AI'}
+        {showAiChat ? <IcoClose /> : 'AI'}
       </button>
     </div>
   );

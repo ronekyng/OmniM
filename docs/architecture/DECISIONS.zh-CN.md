@@ -1,7 +1,7 @@
 ---
 title: "OmniM — 架构决策记录(Architecture Decision Records)"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "crates/, web/"
 evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 ---
@@ -42,7 +42,7 @@ evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 | [ADR-0004](#adr-0004-json-文件持久化单-project-rwlock) | JSON 文件持久化(单 Project,RwLock)及其已知局限 | Accepted |
 | [ADR-0005](#adr-0005-手写-ifc-解析器而非-ifc-crate) | 手写 IFC 解析器,而非 ifc crate | Accepted（含一条实现说明） |
 | [ADR-0006](#adr-0006-所有变更路径统一走-executorvalidator) | 所有变更路径统一走 Executor/Validator | Accepted — Implemented (2026-10-28) |
-| [ADR-0007](#adr-0007-双主题令牌分层) | 双主题令牌分层（原始 → 语义 → 组件） | Accepted（设计） |
+| [ADR-0007](#adr-0007-双主题令牌分层) | 双主题令牌分层（原始 → 语义 → 组件） | 已实现（2026-11-02） |
 | [ADR-0008](#adr-0008-停靠式外壳优先于浮动面板) | 停靠式外壳优先于浮动面板 | Accepted（设计） |
 | [ADR-0009](#adr-0009-可扩展的面板注册表) | 可扩展的面板注册表（标签元数据） | Accepted（设计） |
 | [ADR-0010](#adr-0010-基于键的-i18n-与-icu) | 基于键的 i18n 与 ICU 格式化 | Accepted（设计） |
@@ -237,7 +237,7 @@ Wave 1 已恢复该不变量。所有变更 REST handler 现在构造 `OmniComma
 
 ### ADR-0007. 双主题令牌分层
 
-**状态**：Accepted（设计）——尚未实现。
+**状态**：Accepted（2026-11-02 实现：令牌收敛到 `globals.css`，组件字面量颜色为 0）。
 
 **背景**：`styles.css` 有 712 处硬编码颜色，令牌块在 `globals.css` 中重复。产品需要深色与浅色主题，但不能有两套视觉语言。
 

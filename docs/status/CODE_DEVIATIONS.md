@@ -1,7 +1,7 @@
 ---
 title: "Code-Level Deviations from Documented Model"
 status: current
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 applies_to: "repo"
 evidence: "audited against code 2026-10-27; §7 audited 2026-10-29"
 ---
@@ -197,7 +197,7 @@ The official geometry path is the feature tree/BRep pipeline; the genrule pass-t
 
 ## 7. Frontend UI Deviations — **Known** (2026-10-29)
 
-> **P9 update (2026-10-29).** 7.1, 7.2, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, a project home with new/open/recent/sample exists, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; **P10 addendum (2026-10-30)**: 7.12/7.13 were filed from the UI/UX acceptance audit and closed the same day (single save-semantics story, same-screen unit labels); 7.4 (panel states) and 7.8–7.11 remain open.
+> **P9 update (2026-10-29).** 7.1, 7.2, 7.3, 7.5, 7.6 and 7.7 are resolved: properties dock right by default, a project home with new/open/recent/sample exists, explicit save/save-as is wired, native dialogs are gone, error boundaries exist, and auto-naming is unit-tested. The rows below stay as the audit snapshot; **P10 addendum (2026-10-30)**: 7.12/7.13 were filed from the UI/UX acceptance audit and closed the same day (single save-semantics story, same-screen unit labels); 7.4 (panel states), 7.9 and 7.11 remain open; **P11 update (2026-11-02)**: 7.8 and 7.10 are closed — single token source, zero literal colours; tree/tabs/toolbar/menu/property table/toast/viewport ARIA and keyboard behaviour landed.
 
 
 Audited against `web/src` on 2026-10-29. These are the gaps between the UI contracts in
@@ -213,9 +213,9 @@ Requirement IDs trace to [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTE
 | 7.5 | Destructive actions use the shared dialog family | Five `window.confirm/alert/prompt` call sites | `App.tsx`, `MainToolbar.tsx`, `ObjectTree.tsx` | UI-FBK-05 |
 | 7.6 | A panel failure is isolated | No error boundary anywhere; a render exception blanks the app | zero `ErrorBoundary` / `componentDidCatch` | UI-FBK-06 |
 | 7.7 | Objects are named `Type-nnn` | Names are timestamps (`wall-${Date.now()}`); 52 `Date.now()` call sites, most used to build object names | `MainToolbar.tsx`, `DomainPanels.tsx` | UI-INT-09 |
-| 7.8 | UI styling uses semantic tokens only | 712 hardcoded colors in `styles.css` (731 across all CSS); the token block is duplicated in `globals.css` | `web/src/styles.css`, `web/src/globals.css` | UI-DS-01, UI-DS-04 |
+| 7.8 | UI styling uses semantic tokens only | **Resolved (2026-11-02, UI-DS-04)**: the token block lives only in `globals.css`; `styles.css` and the other component styles have zero literal colours and use semantic tokens | `web/src/globals.css`, `scripts/check_ui_contracts.py`, `web/src/__tests__/designTokens.test.ts` | UI-DS-01, UI-DS-04 |
 | 7.9 | All user-visible strings are externalized | 858 CJK runs across 31 files, no i18n layer; no theme provider | source scan | UI-I18N-01, UI-DS-02 |
-| 7.10 | Trees and tables expose roles and ARIA state | 1 `aria-*` attribute, 0 `role` attributes | source scan | UI-A11Y-04 |
+| 7.10 | Trees and tables expose roles and ARIA state | **Resolved (2026-11-02, UI-A11Y-04)**: `tree/treeitem`, `tablist/tab/tabpanel`, `toolbar`, `menu/menuitem`, `table/row/rowheader/cell`, `status`, `application` plus keyboard behaviour | `web/e2e/a11y.spec.ts`; 73 `aria-*` / 70 `role` | UI-A11Y-04 |
 
 | 7.11 | `Delete` is ignored during a picking session | `Delete` deletes the current selection; only `Backspace` is special-cased | `web/src/app/App.tsx:91-95` | UI-INT-02 |
 | 7.12 | Single save-semantics story (auto-persist vs "unsaved") | **Resolved (2026-10-30, UI/UX audit F1)**: the server persists every mutation by default while the explicit-save state machine showed "Unsaved changes" (false alarm). Dirty copy is now "Auto-saved server-side · Ctrl+S to snapshot", TitleBar aria aligned, and FRONTEND_MATURITY §5 reframed as snapshot tiering | `web/src/shared/saveState.ts`, `TitleBar.tsx`, `FRONTEND_MATURITY.md` | UI-DAT-02 |

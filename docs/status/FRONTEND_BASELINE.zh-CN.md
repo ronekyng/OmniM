@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端基线（2026-10-29）"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "2026-10-29 静态测量；运行时与截图测量待插桩"
 ---
@@ -71,6 +71,9 @@ evidence: "2026-10-29 静态测量；运行时与截图测量待插桩"
 | `web/` 的 ESLint / Prettier 配置 | 0 | 必需 | — |
 | 布局持久化 | 无 | 必需 | UI-SHL-06 |
 | 主题 Provider | 无 | 必需 | UI-DS-02 |
+
+> **2026-11-02 复测（P11）。** 上表是 2026-10-29 的历史快照，保留不改；当前实测：令牌文件（`web/src/globals.css`）之外字面量颜色 **0**，重复令牌块 **0**，emoji 图标 **0**，z-index 魔数 **0**，`aria-*` 73 / `role` 70；`check_ui_contracts.py --only tokens,zindex,emoji` 均为 0；axe 关键路径 0 violations。深/浅主题由 `web/e2e/theme.spec.ts` 覆盖切换、持久化与双主题 AA 对比度。
+
 | i18n Provider | 无 | 必需 | UI-I18N-02 |
 
 ## 5. 运行时基线（待测）

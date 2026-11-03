@@ -197,6 +197,10 @@ enum Action {
   CREATE_GRID_LINE = 231;
   UPDATE_GRID_LINE = 232;
   DELETE_GRID_LINE = 233;
+  // 2026-11-03 Phase 8-4: motion joints (docs/specification/ASSEMBLY.zh-CN.md §9)
+  CREATE_JOINT = 234;
+  UPDATE_JOINT = 235;
+  DELETE_JOINT = 236;
 }
 
 // === Operations ===
@@ -287,6 +291,10 @@ message Operation {
     CreateGridLineOperation create_grid_line = 74;
     UpdateGridLineOperation update_grid_line = 75;
     DeleteGridLineOperation delete_grid_line = 76;
+    // 2026-11-03 Phase 8-4: motion joint ops
+    CreateJointOperation create_joint = 78;
+    UpdateJointOperation update_joint = 79;
+    DeleteJointOperation delete_joint = 80;
     // 2026-10-30 assembly container (see docs/specification/ASSEMBLY.md)
     CreateAssemblyOperation create_assembly = 77;
   }
@@ -1018,6 +1026,51 @@ message UpdateGridLineOperation {
 
 message DeleteGridLineOperation {
   string grid_line_id = 1;
+}
+
+// === Motion joints (2026-11-03 Phase 8-4, docs/specification/ASSEMBLY.zh-CN.md §9) ===
+//
+// A joint is a mechanism constraint between two object ids (typically assembly
+// parts). Joints are mechanism annotations like grids/measurements: they own no
+// geometry and live in the project store, not the object tree.
+
+enum JointKind {
+  JOINT_KIND_UNSPECIFIED = 0;  // invalid in requests
+  JOINT_REVOLUTE = 1;          // rotation about `axis` through `origin` (radians limits)
+  JOINT_PRISMATIC = 2;         // translation along `axis` (metre limits)
+  JOINT_FIXED = 3;             // welded pair
+  JOINT_SPHERICAL = 4;         // ball joint about `origin`, free rotation
+}
+
+message CreateJointOperation {
+  string name = 1;
+  JointKind kind = 2;
+  string from_object_id = 3;
+  string to_object_id = 4;
+  Point3D origin = 5;
+  // Unit axis of motion; required for revolute/prismatic, optional otherwise.
+  Vector3D axis = 6;
+  // Motion limits: radians (revolute) or metres (prismatic). min <= max.
+  bool has_limits = 7;
+  double limit_min = 8;
+  double limit_max = 9;
+}
+
+message UpdateJointOperation {
+  string joint_id = 1;
+  string name = 2;
+  JointKind kind = 3;
+  string from_object_id = 4;
+  string to_object_id = 5;
+  Point3D origin = 6;
+  Vector3D axis = 7;
+  bool has_limits = 8;
+  double limit_min = 9;
+  double limit_max = 10;
+}
+
+message DeleteJointOperation {
+  string joint_id = 1;
 }
 
 // === Assembly container (2026-10-30, docs/specification/ASSEMBLY.md) ===

@@ -5,6 +5,7 @@ import { api } from '../../../shared/api';
 import type { Material } from '../../../shared/types';
 import { DEFAULT_LAYERS_WALL, DEFAULT_LAYERS_SLAB } from '../../../shared/types/creation';
 import { MaterialBrowser } from './MaterialBrowser';
+import { IcoChevronDown, IcoChevronRight, IcoChevronUp } from '../Icons';
 
 type Props = {
   value: LayerDefInput[];
@@ -120,7 +121,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
       <div className="layer-editor-header" onClick={() => setExpanded((v) => !v)}>
         <span className="layer-editor-title">层结构</span>
         <span className="layer-editor-meta">{value.length} 层 · {totalThickness} mm</span>
-        <span className="layer-editor-toggle">{expanded ? '▾' : '▸'}</span>
+        <span className="layer-editor-toggle">{expanded ? <IcoChevronDown /> : <IcoChevronRight />}</span>
       </div>
 
       {expanded && (
@@ -162,8 +163,8 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <span className="layer-swatch" style={{ background: l.color || '#999' }} />
                   <span className="layer-card-title">{l.name || `层 ${i + 1}`}</span>
                   <div className="layer-card-actions">
-                    <button type="button" className="layer-move-btn" disabled={i === 0} onClick={() => moveLayer(i, -1)} title="上移">▲</button>
-                    <button type="button" className="layer-move-btn" disabled={i === value.length - 1} onClick={() => moveLayer(i, 1)} title="下移">▼</button>
+                    <button type="button" className="layer-move-btn" disabled={i === 0} onClick={() => moveLayer(i, -1)} title="上移"><IcoChevronUp /></button>
+                    <button type="button" className="layer-move-btn" disabled={i === value.length - 1} onClick={() => moveLayer(i, 1)} title="下移"><IcoChevronDown /></button>
                     <button type="button" className="layer-del-btn" onClick={() => removeLayer(i)} title="删除层">×</button>
                   </div>
                 </div>
@@ -172,6 +173,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <span className="layer-field-label">材料</span>
                   <select
                     className="layer-material-select"
+                    aria-label={`Layer ${i + 1} material`}
                     value={l.material_id}
                     onChange={(e) => {
                       const mat = materialById(e.target.value);
@@ -193,6 +195,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <input
                     type="range"
                     className="layer-thickness-slider"
+                    aria-label={`Layer ${i + 1} thickness slider`}
                     min={1}
                     max={400}
                     step={1}
@@ -202,6 +205,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <input
                     type="number"
                     className="layer-thickness-input"
+                    aria-label={`Layer ${i + 1} thickness`}
                     min={1}
                     max={1000}
                     value={l.thickness}
@@ -214,6 +218,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <span className="layer-field-label">功能</span>
                   <select
                     className="layer-function-select"
+                    aria-label={`Layer ${i + 1} function`}
                     value={l.function}
                     onChange={(e) => updateLayer(i, { function: e.target.value })}
                   >
@@ -227,6 +232,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                   <input
                     type="text"
                     className="layer-name-input"
+                    aria-label={`Layer ${i + 1} name`}
                     placeholder="层名"
                     value={l.name}
                     onChange={(e) => updateLayer(i, { name: e.target.value })}

@@ -1,7 +1,7 @@
 ---
 title: "OmniM Keyboard Map"
 status: design
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx, OmniPanel.tsx, ObjectTree.tsx, AiChat.tsx on 2026-10-30"
 ---
@@ -17,8 +17,8 @@ evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx,
 
 | Layer | Artifact |
 |---|---|
-| Command definitions | Command registry (planned) |
-| Shortcut bindings | `web/src/shared/commands/keymap.ts` (planned) |
+| Command definitions | `commands` registry in `web/src/app/App.tsx` |
+| Shortcut bindings | Registry `shortcut` fields + global dispatch in `App.tsx` |
 | This document | Mirrors the registry; never hand-edited after generation |
 | Conflict resolution | Registry load order fails the build on duplicates within a scope |
 
@@ -28,16 +28,17 @@ evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx,
 |---|---|---|---|
 | `Ctrl/Cmd+S` | Save project | global | ✅ |
 | `Ctrl/Cmd+Shift+S` | Save as | global | 📅 |
-| `Ctrl/Cmd+Z` | Undo | global | 🔀 |
-| `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | Redo | global | 🔀 |
-| `Ctrl/Cmd+K` | Command palette | global | 📅 |
+| `Ctrl/Cmd+Z` | Undo | global | ✅ |
+| `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | Redo | global | ✅ |
+| `Ctrl/Cmd+K` | Command palette | global | ✅ |
 | `Ctrl/Cmd+A` | Select all visible | global | 📅 |
 | `Delete` | Delete selection | global | ✅ |
 | `Esc` | Cancel innermost action | global | ✅ |
-| `Shift+F10` | Context menu | global | 📅 |
-| `F1` | Shortcut help | global | 📅 |
-| `F6` | Cycle regions | global | 📅 |
+| `Shift+F10` | Context menu | global | ✅ |
+| `F1` | Shortcut help | global | ✅ |
+| `F6` | Cycle regions | global | ✅ |
 | `?` | Contextual help for focused control | global | 📅 |
+| `F2` | Inline rename (focused tree row) | global | ✅ |
 
 > Note: `Ctrl/Cmd+S` maps to the title-bar **Save** button. The "Save as" command is not a shortcut yet (📅) — today `Ctrl/Cmd+Shift+S` falls into the same handler as `Ctrl+S` and triggers a plain save; use the title-bar **Save as** button instead.
 
@@ -71,9 +72,9 @@ evidence: "verified against web/src/app/App.tsx, sketch/ComponentEditorPage.tsx,
 | Shortcut | Action | Status |
 |---|---|---|
 | `Tab` / `Shift+Tab` | Move focus within dialog | 📅 |
-| `Enter` | Confirm (safe default) | 📅 |
-| `Esc` | Close / cancel | 🔀 |
-| `Space` | Activate focused control | 📅 |
+| `Enter` | Confirm (safe default) | ✅ |
+| `Esc` | Close / cancel | ✅ |
+| `Space` | Activate focused control | ✅ |
 
 ## 6. Console and Editors
 

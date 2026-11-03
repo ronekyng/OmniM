@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../shared/api';
 import { MainToolbar } from './components/MainToolbar';
@@ -11,6 +11,7 @@ import { StatusBar } from './components/StatusBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useConfirm } from './components/ConfirmDialog';
 import { shouldWarnBeforeUnload } from '../shared/saveState';
+import { analyzeDeleteImpact, formatDeleteImpact } from '../shared/deleteImpact';
 import { ThreeViewer, type ThreeViewerHandle } from './components/ThreeViewer';
 import { ViewCube3D } from './components/ViewCube3D';
 import { ToastContainer } from './components/ToastContainer';
@@ -20,20 +21,62 @@ import { ComponentEditorPage } from '../sketch/ComponentEditorPage';
 import { SeriesManagerPage } from '../series/SeriesManagerPage';
 import { LibraryManagerPage } from '../library/LibraryManagerPage';
 import { useAppStore } from './store/appStore';
-import { pickModeForForm, applyPointsToForm } from '../shared/types/creation';
+import { pickModeForForm, applyPointsToForm, createInitialForm } from '../shared/types/creation';
 import { registerDefaultPanels } from './panels/defaultPanels';
 import { AppLayout } from './layout/AppLayout';
 import { PanelSlot } from './panels/PanelRegistry';
 import { ThreeViewerContext } from './context/ThreeViewerContext';
 import type { ReactNode } from 'react';
 import { applyTheme } from '../shared/theme';
+import { CommandPalette, type PaletteCommand } from './components/CommandPalette';
+import { ShortcutHelp } from './components/ShortcutHelp';
+
+const FOCUS_REGIONS = [
+  '.main-toolbar',
+  '.dock-tabs',
+  '#left-dock-panel',
+  '.three-viewer',
+  '.properties-panel',
+  '.omni-panel',
+  '.status-bar',
+];
+
+function firstFocusable(region: Element): HTMLElement | null {
+  return (
+    Array.from(
+      region.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      ),
+    ).find((el) => !el.hasAttribute('disabled') && el.getClientRects().length > 0) ?? null
+  );
+}
+
+/** A11Y §4: F6 / Shift+F6 cycle the seven shell regions. */
+function focusNextRegion(delta: 1 | -1) {
+  const active = document.activeElement;
+  let index = -1;
+  FOCUS_REGIONS.forEach((selector, i) => {
+    const region = document.querySelector(selector);
+    if (region && active && region.contains(active)) index = i;
+  });
+  for (let step = 1; step <= FOCUS_REGIONS.length; step += 1) {
+    const i = (index + delta * step + FOCUS_REGIONS.length * 2) % FOCUS_REGIONS.length;
+    const region = document.querySelector(FOCUS_REGIONS[i]);
+    const target = region ? firstFocusable(region) : null;
+    if (target) {
+      target.focus();
+      return;
+    }
+  }
+}
 
 /** Dev/e2e aid (UI-FBK-06): workspace route crash for boundary tests. */
 function CrashRoutePanel(): ReactNode {
   throw new Error('crash-test fixture: route threw while rendering');
 }
 
-export function App() {  const toast = useToastApi();
+export function App() {
+  const toast = useToastApi();
   const navigate = useNavigate();
   const location = useLocation();
   const isMain = location.pathname === '/' || location.pathname === '';
@@ -60,15 +103,16 @@ export function App() {  const toast = useToastApi();
     theme,
   } = useAppStore();
   const confirm = useConfirm();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   async function deleteSelected() {
     if (selectedIds.length === 0) return;
-    const msg = selectedIds.length === 1
-      ? 'This removes the object from the project.'
-      : `This removes ${selectedIds.length} objects from the project.`;
+    // INTERACTION §7.3: state scope, child impact and undo before deleting.
+    const impact = analyzeDeleteImpact(tree, selectedIds);
     const ok = await confirm({
       title: selectedIds.length === 1 ? 'Delete object?' : `Delete ${selectedIds.length} objects?`,
-      message: msg,
+      message: formatDeleteImpact(impact),
       confirmLabel: 'Delete',
       danger: true,
     });
@@ -115,9 +159,50 @@ export function App() {  const toast = useToastApi();
   useEffect(() => { refresh(); reloadScene(); }, []);
   useEffect(() => { if (isMain) { refresh(); reloadScene(); } }, [location.pathname]);
 
+  const previousPathRef = useRef(location.pathname);
+  useEffect(() => {
+    if (previousPathRef.current === location.pathname) return;
+    previousPathRef.current = location.pathname;
+    // A11Y §4: a route change moves focus to the page heading.
+    requestAnimationFrame(() => {
+      // Never steal focus from an error fallback that is already announcing.
+      if (document.querySelector('.error-boundary')) return;
+      const target = document.querySelector<HTMLElement>('[data-page-heading], h1');
+      if (!target) return;
+      if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+      target.focus();
+    });
+  }, [location.pathname]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (event.key === 'F1') {
+        event.preventDefault();
+        setHelpOpen(true);
+        return;
+      }
+      if (event.key === 'F6') {
+        event.preventDefault();
+        focusNextRegion(event.shiftKey ? -1 : 1);
+        return;
+      }
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) void redoCommand();
+        else void undoCommand();
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        void redoCommand();
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
         void saveProject();
@@ -196,6 +281,39 @@ export function App() {  const toast = useToastApi();
     return () => document.removeEventListener('mousedown', handler);
   }, [visualOpen]);
 
+  const undoCommand = async () => {
+    await api.undo();
+    markDirty();
+    refresh();
+    reloadScene();
+  };
+  const redoCommand = async () => {
+    await api.redo();
+    markDirty();
+    refresh();
+    reloadScene();
+  };
+
+  const commands: PaletteCommand[] = [
+    { id: 'file.save', title: 'Save project', shortcut: 'Ctrl/Cmd+S', scope: 'Global', run: () => void saveProject() },
+    { id: 'edit.undo', title: 'Undo', shortcut: 'Ctrl/Cmd+Z', scope: 'Global', disabled: !canUndo, run: () => void undoCommand() },
+    { id: 'edit.redo', title: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', scope: 'Global', disabled: !canRedo, run: () => void redoCommand() },
+    { id: 'edit.delete', title: 'Delete selected objects', shortcut: 'Delete', scope: 'Global', disabled: selectedIds.length === 0, run: () => void deleteSelected() },
+    { id: 'view.fit', title: 'Fit view', shortcut: 'F', scope: 'Viewport', run: () => viewerRef.current?.fit() },
+    { id: 'view.home', title: 'Home view', shortcut: 'H', scope: 'Viewport', run: () => viewerRef.current?.home() },
+    { id: 'view.grid', title: 'Toggle grid', shortcut: 'G', scope: 'Viewport', run: () => { setGridVisible((v) => !v); viewerRef.current?.toggleGrid(); } },
+    { id: 'view.ortho', title: 'Toggle orthographic / perspective', shortcut: 'O', scope: 'Viewport', run: () => { setIsOrtho((v) => !v); viewerRef.current?.toggleOrtho(); } },
+    { id: 'view.space', title: 'Toggle local / world transform space', shortcut: 'X', scope: 'Viewport', run: () => { const next = transformSpace === 'world' ? 'local' : 'world'; setTransformSpace(next); viewerRef.current?.setTransformSpace(next); } },
+    { id: 'transform.move', title: 'Move mode', shortcut: 'W', scope: 'Viewport', run: () => setTransformMode((prev) => prev === 'translate' ? null : 'translate') },
+    { id: 'transform.rotate', title: 'Rotate mode', shortcut: 'E', scope: 'Viewport', run: () => setTransformMode((prev) => prev === 'rotate' ? null : 'rotate') },
+    { id: 'create.storey', title: 'Create storey', scope: 'Create', run: () => creationDispatch({ type: 'completePicking', form: createInitialForm('storey', []) }) },
+    { id: 'create.door', title: 'Create door', scope: 'Create', run: () => creationDispatch({ type: 'completePicking', form: createInitialForm('door', []) }) },
+    { id: 'nav.projects', title: 'Go to projects', scope: 'Navigation', run: () => navigate('/projects') },
+    { id: 'nav.series', title: 'Open Series Manager', scope: 'Navigation', run: () => navigate('/series-manager') },
+    { id: 'nav.library', title: 'Open Library Manager', scope: 'Navigation', run: () => navigate('/library-manager') },
+    { id: 'help.shortcuts', title: 'Keyboard shortcuts', shortcut: 'F1', scope: 'Help', run: () => setHelpOpen(true) },
+  ];
+
   return (
     <ErrorBoundary scope="Workspace" resetKey={location.pathname}>
     <Routes>
@@ -254,7 +372,7 @@ export function App() {  const toast = useToastApi();
               <ViewCube3D viewer={viewerRef} />
               <div className="view-toolbar-vertical">
                 <div className="transform-group" ref={transformRef}>
-                  <button className={transformMode ? 'active' : ''} onClick={() => setTransformOpen((v) => !v)} title={transformMode === 'translate' ? 'Move (W)' : transformMode === 'rotate' ? 'Rotate (E)' : ''}>
+                  <button className={transformMode ? 'active' : ''} onClick={() => setTransformOpen((v) => !v)} title={transformMode === 'translate' ? 'Move (W)' : transformMode === 'rotate' ? 'Rotate (E)' : 'Transform'} aria-label={transformMode === 'translate' ? 'Move (W)' : transformMode === 'rotate' ? 'Rotate (E)' : 'Transform'}>
                     {transformMode === 'translate' ? <IcoMove /> : transformMode === 'rotate' ? <IcoRotate /> : <IcoMove />}
                   </button>
                   {transformOpen && (
@@ -300,6 +418,8 @@ export function App() {  const toast = useToastApi();
       } />
     </Routes>
     <ToastContainer />
+    <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
+    <ShortcutHelp open={helpOpen} commands={commands} onClose={() => setHelpOpen(false)} />
     </ErrorBoundary>
   );
 }

@@ -1,8 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import { saveLabel, shouldWarnBeforeUnload } from '../../shared/saveState';
 import { useConfirm } from './ConfirmDialog';
+import { useDialogFocus } from './useDialogFocus';
+import { IcoMoon, IcoSun } from './Icons';
 
 /** Workspace title bar: project name, dirty mark, breadcrumb, explicit save.
  *  Contract: IA_SHELL §2.2, DATA_INTEGRITY §3. */
@@ -21,6 +24,9 @@ export function TitleBar() {
   const creationObjectType = useAppStore((s) => s.creationObjectType);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [path, setPath] = useState('project.omnim');
+  const saveAsDialogRef = useRef<HTMLFormElement | null>(null);
+  const saveAsInputRef = useRef<HTMLInputElement | null>(null);
+  useDialogFocus(saveAsOpen, saveAsDialogRef, saveAsInputRef, () => setSaveAsOpen(false));
 
   const name = stats?.name || 'Untitled';
   const dirty = saveState.status !== 'clean';
@@ -33,15 +39,6 @@ export function TitleBar() {
   useEffect(() => {
     document.title = `${dirty ? '• ' : ''}${name} — OmniM`;
   }, [dirty, name]);
-
-  useEffect(() => {
-    if (!saveAsOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setSaveAsOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [saveAsOpen]);
 
   const openProjects = async () => {
     if (shouldWarnBeforeUnload(saveState)) {
@@ -59,6 +56,7 @@ export function TitleBar() {
 
   return (
     <div className="title-bar">
+      <h1 className="sr-only" data-page-heading>{name} workspace</h1>
       <button type="button" className="title-project" title="Back to projects" onClick={() => void openProjects()}>
         {dirty && <span className="dirty-dot" aria-label="Edits auto-saved server-side, snapshot pending" />}
         <strong>{name}</strong>
@@ -78,7 +76,7 @@ export function TitleBar() {
           title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
         >
-          {theme === 'dark' ? '☀' : '☾'}
+          {theme === 'dark' ? <IcoSun /> : <IcoMoon />}
         </button>
         <button type="button" onClick={() => void saveProject()} disabled={saveState.status === 'saving'} title="Save (Ctrl/Cmd+S)">
           Save
@@ -88,34 +86,37 @@ export function TitleBar() {
         <button type="button" onClick={resetLayout} title="Reset docks to defaults">Reset layout</button>
       </div>
 
-      {saveAsOpen && (
-        <div className="confirm-overlay" role="presentation" onMouseDown={() => setSaveAsOpen(false)}>
-          <form
-            className="confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="save-as-title"
-            onMouseDown={(e) => e.stopPropagation()}
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveProjectAs(path).then((ok) => { if (ok) setSaveAsOpen(false); });
-            }}
-          >
-            <h2 id="save-as-title">Save project as</h2>
-            <p>Path on the server, relative or absolute. Must end with <code>.omnim</code>.</p>
-            <input
-              autoFocus
-              value={path}
-              onChange={(e) => setPath(e.target.value)}
-              aria-label="Project file path"
-            />
-            <div className="confirm-actions">
-              <button type="button" onClick={() => setSaveAsOpen(false)}>Cancel</button>
-              <button type="submit" className="primary" disabled={!path.trim()}>Save</button>
-            </div>
-          </form>
-        </div>
-      )}
+      {saveAsOpen &&
+        createPortal(
+          <div className="confirm-overlay" role="presentation" onMouseDown={() => setSaveAsOpen(false)}>
+            <form
+              ref={saveAsDialogRef}
+              className="confirm-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="save-as-title"
+              onMouseDown={(e) => e.stopPropagation()}
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveProjectAs(path).then((ok) => { if (ok) setSaveAsOpen(false); });
+              }}
+            >
+              <h2 id="save-as-title">Save project as</h2>
+              <p>Path on the server, relative or absolute. Must end with <code>.omnim</code>.</p>
+              <input
+                ref={saveAsInputRef}
+                value={path}
+                onChange={(e) => setPath(e.target.value)}
+                aria-label="Project file path"
+              />
+              <div className="confirm-actions">
+                <button type="button" onClick={() => setSaveAsOpen(false)}>Cancel</button>
+                <button type="submit" className="primary" disabled={!path.trim()}>Save</button>
+              </div>
+            </form>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

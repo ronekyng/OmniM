@@ -6,6 +6,9 @@ import { useThreeViewer } from '../context/ThreeViewerContext';
 import { api } from '../../shared/api';
 import { nextAutoName, uniqueName } from '../../shared/naming';
 import type { TreeNode } from '../../shared/types';
+import { useConfirm } from '../components/ConfirmDialog';
+import { useToastApi } from '../../shared/toast';
+import { analyzeDeleteImpact, formatDeleteImpact } from '../../shared/deleteImpact';
 
 function findTreeNode(nodes: TreeNode[], id: string): TreeNode | undefined {
   for (const node of nodes) {
@@ -37,6 +40,8 @@ export function ObjectTreePanel() {
   const selectedIds = useAppStore((s) => s.selectedIds);
   const setSelectedIds = useAppStore((s) => s.setSelectedIds);
   const setPrimaryMeshInfo = useAppStore((s) => s.setPrimaryMeshInfo);
+  const confirm = useConfirm();
+  const toast = useToastApi();
   const refresh = useAppStore((s) => s.refresh);
   const reloadScene = useAppStore((s) => s.reloadScene);
   const markDirty = useAppStore((s) => s.markDirty);
@@ -76,15 +81,44 @@ export function ObjectTreePanel() {
   }, [tree, markDirty, refresh, reloadScene]);
 
   const handleDelete = useCallback(async (id: string) => {
-    // requestVoid throws on failure; keep the same external contract.
-    await api.deleteObject(id);
+    // The tree path must use the same guarded delete as the toolbar (UI-INT-07).
+    const node = findTreeNode(tree, id);
+    const impact = analyzeDeleteImpact(tree, [id]);
+    const ok = await confirm({
+      title: 'Delete object?',
+      message: formatDeleteImpact(impact),
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api.deleteObject(id);
+    } catch (err) {
+      toast.error(`Delete failed: ${err instanceof Error ? err.message : String(err)}`);
+      return;
+    }
     if (selectedIds.includes(id)) {
       setSelectedIds((prev) => prev.filter((prevId) => prevId !== id));
     }
     markDirty();
+    toast.success(`Deleted ${node?.name ?? 'object'}`);
     refresh();
     reloadScene();
-  }, [selectedIds, setSelectedIds, markDirty, refresh, reloadScene]);
+  }, [tree, confirm, toast, selectedIds, setSelectedIds, markDirty, refresh, reloadScene]);
+
+  const handleRename = useCallback(async (id: string, name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await api.updateObject(id, { name: trimmed });
+      markDirty();
+      toast.success(`Renamed to ${trimmed}`);
+      refresh();
+      reloadScene();
+    } catch (err) {
+      toast.error(`Rename failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }, [markDirty, toast, refresh, reloadScene]);
 
   const handleReparent = useCallback(async (childId: string, newParentId: string | null) => {
     await api.setParent(childId, newParentId);
@@ -120,6 +154,7 @@ export function ObjectTreePanel() {
           onDelete={handleDelete}
           onReparent={handleReparent}
           onEditComponent={handleEditComponent}
+          onRename={handleRename}
         />
       )}
     </>

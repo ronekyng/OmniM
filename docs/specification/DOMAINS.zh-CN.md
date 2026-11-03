@@ -1,7 +1,7 @@
 ---
 title: "OmniM 领域覆盖范围"
 status: design
-last_updated: 2026-10-27
+last_updated: 2026-11-03
 applies_to: "proto/, crates/model"
 evidence: "n/a (design contract)"
 ---
@@ -64,10 +64,10 @@ OmniM 是一个统一的工程信息平台，支持四大工程领域，且不�
 | 隧道 | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage | 🔀 Tunnel；🗓 Lining, Portal, Shaft, Segment, Ring, CrossPassage |
 | 水利 | Dam, Culvert, Channel, Drainage, RetentionBasin | ✅ Dam, Culvert；🗓 Channel, Drainage, RetentionBasin |
 | 公用设施 | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank | ✅ Manhole；🗓 WaterPipe, SewerPipe, StormPipe, UtilityPole, DuctBank |
-| 土石方/场地 | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | 🗓 全部仅计划 |
-| 土方 | CutVolume, FillVolume, EarthworkBalance, RetainingWall | ✅ RetainingWall；🗓 CutVolume, FillVolume, EarthworkBalance |
+| 土石方/场地 | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | **🔀 TerrainModel 已交付**（Phase 8-2，2026-11-03）：`genrule: terrain` 由测点 `[x,y,z]`Bowyer–Watson TIN 拟合入库（`ObjectType::TerrainModel`，网面几何 + `survey_points/vertex_count/triangle_count/extent` 属性）；`GET /api/terrain/{id}/elevation?x=&y=` 重心插值查标高（出凸包 404）。🗓 GradingSurface、数学 Sloan、FeatureLine/ContourLine 已有对象但未接地形 |
+| 土方 | CutVolume, FillVolume, EarthworkBalance, RetainingWall | 🔀 **EarthworkBalance 已交付（Phase 8-2）**：`POST /api/earthwork`（内联测点或 TerrainModel id + `design_z`/`cell`）按格网元中心与设计高程差分并积分 cut/fill/net（凸包外格元计数不外推）。🗓 CutVolume/FillVolume 持久化对象未建 |
 
-> **Proto 状态**图例：✅ 已进 proto · 🔀 部分（已进 proto，工作流简化）· 🗓 仅计划。土木：列出 41 / proto 10 / 仅计划 31。
+> **Proto 状态**图例：✅ 已进 proto · 🔀 部分（已进 proto，工作流简化）· 🗓 仅计划。土木：列出 41 / proto 11 / 仅计划 30（2026-11-03 追加 `ObjectType::TerrainModel`）。
 
 > **Bentley 桥梁/隧道构件细节**（`docs/research/bentley_openroads_components.md`）：
 > - **支座类型**（§2.3.1）：板式橡胶支座（Elastomeric Pad）、盆式支座（Pot）、圆盘支座（Disc）、机械式支座（Mechanical）

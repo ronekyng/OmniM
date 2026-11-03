@@ -1,7 +1,7 @@
 ---
 title: "OmniM Development Roadmap"
 status: current
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 applies_to: "repo"
 evidence: "Reconciled against code, CHANGELOG and the gate board; every status carries an evidence link"
 ---
@@ -80,8 +80,8 @@ Project Workspace, sketch editor, feature tree, catalog panel, properties panel,
 | Gate | Scope | Status | Today | Exit condition |
 |---|---|---|---|---|
 | G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
-| G1 | Alpha | 📅 Not passed | 22 ✅ / 3 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
-| G2 | Beta | 📅 Not started | 0 / 37 | Design system, i18n, A11Y, performance all met |
+| G1 | Alpha | 📅 Not passed | 23 ✅ / 2 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
+| G2 | Beta | 🔀 In progress | 12 / 37 (`UI-SHL-12`, `UI-DS-03/04/08/09`, `UI-INT-06/07/08`, `UI-A11Y-01/02/03/04` ✅) | Design system, i18n, A11Y, performance all met |
 | G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 
 Full list: [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md); judgement rules: [RELEASE_READINESS](RELEASE_READINESS.md).
@@ -121,11 +121,11 @@ Evidence: [CAPABILITY_MATRIX](../CAPABILITY_MATRIX.md), [CHANGELOG](CHANGELOG.md
 
 | Item | Status | Prerequisite | Note |
 |---|---|---|---|
-| 8-1 Building: full IFC element coverage, MEP, quantities | 📅 | Kernel ✅ | Doors/windows are host fills (leaf + frame); frame types, sill/head constraints and schedules are still missing; the host is not re-cut |
-| 8-2 Civil: terrain fitting, earthwork, alignment/profile | 📅 | Kernel ✅ | Bridges/tunnels still use start/end only |
-| 8-3 Plant: branch piping, P&ID | 📅 | Pipe routing ✅ | Branches, fittings and feature-tree templates not covered |
-| 8-4 Mechanical: BOM, quantities, kinematic joints | 🔀 | Assembly container ✅ | Container delivered; BOM/joints not started |
-| 8-5 Frontend: domain panels, filters, domain-aware drag-to-place | 📅 | **7b G2** | Must wait for the shell and design system to settle |
+| 8-1 Building: full IFC element coverage, MEP, quantities | 🔀 | Kernel ✅ | Frame variants (leaves/mullions), sill/lintel and the openings schedule delivered (Phase 8-1); host not re-cut, full IFC/MEP element set outstanding |
+| 8-2 Civil: terrain fitting, earthwork, alignment/profile | 🔀 | Kernel ✅ | TIN fitting + elevation query + grid earthwork + full-alignment bridges/tunnels delivered (Phase 8-2); persistent alignment/profile objects and contours not started |
+| 8-3 Plant: branch piping, P&ID | 🔀 | Pipe routing ✅ | Branches (tee + branch pipe) delivered (Phase 8-3); fitting feature templates, element series and P&ID uncovered |
+| 8-4 Mechanical: BOM, quantities, kinematic joints | 🔀 | Assembly container ✅ | BOM/quantities and motion joints delivered (§9); quantities are bbox-based estimates only — precise takeoff/mass properties not started |
+| 8-5 Frontend: domain panels, filters, domain-aware drag-to-place | 🔀 | **7b G2** | Domain panels open from the ribbon switches and read the domain endpoints (mechanical = joints, building = doors/windows schedule, Phase 8-5 slice); filters and domain-aware drag-to-place remain incomplete and stay under the 7b G2 freeze |
 
 ### 5.3 Dependency on 7b
 

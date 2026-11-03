@@ -82,3 +82,70 @@ export const IcoMeasureArea = ({ size }: IconProps) => icon(size, <><path d="M3 
 export const IcoXray = ({ size }: IconProps) => icon(size, <><circle cx="8" cy="8" r="5" fill="currentColor" fillOpacity="0.15" /><circle cx="8" cy="8" r="5" /><path d="M5 8h6M8 5v6" strokeOpacity="0.5" /></>);
 
 export const IcoSnap = ({ size }: IconProps) => icon(size, <><circle cx="8" cy="8" r="5" fill="currentColor" fillOpacity="0.15" /><circle cx="8" cy="8" r="5" stroke="currentColor" fill="none" /><path d="M8 5v6M5 8h6" /></>);
+
+/* ── UI-DS-09: glyph replacements for emoji / pictographic characters ── */
+
+export const IcoChevronUp = ({ size }: IconProps) => icon(size, <path d="M4 10l4-4 4 4" />);
+export const IcoChevronDown = ({ size }: IconProps) => icon(size, <path d="M4 6l4 4 4-4" />);
+export const IcoChevronLeft = ({ size }: IconProps) => icon(size, <path d="M10 4 6 8l4 4" />);
+export const IcoChevronRight = ({ size }: IconProps) => icon(size, <path d="M6 4l4 4-4 4" />);
+export const IcoCheck = ({ size }: IconProps) => icon(size, <path d="M3 8.5 6.5 12 13 4" />);
+export const IcoWarning = ({ size }: IconProps) => icon(size, <><path d="M8 2 1.5 13.5h13L8 2z" /><path d="M8 6v4M8 12v.5" /></>);
+export const IcoEdit = ({ size }: IconProps) => icon(size, <><path d="M10.5 2.5 13.5 5.5 6 13H3v-3l7.5-7.5z" /><path d="M9 4l3 3" /></>);
+export const IcoHelp = ({ size }: IconProps) => icon(size, <><circle cx="8" cy="8" r="6" /><path d="M6 6a2 2 0 1 1 3 1.7c-.6.4-1 .9-1 1.8M8 12v.5" /></>);
+export const IcoBox = ({ size }: IconProps) => icon(size, <><path d="M2 5l6-3 6 3v6l-6 3-6-3V5z" /><path d="M2 5l6 3 6-3M8 8v6" /></>);
+export const IcoVolumeOn = ({ size }: IconProps) => icon(size, <><path d="M3 6h3l3-3v10l-3-3H3V6z" /><path d="M11 6a3 3 0 0 1 0 4M12.5 4.5a5 5 0 0 1 0 7" /></>);
+export const IcoVolumeOff = ({ size }: IconProps) => icon(size, <><path d="M3 6h3l3-3v10l-3-3H3V6z" /><path d="M11 6l4 4M15 6l-4 4" /></>);
+export const IcoMagnet = ({ size }: IconProps) => icon(size, <><path d="M4 3v5a4 4 0 0 0 8 0V3" /><path d="M4 3h3v5a1 1 0 0 0 2 0V3h3" /><path d="M4 6h3M9 6h3" /></>);
+export const IcoAnchor = ({ size }: IconProps) => icon(size, <><circle cx="8" cy="3.5" r="1.5" /><path d="M8 5v8M4 8H2a6 6 0 0 0 12 0h-2M5 10.5c1 1.5 2 2 3 2s2-.5 3-2" /></>);
+export const IcoSun = ({ size }: IconProps) => icon(size, <><circle cx="8" cy="8" r="3" /><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3.1 3.1l1.4 1.4M11.5 11.5l1.4 1.4M3.1 12.9l1.4-1.4M11.5 4.5l1.4-1.4" /></>);
+export const IcoMoon = ({ size }: IconProps) => icon(size, <path d="M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5z" />);
+export const IcoTarget = ({ size }: IconProps) => icon(size, <><path d="M8 14s5-4.5 5-8A5 5 0 0 0 3 6c0 3.5 5 8 5 8z" /><circle cx="8" cy="6" r="1.5" /></>);
+export const IcoDrag = ({ size }: IconProps) => icon(size, <><path d="M8 1v14M5 4l3-3 3 3M5 12l3 3 3-3" /></>);
+export const IcoStar = ({ size, filled }: IconProps & { filled?: boolean }) =>
+  icon(size, <path d="M8 1.5l1.9 4 4.4.6-3.2 3.1.8 4.3L8 11.5l-3.9 2 .8-4.3L1.7 6l4.4-.6L8 1.5z" fill={filled ? 'currentColor' : 'none'} />);
+
+export type GlyphName =
+  | 'wall' | 'slab' | 'column' | 'beam' | 'door' | 'window' | 'rebar'
+  | 'duct' | 'tray' | 'road' | 'pipe' | 'manhole' | 'tank' | 'pump'
+  | 'valve' | 'hx' | 'compressor' | 'angle' | 'gear'
+  | 'extrude' | 'revolve' | 'sweep' | 'loft' | 'fusion' | 'lofted_fusion'
+  | 'boolean' | 'chamfer' | 'fillet' | 'pattern' | 'shell';
+
+/** Single glyph index for catalog quick-actions and feature types. */
+export function Glyph({ name, size }: { name: GlyphName; size?: number }) {
+  const s = size ?? 16;
+  const shapes: Record<GlyphName, React.ReactNode> = {
+    wall: <><rect x="2" y="4" width="12" height="8" /><path d="M5 4v8M8 4v8M11 4v8" /></>,
+    slab: <rect x="1" y="5" width="14" height="6" rx="1" />,
+    column: <rect x="5" y="2" width="6" height="12" rx="1" />,
+    beam: <rect x="1" y="6" width="14" height="4" rx="1" />,
+    door: <><rect x="4" y="2" width="7" height="12" /><path d="M11 4a4 4 0 0 1 0 8" /></>,
+    window: <><rect x="2" y="4" width="12" height="8" /><path d="M8 4v8M2 8h12" /></>,
+    rebar: <><circle cx="8" cy="8" r="5" /><circle cx="8" cy="8" r="1" /><path d="M8 1v3M8 12v3M1 8h3M12 8h3" /></>,
+    duct: <><rect x="2" y="4" width="12" height="8" /><path d="M5 4v8" /></>,
+    tray: <path d="M2 5v6h12V5M2 5h12M5 8h6" />,
+    road: <><path d="M3 13 5 3M11 13 13 3" /><path d="M8 4v2M8 8v2M8 12v1" /></>,
+    pipe: <><circle cx="8" cy="8" r="5" /><circle cx="8" cy="8" r="1.5" /></>,
+    manhole: <><circle cx="8" cy="8" r="6" /><circle cx="8" cy="8" r="3" /></>,
+    tank: <><rect x="4" y="2" width="8" height="12" rx="4" /><path d="M4 6h8M4 10h8" /></>,
+    pump: <><circle cx="7" cy="8" r="4" /><path d="M11 8h3M3 8H1" /></>,
+    valve: <><path d="M2 4l6 4-6 4V4zM14 4l-6 4 6 4V4z" /><path d="M8 8v4" /></>,
+    hx: <><rect x="2" y="4" width="12" height="8" rx="2" /><path d="M4 8c1-1 2-1 3 0s2 1 3 0 2-1 3 0" /></>,
+    compressor: <><rect x="2" y="5" width="9" height="7" rx="1" /><circle cx="12" cy="8.5" r="2" /></>,
+    angle: <path d="M4 2v11h10" />,
+    gear: <><circle cx="8" cy="8" r="3" /><path d="M8 1v3M8 12v3M1 8h3M12 8h3M3 3l2 2M11 11l2 2M3 13l2-2M11 5l2-2" /></>,
+    extrude: <><rect x="3" y="8" width="8" height="5" /><path d="M7 2v6M4.5 5 7 2l2.5 3" /></>,
+    revolve: <><path d="M12 5a4 4 0 1 0 1 5" /><path d="M15 4v4h-4" /></>,
+    sweep: <><path d="M2 12c4-8 8 4 12-4" /><path d="M11 5h3v3" /></>,
+    loft: <><ellipse cx="8" cy="4" rx="4" ry="1.5" /><ellipse cx="8" cy="12" rx="6" ry="1.5" /><path d="M4 4v8M12 4v8" /></>,
+    fusion: <><circle cx="6" cy="8" r="3.5" /><circle cx="10" cy="8" r="3.5" /></>,
+    lofted_fusion: <><ellipse cx="8" cy="3" rx="3" ry="1.2" /><ellipse cx="8" cy="13" rx="3" ry="1.2" /><path d="M5 4c0 4 6 4 6 8M11 4c0 4-6 4-6 8" /></>,
+    boolean: <><circle cx="6" cy="8" r="3.5" /><circle cx="10" cy="8" r="3.5" /><path d="M8 5v6" /></>,
+    chamfer: <path d="M3 3h7l3 3v7H3V3z" />,
+    fillet: <path d="M3 3h6a4 4 0 0 1 4 4v6" />,
+    pattern: <><rect x="2" y="2" width="5" height="5" /><rect x="9" y="2" width="5" height="5" /><rect x="2" y="9" width="5" height="5" /><rect x="9" y="9" width="5" height="5" /></>,
+    shell: <><rect x="2" y="2" width="12" height="12" /><rect x="5" y="5" width="6" height="6" /></>,
+  };
+  return icon(s, shapes[name] ?? shapes.extrude);
+}

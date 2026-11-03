@@ -1,7 +1,7 @@
 ---
 title: "装配容器与子件（Assembly Container & Parts）"
 status: design
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "proto/, crates/model, crates/omcom, crates/server, web/"
 evidence: "Phase-8 装配升级的设计契约；同一变更集内增量实现"
 ---
@@ -81,6 +81,47 @@ AssemblyPart { string name = 1; oneof source {
 ## 7. 范围外（已登记）
 
 - 逐子件 live placement 字段与子件非破坏移动。
-- 基于 `catalog_ref` 子件的 BOM/工程量端点。
-- 运动副 / 约束装配（ROADMAP Phase 8）。
+- 运动学**求解器**（运动仿真/干涉）；基础运动副已交付（§9）。
+
+## 8. BOM / 工程量端点（已交付）
+
+`GET /api/objects/{id}/bom`（Phase 8-4）：容器返回**全部子孙**行（容器自身无几何不入行）；叶子返回自身一条。
+
+| 行字段 | 说明 |
+|---|---|
+| `object_id/name/object_type` | 实例标识与类型名 |
+| `kind` | `component`（catalog_ref）/ `part`（基本体）/ `proxy`（域对象） |
+| `component_def_id / series_id` | 目录来源 |
+| `bbox_volume_m3` | 包围盒体积（m³，估算；零或负不返回） |
+| `totals` | `row_count` 与 `total_volume_m3` |
+
+响应带 `root_object_type`：`Assembly` 表示容器清单。属性面板选中装配容器时展示本表（含"合计（包围盒估算）"）。
 - 嵌套装配与子件替换工作流。
+
+## 9. 运动副（已交付，Phase 8-4）
+
+约束标注（与轴网/测量同构：无几何、不入对象树）。一个运动副连接两个对象 id（通常是装配子件）。
+
+**端点**
+
+| 方法/路径 | 行为 |
+|---|---|
+| `GET /api/joints` | 全部运动副；`?object_id=` 过滤触点对象 |
+| `POST /api/joints` | 创建；非法域由校验器拒为 400；`201` |
+| `PUT /api/joints/{id}` | 更新（种类/端点/原点/轴/限位）；未知 id 404 |
+| `DELETE /api/joints/{id}` | 删除；`204`，未知 id `404` |
+
+**种类（`JointKind`）**
+
+| kind | 轴 | 限位 | 语义 |
+|---|---|---|---|
+| `revolute` | 必需（服务端归一化） | 有（弧度，min≤max） | 绕 `axis` 过 `origin` 旋转 |
+| `prismatic` | 必需 | 有（米，min≤max） | 沿 `axis` 平移 |
+| `fixed` | 禁止 | — | 焊接对 |
+| `spherical` | 禁止 | — | 绕 `origin` 自由转动 |
+
+**校验器拒绝**（400）：种类未知；端点相同/不存在；缺原点；revolute/prismatic 缺非零轴或零轴；限位顺序颠倒；限位作用于 fixed/spherical；同一**无序**端点对已存在同种类运动副（不同种类可共存）。
+
+**级联/撤销**：删除端点对象会在一次删除里级联移除触点运动副（`GLOBALS: DEL cascade`：单步撤销同时还原对象与运动副）；撤销深度与单步语义沿用 `MAX_UNDO_DEPTH=200` 约定。
+
+**响应字段**（`201`/`GET`）：`id/name/kind`；`from_object_id`/`to_object_id`（from 为驱动侧约定）；`origin`（米；旋转中心/滑动基准）；`axis`（单位轴，revolute/prismatic，否则 `null`）；`limit_min`/`limit_max`（成对或均为 `null`；弧度/米）。

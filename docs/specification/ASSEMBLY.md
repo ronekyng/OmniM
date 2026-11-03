@@ -1,7 +1,7 @@
 ---
 title: "Assembly Container & Parts (装配容器与子件)"
 status: design
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "proto/, crates/model, crates/omcom, crates/server, web/"
 evidence: "design contract for the Phase-8 assembly upgrade; implemented incrementally by the same change set"
 ---
@@ -118,6 +118,47 @@ types (`Stair`, `AHU`, `Chiller`, `Transformer`, `Reactor`) that reuse
 ## 7. Out of scope (tracked)
 
 - Per-part live placement field and non-destructive move of individual parts.
-- BOM / quantity endpoint over `catalog_ref` children.
-- Kinematic joints / constrained assemblies (ROADMAP Phase 8).
+- A kinematic **solver** (motion simulation / interference); the basic joints are delivered (§9).
+
+## 8. BOM / quantity endpoint (delivered)
+
+`GET /api/objects/{id}/bom` (Phase 8-4): for a container it returns one row per **descendant** (the container itself has no geometry); a leaf returns itself.
+
+| Row field | Meaning |
+|---|---|
+| `object_id/name/object_type` | instance identity and type name |
+| `kind` | `component` (catalog_ref) / `part` (primitive) / `proxy` (domain object) |
+| `component_def_id / series_id` | catalog source |
+| `bbox_volume_m3` | bounding-box volume (m³ estimate; omitted when zero) |
+| `totals` | `row_count` and `total_volume_m3` |
+
+The response carries `root_object_type`; `Assembly` marks a container listing. The properties panel shows this table for selected Assembly containers (including a "bbox estimate" total).
 - Nested assemblies and part replacement workflows.
+
+## 9. Motion joints (delivered, Phase 8-4)
+
+Constraint annotations (isomorphic to grids/measurements: no geometry, not part of the object tree). A joint connects two object ids (usually assembly parts).
+
+**Endpoints**
+
+| Method/path | Behavior |
+|---|---|
+| `GET /api/joints` | all joints; `?object_id=` filters those touching an object |
+| `POST /api/joints` | create; invalid domain is refused with 400; `201` |
+| `PUT /api/joints/{id}` | update (kind/endpoints/origin/axis/limits); unknown id 404 |
+| `DELETE /api/joints/{id}` | delete; `204`, unknown id `404` |
+
+**Kinds (`JointKind`)**
+
+| kind | axis | limits | meaning |
+|---|---|---|---|
+| `revolute` | required (normalized server-side) | radians, min<=max | rotation about `axis` through `origin` |
+| `prismatic` | required | metres, min<=max | translation along `axis` |
+| `fixed` | forbidden | — | welded pair |
+| `spherical` | forbidden | — | free rotation about `origin` |
+
+**Validator refusals** (400): unknown kind; identical/missing endpoints; missing origin; revolute/prismatic without (or with a zero) axis; out-of-order limits; limits on fixed/spherical; the same **unordered** endpoint pair already joined with the same kind (different kinds may coexist).
+
+**Cascade/undo**: deleting an endpoint object cascades the touching joints in the same delete step (single-step undo restores the object and the joint); undo depth follows `MAX_UNDO_DEPTH=200`.
+
+**Response fields** (`201`/`GET`): `id/name/kind`; `from_object_id`/`to_object_id` (from is the driving side by convention); `origin` (metres; rotation centre/slide datum); `axis` (unit axis for revolute/prismatic, `null` otherwise); `limit_min`/`limit_max` (paired or both `null`; radians/metres).

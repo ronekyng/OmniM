@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../../shared/api';
 import type { Material } from '../../../shared/types';
 import { MATERIAL_CATEGORY_NAMES } from '../../../shared/types';
+import { IcoStar } from '../Icons';
 
 type Props = {
   selectedId?: string;
@@ -107,7 +108,7 @@ export function MaterialBrowser({ selectedId, onSelect, onClose, filterCategory 
                     onClick={(e) => { e.stopPropagation(); toggleFavorite(m.id); }}
                     title={isFav ? '取消收藏' : '收藏'}
                   >
-                    {isFav ? '★' : '☆'}
+                    <IcoStar filled={isFav} />
                   </button>
                 </div>
                 <div className="material-card-cat">{catName(m)}</div>

@@ -17,6 +17,10 @@ export default defineConfig(({ command }) => {
       outDir: 'dist',
     },
     server: {
+      // Same failure philosophy as the Rust server: an occupied port means a
+      // stale instance (or the E2E server on 5174) — fail loudly instead of
+      // silently drifting to the next port.
+      strictPort: true,
       proxy: {
         '/api': apiTarget,
       },

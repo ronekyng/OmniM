@@ -106,6 +106,9 @@ pub fn primary_gen_rule(object_type: ObjectType) -> GenRuleHint {
         ObjectType::Road | ObjectType::Bridge | ObjectType::Tunnel | ObjectType::Culvert => {
             GenRuleHint::LinearComponent
         }
+        // Terrain surface (Phase 8-2): TIN fitting happens in the server
+        // terrain handler (wet triangulation), not the feature pipeline.
+        ObjectType::TerrainModel => GenRuleHint::Primitive,
         ObjectType::Dam | ObjectType::RetainingWall => GenRuleHint::Primitive,
         ObjectType::Pier | ObjectType::Abutment => GenRuleHint::Primitive,
         ObjectType::Manhole => GenRuleHint::Primitive,
@@ -312,6 +315,7 @@ mod tests {
             ObjectType::Luminaire,
             ObjectType::Road,
             ObjectType::Bridge,
+            ObjectType::TerrainModel,
             ObjectType::Tunnel,
             ObjectType::Dam,
             ObjectType::Culvert,

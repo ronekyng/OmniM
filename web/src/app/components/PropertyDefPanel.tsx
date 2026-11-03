@@ -71,6 +71,7 @@ function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; valu
           <input
             className="prop-value"
             type="number"
+            aria-label={def.label}
             min={isFinite(def.min) ? def.min : undefined}
             max={isFinite(def.max) ? def.max : undefined}
             step={def.step > 0 ? def.step : 'any'}
@@ -90,6 +91,7 @@ function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; valu
           <span className="prop-label" title={def.description}>{def.label}</span>
           <input
             className="prop-value"
+            aria-label={def.label}
             value={local}
             onChange={(e) => setLocal(e.target.value)}
             onBlur={() => void handleBlur()}
@@ -106,6 +108,7 @@ function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; valu
           <label className="prop-value-toggle">
             <input
               type="checkbox"
+              aria-label={def.label}
               checked={local === 'true' || local === '1'}
               onChange={(e) => {
                 const v = e.target.checked ? 'true' : 'false';
@@ -124,6 +127,7 @@ function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; valu
           <span className="prop-label" title={def.description}>{def.label}</span>
           <select
             className="prop-value"
+            aria-label={def.label}
             value={local}
             onChange={(e) => {
               const v = e.target.value;

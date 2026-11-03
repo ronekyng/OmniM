@@ -18,6 +18,7 @@ import { renderDatumGrids, clearDatumGridGroup } from './viewer/three/DatumGrids
 import { meshVisibleOnStorey } from '../../shared/storeyView';
 import { polygonPreviewError } from '../../shared/creation/polyline';
 import { pickGroundPoint, pickingHint, requiredClicks } from './viewer/three/Picking';
+import { IcoTarget } from './Icons';
 import { SnapIndicator } from './viewer/three/SnapIndicator';
 import { snapPoint, snapToGrid, type SnapSettings } from './viewer/three/Snapping';
 import viewerStyles from './ThreeViewer.module.css';
@@ -155,6 +156,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   const creationPoints = useAppStore((s) => s.creationPoints);
   const creationForm = useAppStore((s) => s.creationForm);
   const activeStoreyId = useAppStore((s) => s.activeStoreyId);
+  const objectCount = useAppStore((s) => s.stats?.object_count ?? 0);
+  const isOrtho = useAppStore((s) => s.isOrtho);
   creationPhaseRef.current = creationPhase;
   creationObjectTypeRef.current = creationObjectType;
   creationPointsRef.current = creationPoints;
@@ -612,7 +615,7 @@ focusObject: (id) => {
       let selectionRect: HTMLDivElement | null = null;
 
       const overlay = document.createElement('div');
-      overlay.style.cssText = 'position:absolute;inset:0;z-index:5;cursor:crosshair';
+      overlay.style.cssText = 'position:absolute;inset:0;z-index:var(--z-overlay);cursor:crosshair';
       host.appendChild(overlay);
 
       function onOverlayMove(e: PointerEvent) {
@@ -1153,10 +1156,21 @@ focusObject: (id) => {
   }, [reloadToken, activeStoreyId]);
 
   return (
-    <div ref={hostRef} className={`three-viewer ${viewerStyles.threeViewer}`}>
+    <div
+      ref={hostRef}
+      className={`three-viewer ${viewerStyles.threeViewer}`}
+      role="application"
+      aria-label="3D viewport"
+      aria-describedby="viewport-description"
+      tabIndex={0}
+    >
+      <span id="viewport-description" className="sr-only">
+        {objectCount} objects in the project. {isOrtho ? 'Orthographic' : 'Perspective'} camera.
+        Use the object tree for selection, properties and keyboard access.
+      </span>
       {creationPhase === 'picking' && creationObjectType && (
         <div className="picking-hint">
-          <span>📍 {pickingHint(creationObjectType, creationPoints, creationForm ? pickModeForForm(creationForm) : undefined)} ，按 Esc 取消</span>
+          <span><IcoTarget /> {pickingHint(creationObjectType, creationPoints, creationForm ? pickModeForForm(creationForm) : undefined)} ，按 Esc 取消</span>
         </div>
       )}
     </div>

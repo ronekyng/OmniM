@@ -39,6 +39,10 @@ pub struct Project {
     /// Grid datum lines (轴网), P8-S1. Datum annotations, not objects.
     #[serde(default)]
     pub grids: crate::grid::GridStore,
+    /// Motion joints (Phase 8-4, ASSEMBLY §9). Mechanism annotations between
+    /// objects, not objects themselves.
+    #[serde(default)]
+    pub joints: crate::joint::JointStore,
 }
 
 /// One object changed by a storey-elevation cascade (P8-S2). Carried inside a
@@ -70,6 +74,9 @@ pub struct DeleteCascade {
     pub lifecycle_refs: Vec<(String, String)>,
     /// (breakdown node id, object id) pairs detached from nodes.
     pub breakdown_refs: Vec<(String, String)>,
+    /// Motion joints removed because an endpoint object was deleted
+    /// (Phase 8-4). Restored by the same undo step.
+    pub removed_joints: Vec<crate::joint::MotionJoint>,
 }
 
 /// Reference to an external series (file or Library-provided).
@@ -96,6 +103,7 @@ impl Project {
             external_series_refs: Vec::new(),
             measurements: MeasurementStore::new(),
             grids: crate::grid::GridStore::new(),
+            joints: crate::joint::JointStore::new(),
         };
         crate::seed_materials::seed_default_materials(&mut p.materials);
         p
@@ -203,6 +211,11 @@ impl Project {
         // Lifecycle / breakdown references.
         cascade.lifecycle_refs = self.lifecycle.detach_object(object_id);
         cascade.breakdown_refs = self.breakdown.detach_object(object_id);
+        // Motion joints (Phase 8-4): a joint on a deleted endpoint is removed
+        // with the object and restored by the same undo step.
+        cascade.removed_joints = self
+            .joints
+            .remove_many(|j| j.from_object_id == object_id || j.to_object_id == object_id);
         Ok((obj, cascade))
     }
 
@@ -327,6 +340,10 @@ impl Project {
                 .breakdown_refs
                 .extend(self.breakdown.detach_object(id));
         }
+        cascade.removed_joints = self.joints.remove_many(|j| {
+            removed_set.contains(j.from_object_id.as_str())
+                || removed_set.contains(j.to_object_id.as_str())
+        });
         Ok((obj, cascade))
     }
 
@@ -364,6 +381,11 @@ impl Project {
                     node.related_object_ids.push(object_id.clone());
                 }
             }
+        }
+        // Motion joints (Phase 8-4): a joint removed with its endpoint comes
+        // back when the object does (order-insensitive re-insert).
+        for joint in &cascade.removed_joints {
+            self.joints.insert(joint.clone());
         }
     }
 

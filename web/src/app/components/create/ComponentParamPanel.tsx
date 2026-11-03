@@ -24,6 +24,7 @@ function ParamInput({ param, value, onChange }: { param: ParamDef; value: number
     return (
       <select
         className="comp-param-select"
+        aria-label={param.name}
         value={String(value)}
         onChange={(e) => onChange(parseFloat(e.target.value))}
       >
@@ -40,6 +41,7 @@ function ParamInput({ param, value, onChange }: { param: ParamDef; value: number
         <input
           type="range"
           className="comp-param-slider"
+          aria-label={param.name}
           min={param.min_value}
           max={param.max_value}
           step={hasStep ? param.step : 'any'}
@@ -58,6 +60,7 @@ function ParamInput({ param, value, onChange }: { param: ParamDef; value: number
     <input
       type="number"
       className="comp-param-input"
+      aria-label={param.name}
       value={Number.isFinite(value) ? value : 0}
       min={isFinite(param.min_value) ? param.min_value : undefined}
       max={isFinite(param.max_value) ? param.max_value : undefined}

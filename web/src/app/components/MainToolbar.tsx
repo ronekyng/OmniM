@@ -53,6 +53,17 @@ export function MainToolbar({
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
+  // Phase 8-5: a domain switch also opens the matching domain panel
+  // (registered in defaultPanels; panels live in the right dock).
+  const setDomainPanelOpen = useAppStore((s) => s.setDomainPanelOpen);
+  const handleDomainSwitch = (domain: string) => {
+    const next = activeDomain === domain ? null : domain;
+    setActiveDomain(next);
+    setDomainPanelOpen('building', domain === 'building');
+    setDomainPanelOpen('civil', domain === 'civil');
+    setDomainPanelOpen('plant', domain === 'plant');
+    setDomainPanelOpen('mechanical', domain === 'mechanical');
+  };
   // Ribbon contract (IA_SHELL §3.3): start scoped to the building discipline
   // so the contextual command row is real from the first second.
   useEffect(() => { setActiveDomain((d) => d ?? 'building'); }, []);
@@ -447,7 +458,7 @@ export function MainToolbar({
 
   return (
     <>
-      <div className="main-toolbar">
+      <div className="main-toolbar" role="toolbar" aria-label="Modeling commands" aria-orientation="horizontal">
         <button onClick={onRefresh} title="Refresh"><IcoRefresh /></button>
         <button className="accent" onClick={() => { setAssemblyOpen(false); handleDomainObjectClick('wall'); }} title="Create object"><IcoAdd /><span className="btn-label">Create</span></button>
         <button onClick={() => { setAssemblyOpen((v) => !v); }} title="Assembly (multi-part)"><IcoAssy /><span className="btn-label">Assembly</span></button>
@@ -473,10 +484,10 @@ export function MainToolbar({
         <button onClick={() => navigate('/series-manager')} title="Series Manager"><IcoSeries /><span className="btn-label">Series</span></button>
         <button onClick={() => navigate('/library-manager')} title="Library Manager"><IcoCatalog /><span className="btn-label">Library</span></button>
         <span className="separator" />
-        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => setActiveDomain('building')} title="建筑" aria-pressed={activeDomain === 'building'}><IcoGrid /><span className="btn-label">建筑</span></button>
-        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => setActiveDomain('civil')} title="土木" aria-pressed={activeDomain === 'civil'}><IcoGrid /><span className="btn-label">土木</span></button>
-        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => setActiveDomain('plant')} title="工厂" aria-pressed={activeDomain === 'plant'}><IcoGrid /><span className="btn-label">工厂</span></button>
-        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => setActiveDomain('mechanical')} title="机械" aria-pressed={activeDomain === 'mechanical'}><IcoGrid /><span className="btn-label">机械</span></button>
+        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => handleDomainSwitch('building')} title="建筑" aria-pressed={activeDomain === 'building'}><IcoGrid /><span className="btn-label">建筑</span></button>
+        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => handleDomainSwitch('civil')} title="土木" aria-pressed={activeDomain === 'civil'}><IcoGrid /><span className="btn-label">土木</span></button>
+        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => handleDomainSwitch('plant')} title="工厂" aria-pressed={activeDomain === 'plant'}><IcoGrid /><span className="btn-label">工厂</span></button>
+        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => handleDomainSwitch('mechanical')} title="机械" aria-pressed={activeDomain === 'mechanical'}><IcoGrid /><span className="btn-label">机械</span></button>
       </div>
 
       {activeDomain && (

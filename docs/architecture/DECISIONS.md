@@ -1,7 +1,7 @@
 ---
 title: "OmniM — Architecture Decision Records"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "crates/, web/"
 evidence: "audited against crates/server/src/lib.rs 2026-10-27"
 ---
@@ -43,7 +43,7 @@ Rules:
 | [ADR-0004](#adr-0004-json-file-persistence-single-project-rwlock) | JSON-file persistence (single Project, RwLock) | Accepted |
 | [ADR-0005](#adr-0005-hand-written-ifc-parser) | Hand-written IFC parser rather than an ifc crate | Accepted (one implementation note) |
 | [ADR-0006](#adr-0006-unified-executorvalidator-for-all-mutation-paths-target) | Unified Executor/Validator for all mutation paths | Accepted — Implemented (2026-10-28) |
-| [ADR-0007](#adr-0007-dual-theme-token-layers) | Dual-theme token layers (primitive → semantic → component) | Accepted (design) |
+| [ADR-0007](#adr-0007-dual-theme-token-layers) | Dual-theme token layers (primitive → semantic → component) | Implemented (2026-11-02) |
 | [ADR-0008](#adr-0008-docked-shell-over-floating-panels) | Docked shell over floating panels | Accepted (design) |
 | [ADR-0009](#adr-0009-extendable-panel-registry) | Extendable panel registry with tab metadata | Accepted (design) |
 | [ADR-0010](#adr-0010-key-based-i18n-with-icu) | Key-based i18n with ICU formatting | Accepted (design) |
@@ -237,7 +237,7 @@ See [WRITE_PATHS.md](WRITE_PATHS.md) for the current matrix.
 
 ### ADR-0007. Dual-theme token layers
 
-**Status**: Accepted (design) — not implemented.
+**Status**: Implemented (2026-11-02): tokens consolidated in `globals.css`, zero literal colors in components.
 
 **Context**: `styles.css` contains 712 hardcoded colors and the token block is duplicated in `globals.css`.
 The product needs dark and light themes without a second visual language.

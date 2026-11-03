@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap batch.
 
-**Last updated: 2026-10-30**
+**Last updated: 2026-11-03**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,47 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-11-03] — Phase 8-1/2/3/4: domain delivery batch
+
+### Added
+- **Opening panel variants**: door/window requests accept `leaf_count` (doors 1–2 / windows 1–4 with mullions), `with_sill` (outward sill slab) and `with_lintel` (spanning beam); objects record the frame-variant properties.
+- **Door/window schedule**: `GET /api/schedules/openings?root_id=` groups Door/Window objects over the root's subtree (or the whole project) by (type, opening size [mm], frame variants).
+- **Terrain TIN fitting**: `genrule: terrain` fits a Bowyer–Watson triangulation from ≥3 survey points (`ObjectType::TerrainModel` surface mesh + survey/stats properties); duplicate XY keeps the first elevation, collinear surveys are refused.
+- **Elevation query & earthwork**: `GET /api/terrain/{id}/elevation?x=&y=` barycentric lookup (404 outside the hull); `POST /api/earthwork` (inline points or a terrain object + design_z/cell) integrates grid cut/fill/net; outside-hull cells are counted, not extrapolated.
+- **Bridges/tunnels follow the full alignment**: new `genrule: bridge` (layered deck, bridge × linear) and `genrule: tunnel` (circular lining tube swept along the full polyline via the pipe kernel) — replacing the first→last-point-only construction.
+- **Branched piping**: pipe requests support `branch_of`/`branch_point`/`target` — the branch point snaps onto the host route (tolerance 0.1 m), creating a tee fitting + a routed branch pipe (Pipe-Path instantiation) in one undo step.
+- **Motion joints**: `/api/joints` (revolute/prismatic/fixed/spherical) — axis normalization, paired-limit validation (radians/metres), unordered-pair same-kind dedup; deleting an endpoint object cascades the touching joints and one undo step restores the object and the joint.
+- **BOM/quantity endpoint**: `GET /api/objects/{id}/bom` returns **all descendants** of a container (kind=component/part/proxy, catalog source, bbox volume in m³) with `totals`; a leaf returns itself; unknown id 404. The properties panel renders the table for selected Assembly containers (with a "bbox estimate" total).
+- **Tree row grid layout fix**: nested subtrees used to be flex siblings that squeezed the row label to zero width (clicking an assembly row selected a child); rows are now grid.
+
+### Added
+- **Terrain TIN fitting**: `genrule: terrain` fits a Bowyer–Watson triangulation from ≥3 survey points (`ObjectType::TerrainModel` surface mesh + survey/stats properties); duplicate XY keeps the first elevation, collinear surveys are refused.
+- **Elevation query & earthwork**: `GET /api/terrain/{id}/elevation?x=&y=` barycentric lookup (404 outside the hull); `POST /api/earthwork` (inline points or a terrain object + design_z/cell) integrates grid cut/fill/net; outside-hull cells are counted, not extrapolated.
+- **Bridges/tunnels follow the full alignment**: new `genrule: bridge` (layered deck, bridge × linear) and `genrule: tunnel` (circular lining tube swept along the full polyline via the pipe kernel) — replacing the first→last-point-only construction.
+- **Branched piping**: pipe requests support `branch_of`/`branch_point`/`target` — the branch point snaps onto the host route (tolerance 0.1 m), creating a tee fitting + a routed branch pipe (Pipe-Path instantiation) in one undo step.
+- **Motion joints**: `/api/joints` (revolute/prismatic/fixed/spherical) — axis normalization, paired-limit validation (radians/metres), unordered-pair same-kind dedup; deleting an endpoint object cascades the touching joints and one undo step restores the object and the joint.
+- **BOM/quantity endpoint**: `GET /api/objects/{id}/bom` returns **all descendants** of a container (kind=component/part/proxy, catalog source, bbox volume in m³) with `totals`; a leaf returns itself; unknown id 404. The properties panel renders the table for selected Assembly containers (with a "bbox estimate" total).
+- **Tree row grid layout fix**: nested subtrees used to be flex siblings that squeezed the row label to zero width (clicking an assembly row selected a child); rows are now grid.
+
+## [2026-11-02] — G2 design-system / accessibility slice
+
+### Added
+- **Semantic tokens and dual themes**: `globals.css` is the single token source with surface/border/text/accent/status/button/syntax/viewport layers; the light theme overrides every colour token and `theme.spec.ts` covers reload-free switching, persistence and AA contrast in both themes.
+- **Z-index scale**: §7 `--z-*` tokens replace every magic number; a `zindex` contract check prevents regressions.
+- **Single icon set**: title bar, tree, tabs, library/series managers, sketch features and domain quick actions now use 16×16 monochrome SVGs; emoji/pictographic icons are at zero.
+- **Dialog and focus contract**: `useDialogFocus` centralizes the focus trap, inert background, Esc and focus restore; destructive confirms default to Cancel.
+- **Destructive impact**: deletes state container descendants by type, promoted children for non-containers, and undo; the tree context-menu path now uses the same confirmation.
+- **ARIA and keyboard**: object tree `tree/treeitem` with roving Tab/arrows/Enter/Home/End; `tablist/tab/tabpanel`; toolbar, menu, property table, toast and viewport semantics; `F6` region cycling plus route-heading and error-fallback focus.
+- **axe audit**: launch, open, create, select, failed save and error fallback are covered by `axe.spec.ts` with 0 violations; run it with `npm run test:a11y`.
+- **Undo/redo regression**: 60-step depth, 200-command cap, redo replay and grid-update endpoint now have explicit assertions.
+- **Command surface**: `Ctrl/Cmd+K` palette (filter, arrows, Enter), `F1` shortcut help and global undo/redo shortcuts; a keyboard-only J1 (create storey + save) walkthrough is now covered.
+- **Inline rename**: tree rows enter an input on F2/double-click, commit on Enter/blur, cancel on Esc; property rows navigate with ↑↓/Home/End.
+
+### Fixed
+- **Duplicate tokens and build failure**: removed the duplicated `:root` block in `styles.css`; repaired the dangling toast `max-width` that broke `vite build`.
+- **Sample-project 409**: the project home could race an empty list or an orphaned slug; it now waits for the list, dedupes by display name and file slug, and retries a 409 with a suffix.
+- **Tree keyboard double-move**: nested `treeitem` keydown bubbling moved focus twice; only the event-source row acts now.
 
 ## [2026-10-30] — Creation display & orientation fixes
 

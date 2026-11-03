@@ -255,6 +255,7 @@ fn type_name(t: c::ObjectType) -> &'static str {
         Luminaire => "Luminaire",
         Road => "Road",
         Bridge => "Bridge",
+        TerrainModel => "TerrainModel",
         Tunnel => "Tunnel",
         Dam => "Dam",
         Culvert => "Culvert",

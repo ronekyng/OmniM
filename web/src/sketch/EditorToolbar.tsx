@@ -1,4 +1,5 @@
 import type { SketchConstraintType } from '../shared/types';
+import { Glyph, IcoCheck, IcoClose, IcoMagnet } from '../app/components/Icons';
 
 export type FeatureType = 'extrude' | 'revolve' | 'sweep' | 'loft' | 'fusion' | 'lofted_fusion' | 'boolean' | 'chamfer' | 'fillet' | 'pattern' | 'shell';
 
@@ -50,9 +51,9 @@ const CONSTRAINTS: { key: SketchConstraintType; label: string; title: string }[]
   { key: 'Angle', label: '∠', title: '角度' },
   { key: 'Radius', label: 'R', title: '半径' },
   { key: 'Diameter', label: 'Ø', title: '直径' },
-  { key: 'Fixed', label: '⚓', title: '固定' },
+  { key: 'Fixed', label: 'FIX', title: '固定' },
   { key: 'Tangent', label: '⌒', title: '相切' },
-  { key: 'AtMidpoint', label: '◉', title: '中点' },
+  { key: 'AtMidpoint', label: 'MID', title: '中点' },
   { key: 'EqualLength', label: 'L≃', title: '等长' },
   { key: 'EqualRadius', label: 'R≃', title: '等半径' },
   { key: 'Symmetric', label: '↔', title: '对称' },
@@ -75,18 +76,18 @@ const TOOLS = [
   { key: 'extend' as const, label: 'Extend', shortcut: 'X' },
 ];
 
-const FEATURE_BUTTONS: { type: FeatureType; icon: string; label: string; tooltip: string }[] = [
-  { type: 'extrude', icon: '⬍', label: '拉伸', tooltip: '拉伸 - 从轮廓创建实体' },
-  { type: 'revolve', icon: '↻', label: '旋转', tooltip: '旋转 - 绕轴旋转轮廓' },
-  { type: 'sweep', icon: '⟿', label: '扫掠', tooltip: '扫掠 - 沿路径移动轮廓' },
-  { type: 'loft', icon: 'ℳ', label: '放样', tooltip: '放样 - 连接多个截面' },
-  { type: 'fusion', icon: '⊕', label: '融合', tooltip: '融合 - 两个截面之间的过渡实体 (如大小头、天圆地方)' },
-  { type: 'lofted_fusion', icon: 'ℳ⊕', label: '放样融合', tooltip: '放样融合 - 两个截面沿路径渐变过渡' },
-  { type: 'boolean', icon: '⊖', label: '布尔', tooltip: '布尔 - 两个实体运算 (并集/差集/交集)' },
-  { type: 'chamfer', icon: '⊿', label: '倒角', tooltip: '倒角 - 边缘倒角' },
-  { type: 'fillet', icon: '⌒', label: '圆角', tooltip: '圆角 - 边缘圆角' },
-  { type: 'pattern', icon: '⊞', label: '阵列', tooltip: '阵列 - 复制排列' },
-  { type: 'shell', icon: '⊡', label: '抽壳', tooltip: '抽壳 - 变薄壁' },
+const FEATURE_BUTTONS: { type: FeatureType; label: string; tooltip: string }[] = [
+  { type: 'extrude', label: '拉伸', tooltip: '拉伸 - 从轮廓创建实体' },
+  { type: 'revolve', label: '旋转', tooltip: '旋转 - 绕轴旋转轮廓' },
+  { type: 'sweep', label: '扫掠', tooltip: '扫掠 - 沿路径移动轮廓' },
+  { type: 'loft', label: '放样', tooltip: '放样 - 连接多个截面' },
+  { type: 'fusion', label: '融合', tooltip: '融合 - 两个截面之间的过渡实体 (如大小头、天圆地方)' },
+  { type: 'lofted_fusion', label: '放样融合', tooltip: '放样融合 - 两个截面沿路径渐变过渡' },
+  { type: 'boolean', label: '布尔', tooltip: '布尔 - 两个实体运算 (并集/差集/交集)' },
+  { type: 'chamfer', label: '倒角', tooltip: '倒角 - 边缘倒角' },
+  { type: 'fillet', label: '圆角', tooltip: '圆角 - 边缘圆角' },
+  { type: 'pattern', label: '阵列', tooltip: '阵列 - 复制排列' },
+  { type: 'shell', label: '抽壳', tooltip: '抽壳 - 变薄壁' },
 ];
 
 export function EditorToolbar({
@@ -113,7 +114,7 @@ export function EditorToolbar({
               disabled={!!creatingFeature}
               title={f.tooltip}
             >
-              <span className="feature-ribbon-icon">{f.icon}</span>
+              <span className="feature-ribbon-icon"><Glyph name={f.type} /></span>
               <span className="feature-ribbon-label">{f.label}</span>
             </button>
           ))}
@@ -162,7 +163,7 @@ export function EditorToolbar({
           onClick={onToggleSnap}
           title="Toggle snap (S)"
         >
-          {snapEnabled ? '🧲' : '🧲'}
+          <IcoMagnet />
           <span style={{ fontSize: 10, marginLeft: 2 }}>Snap</span>
         </button>
 
@@ -229,13 +230,13 @@ export function EditorToolbar({
                 onClick={onFinishDrawing}
                 style={{ background: '#2e7d32' }}
               >
-                ✓ Done
+                <IcoCheck /> Done
               </button>
               <button
                 className="sketch-tool-btn danger"
                 onClick={onCancelCreating}
               >
-                ✗ Cancel
+                <IcoClose /> Cancel
               </button>
             </>
           ) : (

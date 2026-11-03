@@ -1,7 +1,7 @@
 ---
 title: "OmniM 界面设计系统"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -49,7 +49,7 @@ evidence: "n/a (design contract)"
 主题应用在 `<html data-theme="dark|light|hc">` 上。所有语义令牌在一个地方按主题重定义：
 
 ```css
-:root, [data-theme="dark"] { color-scheme: dark;  --surface-app: #16181d; }
+:root, [data-theme="dark"] { color-scheme: dark;  --surface-app: #1a1d23; }
 [data-theme="light"]      { color-scheme: light; --surface-app: #f4f6f9; }
 [data-theme="hc"]         { color-scheme: dark;  --surface-app: #000000; }
 ```
@@ -73,20 +73,20 @@ evidence: "n/a (design contract)"
 
 | 角色 | 取值 |
 |---|---|
-| 应用背景 | `#16181d` |
-| 面板表面 | `#1b1e24` |
-| 抬高表面 | `#22262e` |
+| 应用背景 | `#1a1d23` |
+| 面板表面 | `#14161c` |
+| 抬高表面 | `#1e2128` |
 | 下沉表面 | `#121418` |
-| 边框默认 | `#2e333c` |
-| 边框强调 | `#3d444f` |
-| 主文本 | `#e6e8eb` |
-| 次文本 | `#b3b9c4` |
-| 弱化文本 | `#8b93a1` |
-| 禁用文本 | `#5a616e` |
+| 边框默认 | `#2a2d35` |
+| 边框强调 | `#3a3d4a` |
+| 主文本 | `#e0e0e0` |
+| 次文本 | `#ccc` |
+| 弱化文本 | `#888` |
+| 禁用文本 | `#555` |
 | 强调色 | `#4a90d9` |
 | 强调悬停 | `#5ba0e9` |
-| 强调按下 | `#3d7fc4` |
-| 焦点环 | `#7fc4ff` |
+| 强调按下 | `#4fc3f7` |
+| 焦点环 | `#4fc3f7` |
 
 ### 3.2 浅色主题与系统偏好
 
@@ -95,19 +95,19 @@ evidence: "n/a (design contract)"
 | 角色 | 取值 |
 |---|---|
 | 应用背景 | `#f4f6f9` |
-| 面板表面 | `#ffffff` |
+| 面板表面 | `#e9edf2` |
 | 抬高表面 | `#ffffff` |
-| 下沉表面 | `#e9edf2` |
+| 下沉表面 | `#eef1f5` |
 | 边框默认 | `#d5dae2` |
 | 边框强调 | `#b8c0cb` |
-| 主文本 | `#1f2329` |
-| 次文本 | `#4a5260` |
-| 弱化文本 | `#6b7482` |
-| 禁用文本 | `#a2aab6` |
-| 强调色 | `#1a6fd4` |
-| 强调悬停 | `#1560b8` |
-| 强调按下 | `#11509b` |
-| 焦点环 | `#1a6fd4` |
+| 主文本 | `#1c222b` |
+| 次文本 | `#374151` |
+| 弱化文本 | `#5b6575` |
+| 禁用文本 | `#98a2b3` |
+| 强调色 | `#2f6fb3` |
+| 强调悬停 | `#3b7fc7` |
+| 强调按下 | `#1f5f9f` |
+| 焦点环 | `#1f5f9f` |
 
 规则：
 
@@ -120,18 +120,20 @@ evidence: "n/a (design contract)"
 
 | 语义令牌 | 深色 | 浅色 |
 |---|---|---|
-| `--surface-app` | `#16181d` | `#f4f6f9` |
-| `--surface-panel` | `#1b1e24` | `#ffffff` |
-| `--surface-elevated` | `#22262e` | `#ffffff` |
-| `--surface-sunken` | `#121418` | `#e9edf2` |
-| `--border-default` | `#2e333c` | `#d5dae2` |
-| `--text-primary` | `#e6e8eb` | `#1f2329` |
-| `--text-muted` | `#8b93a1` | `#6b7482` |
-| `--accent-default` | `#4a90d9` | `#1a6fd4` |
-| `--status-danger` | `#e05252` | `#c62828` |
-| `--status-warning` | `#e0a030` | `#a86400` |
-| `--status-success` | `#4caf72` | `#2e7d32` |
-| `--status-info` | `#4a90d9` | `#1565c0` |
+| `--surface-app` | `#1a1d23` | `#f4f6f9` |
+| `--surface-panel` | `#14161c` | `#e9edf2` |
+| `--surface-elevated` | `#1e2128` | `#ffffff` |
+| `--surface-sunken` | `#121418` | `#eef1f5` |
+| `--border-default` | `#2a2d35` | `#d5dae2` |
+| `--text-primary` | `#e0e0e0` | `#1c222b` |
+| `--text-muted` | `#888` | `#5b6575` |
+| `--accent-default` | `#4a90d9` | `#2f6fb3` |
+| `--status-danger` | `#f44336` | `#c62828` |
+| `--status-warning` | `#ff9800` | `#a15c00` |
+| `--status-success` | `#81c784` | `#2e7d32` |
+| `--status-info` | `#4a90d9` | `#2f6fb3` |
+
+取值权威来源是 `web/src/globals.css`：本表与令牌文件必须一致；组件样式不得再出现字面量颜色（`scripts/check_ui_contracts.py --only tokens` 为 0）。
 
 ### 3.4 高对比
 
@@ -185,17 +187,17 @@ evidence: "n/a (design contract)"
 
 ## 7. Z-Index 分层
 
-| 层 | 取值 | 用途 |
-|---|---|---|
-| 0 | 0 | 视口画布 |
-| 1 | 10–19 | 视口覆盖层（视图立方、工具条、提示） |
-| 2 | 20–29 | 停靠与分隔条 |
-| 3 | 30–39 | 附着在外壳上的浮层、菜单、提示 |
-| 4 | 40–49 | 弹窗遮罩与弹窗 |
-| 5 | 60–69 | 提示消息与实时播报 |
-| 6 | 90–99 | 调试覆盖层（绝不进生产） |
+| 层 | 取值 | 令牌 | 用途 |
+|---|---|---|---|
+| 0 | 0 | `--z-viewport` | 视口画布 |
+| 1 | 10–19 | `--z-overlay`、`--z-local`、`--z-local-raised` | 视口覆盖层（视图立方、工具条、提示）与局部堆叠 |
+| 2 | 20–29 | `--z-dock`、`--z-resize` | 停靠与分隔条 |
+| 3 | 30–39 | `--z-shell`、`--z-menu` | 附着在外壳上的浮层、菜单、提示 |
+| 4 | 40–49 | `--z-dialog` | 弹窗遮罩与弹窗 |
+| 5 | 60–69 | `--z-toast` | 提示消息与实时播报 |
+| 6 | 90–99 | `--z-debug` | 调试覆盖层（绝不进生产） |
 
-任何组件都不得使用这些区间之外的 z-index。需求：UI-DS-08。
+任何组件都不得使用这些区间之外的 z-index；组件样式只能通过 `var(--z-*)` 取值。需求：UI-DS-08。
 
 ## 8. 图标
 

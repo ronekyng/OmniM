@@ -15,6 +15,7 @@ Checks
   ids      every UI-* ID in the register is unique, appears in the PRD and in
            a verification column, and area counts match the declared total
   tokens   hardcoded colours in user-facing styles (strict only)
+  zindex   z-index values outside the DESIGN_SYSTEM §7 scale
   emoji    emoji used as icons in tsx (strict only)
   dialogs  window.alert/confirm/prompt call sites (strict only)
   strings  CJK literals outside the i18n catalogue (strict only)
@@ -43,6 +44,9 @@ KEYMAP = DOCS / "reference" / "KEYBOARD_MAP.md"
 ID_RE = re.compile(r"\bUI-(SHL|DS|INT|FBK|DAT|A11Y|I18N|PRF|CMP|SEC|TLM)-(\d{2})\b")
 CODE_RE = re.compile(r"\bOMNI-(UI|API|NET|IO|GEO|CAT|IFC|AUTH|SYS)-(\d{4})\b")
 HEX_RE = re.compile(r"#[0-9a-fA-F]{3,8}\b")
+NAMED_COLOR_RE = re.compile(
+    r":\s*(?:white|black|red|green|blue|gray|grey|silver|maroon|navy|teal|olive|purple|orange|yellow)\s*(?:!important\s*)?;"
+)
 EMOJI_RE = re.compile(
     "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F000-\U0001F2FF"
     "\U000025A0-\U000025FF\U00002B00-\U00002BFF]"
@@ -54,14 +58,15 @@ AREAS = ["SHL", "DS", "INT", "FBK", "DAT", "A11Y", "I18N", "PRF", "CMP", "SEC", 
 STATUS = {"✅", "🔀", "📅", "💭"}
 GATES = {"G0", "G1", "G2", "G3", "—"}
 
-# Measured baseline on 2026-10-29. ``--baseline`` fails on regression above
+# Measured baseline on 2026-11-02. ``--baseline`` fails on regression above
 # these values; ``--strict`` requires zero debt (the G2 gate).
 DEBT_BASELINE = {
-    "colors": 731,
-    "colors_func": 61,
-    "emoji": 63,
-    "dialogs": 5,
-    "cjk": 858,
+    "colors": 0,
+    "colors_func": 0,
+    "emoji": 0,
+    "dialogs": 0,
+    "cjk": 975,
+    "zindex": 0,
 }
 
 
@@ -133,17 +138,54 @@ def check_ids() -> list[str]:
 
 
 FUNC_COLOR_RE = re.compile(r"\b(?:rgba?|hsla?)\s*\(")
+Z_INDEX_RE = re.compile(r"z-index\s*:\s*([^;]+);")
+Z_INDEX_BANDS = ((0, 0), (10, 19), (20, 29), (30, 39), (40, 49), (60, 69), (90, 99))
+
+
+def in_z_band(value: int) -> bool:
+    return any(low <= value <= high for low, high in Z_INDEX_BANDS)
+
+
+def check_zindex() -> tuple[list[str], dict[str, int]]:
+    """DESIGN_SYSTEM §7: every z-index is a --z-* token within the scale."""
+    failures: list[str] = []
+    for path in iter_files((".css",)):
+        for raw in Z_INDEX_RE.findall(path.read_text(encoding="utf-8", errors="ignore")):
+            value = raw.strip()
+            if value.startswith("var(--z-"):
+                continue
+            if value in ("auto", "inherit", "initial", "unset", "revert"):
+                continue
+            if path == TOKEN_FILE:
+                try:
+                    numeric = int(value)
+                except ValueError:
+                    failures.append(f"{rel(path)}: z-index {value!r} is not a number")
+                    continue
+                if not in_z_band(numeric):
+                    failures.append(f"{rel(path)}: z-index {numeric} is outside the §7 scale")
+                continue
+            failures.append(f"{rel(path)}: z-index {value!r} must use a --z-* token")
+    for path in iter_files((".tsx",)):
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        for match in re.finditer(r"zIndex\s*:\s*(\d+)", text):
+            failures.append(f"{rel(path)}: inline zIndex {match.group(1)} must use a --z-* token")
+    return failures, {"zindex": len(failures)}
+
+
+TOKEN_FILE = WEB / "globals.css"
 
 
 def check_tokens() -> tuple[list[str], dict[str, int]]:
-    """Hardcoded colours in user-facing stylesheets (hex + rgb/hsl)."""
+    """Hardcoded colours outside the token file (hex + rgb/hsl)."""
     hex_total = 0
     func_total = 0
     for path in iter_files((".css",)):
-        if "tokens" in path.name:
+        # DESIGN_SYSTEM §2.4: literals are allowed only in the token source.
+        if "tokens" in path.name or path == TOKEN_FILE:
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
-        hex_total += len(HEX_RE.findall(text))
+        hex_total += len(HEX_RE.findall(text)) + len(NAMED_COLOR_RE.findall(text))
         func_total += len(FUNC_COLOR_RE.findall(text))
     return [], {"colors": hex_total, "colors_func": func_total}
 
@@ -246,9 +288,10 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true", help="zero-debt gate: fail on any debt")
     parser.add_argument("--baseline", action="store_true", help="fail when debt exceeds the 2026-10-29 baseline")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
-    parser.add_argument("--only", default="", help="comma list: ids,tokens,emoji,dialogs,strings,keymap,errors")
+    parser.add_argument("--only", default="", help="comma list: ids,tokens,zindex,emoji,dialogs,strings,keymap,errors")
     parser.add_argument("--ids", action="store_true", help="alias for --only ids")
     parser.add_argument("--tokens", action="store_true", help="alias for --only tokens")
+    parser.add_argument("--zindex", action="store_true", help="alias for --only zindex")
     parser.add_argument("--emoji", action="store_true", help="alias for --only emoji")
     parser.add_argument("--dialogs", action="store_true", help="alias for --only dialogs")
     parser.add_argument("--strings", action="store_true", help="alias for --only strings")
@@ -257,7 +300,7 @@ def main() -> int:
     args = parser.parse_args()
 
     wanted = {p.strip() for p in args.only.split(",") if p.strip()}
-    for flag in ("ids", "tokens", "emoji", "dialogs", "strings", "keymap", "errors"):
+    for flag in ("ids", "tokens", "zindex", "emoji", "dialogs", "strings", "keymap", "errors"):
         if getattr(args, flag):
             wanted.add(flag)
     failures: list[str] = []
@@ -278,6 +321,7 @@ def main() -> int:
     run("keymap", check_keymap)
     run("errors", check_errors)
     run("tokens", check_tokens)
+    run("zindex", check_zindex)
     run("emoji", check_emoji)
     run("dialogs", check_dialogs)
     run("strings", check_strings)
@@ -301,7 +345,7 @@ def main() -> int:
         return 1 if all_failures else 0
 
     print("UI contract checks")
-    for key in ("colors", "colors_func", "emoji", "dialogs", "cjk"):
+    for key in ("colors", "colors_func", "zindex", "emoji", "dialogs", "cjk"):
         if key in metrics:
             print(f"  {key:11s}: {metrics[key]}")
     print(f"  failures: {len(all_failures)}")

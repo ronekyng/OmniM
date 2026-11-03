@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图批次组织。
 
-**最后更新：2026-10-30**
+**最后更新：2026-11-03**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,47 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-11-03] — Phase 8-1/2/3/4：领域交付批次
+
+### 新增（Added）
+- **门窗面板变体**：door/window 请求 `leaf_count`（门 1–2/窗 1–4，多扇间加中梃）、`with_sill`（窗台外挑板）与 `with_lintel`（过梁）；对象记录 frame 变体属性。
+- **门窗表**：`GET /api/schedules/openings?root_id=` 对容器子树（或全项目）按 (类型, 洞口尺寸[mm], 框变体) 分组计数。
+- **地形 TIN 拟合**：`genrule: terrain` 由 ≥3 个测点 Bowyer–Watson 三角网入库（`ObjectType::TerrainModel`，TIN 网面 + survey_points/统计属性）；重复 XY 取首个标高，共线测点拒绝。
+- **标高查询与土方**：`GET /api/terrain/{id}/elevation?x=&y=` 重心插值（出凸包 404）；`POST /api/earthwork`（内联测点或地形对象 + design_z/cell）格网 cut/fill/net 积分，凸包外格元计数不外推。
+- **桥/隧全线对齐**：新增 `genrule: bridge`（叠合桥面板，授权 bridge × linear）与 `genrule: tunnel`（环形衬砌管沿全折线扫掠，复用路径管线内核），修"桥/隧只用首末点"。
+- **分支管道**：pipe 支持 `branch_of`/`branch_point`/`target`——branch_point 吸附宿主管道路由（容差 0.1 m），创建三通管件 + 路由支管（Pipe-Path 实例化），单步撤销。
+- **运动副**：`/api/joints`（revolute/prismatic/fixed/spherical）——轴归一化、限位成对校验（弧度/米）、无序端点对同种类去重；删除端点对象级联移除触点运动副，单步撤销还原对象+运动副。
+- **BOM/工程量端点**：`GET /api/objects/{id}/bom` 返回容器**全部子孙**行（kind=component/part/proxy、目录来源、包围盒体积 m³）与 `totals`；叶子返回自身；未知 id 404。属性面板选中装配容器时渲染该表（含"合计（包围盒估算）"）。
+- **树行 grid 布局修复**：嵌套子树曾是 flex 兄弟项把行内标签挤到 0 宽（点击装配行会误选子行）；改为 grid。
+
+### 新增（Added）
+- **地形 TIN 拟合**：`genrule: terrain` 由 ≥3 个测点 Bowyer–Watson 三角网入库（`ObjectType::TerrainModel`，TIN 网面 + survey_points/统计属性）；重复 XY 取首个标高，共线测点拒绝。
+- **标高查询与土方**：`GET /api/terrain/{id}/elevation?x=&y=` 重心插值（出凸包 404）；`POST /api/earthwork`（内联测点或地形对象 + design_z/cell）格网 cut/fill/net 积分，凸包外格元计数不外推。
+- **桥/隧全线对齐**：新增 `genrule: bridge`（叠合桥面板，授权 bridge × linear）与 `genrule: tunnel`（环形衬砌管沿全折线扫掠，复用路径管线内核），修"桥/隧只用首末点"。
+- **分支管道**：pipe 支持 `branch_of`/`branch_point`/`target`——branch_point 吸附宿主管道路由（容差 0.1 m），创建三通管件 + 路由支管（Pipe-Path 实例化），单步撤销。
+- **运动副**：`/api/joints`（revolute/prismatic/fixed/spherical）——轴归一化、限位成对校验（弧度/米）、无序端点对同种类去重；删除端点对象级联移除触点运动副，单步撤销还原对象+运动副。
+- **BOM/工程量端点**：`GET /api/objects/{id}/bom` 返回容器**全部子孙**行（kind=component/part/proxy、目录来源、包围盒体积 m³）与 `totals`；叶子返回自身；未知 id 404。属性面板选中装配容器时渲染该表（含"合计（包围盒估算）"）。
+- **树行 grid 布局修复**：嵌套子树曾是 flex 兄弟项把行内标签挤到 0 宽（点击装配行会误选子行）；改为 grid。
+
+## [2026-11-02] — G2 设计系统 / 无障碍切片
+
+### 新增（Added）
+- **语义令牌与双主题**：`globals.css` 成为唯一令牌源，补齐 surface/border/text/accent/status/button/syntax/viewport 语义层；浅色主题完整覆盖，`theme.spec.ts` 断言无重载切换、持久化与双主题 AA 对比度。
+- **z-index 分层**：按 §7 定义 `--z-*` 刻度，组件样式零魔数；新增 `zindex` 契约检查。
+- **单一图标集**：标题栏、树、标签、库/系列管理、草图特征与领域快捷创建改用 16×16 单色 SVG，emoji/图形字符图标清零。
+- **对话框与焦点契约**：`useDialogFocus` 统一焦点陷阱、背景 inert、Esc 与焦点归还；确认框默认焦点落在 Cancel。
+- **破坏性确认影响**：删除前统计容器子对象（按类型）、说明非容器子对象提升与可撤销；对象树右键删除接入同一确认。
+- **ARIA 与键盘**：对象树 `tree/treeitem` + roving Tab/方向键/Enter/Home/End；标签 `tablist/tab/tabpanel`；工具栏、菜单、属性表、Toast、视口语义；`F6` 区域循环、路由 h1 与错误兜底焦点。
+- **axe 审计**：首启、打开、创建、选中、保存失败与错误兜底纳入 `axe.spec.ts`，当前 0 violations；`npm run test:a11y` 可单独执行。
+- **撤销/重做回归**：补 60 步深度、200 步上限、redo 回放与网格更新端点测试，历史上限内外的行为均有断言。
+- **命令面**：`Ctrl/Cmd+K` 命令面板（过滤、方向键、Enter 执行）、`F1` 快捷键帮助、全局撤销/重做快捷键；新增纯键盘 J1（创建楼层并保存）走查。
+- **就地重命名**：树行 F2/双击进入输入态，Enter/失焦提交、Esc 取消；属性表 ↑↓/Home/End 行导航。
+
+### 修复（Fixed）
+- **令牌重复与构建失败**：删除 `styles.css` 重复 `:root`；修复 toast 容器悬空 `max-width` 导致的 `vite build` 失败。
+- **样例项目 409**：项目首页在列表未就绪或存在孤立同名文件时会撞 slug；现等待列表加载、同时按显示名与文件 slug 去重，并在 409 时后缀重试。
+- **树键盘双跳**：嵌套 `treeitem` 的 keydown 冒泡会让一次方向键触发多级移动，现仅事件源行响应。
 
 ## [2026-10-30] — 创建显示与朝向修复
 

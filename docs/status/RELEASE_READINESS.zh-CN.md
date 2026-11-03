@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端发布就绪度"
 status: current
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "2026-10-30 依据 REQUIREMENTS_REGISTER 与 FRONTEND_MATURITY 评估门禁状态；并入建模师 UI/UX 复验（G1 体验档）口径区分"
 ---
@@ -61,7 +61,7 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-SHL-07 上下文功能区 | ✅ | 四专业切换仅替换命令集（`ribbon.spec.ts`）+ 当前工具指示 + 组标签 |
 | UI-SHL-08 状态栏读数 | ✅ | `web/e2e/shell.spec.ts` 断言坐标/选择/单位/保存；开发者模式断言 FPS |
 | UI-SHL-10 标题与面包屑 | ✅ | 工作区面包屑 + 编辑器层 `PageBreadcrumb`；`editors.spec.ts` 覆盖 Series/Library 返回 |
-| UI-DS-02 深浅主题切换 | 🔀 | `data-theme` + `localStorage` 持久化 + OS 默认；标题栏切换；语义令牌迁移（UI-DS-04）与截图证据待补 |
+| UI-DS-02 深浅主题切换 | ✅ | `data-theme` + `localStorage` + OS 默认；`theme.spec.ts` 断言无重载切换、持久化与双主题 WCAG AA 对比度 |
 | UI-INT-01 五种选择手势 | 🔀 | 单击/Ctrl/框选已有；Esc 先取消工具 |
 | UI-INT-02 拾取状态机 | ✅ | `stateMachine.test.ts` |
 | UI-INT-04 输入时不触发快捷键 | ✅ | `web/e2e/shell.spec.ts` 在名称输入框按 Delete，对象未被删除；注册表统一属 UI-INT-03 |
@@ -78,7 +78,7 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | UI-DAT-03 脏状态 | ✅ | `data.spec.ts` 断言 dirty 文案与 Save 后 clean |
 | UI-DAT-06 未保存拦截 | 🔀 | `data.spec.ts` 覆盖 dirty→Stay、dirty→Leave、clean→离开；刷新/新建与 beforeunload 分支待补 |
 
-**G1 判定：** 📅 **未就绪。** 25 条中 22 条完成（`UI-SHL-01…06/08/10`、`UI-INT-02/04/09`、`UI-FBK-01/02/05/06/07/08/09`、`UI-DAT-01/02/03`），3 条部分实现，0 条缺失。
+**G1 判定：** 📅 **未就绪。** 25 条中 23 条完成（`UI-SHL-01/02/03/04/05/06/07/08/10`、`UI-DS-02`、`UI-INT-02/04/09`、`UI-FBK-01/02/05/06/07/08/09`、`UI-DAT-01/02/03`），2 条部分实现（`UI-INT-01`、`UI-DAT-06`），0 条缺失。
 
 > **验收记录（2026-10-30，口径区分）。** 建模师 UI/UX 复验（[MODELER_UIUX_REAUDIT_2026-10-30](MODELER_UIUX_REAUDIT_2026-10-30.zh-CN.md)）以**可用原型（G1）档的 UI/UX 维度**正式放行：两个 P0-UX（保存假警报、单位陷阱）已关闭。这不改变上表按 RTM 逐条判定的门禁状态——25 条仍以 `REQUIREMENTS_REGISTER` 的验证证据为准，本看板不因"体验验收通过"而升级门禁。
 
@@ -86,17 +86,17 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 
 | 域 | 要求 | 状态 |
 |---|---|---|
-| 设计系统（12） | 令牌、主题、图标、视口调色板；3 项完备度延至 G3 | 📅 |
-| 可访问性（8） | 关键路径 WCAG 2.2 AA；动效与实时播报延至 G3 | 📅 |
+| 设计系统（12） | 令牌、主题、图标、视口调色板；3 项完备度延至 G3 | 🔀 5/12（DS-02/03/04/08/09 完成） |
+| 可访问性（8） | 关键路径 WCAG 2.2 AA；动效与实时播报延至 G3 | 🔀 4/8（A11Y-01/02/03/04 完成；读屏评审随 A11Y-05，aria-label 本地化随 I18N-01） |
 | 国际化（7） | 100% 外置且可切换；伪语言延至 G3 | 📅 |
 | 性能（8） | 全部预算在 CI 强制 | 📅 |
 | 反馈（剩余） | 进度、带码错误、提示 | 🔀 |
 | 数据完整性（剩余） | 自动保存、恢复、元信息 | 📅 |
-| 交互（剩余） | 命令注册表、弹窗、撤销历史 | 🔀 |
+| 交互（剩余） | 命令注册表（撤销历史、弹窗与焦点管理已收口） | 🔀 |
 
 **2026-10-29 延至 G3**（O1 门禁再平衡）：`UI-DS-05`、`UI-DS-07`、`UI-DS-10`、`UI-A11Y-06`、`UI-A11Y-08`、`UI-I18N-05`。理由：G2 是外部试点门禁，完备度层级属于 GA。`UI-DS-08` 保留在 G2，因为 z-index 分层是壳体重写的前置条件且成本低。
 
-**G2 判定：** 📅 **未就绪。**
+**G2 判定：** 🔀 **进行中。** 37 条中 12 条完成（`UI-SHL-12`、`UI-DS-03/04/08/09`、`UI-INT-06/07/08`、`UI-A11Y-01/02/03/04`），5 条部分实现，20 条未开始。
 
 ## 6. G3 GA 就绪
 
@@ -117,7 +117,6 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 
 | # | 问题 | 门禁 | 责任人 | 需求 |
 |---|---|---|---|---|
-| B6 | 令牌在 731 处被绕过 | G2 | 前端 | UI-DS-04 |
 | B7 | 无 i18n 层 | G2 | 前端 | UI-I18N-01 |
 | B8 | 无可访问性语义 | G2 | 前端 | UI-A11Y-04 |
 | B9 | 持续渲染循环；无实例化 | G2 | 前端 | UI-PRF-03/04 |
@@ -131,6 +130,17 @@ G1 的 25 条需求完整清单（从登记册生成，不是挑选子集）。
 | 2026-10-29 | — | 基线完成测量 | [FRONTEND_BASELINE](FRONTEND_BASELINE.zh-CN.md) |
 | 2026-10-29 | G1（部分） | 外壳/可靠性切片：属性停靠、布局持久化、标题/状态栏、错误边界、共享弹窗、显式保存/另存为、自动命名 | `web/src/__tests__/{layout,saveState,naming}.test.ts`；Rust `persistence::save_as_retargets_the_session_and_rejects_bad_paths` |
 | 2026-10-29 | G1（部分） | 项目首页：会话门禁、新建/打开/最近/示例、允许根目录 | `crates/server/tests/projects.rs`；`web/src/__tests__/recentProjects.test.ts` |
+| 2026-11-02 | G2（部分） | 语义令牌迁移（UI-DS-04）：`globals.css` 单份令牌，组件字面量颜色 0；令牌引用与浅色覆盖有单测 | `scripts/check_ui_contracts.py --only tokens`；`web/src/__tests__/designTokens.test.ts` |
+| 2026-11-02 | G1/G2（DS-02/03） | 双主题切换：无重载、持久化、OS 默认、双主题 AA 对比度 | `web/e2e/theme.spec.ts` |
+| 2026-11-02 | G2（INT-06/07） | 对话框族焦点管理、背景 inert、焦点归还；删除影响按子对象类型计数 | `web/e2e/dialogs.spec.ts`；`web/src/__tests__/deleteImpact.test.ts` |
+| 2026-11-02 | G2（DS-08） | z-index 收敛到 §7 刻度令牌，组件样式零魔数 | `check_ui_contracts.py --only zindex`；`web/src/__tests__/designTokens.test.ts` |
+| 2026-11-02 | G2（DS-09） | emoji/图形字符图标清零，统一 16×16 单色 SVG 图标集（currentColor、1.5 描边） | `check_ui_contracts.py --only emoji`（0）；`web/src/app/components/Icons.tsx` |
+| 2026-11-02 | G2（A11Y-04） | 对象树/停靠标签/底停靠标签/工具栏/菜单/属性表/Toast/视口语义与键盘行为 | `web/e2e/a11y.spec.ts` |
+| 2026-11-02 | G2（A11Y-03） | `:focus-visible` 2 px 环、F6 区域循环、删除后焦点迁移、路由 h1 与错误兜底焦点 | `web/e2e/focus.spec.ts` |
+| 2026-11-02 | G2（A11Y-01） | axe 审计关键路径：首启、打开、创建、选中、保存失败、错误兜底，0 violations | `web/e2e/axe.spec.ts`；`npm run test:a11y` |
+| 2026-11-02 | G2（INT-08） | 撤销/重做深度 60、上限 200、redo 回放与网格更新端点 | `crates/server/tests/write_paths.rs`；`crates/server/tests/datum.rs` |
+| 2026-11-02 | G2（SHL-12/A11Y-02 部分） | 命令面板、F1 快捷键帮助、纯键盘 J1（创建楼层并保存） | `web/e2e/commands.spec.ts` |
+| 2026-11-03 | G2（A11Y-02 收口） | F2 就地重命名、属性行方向键、Esc；树双击语义改为重命名 | `web/e2e/a11y.spec.ts` |
 
 ## 9. 非目标
 

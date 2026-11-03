@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '../../shared/api';
 import type { MeshInfo, MeshMaterial } from './ThreeViewer';
-import type { OmniObject, ObjectPropertyDef, TreeNode } from '../../shared/types';
+import type { BomResponse, OmniObject, ObjectPropertyDef, TreeNode } from '../../shared/types';
 import type { CreationForm, CreationPhase } from '../../shared/types/creation';
 import { CATALOG_TYPES } from '../../shared/catalog';
 import { CatalogParams } from './create/CatalogParams';
 import { PropertyDefPanel } from './PropertyDefPanel';
+import { IcoClose } from './Icons';
 import { SkeletonLines } from './Loading';
 import { useDelayedLoading } from '../../shared/useDelayedLoading';
 
@@ -41,10 +42,64 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
   const [localIfc, setLocalIfc] = useState('');
   const [localDesc, setLocalDesc] = useState('');
   const [material, setMaterial] = useState<MeshMaterial>({ color: '#cccccc', roughness: 0.5, metalness: 0.1 });
+  const [bom, setBom] = useState<BomResponse | null>(null);
+  const tableRef = useRef<HTMLDivElement | null>(null);
+
+  // A11Y §3: arrow keys move between property rows; Esc leaves the cell.
+  const handleTableKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    const row = target.closest<HTMLElement>('[role="row"]');
+    if (!row || !tableRef.current) return;
+    const rows = Array.from(tableRef.current.querySelectorAll<HTMLElement>('[role="row"]'));
+    const index = rows.indexOf(row);
+    const focusCell = (nextRow: HTMLElement | undefined, last = false) => {
+      if (!nextRow) return;
+      const cells = Array.from(nextRow.querySelectorAll<HTMLElement>('[role="cell"]'));
+      const cell = last ? cells[cells.length - 1] : cells[0];
+      cell?.querySelector<HTMLElement>('input, select, textarea, button')?.focus();
+    };
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      focusCell(rows[index + 1]);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      focusCell(rows[index - 1]);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      focusCell(row);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      focusCell(row, true);
+    } else if (event.key === 'Escape') {
+      target.blur();
+    }
+  };
 
   const selectedCount = selectedIds?.length ?? 0;
   const primaryId = selectedCount === 1 ? selectedIds![0] : null;
   const showSkeleton = useDelayedLoading(loading);
+
+  // Phase 8-4 (ASSEMBLY §1): BOM lines for an Assembly container.
+  useEffect(() => {
+    let cancelled = false;
+    setBom(null);
+    if (typeof window !== 'undefined') console.log('[bom] effect', primaryId);
+    if (!primaryId) return undefined;
+    api
+      .objectBom(primaryId)
+      .then((res) => {
+        if (typeof window !== 'undefined') console.log('[bom] res', JSON.stringify({ root: res.root_object_type, rootId: res.root_id, n: res.rows.length }));
+        if (!cancelled && res.root_object_type === 'Assembly' && res.rows.length > 0) {
+          setBom(res);
+        }
+      })
+      .catch(() => {
+        /* not an assembly, or the server declined — no BOM section */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [primaryId, reloadKey]);
 
   // Load object + property defs when single selection changes
   useEffect(() => {
@@ -179,7 +234,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
               {panelMode === 'floating' ? '⊞' : '⊟'}
             </button>
-            <button className="close-btn" onClick={onClose} title="Close">✕</button>
+            <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
           </div>
         </div>
         {error && <p className="error">{error}</p>}
@@ -188,19 +243,19 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
           <h3>基本属性</h3>
           <div className="prop-row">
             <span className="prop-label">类型</span>
-            <input className="prop-value" readOnly value={ct} />
+            <input className="prop-value" readOnly value={ct} aria-label="Type" />
           </div>
           <div className="prop-row">
             <span className="prop-label">名称</span>
-            <input className="prop-value" value={creatingForm.name} placeholder={`${ct}-...`} onChange={(e) => handleChange({ name: e.target.value })} />
+            <input className="prop-value" value={creatingForm.name} aria-label="Name" placeholder={`${ct}-...`} onChange={(e) => handleChange({ name: e.target.value })} />
           </div>
           <div className="prop-row">
             <span className="prop-label">IFC Class</span>
-            <input className="prop-value" value={localIfc} onChange={(e) => { setLocalIfc(e.target.value); notifyExtra(e.target.value, localDesc); }} />
+            <input className="prop-value" value={localIfc} aria-label="IFC Class" onChange={(e) => { setLocalIfc(e.target.value); notifyExtra(e.target.value, localDesc); }} />
           </div>
           <div className="prop-row">
             <span className="prop-label">描述</span>
-            <textarea className="prop-value-text" value={localDesc} onChange={(e) => { setLocalDesc(e.target.value); notifyExtra(localIfc, e.target.value); }} rows={2} />
+            <textarea className="prop-value-text" value={localDesc} aria-label="Description" onChange={(e) => { setLocalDesc(e.target.value); notifyExtra(localIfc, e.target.value); }} rows={2} />
           </div>
         </div>
 
@@ -218,16 +273,16 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
               <>
                 <div className="prop-row">
                   <span className="prop-label">起点</span>
-                  <input className="prop-value" readOnly value={startStrFrom(creatingForm)} />
+                  <input className="prop-value" readOnly value={startStrFrom(creatingForm)} aria-label="Start point" />
                 </div>
                 <div className="prop-row">
                   <span className="prop-label">终点</span>
-                  <input className="prop-value" readOnly value={endStrFrom(creatingForm)} />
+                  <input className="prop-value" readOnly value={endStrFrom(creatingForm)} aria-label="End point" />
                 </div>
                 <div className="prop-row">
                   <span className="prop-label">长度</span>
                   <div className="prop-row-inline">
-                    <input className="prop-value" value={creatingForm.length} onChange={(e) => handleChange({ length: e.target.value })} />
+                    <input className="prop-value" value={creatingForm.length} aria-label="Length" onChange={(e) => handleChange({ length: e.target.value })} />
                     <span className="prop-value">m</span>
                   </div>
                 </div>
@@ -236,7 +291,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             {!isLinear && posStr && (
               <div className="prop-row">
                 <span className="prop-label">位置</span>
-                <input className="prop-value" value={posStr} readOnly />
+                <input className="prop-value" value={posStr} readOnly aria-label="Position" />
               </div>
             )}
             </div>
@@ -270,7 +325,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
               {panelMode === 'floating' ? '⊞' : '⊟'}
             </button>
-            <button className="close-btn" onClick={onClose} title="Close">✕</button>
+            <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
           </div>
         </div>
         <div className="propsets-section">
@@ -336,7 +391,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
           <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
             {panelMode === 'floating' ? '⊞' : '⊟'}
           </button>
-          <button className="close-btn" onClick={onClose} title="Close">✕</button>
+          <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
         </div>
       </div>
       {loading && <div className="panel-loading-line" aria-hidden="true" />}
@@ -348,24 +403,26 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
       )}
 
       <form onSubmit={(event) => void save(event)}>
-        <div className="prop-row"><span className="prop-label">Type</span><input className="prop-value" readOnly value={typeName} /></div>
-        <div className="prop-row"><span className="prop-label">Name</span><input className="prop-value" name="name" key={`name-${object.id}`} defaultValue={object.name} /></div>
-        <div className="prop-row"><span className="prop-label">IFC Class</span><input className="prop-value" name="ifc_class" key={`ifc-${object.id}`} defaultValue={object.ifc_class} /></div>
+        <div ref={tableRef} role="table" aria-label="Object properties" aria-rowcount={3 + (meshInfo ? 5 : 0)} aria-colcount={2} onKeyDown={handleTableKeyDown}>
+        <div className="prop-row" role="row"><span className="prop-label" role="rowheader">Type</span><span className="prop-cell" role="cell"><input aria-label="Type" className="prop-value" readOnly value={typeName} /></span></div>
+        <div className="prop-row" role="row"><span className="prop-label" role="rowheader">Name</span><span className="prop-cell" role="cell"><input aria-label="Name" className="prop-value" name="name" key={`name-${object.id}`} defaultValue={object.name} /></span></div>
+        <div className="prop-row" role="row"><span className="prop-label" role="rowheader">IFC Class</span><span className="prop-cell" role="cell"><input aria-label="IFC Class" className="prop-value" name="ifc_class" key={`ifc-${object.id}`} defaultValue={object.ifc_class} /></span></div>
         {meshInfo && (
           <>
-            <div className="prop-row"><span className="prop-label">Triangles</span><input className="prop-value" readOnly value={meshInfo.tcount} /></div>
-            <div className="prop-row"><span className="prop-label">Vertices</span><input className="prop-value" readOnly value={meshInfo.vcount} /></div>
-            <div className="prop-row"><span className="prop-label">Size (XYZ)</span><input className="prop-value" readOnly value={`${size[0]} × ${size[1]} × ${size[2]}`} /></div>
-            <div className="prop-row"><span className="prop-label">BBox Min</span><input className="prop-value" readOnly value={`${bbox[0][0].toFixed(2)}, ${bbox[0][1].toFixed(2)}, ${bbox[0][2].toFixed(2)}`} /></div>
-            <div className="prop-row"><span className="prop-label">BBox Max</span><input className="prop-value" readOnly value={`${bbox[1][0].toFixed(2)}, ${bbox[1][1].toFixed(2)}, ${bbox[1][2].toFixed(2)}`} /></div>
+            <div className="prop-row" role="row"><span className="prop-label" role="rowheader">Triangles</span><span className="prop-cell" role="cell"><input aria-label="Triangles" className="prop-value" readOnly value={meshInfo.tcount} /></span></div>
+            <div className="prop-row" role="row"><span className="prop-label" role="rowheader">Vertices</span><span className="prop-cell" role="cell"><input aria-label="Vertices" className="prop-value" readOnly value={meshInfo.vcount} /></span></div>
+            <div className="prop-row" role="row"><span className="prop-label" role="rowheader">Size (XYZ)</span><span className="prop-cell" role="cell"><input aria-label="Size (XYZ)" className="prop-value" readOnly value={`${size[0]} × ${size[1]} × ${size[2]}`} /></span></div>
+            <div className="prop-row" role="row"><span className="prop-label" role="rowheader">BBox Min</span><span className="prop-cell" role="cell"><input aria-label="BBox Min" className="prop-value" readOnly value={`${bbox[0][0].toFixed(2)}, ${bbox[0][1].toFixed(2)}, ${bbox[0][2].toFixed(2)}`} /></span></div>
+            <div className="prop-row" role="row"><span className="prop-label" role="rowheader">BBox Max</span><span className="prop-cell" role="cell"><input aria-label="BBox Max" className="prop-value" readOnly value={`${bbox[1][0].toFixed(2)}, ${bbox[1][1].toFixed(2)}, ${bbox[1][2].toFixed(2)}`} /></span></div>
           </>
         )}
-        {onGetMaterial && onSetMaterial && primaryId && (
+        </div>
+{onGetMaterial && onSetMaterial && primaryId && (
           <div className="propsets-section">
             <h3>材质</h3>
             <div className="prop-row">
               <span className="prop-label">颜色</span>
-              <input className="prop-value" type="color" value={material.color}
+              <input className="prop-value" type="color" value={material.color} aria-label="Color"
                 onChange={(e) => {
                   const next = { ...material, color: e.target.value };
                   setMaterial(next);
@@ -375,7 +432,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             </div>
             <div className="prop-row">
               <span className="prop-label">粗糙度</span>
-              <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.roughness}
+              <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.roughness} aria-label="Roughness"
                 onChange={(e) => {
                   const next = { ...material, roughness: parseFloat(e.target.value) };
                   setMaterial(next);
@@ -386,7 +443,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             </div>
             <div className="prop-row">
               <span className="prop-label">金属度</span>
-              <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.metalness}
+              <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.metalness} aria-label="Metalness"
                 onChange={(e) => {
                   const next = { ...material, metalness: parseFloat(e.target.value) };
                   setMaterial(next);
@@ -399,8 +456,30 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         )}
         <div className="prop-row">
           <span className="prop-label">Description</span>
-          <textarea className="prop-value-text" name="description" key={`desc-${object.id}`} defaultValue={object.description} rows={2} />
+          <textarea className="prop-value-text" name="description" aria-label="Description" key={`desc-${object.id}`} defaultValue={object.description} rows={2} />
         </div>
+        {bom && (
+          <div className="propsets-section">
+            <h3>BOM / 工程量</h3>
+            <div role="table" aria-label="Bill of materials" aria-colcount={4} aria-rowcount={bom.rows.length + 1}>
+              <div className="bom-row bom-row-head" role="row">
+                <span role="columnheader">对象</span>
+                <span role="columnheader">类型</span>
+                <span role="columnheader">来源</span>
+                <span role="columnheader">体积 m³</span>
+              </div>
+              {bom.rows.map((row) => (
+                <div className="bom-row" role="row" key={row.object_id}>
+                  <span role="cell" title={row.name}>{row.name}</span>
+                  <span role="cell">{row.object_type}</span>
+                  <span role="cell">{row.component_def_id ? '目录' : row.kind === 'part' ? '基本体' : '代理'}</span>
+                  <span role="cell">{row.bbox_volume_m3 != null ? row.bbox_volume_m3.toFixed(2) : '—'}</span>
+                </div>
+              ))}
+            </div>
+            <small className="hint">合计 {bom.totals.total_volume_m3.toFixed(2)} m³（包围盒估算）</small>
+          </div>
+        )}
         <div className="form-actions">
           <button type="submit" disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
         </div>

@@ -1,7 +1,7 @@
 ---
 title: "OmniM UI Design System"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -49,7 +49,7 @@ Names use semantic roles, never visual descriptions (`--surface-panel`, not `--g
 Themes are applied on `<html data-theme="dark|light|hc">`. All semantic tokens are redefined per theme in one place:
 
 ```css
-:root, [data-theme="dark"] { color-scheme: dark;  --surface-app: #16181d; }
+:root, [data-theme="dark"] { color-scheme: dark;  --surface-app: #1a1d23; }
 [data-theme="light"]      { color-scheme: light; --surface-app: #f4f6f9; }
 [data-theme="hc"]         { color-scheme: dark;  --surface-app: #000000; }
 ```
@@ -73,20 +73,20 @@ The primary engineering theme. Neutral, low-chroma surfaces; one blue accent; st
 
 | Role | Value |
 |---|---|
-| App background | `#16181d` |
-| Panel surface | `#1b1e24` |
-| Elevated surface | `#22262e` |
+| App background | `#1a1d23` |
+| Panel surface | `#14161c` |
+| Elevated surface | `#1e2128` |
 | Sunken surface | `#121418` |
-| Border default | `#2e333c` |
-| Border strong | `#3d444f` |
-| Text primary | `#e6e8eb` |
-| Text secondary | `#b3b9c4` |
-| Text muted | `#8b93a1` |
-| Text disabled | `#5a616e` |
+| Border default | `#2a2d35` |
+| Border strong | `#3a3d4a` |
+| Text primary | `#e0e0e0` |
+| Text secondary | `#ccc` |
+| Text muted | `#888` |
+| Text disabled | `#555` |
 | Accent | `#4a90d9` |
 | Accent hover | `#5ba0e9` |
-| Accent active | `#3d7fc4` |
-| Focus ring | `#7fc4ff` |
+| Accent active | `#4fc3f7` |
+| Focus ring | `#4fc3f7` |
 
 ### 3.2 Light theme and OS preference
 
@@ -95,19 +95,19 @@ The light theme is a **working theme**, not a print theme: contrast-stable on a 
 | Role | Value |
 |---|---|
 | App background | `#f4f6f9` |
-| Panel surface | `#ffffff` |
+| Panel surface | `#e9edf2` |
 | Elevated surface | `#ffffff` |
-| Sunken surface | `#e9edf2` |
+| Sunken surface | `#eef1f5` |
 | Border default | `#d5dae2` |
 | Border strong | `#b8c0cb` |
-| Text primary | `#1f2329` |
-| Text secondary | `#4a5260` |
-| Text muted | `#6b7482` |
-| Text disabled | `#a2aab6` |
-| Accent | `#1a6fd4` |
-| Accent hover | `#1560b8` |
-| Accent active | `#11509b` |
-| Focus ring | `#1a6fd4` |
+| Text primary | `#1c222b` |
+| Text secondary | `#374151` |
+| Text muted | `#5b6575` |
+| Text disabled | `#98a2b3` |
+| Accent | `#2f6fb3` |
+| Accent hover | `#3b7fc7` |
+| Accent active | `#1f5f9f` |
+| Focus ring | `#1f5f9f` |
 
 Rules:
 
@@ -120,18 +120,20 @@ Rules:
 
 | Semantic token | Dark | Light |
 |---|---|---|
-| `--surface-app` | `#16181d` | `#f4f6f9` |
-| `--surface-panel` | `#1b1e24` | `#ffffff` |
-| `--surface-elevated` | `#22262e` | `#ffffff` |
-| `--surface-sunken` | `#121418` | `#e9edf2` |
-| `--border-default` | `#2e333c` | `#d5dae2` |
-| `--text-primary` | `#e6e8eb` | `#1f2329` |
-| `--text-muted` | `#8b93a1` | `#6b7482` |
-| `--accent-default` | `#4a90d9` | `#1a6fd4` |
-| `--status-danger` | `#e05252` | `#c62828` |
-| `--status-warning` | `#e0a030` | `#a86400` |
-| `--status-success` | `#4caf72` | `#2e7d32` |
-| `--status-info` | `#4a90d9` | `#1565c0` |
+| `--surface-app` | `#1a1d23` | `#f4f6f9` |
+| `--surface-panel` | `#14161c` | `#e9edf2` |
+| `--surface-elevated` | `#1e2128` | `#ffffff` |
+| `--surface-sunken` | `#121418` | `#eef1f5` |
+| `--border-default` | `#2a2d35` | `#d5dae2` |
+| `--text-primary` | `#e0e0e0` | `#1c222b` |
+| `--text-muted` | `#888` | `#5b6575` |
+| `--accent-default` | `#4a90d9` | `#2f6fb3` |
+| `--status-danger` | `#f44336` | `#c62828` |
+| `--status-warning` | `#ff9800` | `#a15c00` |
+| `--status-success` | `#81c784` | `#2e7d32` |
+| `--status-info` | `#4a90d9` | `#2f6fb3` |
+
+The canonical values live in `web/src/globals.css`; this table mirrors that file. Component styles must not contain literal colours (`scripts/check_ui_contracts.py --only tokens` is 0).
 
 ### 3.4 High contrast
 
@@ -185,17 +187,17 @@ Shadows are for elevated surfaces only (popover, dialog, floating panel). Docked
 
 ## 7. Z-Index Scale
 
-| Band | Value | Layer |
-|---|---|---|
-| 0 | 0 | Viewport canvas |
-| 1 | 10–19 | Viewport overlays (view cube, tool strip, hints) |
-| 2 | 20–29 | Docks and splitters |
-| 3 | 30–39 | Popovers, menus, tooltips anchored to chrome |
-| 4 | 40–49 | Dialog backdrop and dialog |
-| 5 | 60–69 | Toasts and live-region announcements |
-| 6 | 90–99 | Debug overlays (never in production) |
+| Band | Value | Token | Layer |
+|---|---|---|---|
+| 0 | 0 | `--z-viewport` | Viewport canvas |
+| 1 | 10–19 | `--z-overlay`, `--z-local`, `--z-local-raised` | Viewport overlays (view cube, tool strip, hints) and local stacking |
+| 2 | 20–29 | `--z-dock`, `--z-resize` | Docks and splitters |
+| 3 | 30–39 | `--z-shell`, `--z-menu` | Popovers, menus, tooltips anchored to chrome |
+| 4 | 40–49 | `--z-dialog` | Dialog backdrop and dialog |
+| 5 | 60–69 | `--z-toast` | Toasts and live-region announcements |
+| 6 | 90–99 | `--z-debug` | Debug overlays (never in production) |
 
-No component may use a z-index outside these bands. Requirement: UI-DS-08.
+No component may use a z-index outside these bands; component styles may only read `var(--z-*)`. Requirement: UI-DS-08.
 
 ## 8. Iconography
 

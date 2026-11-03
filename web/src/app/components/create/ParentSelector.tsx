@@ -26,7 +26,7 @@ export function ParentSelector({ tree, value, onChange }: { tree?: TreeNode[]; v
   return (
     <div className="create-row create-row--labeled">
       <span className="field-label">放置于</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <select aria-label="Parent container" value={value} onChange={(e) => onChange(e.target.value)}>
         <option value="">-- 项目根级 --</option>
         {containers.map((c) => (
           <option key={c.id} value={c.id}>

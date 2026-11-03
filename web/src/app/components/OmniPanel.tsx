@@ -706,6 +706,17 @@ historyRawRef.current = [...historyRawRef.current, consoleInput];
     setExpandedCmd(expandedCmd === id ? null : id);
   }
 
+  function selectTab(tab: 'console' | 'ai') {
+    setActiveTab(tab);
+    requestAnimationFrame(() => document.getElementById(`omni-tab-${tab}`)?.focus());
+  }
+
+  function onTabKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    event.preventDefault();
+    selectTab(activeTab === 'console' ? 'ai' : 'console');
+  }
+
   function togglePanel(tab: 'console' | 'ai') {
     if (showPanel && activeTab === tab) {
       setShowPanel(false);
@@ -722,24 +733,36 @@ historyRawRef.current = [...historyRawRef.current, consoleInput];
       {showPanel && (
         <div className="omni-panel">
           <div className="omni-tabs">
-            <button
-              className={`omni-tab ${activeTab === 'console' ? 'active' : ''}`}
-              onClick={() => setActiveTab('console')}
-            >
-              {'>_ Console'}
-            </button>
-            <button
-              className={`omni-tab ${activeTab === 'ai' ? 'active' : ''}`}
-              onClick={() => setActiveTab('ai')}
-            >
-              AI
-            </button>
+            <div className="omni-tablist" role="tablist" aria-label="Bottom panel" onKeyDown={onTabKeyDown}>
+              <button
+                id="omni-tab-console"
+                role="tab"
+                aria-selected={activeTab === 'console'}
+                aria-controls="omni-panel-console"
+                tabIndex={activeTab === 'console' ? 0 : -1}
+                className={`omni-tab ${activeTab === 'console' ? 'active' : ''}`}
+                onClick={() => setActiveTab('console')}
+              >
+                {'>_ Console'}
+              </button>
+              <button
+                id="omni-tab-ai"
+                role="tab"
+                aria-selected={activeTab === 'ai'}
+                aria-controls="omni-panel-ai"
+                tabIndex={activeTab === 'ai' ? 0 : -1}
+                className={`omni-tab ${activeTab === 'ai' ? 'active' : ''}`}
+                onClick={() => setActiveTab('ai')}
+              >
+                AI
+              </button>
+            </div>
             <div className="omni-tab-spacer" />
             <button className="omni-btn close" onClick={() => setShowPanel(false)} title="Close">&times;</button>
           </div>
 
           {activeTab === 'console' ? (
-            <div className="omni-body omni-body-console">
+            <div id="omni-panel-console" className="omni-body omni-body-console" role="tabpanel" aria-labelledby="omni-tab-console" tabIndex={0}>
               {showReference ? (
                 <div className="console-reference">
                   {commandGroups.map(group => (
@@ -847,7 +870,7 @@ historyRawRef.current = [...historyRawRef.current, consoleInput];
               </div>
             </div>
           ) : (
-            <div className="omni-body">
+            <div id="omni-panel-ai" className="omni-body" role="tabpanel" aria-labelledby="omni-tab-ai" tabIndex={0}>
               <div className="aichat-body">
                 {messages.length === 0 && !aiError && (
                   <div className="aichat-empty">

@@ -1,7 +1,7 @@
 ---
 title: "OmniM Web Architecture — Current State"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "web/, crates/server"
 evidence: "audited against web/src on 2026-10-29 (21,801 lines across ts/tsx/css; 94 unit tests passing)"
 ---
@@ -131,8 +131,8 @@ Counts measured on 2026-10-29; they are the baseline for [FRONTEND_MATURITY](../
 |---|---|---|---|
 | D1 | Properties panel defaults to a centered floating overlay | `appStore.ts:89` `panelMode: 'floating'`; `AppLayout` `.floating-panel-overlay` uses `inset:0` + center | UI-SHL-03 |
 | D2 | No project home, new/open/save-as; client never calls `POST /api/project/save` | route table; zero `saveProject` references | UI-DAT-01, UI-DAT-02 |
-| D3 | 712 hardcoded colors in the 4,110-line global stylesheet (731 across all CSS) | `web/src/styles.css` | UI-DS-04 |
-| D4 | Tokens defined twice, then bypassed | `globals.css` and `styles.css` both define the same `:root` block | UI-DS-01 |
+| D3 | ~~712 hardcoded colors in the 4,110-line global stylesheet~~ **Closed (2026-11-02)**: zero literal colors outside the token file | `web/src/globals.css`, `scripts/check_ui_contracts.py` | UI-DS-04 |
+| D4 | ~~Tokens defined twice, then bypassed~~ **Closed (2026-11-02)**: tokens live only in `globals.css`; components reference `var(--*)` | `web/src/globals.css` | UI-DS-01 |
 | D5 | 63 emoji occurrences; 25 used as panel icons | `DomainPanels.tsx` `icon: '▦'` etc. | UI-DS-09 |
 | D6 | 52 `Date.now()` call sites, most building object names | `wall-${Date.now()}` pattern | UI-INT-09 |
 | D7 | 5 native dialogs | `window.confirm/alert/prompt` | UI-FBK-05 |

@@ -568,6 +568,46 @@ impl Validator {
                             errors.push(format!("grid line '{}' not found", dg.grid_line_id));
                         }
                     }
+
+                    // 2026-11-03 Phase 8-4: motion joint validation (ASSEMBLY §9)
+                    c::operation::Op::CreateJoint(cj) => validate_joint_fields(
+                        project,
+                        cj.name.trim(),
+                        cj.kind,
+                        &cj.from_object_id,
+                        &cj.to_object_id,
+                        cj.origin.as_ref(),
+                        cj.axis.as_ref(),
+                        cj.has_limits,
+                        cj.limit_min,
+                        cj.limit_max,
+                        None,
+                        &mut errors,
+                    ),
+                    c::operation::Op::UpdateJoint(uj) => {
+                        validate_joint_fields(
+                            project,
+                            uj.name.trim(),
+                            uj.kind,
+                            &uj.from_object_id,
+                            &uj.to_object_id,
+                            uj.origin.as_ref(),
+                            uj.axis.as_ref(),
+                            uj.has_limits,
+                            uj.limit_min,
+                            uj.limit_max,
+                            None,
+                            &mut errors,
+                        );
+                        if project.joints.get(&uj.joint_id).is_none() {
+                            errors.push(format!("joint '{}' not found", uj.joint_id));
+                        }
+                    }
+                    c::operation::Op::DeleteJoint(dj) => {
+                        if project.joints.get(&dj.joint_id).is_none() {
+                            errors.push(format!("joint '{}' not found", dj.joint_id));
+                        }
+                    }
                     c::operation::Op::CopyObject(co) => {
                         if !project.objects.contains(&co.source_object_id) {
                             errors
@@ -954,6 +994,84 @@ fn validate_level_extent(
     }
 }
 
+/// Phase 8-4 (ASSEMBLY §9): shared motion-joint field validation for
+/// create/update. `existing_id` is `Some` when the duplicate check must skip
+/// the joint being updated itself.
+#[allow(clippy::too_many_arguments)]
+fn validate_joint_fields(
+    project: &Project,
+    name: &str,
+    kind: i32,
+    from_id: &str,
+    to_id: &str,
+    #[allow(unused_variables)] origin: Option<&omnim_core::Point3D>,
+    #[allow(unused_variables)] axis: Option<&omnim_core::Vector3D>,
+    has_limits: bool,
+    limit_min: f64,
+    limit_max: f64,
+    existing_id: Option<&str>,
+    errors: &mut Vec<String>,
+) {
+    let Some(kind) = omnim_model::joint::JointKind::from_proto(kind) else {
+        errors.push("joint kind is unspecified (revolute | prismatic | fixed | spherical)".into());
+        return;
+    };
+    if name.is_empty() {
+        errors.push("joint name is empty".into());
+    }
+    if from_id == to_id {
+        errors.push(format!("joint endpoints must differ ('{}')", from_id));
+        return;
+    }
+    if project.objects.get(from_id).is_none() {
+        errors.push(format!("joint endpoint object '{}' not found", from_id));
+    }
+    if project.objects.get(to_id).is_none() {
+        errors.push(format!("joint endpoint object '{}' not found", to_id));
+    }
+    if kind.needs_axis()
+        && axis
+            .map(|v| v.x * v.x + v.y * v.y + v.z * v.z <= f64::EPSILON)
+            .unwrap_or(true)
+    {
+        errors.push(format!("joint kind '{:?}' requires a non-zero axis", kind));
+    }
+    if has_limits && !kind.takes_limits() {
+        errors.push(format!("joint kind '{:?}' does not take limits", kind));
+    }
+    if has_limits && limit_min > limit_max {
+        errors.push(format!(
+            "joint limits out of order: min {} > max {}",
+            limit_min, limit_max
+        ));
+    }
+    // Duplicate unordered pair with the same kind is refused (one hinge per
+    // pair unless the kinds differ, e.g. revolute + prismatic slide).
+    let duplicate = project.joints.joints.iter().any(|j| {
+        Some(j.id.as_str()) != existing_id
+            && j.kind == kind
+            && ((j.from_object_id == from_id && j.to_object_id == to_id)
+                || (j.from_object_id == to_id && j.to_object_id == from_id))
+    });
+    if duplicate {
+        errors.push(format!(
+            "objects '{}' and '{}' already share a joint of this kind",
+            from_id, to_id
+        ));
+    }
+}
+
+/// Encode a model joint kind back to its proto discriminant for validators.
+fn kind_to_i32(kind: omnim_model::joint::JointKind) -> i32 {
+    use omnim_model::joint::JointKind::*;
+    match kind {
+        Revolute => 1,
+        Prismatic => 2,
+        Fixed => 3,
+        Spherical => 4,
+    }
+}
+
 /// 可逆命令 — 记录操作的反向数据
 #[derive(Clone)]
 pub enum Command {
@@ -1292,6 +1410,17 @@ pub enum Command {
     },
     DeleteGridLine {
         grid_line: omnim_model::grid::GridLine,
+    },
+    // 2026-11-03 Phase 8-4: motion joint commands (ASSEMBLY §9)
+    CreateJoint {
+        joint: omnim_model::joint::MotionJoint,
+    },
+    UpdateJoint {
+        before: omnim_model::joint::MotionJoint,
+        after: omnim_model::joint::MotionJoint,
+    },
+    DeleteJoint {
+        joint: omnim_model::joint::MotionJoint,
     },
     // 2026-10-28 Wave 1 Slice 4: administrative division commands
     CreateAdministrativeDivision {
@@ -3562,6 +3691,79 @@ impl Executor {
                         }
                     }
 
+                    // 2026-11-03 Phase 8-4: motion joint execution (ASSEMBLY §9)
+                    c::operation::Op::CreateJoint(cj) => {
+                        let origin = cj.origin.clone().unwrap_or(c::Point3D {
+                            x: 0.0,
+                            y: 0.0,
+                            z: 0.0,
+                        });
+                        let mut joint = omnim_model::joint::MotionJoint::new(
+                            cj.name.trim(),
+                            omnim_model::joint::JointKind::from_proto(cj.kind)
+                                .unwrap_or(omnim_model::joint::JointKind::Fixed),
+                            cj.from_object_id.clone(),
+                            cj.to_object_id.clone(),
+                            origin,
+                            cj.axis.clone(),
+                        );
+                        if cj.has_limits {
+                            joint.limit_min = Some(cj.limit_min);
+                            joint.limit_max = Some(cj.limit_max);
+                        }
+                        let id = joint.id.clone();
+                        project.joints.insert(joint.clone());
+                        created_ids.push(id);
+                        commands.push(Command::CreateJoint { joint });
+                    }
+
+                    c::operation::Op::UpdateJoint(uj) => {
+                        if let Some(entry) = project.joints.get_mut(&uj.joint_id) {
+                            let before = entry.clone();
+                            entry.name = uj.name.trim().to_string();
+                            if let Some(kind) = omnim_model::joint::JointKind::from_proto(uj.kind) {
+                                entry.kind = kind;
+                            }
+                            entry.from_object_id = uj.from_object_id.clone();
+                            entry.to_object_id = uj.to_object_id.clone();
+                            if let Some(origin) = uj.origin.clone() {
+                                entry.origin = origin;
+                            }
+                            // Re-normalize the axis when the kind needs one;
+                            // otherwise drop it (fixed/spherical).
+                            if entry.kind.needs_axis() {
+                                if let Some(axis) = uj.axis.clone() {
+                                    let len = axis.x * axis.x + axis.y * axis.y + axis.z * axis.z;
+                                    if len > f64::EPSILON {
+                                        let len = len.sqrt();
+                                        entry.axis = Some(c::Vector3D {
+                                            x: axis.x / len,
+                                            y: axis.y / len,
+                                            z: axis.z / len,
+                                        });
+                                    }
+                                }
+                            } else {
+                                entry.axis = None;
+                            }
+                            if uj.has_limits {
+                                entry.limit_min = Some(uj.limit_min);
+                                entry.limit_max = Some(uj.limit_max);
+                            } else {
+                                entry.limit_min = None;
+                                entry.limit_max = None;
+                            }
+                            let after = entry.clone();
+                            commands.push(Command::UpdateJoint { before, after });
+                        }
+                    }
+
+                    c::operation::Op::DeleteJoint(dj) => {
+                        if let Some(joint) = project.joints.remove(&dj.joint_id) {
+                            commands.push(Command::DeleteJoint { joint });
+                        }
+                    }
+
                     // 2026-10-28 Wave 1 Slice 4: administrative division operations
                     c::operation::Op::CreateAdministrativeDivision(cad) => {
                         let level = c::AdministrativeLevel::try_from(cad.level)
@@ -5211,6 +5413,26 @@ impl Executor {
                     &grid_line.id[..grid_line.id.len().min(8)]
                 )
             }
+            // === Motion joint undo (2026-11-03 Phase 8-4) ===
+            Command::CreateJoint { joint } => {
+                project.joints.remove(&joint.id);
+                format!("undo: removed joint {}", &joint.id[..joint.id.len().min(8)])
+            }
+            Command::UpdateJoint { before, .. } => {
+                project.joints.remove(&before.id);
+                project.joints.insert(before.clone());
+                format!(
+                    "undo: restored joint {}",
+                    &before.id[..before.id.len().min(8)]
+                )
+            }
+            Command::DeleteJoint { joint } => {
+                project.joints.insert(joint.clone());
+                format!(
+                    "undo: restored joint {}",
+                    &joint.id[..joint.id.len().min(8)]
+                )
+            }
             // === Administrative division undo (2026-10-28 Wave 1 Slice 4) ===
             Command::CreateAdministrativeDivision { division } => {
                 project.administrative.remove(&division.id);
@@ -5969,6 +6191,20 @@ impl Executor {
                     "redo: deleted grid line {}",
                     &grid_line.id[..grid_line.id.len().min(8)]
                 )
+            }
+            // === Motion joint redo (2026-11-03 Phase 8-4) ===
+            Command::CreateJoint { joint } => {
+                project.joints.insert(joint.clone());
+                format!("redo: created joint {}", &joint.id[..joint.id.len().min(8)])
+            }
+            Command::UpdateJoint { after, .. } => {
+                project.joints.remove(&after.id);
+                project.joints.insert(after.clone());
+                format!("redo: updated joint {}", &after.id[..after.id.len().min(8)])
+            }
+            Command::DeleteJoint { joint } => {
+                project.joints.remove(&joint.id);
+                format!("redo: deleted joint {}", &joint.id[..joint.id.len().min(8)])
             }
             // === Administrative division redo (2026-10-28 Wave 1 Slice 4) ===
             Command::CreateAdministrativeDivision { division } => {

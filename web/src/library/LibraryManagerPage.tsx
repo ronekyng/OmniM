@@ -6,6 +6,7 @@ import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
 import { PageBreadcrumb } from '../app/components/PageBreadcrumb';
+import { IcoChevronDown, IcoChevronRight, IcoDelete, IcoEdit, IcoSearch } from '../app/components/Icons';
 import type { ComponentDef, ParamDef, CatalogPreviewMesh } from '../shared/types';
 
 export function LibraryManagerPage() {
@@ -295,7 +296,7 @@ export function LibraryManagerPage() {
           {categories.map(cat => (
             <div key={cat} className="library-mgr-category">
               <div className="library-mgr-cat-header" onClick={() => toggleCategory(cat)}>
-                <span className="library-mgr-cat-arrow">{expandedCategories.has(cat) ? '▼' : '▶'}</span>
+                <span className="library-mgr-cat-arrow">{expandedCategories.has(cat) ? <IcoChevronDown /> : <IcoChevronRight />}</span>
                 <span className="library-mgr-cat-name">{cat}</span>
                 <span className="library-mgr-cat-count">({filteredCatalog.filter(c => c.category === cat).length})</span>
               </div>
@@ -352,7 +353,7 @@ export function LibraryManagerPage() {
 
               <div className="library-mgr-detail-actions">
                 <button className="library-mgr-btn" onClick={handlePreview} disabled={previewLoading}>
-                  {previewLoading ? '生成中...' : '🔍 3D 预览'}
+                  {previewLoading ? '生成中...' : <><IcoSearch /> 3D 预览</>}
                 </button>
               </div>
               {previewError && <div className="library-mgr-error">{previewError}</div>}
@@ -402,8 +403,8 @@ export function LibraryManagerPage() {
                             <span className="library-mgr-param-name">{p.name}</span>
                             <span className="library-mgr-param-default">{p.default_value} {p.unit}</span>
                             <div className="library-mgr-param-actions">
-                              <button className="library-mgr-btn-sm" onClick={() => setEditingParamIdx(idx)}>✏️</button>
-                              <button className="library-mgr-btn-sm danger" onClick={() => handleDeleteParam(idx)}>🗑️</button>
+                              <button className="library-mgr-btn-sm" onClick={() => setEditingParamIdx(idx)} title="编辑参数" aria-label="编辑参数"><IcoEdit /></button>
+                              <button className="library-mgr-btn-sm danger" onClick={() => handleDeleteParam(idx)} title="删除参数" aria-label="删除参数"><IcoDelete /></button>
                             </div>
                           </div>
                           <div className="library-mgr-param-range">

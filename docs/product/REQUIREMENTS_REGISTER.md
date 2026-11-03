@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -58,21 +58,21 @@ evidence: "n/a (product requirement)"
 | UI-SHL-09 | Floating panels with persisted geometry | IA_SHELL §4.4 | e2e drag/resize/reload | G2 | 🔀 |
 | UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
 | UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot | G2 | 📅 |
-| UI-SHL-12 | Command palette | IA_SHELL §8 | e2e command coverage | G2 | 📅 |
+| UI-SHL-12 | Command palette | IA_SHELL §8 | `web/e2e/commands.spec.ts` (Ctrl/Cmd+K, filter, keyboard run) | G2 | ✅ |
 
 ## 4. Register: DS — Design System and Theming
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
 | UI-DS-01 | Three token layers, no primitive leakage | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
-| UI-DS-02 | Dark/light switch without reload | DESIGN_SYSTEM §3 | `theme.test.ts` + theme screenshots pending | G1 | 🔀 |
-| UI-DS-03 | OS preference default, choice persisted | DESIGN_SYSTEM §3.2 | emulation test | G2 | 📅 |
-| UI-DS-04 | Zero hardcoded colors in user-facing styles | DESIGN_SYSTEM §2.4 | color scan | G2 | 📅 |
+| UI-DS-02 | Dark/light switch without reload | DESIGN_SYSTEM §3 | `theme.test.ts` + `web/e2e/theme.spec.ts` (switch/persistence/contrast) | G1 | ✅ |
+| UI-DS-03 | OS preference default, choice persisted | DESIGN_SYSTEM §3.2 | `theme.test.ts` + `web/e2e/theme.spec.ts` (light/dark emulation) | G2 | ✅ |
+| UI-DS-04 | Zero hardcoded colors in user-facing styles | DESIGN_SYSTEM §2.4 | `check_ui_contracts.py --only tokens` (0) + `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-05 | Complete semantic state matrix | DESIGN_SYSTEM §4 | token matrix review | G3 | 📅 |
 | UI-DS-06 | Single type scale, tabular numerals | DESIGN_SYSTEM §5 | style scan + screenshot | G2 | 🔀 |
 | UI-DS-07 | 4 px spacing base, fixed radii and shadows | DESIGN_SYSTEM §6 | style scan | G3 | 🔀 |
-| UI-DS-08 | Z-index scale | DESIGN_SYSTEM §7 | style scan | G2 | 📅 |
-| UI-DS-09 | Icon sizes and stroke, no emoji icons | DESIGN_SYSTEM §8 | emoji scan | G2 | 📅 |
+| UI-DS-08 | Z-index scale | DESIGN_SYSTEM §7 | `check_ui_contracts.py --only zindex` (0) + `designTokens.test.ts` | G2 | ✅ |
+| UI-DS-09 | Icon sizes and stroke, no emoji icons | DESIGN_SYSTEM §8 | `check_ui_contracts.py --only emoji` (0) + single `Icons.tsx` set | G2 | ✅ |
 | UI-DS-10 | Component state matrix complete | DESIGN_SYSTEM §9 | component inventory review | G3 | 📅 |
 | UI-DS-11 | High-contrast accessibility theme | DESIGN_SYSTEM §3.4 | contrast audit | G3 | 📅 |
 | UI-DS-12 | Per-theme viewport token set | DESIGN_SYSTEM §10 | screenshot pair per theme | G2 | 📅 |
@@ -86,9 +86,9 @@ evidence: "n/a (product requirement)"
 | UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
 | UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | Contextual and keyboard-invokable menus | INTERACTION §6 | menu e2e | G2 | 🔀 |
-| UI-INT-06 | One dialog family with focus management | INTERACTION §7 | focus-trap test | G2 | 📅 |
-| UI-INT-07 | Destructive confirmation with impact | INTERACTION §7.3 | delete-parent e2e | G2 | 📅 |
-| UI-INT-08 | Undo/redo across all mutations, depth ≥50 | INTERACTION §8 | endpoint coverage test | G2 | 🔀 |
+| UI-INT-06 | One dialog family with focus management | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts` (trap/inert/restore) | G2 | ✅ |
+| UI-INT-07 | Destructive confirmation with impact | INTERACTION §7.3 | `deleteImpact.ts` unit tests + `web/e2e/dialogs.spec.ts` (child counts/both paths) | G2 | ✅ |
+| UI-INT-08 | Undo/redo across all mutations, depth ≥50 | INTERACTION §8 | `crates/server/tests/write_paths.rs` (60/200 depth + redo) + `datum.rs` endpoint coverage | G2 | ✅ |
 | UI-INT-09 | Auto-naming with duplicate detection | INTERACTION §9 | naming unit tests | G1 | ✅ |
 | UI-INT-10 | Consistent units with suffixes | INTERACTION §9.2 | form audit | G2 | 🔀 |
 | UI-INT-11 | One meaning per double-click context | INTERACTION §7.4 | context table review | G2 | 📅 |
@@ -128,10 +128,10 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-A11Y-01 | WCAG 2.2 AA on critical paths | A11Y §2 | axe suite | G2 | 📅 |
-| UI-A11Y-02 | Keyboard-complete commands and help | A11Y §3 | keyboard-only walkthrough | G2 | 📅 |
-| UI-A11Y-03 | Visible, ordered, trapped focus | A11Y §4 | focus audit | G2 | 📅 |
-| UI-A11Y-04 | Roles and ARIA for trees/tables/tabs | A11Y §5 | accessibility tree snapshot | G2 | 📅 |
+| UI-A11Y-01 | WCAG 2.2 AA on critical paths | A11Y §2 | `web/e2e/axe.spec.ts` (launch/open/create/select/save/error recovery, 0 violations) | G2 | ✅ |
+| UI-A11Y-02 | Keyboard-complete commands and help | A11Y §3 | `commands/focus/a11y` specs (F1, palette, keyboard J1, F2, property rows, F6, menu) | G2 | ✅ |
+| UI-A11Y-03 | Visible, ordered, trapped focus | A11Y §4 | `web/e2e/focus.spec.ts` (focus-visible ring, F6, delete restore, route/error focus) | G2 | ✅ |
+| UI-A11Y-04 | Roles and ARIA for trees/tables/tabs | A11Y §5 | `web/e2e/a11y.spec.ts` (tree/tablist/toolbar/menu/table/status/viewport) | G2 | ✅ |
 | UI-A11Y-05 | Accessible names; viewport text alternative | A11Y §6 | axe + manual review | G2 | 📅 |
 | UI-A11Y-06 | Reduced-motion support | A11Y §7 | media emulation test | G3 | 📅 |
 | UI-A11Y-07 | High-contrast theme meets AA | A11Y §8 | contrast audit | G3 | 📅 |

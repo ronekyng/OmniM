@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端需求登记册（RTM）"
 status: design
-last_updated: 2026-11-02
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -58,21 +58,21 @@ evidence: "n/a (product requirement)"
 | UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e | G2 | 🔀 |
 | UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
 | UI-SHL-11 | 低于 1280 px 折叠为图标条 | IA_SHELL §7 | 1024×768 截图 | G2 | 📅 |
-| UI-SHL-12 | 命令面板 | IA_SHELL §8 | 命令覆盖 e2e | G2 | 📅 |
+| UI-SHL-12 | 命令面板 | IA_SHELL §8 | `web/e2e/commands.spec.ts`（Ctrl/Cmd+K、过滤、键盘执行） | G2 | ✅ |
 
 ## 4. 登记：DS — 设计系统与主题
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
 | UI-DS-01 | 三层令牌，无原始令牌泄漏 | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
-| UI-DS-02 | 深/浅主题切换不重载 | DESIGN_SYSTEM §3 | `theme.test.ts` + 主题截图待补 | G1 | 🔀 |
-| UI-DS-03 | 跟随系统默认，选择持久化 | DESIGN_SYSTEM §3.2 | 媒体模拟测试 | G2 | 📅 |
-| UI-DS-04 | 用户界面样式零硬编码颜色 | DESIGN_SYSTEM §2.4 | 颜色扫描 | G2 | 📅 |
+| UI-DS-02 | 深/浅主题切换不重载 | DESIGN_SYSTEM §3 | `theme.test.ts` + `web/e2e/theme.spec.ts`（切换/持久化/对比度） | G1 | ✅ |
+| UI-DS-03 | 跟随系统默认，选择持久化 | DESIGN_SYSTEM §3.2 | `theme.test.ts` + `web/e2e/theme.spec.ts`（浅/深媒体模拟） | G2 | ✅ |
+| UI-DS-04 | 用户界面样式零硬编码颜色 | DESIGN_SYSTEM §2.4 | `check_ui_contracts.py --only tokens`（0）+ `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-05 | 完整语义状态矩阵 | DESIGN_SYSTEM §4 | 令牌矩阵评审 | G3 | 📅 |
 | UI-DS-06 | 单一排版刻度，等宽数字 | DESIGN_SYSTEM §5 | 样式扫描 + 截图 | G2 | 🔀 |
 | UI-DS-07 | 4 px 间距基准，固定圆角与阴影 | DESIGN_SYSTEM §6 | 样式扫描 | G3 | 🔀 |
-| UI-DS-08 | z-index 分层 | DESIGN_SYSTEM §7 | 样式扫描 | G2 | 📅 |
-| UI-DS-09 | 图标尺寸与描边，无 emoji 图标 | DESIGN_SYSTEM §8 | emoji 扫描 | G2 | 📅 |
+| UI-DS-08 | z-index 分层 | DESIGN_SYSTEM §7 | `check_ui_contracts.py --only zindex`（0）+ `designTokens.test.ts` | G2 | ✅ |
+| UI-DS-09 | 图标尺寸与描边，无 emoji 图标 | DESIGN_SYSTEM §8 | `check_ui_contracts.py --only emoji`（0）+ `Icons.tsx` 单一图标集 | G2 | ✅ |
 | UI-DS-10 | 组件状态矩阵完整 | DESIGN_SYSTEM §9 | 组件清单评审 | G3 | 📅 |
 | UI-DS-11 | 高对比可访问性主题 | DESIGN_SYSTEM §3.4 | 对比度审计 | G3 | 📅 |
 | UI-DS-12 | 双主题视口令牌集 | DESIGN_SYSTEM §10 | 每主题截图对 | G2 | 📅 |
@@ -86,9 +86,9 @@ evidence: "n/a (product requirement)"
 | UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
 | UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | 上下文菜单且可键盘唤起 | INTERACTION §6 | 菜单 e2e | G2 | 🔀 |
-| UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | 焦点陷阱测试 | G2 | 📅 |
-| UI-INT-07 | 破坏性确认并说明影响 | INTERACTION §7.3 | 删除父对象 e2e | G2 | 📅 |
-| UI-INT-08 | 全变更撤销/重做，深度 ≥50 | INTERACTION §8 | 端点覆盖测试 | G2 | 🔀 |
+| UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts`（焦点陷阱/背景 inert/焦点归还） | G2 | ✅ |
+| UI-INT-07 | 破坏性确认并说明影响 | INTERACTION §7.3 | `deleteImpact.ts` 单测 + `web/e2e/dialogs.spec.ts`（子对象计数/两路径确认） | G2 | ✅ |
+| UI-INT-08 | 全变更撤销/重做，深度 ≥50 | INTERACTION §8 | `crates/server/tests/write_paths.rs`（60/200 深度与 redo）+ `datum.rs` 等端点覆盖 | G2 | ✅ |
 | UI-INT-09 | 自动命名与重名检测 | INTERACTION §9 | 命名单测 | G1 | ✅ |
 | UI-INT-10 | 单位一致且带后缀 | INTERACTION §9.2 | 表单审计 | G2 | 🔀 |
 | UI-INT-11 | 每个上下文双击含义唯一 | INTERACTION §7.4 | 上下文表评审 | G2 | 📅 |
@@ -128,10 +128,10 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-A11Y-01 | 关键路径 WCAG 2.2 AA | A11Y §2 | axe 套件 | G2 | 📅 |
-| UI-A11Y-02 | 命令键盘完备且有帮助 | A11Y §3 | 纯键盘走查 | G2 | 📅 |
-| UI-A11Y-03 | 焦点可见、有序、受限 | A11Y §4 | 焦点审计 | G2 | 📅 |
-| UI-A11Y-04 | 树/表/标签的 role 与 ARIA | A11Y §5 | 无障碍树快照 | G2 | 📅 |
+| UI-A11Y-01 | 关键路径 WCAG 2.2 AA | A11Y §2 | `web/e2e/axe.spec.ts`（首启/打开/创建/选中/保存/错误恢复，0 violations） | G2 | ✅ |
+| UI-A11Y-02 | 命令键盘完备且有帮助 | A11Y §3 | `commands/focus/a11y` specs（F1、命令面板、纯键盘 J1、F2、属性行方向键、F6、菜单） | G2 | ✅ |
+| UI-A11Y-03 | 焦点可见、有序、受限 | A11Y §4 | `web/e2e/focus.spec.ts`（:focus-visible 环、F6、删除后迁移、路由/错误兜底） | G2 | ✅ |
+| UI-A11Y-04 | 树/表/标签的 role 与 ARIA | A11Y §5 | `web/e2e/a11y.spec.ts`（tree/tablist/toolbar/menu/table/status/viewport） | G2 | ✅ |
 | UI-A11Y-05 | 无障碍名称；视口文本替代 | A11Y §6 | axe + 人工评审 | G2 | 📅 |
 | UI-A11Y-06 | 减弱动效支持 | A11Y §7 | 媒体模拟测试 | G3 | 📅 |
 | UI-A11Y-07 | 高对比主题达到 AA | A11Y §8 | 对比度审计 | G3 | 📅 |

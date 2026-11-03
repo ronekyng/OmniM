@@ -47,12 +47,29 @@ function mergeRows(projects: ProjectSummary[], recent: RecentProject[]): Row[] {
   return [...rows, ...rest];
 }
 
-function uniqueProjectName(base: string, existing: string[]): string {
-  const taken = new Set(existing.map((n) => n.toLowerCase()));
-  if (!taken.has(base.toLowerCase())) return base;
+function slugifyProjectName(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'project';
+}
+
+function uniqueProjectName(base: string, existing: { name: string; path: string }[]): string {
+  // Display names and file slugs are different keys: an orphaned file can
+  // occupy sample-project.omnim while its internal name is something else.
+  const names = new Set(existing.map((p) => p.name.toLowerCase()));
+  const slugs = new Set(
+    existing.map((p) => p.path.split(/[\\/]/).pop()!.replace(/\.omnim$/i, '').toLowerCase()),
+  );
+  let candidate = base;
   let n = 2;
-  while (taken.has(`${base} ${n}`.toLowerCase())) n += 1;
-  return `${base} ${n}`;
+  while (names.has(candidate.toLowerCase()) || slugs.has(slugifyProjectName(candidate))) {
+    candidate = `${base} ${n}`;
+    n += 1;
+  }
+  return candidate;
 }
 
 function formatWhen(seconds: number | null | undefined): string {
@@ -74,6 +91,9 @@ export function ProjectsPage() {
   const [name, setName] = useState('Untitled');
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Creating before the list loads would pick a name that slugifies onto an
+  // existing file (the sample button used to race into a 409 on warm dirs).
+  const [loaded, setLoaded] = useState(false);
 
   const reload = useCallback(async () => {
     setError(null);
@@ -83,6 +103,8 @@ export function ProjectsPage() {
       setCurrent(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoaded(true);
     }
   }, []);
 
@@ -113,11 +135,30 @@ export function ProjectsPage() {
   }, [navigate, refresh, reloadScene, remember, resetSaveState]);
 
   const create = useCallback(async (projectName: string, sample: boolean) => {
+    if (!loaded) {
+      setError('Project list is still loading. Try again in a moment.');
+      return;
+    }
     setBusy(sample ? 'sample' : 'new');
     setError(null);
     try {
-      const resolved = uniqueProjectName(projectName.trim() || 'Untitled', projects.map((p) => p.name));
-      const project = await api.newProject(resolved, sample);
+      const baseName = projectName.trim() || 'Untitled';
+      let resolved = uniqueProjectName(baseName, rows);
+      let attempt = 2;
+      let project;
+      // The server keys projects by file slug. A stale/orphaned file can still
+      // collide after the client-side check, so resolve a 409 by suffixing.
+      for (;;) {
+        try {
+          project = await api.newProject(resolved, sample);
+          break;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          if (!message.startsWith('409 ') || attempt > 100) throw err;
+          resolved = `${baseName} ${attempt}`;
+          attempt += 1;
+        }
+      }
       toast.success(`Created ${project.name}`);
       await enterWorkspace(project);
     } catch (err) {
@@ -127,7 +168,7 @@ export function ProjectsPage() {
     } finally {
       setBusy(null);
     }
-  }, [enterWorkspace, projects, toast]);
+  }, [enterWorkspace, loaded, rows, toast]);
 
   const open = useCallback(async (path: string) => {
     setBusy(path);
@@ -181,14 +222,14 @@ export function ProjectsPage() {
               aria-label="Project name"
               placeholder="Project name"
             />
-            <button type="submit" className="primary" disabled={busy !== null || !name.trim()}>
+            <button type="submit" className="primary" disabled={busy !== null || !loaded || !name.trim()}>
               {busy === 'new' ? 'Creating…' : 'Create'}
             </button>
           </form>
           <button
             type="button"
             className="sample-button"
-            disabled={busy !== null}
+            disabled={busy !== null || !loaded}
             onClick={() => void create('Sample Project', true)}
           >
             {busy === 'sample' ? 'Creating sample…' : 'Open sample project (2 storeys + grid)'}
@@ -233,7 +274,7 @@ export function ProjectsPage() {
                     <td>{formatBytes(row.size)}</td>
                     <td className="projects-actions">
                       {!row.missing && (
-                        <button type="button" onClick={() => void open(row.path)} disabled={busy !== null}>
+                        <button type="button" onClick={() => void open(row.path)} disabled={busy !== null || !loaded}>
                           {busy === row.path ? 'Opening…' : 'Open'}
                         </button>
                       )}

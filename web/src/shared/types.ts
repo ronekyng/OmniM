@@ -683,6 +683,48 @@ export type ProjectSummary = {
   modified: number | null;
 };
 
+/** Motion joint list item (ASSEMBLY §9). */
+export type JointItem = {
+  id: string;
+  name: string;
+  kind: string;
+  from_object_id: string;
+  to_object_id: string;
+  origin?: [number, number, number] | null;
+  axis?: [number, number, number] | null;
+  limit_min?: number | null;
+  limit_max?: number | null;
+};
+
+/** Grouped door/window schedule row (DATA_MODEL opening schedule). */
+export type OpeningsScheduleRow = {
+  object_type: 'door' | 'window';
+  width_mm: number;
+  height_mm: number;
+  leaf_count?: number | null;
+  with_sill?: boolean | null;
+  with_lintel?: boolean | null;
+  frame_type?: string | null;
+  count: number;
+};
+
+export type BomRow = {
+  object_id: string;
+  name: string;
+  object_type: string;
+  kind: 'component' | 'part' | 'proxy';
+  component_def_id?: string | null;
+  series_id?: string | null;
+  bbox_volume_m3?: number | null;
+};
+
+export type BomResponse = {
+  root_id: string;
+  root_object_type: string;
+  rows: BomRow[];
+  totals: { row_count: number; total_volume_m3: number };
+};
+
 export type CurrentProject = {
   open: boolean;
   name: string;

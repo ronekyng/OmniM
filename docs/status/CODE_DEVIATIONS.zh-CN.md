@@ -1,7 +1,7 @@
 ---
 title: "代码与文档模型的偏差（Code-Level Deviations）"
 status: current
-last_updated: 2026-10-31
+last_updated: 2026-11-02
 applies_to: "repo"
 evidence: "2026-10-27 对照代码审计；§7 于 2026-10-29 审计"
 ---
@@ -201,7 +201,7 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 
 ## 7. 前端界面偏差 — **已知**（2026-10-29）
 
-> **P9 更新（2026-10-29）。** 7.1、7.2、7.3、7.5、7.6、7.7 已解决：属性面板默认右停靠、项目首页（新建/打开/最近/示例）落地、显式保存/另存为已接通、原生弹窗移除、错误边界落地、自动命名有单测。下表保留为审计快照；**P10 增补（2026-10-30）**：7.12/7.13 已按 UI/UX 验收审计立项并同日整改关闭（保存语义单一口径、参数面板单位标注）；7.4（面板三态）、7.8–7.11 仍开放。
+> **P9 更新（2026-10-29）。** 7.1、7.2、7.3、7.5、7.6、7.7 已解决：属性面板默认右停靠、项目首页（新建/打开/最近/示例）落地、显式保存/另存为已接通、原生弹窗移除、错误边界落地、自动命名有单测。下表保留为审计快照；**P10 增补（2026-10-30）**：7.12/7.13 已按 UI/UX 验收审计立项并同日整改关闭（保存语义单一口径、参数面板单位标注）；7.4（面板三态）与 7.9–7.11 仍开放；**P11 更新（2026-11-02）**：7.8 已关闭——令牌块收敛为 `globals.css` 单份，组件样式字面量颜色为 0。
 
 
 2026-10-29 对照 `web/src` 审计。以下是 [`specification/ui/`](../specification/ui/IA_SHELL.zh-CN.md)
@@ -217,7 +217,7 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 | 7.5 | 破坏性操作使用共享弹窗族 | 五处 `window.confirm/alert/prompt` | `App.tsx`、`MainToolbar.tsx`、`ObjectTree.tsx` | UI-FBK-05 |
 | 7.6 | 面板失败被隔离 | 全仓无错误边界；一次渲染异常导致整页白屏 | `ErrorBoundary` / `componentDidCatch` 为零 | UI-FBK-06 |
 | 7.7 | 对象命名为 `Type-nnn` | 使用时间戳命名（`wall-${Date.now()}`）；52 处 `Date.now()` 调用，多数用于构造对象名 | `MainToolbar.tsx`、`DomainPanels.tsx` | UI-INT-09 |
-| 7.8 | 界面样式只用语义令牌 | `styles.css` 中 712 处硬编码颜色（全部 CSS 731 处）；令牌块在 `globals.css` 中重复 | `web/src/styles.css`、`web/src/globals.css` | UI-DS-01, UI-DS-04 |
+| 7.8 | 界面样式只用语义令牌 | **已整改（2026-11-02，UI-DS-04）**：令牌块只在 `globals.css`；`styles.css` 及其余组件样式字面量颜色为 0，改用语义令牌 | `web/src/globals.css`、`scripts/check_ui_contracts.py`、`web/src/__tests__/designTokens.test.ts` | UI-DS-01, UI-DS-04 |
 | 7.9 | 所有用户可见字符串外置 | 31 个文件 858 段中文，无 i18n 层；无主题 Provider | 源码扫描 | UI-I18N-01, UI-DS-02 |
 | 7.10 | 树与表暴露 role 与 ARIA 状态 | 1 个 `aria-*` 属性、0 个 `role` 属性 | 源码扫描 | UI-A11Y-04 |
 

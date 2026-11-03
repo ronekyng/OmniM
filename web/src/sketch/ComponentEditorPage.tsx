@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PageBreadcrumb } from '../app/components/PageBreadcrumb';
+import { IcoWarning } from '../app/components/Icons';
 import * as THREE from 'three';
 import { api } from '../shared/api';
 import { nextAutoName } from '../shared/naming';
@@ -1234,7 +1235,7 @@ export function ComponentEditorPage() {
           {/* Drawing mode banner */}
           {creatingFeature && (
             <div className="component-creating-banner">
-              ⚠ 正在绘制 {creatingFeature.featureType} {MULTI_SKETCH_LABELS[creatingFeature.featureType]?.[creatingFeature.currentSketchIdx] ?? '轮廓'} — 完成后点击 Done
+              <IcoWarning /> 正在绘制 {creatingFeature.featureType} {MULTI_SKETCH_LABELS[creatingFeature.featureType]?.[creatingFeature.currentSketchIdx] ?? '轮廓'} — 完成后点击 Done
             </div>
           )}
 

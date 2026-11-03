@@ -156,9 +156,21 @@ async fn door_leaf_is_sized_to_the_opening_not_the_wall() {
     assert_eq!(obj["parent_id"], wall_id);
 
     let (w, d, h) = bbox_size(&obj);
-    assert!((w - 1.0).abs() < 1e-6, "door width follows the opening: {}", w);
-    assert!((h - 2.1).abs() < 1e-6, "door height follows the opening: {}", h);
-    assert!(d < 0.4, "door depth is the wall thickness, not the bbox: {}", d);
+    assert!(
+        (w - 1.0).abs() < 1e-6,
+        "door width follows the opening: {}",
+        w
+    );
+    assert!(
+        (h - 2.1).abs() < 1e-6,
+        "door height follows the opening: {}",
+        h
+    );
+    assert!(
+        d < 0.4,
+        "door depth is the wall thickness, not the bbox: {}",
+        d
+    );
 
     let props = obj["properties"].as_array().unwrap();
     assert!(props.iter().any(|p| p["name"] == "host_wall_id"));
@@ -202,7 +214,12 @@ async fn door_follows_a_rotated_wall_centreline() {
     assert_eq!(status, 200, "door create failed: {}", body);
     let obj = json_of(&body);
     let (w, d, h) = bbox_size(&obj);
-    assert!(w < 2.0 && d < 2.0, "rotated door is not wall-sized: {} x {}", w, d);
+    assert!(
+        w < 2.0 && d < 2.0,
+        "rotated door is not wall-sized: {} x {}",
+        w,
+        d
+    );
     assert!((h - 2.1).abs() < 1e-6);
 
     let mn = &obj["geometry"]["bbox"]["min"];

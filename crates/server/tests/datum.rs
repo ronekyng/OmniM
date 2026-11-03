@@ -276,6 +276,35 @@ async fn grid_lines_crud_roundtrip() {
 }
 
 #[tokio::test]
+async fn grid_update_is_undoable() {
+    let (port, _) = test_server().await;
+    let (status, body) = create_grid(port, "U", "along_x", 0.0).await;
+    assert_eq!(status, 201, "{}", body);
+    let id = json_of(&body)["id"].as_str().unwrap().to_string();
+
+    let client = reqwest::Client::new();
+    let resp = client
+        .put(api_url(port, &format!("/api/grids/{}", id)))
+        .json(&serde_json::json!({
+            "label": "U", "axis": "along_x", "coordinate": 12.5
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status().as_u16(), 200);
+    let list = get_json(port, "/api/grids").await;
+    assert_eq!(list[0]["coordinate"], 12.5);
+
+    let (status, _) = post_json(port, "/api/undo", serde_json::json!({})).await;
+    assert_eq!(status, 200);
+    let list = get_json(port, "/api/grids").await;
+    assert_eq!(
+        list[0]["coordinate"], 0.0,
+        "undo must restore the previous grid coordinate"
+    );
+}
+
+#[tokio::test]
 async fn grid_delete_is_undoable() {
     let (port, _) = test_server().await;
     let (status, body) = create_grid(port, "A", "along_y", 0.0).await;

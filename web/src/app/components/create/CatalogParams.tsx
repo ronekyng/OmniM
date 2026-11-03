@@ -3,6 +3,7 @@ import type { CreationForm } from '../../../shared/types/creation';
 import { CATALOG_TYPES, defsForType, defaultDefForType, defaultParamsForDef, ensureCatalogLoaded, resolveDef, useCatalog } from '../../../shared/catalog';
 import { ComponentParamPanel } from './ComponentParamPanel';
 import type { ComponentDef } from '../../../shared/types';
+import { IcoWarning } from '../Icons';
 
 type Props = {
   form: CreationForm;
@@ -47,7 +48,7 @@ export function CatalogParams({ form, onChange }: Props) {
     return <div className="catalog-params"><small className="hint">加载构件目录...</small></div>;
   }
   if (defs.length === 0) {
-    return <div className="catalog-params"><small className="hint">⚠️ 目录中暂无 {form.objectType} 类型的构件</small></div>;
+    return <div className="catalog-params"><small className="hint"><IcoWarning /> 目录中暂无 {form.objectType} 类型的构件</small></div>;
   }
 
   return (

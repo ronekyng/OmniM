@@ -5,6 +5,14 @@ PORT="${OMNIM_PORT:-3000}"
 HOST="${OMNIM_HOST:-0.0.0.0}"
 PROJECT="${OMNIM_PROJECT:-project.omnim}"
 
+# OMNIM_PORT=3100 (and the frontend 5174) are reserved for Playwright E2E;
+# an exported leftover would silently move this dev server off 3000 — warn so
+# the port can only move loudly, never quietly.
+if [ -n "${OMNIM_PORT:-}" ] && [ "${OMNIM_PORT}" != "3000" ]; then
+  echo "[omnim] WARNING: OMNIM_PORT='${OMNIM_PORT}' is exported in this shell." >&2
+  echo "[omnim] WARNING: dev normally runs on 3000; 3100 is reserved for E2E." >&2
+fi
+
 cd "$(dirname "$0")/.."
 
 echo "[omnim] stopping existing server on port ${PORT}..."

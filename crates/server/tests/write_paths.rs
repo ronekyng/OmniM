@@ -1825,3 +1825,78 @@ async fn slice4_commands_redo_after_undo() {
         "breakdown link redo failed"
     );
 }
+
+async fn undo_depth(port: u16) -> u64 {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(api_url(port, "/api/undo-status"))
+        .send()
+        .await
+        .unwrap();
+    assert!(resp.status().is_success(), "undo-status failed");
+    let status: serde_json::Value = resp.json().await.unwrap();
+    status["undo_depth"].as_u64().unwrap()
+}
+
+async fn redo_n(port: u16, times: usize) {
+    for _ in 0..times {
+        redo(port).await;
+    }
+}
+
+async fn object_count(port: u16) -> usize {
+    let client = reqwest::Client::new();
+    let resp = client
+        .get(api_url(port, "/api/objects"))
+        .send()
+        .await
+        .unwrap();
+    assert!(resp.status().is_success(), "list objects failed");
+    let objects: Vec<serde_json::Value> = resp.json().await.unwrap();
+    objects.len()
+}
+
+/// INTERACTION §8: history depth must be at least 50 and bounded at 200.
+#[tokio::test]
+async fn undo_history_keeps_fifty_steps_caps_at_two_hundred_and_redoes() {
+    let (port, _) = test_server().await;
+
+    for i in 0..60 {
+        create_wall(port, &format!("W-depth-{i}")).await;
+    }
+    assert_eq!(undo_depth(port).await, 60, "history must retain 60 steps");
+    assert_eq!(object_count(port).await, 60);
+
+    undo_n(port, 60).await;
+    assert_eq!(
+        object_count(port).await,
+        0,
+        "60 undos must remove all objects"
+    );
+    redo_n(port, 60).await;
+    assert_eq!(
+        object_count(port).await,
+        60,
+        "60 redos must restore all objects"
+    );
+    assert!(!undo_depth(port).await.eq(&0), "redo must keep history");
+
+    // The cap is 200 on a fresh history: 210 creates keep the newest 200.
+    let (cap_port, _) = test_server().await;
+    for i in 0..210 {
+        create_wall(cap_port, &format!("W-cap-{i}")).await;
+    }
+    assert_eq!(
+        undo_depth(cap_port).await,
+        200,
+        "history must be capped at 200"
+    );
+
+    // The oldest 10 commands fall off, so 10 objects remain after undoing the cap.
+    undo_n(cap_port, 200).await;
+    assert_eq!(
+        object_count(cap_port).await,
+        10,
+        "the 10 commands outside the cap must remain applied"
+    );
+}

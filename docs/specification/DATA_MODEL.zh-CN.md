@@ -1,7 +1,7 @@
 ---
 title: "OmniM 统一数据模型"
 status: design
-last_updated: 2026-10-27
+last_updated: 2026-11-03
 applies_to: "proto/, crates/model"
 evidence: "n/a (design contract)"
 ---
@@ -1088,6 +1088,8 @@ message ExternalTarget {
 
 **显式墙体开洞集合**（源自 Revit，`docs/research/revit_components.md §5.1`）：Revit 将开洞作为命名的、可统计的、可独立编辑的构件（门/窗开洞）来跟踪。作为上述横断面变化方法之外的替代方案，开洞可以建模为墙体上的显式 `Openings` 集合——每个开洞都是一个带自身标识、尺寸和统计数据的子对象，引用宿主墙及沿墙路径的位置。
 
+**门窗面板变体（Phase 8-1，2026-11-03）**：door/window 请求新增 `leaf_count`（门 1–2、窗 1–4；多扇间加中梃 `mullion`）、`with_sill`（窗台外挑板，基准下挑出）与 `with_lintel`（过梁横梁，覆盖洞口上方 ≥0.08 m）。几何延续既有"面板+框"惯例（`build_opening_panel(width, height, thickness, PanelOptions)`），对象记录 `leaf_count/with_sill/with_lintel/frame_type` 属性。**门窗表**（DOMIANS 量算/开洞统计）：`GET /api/schedules/openings?root_id=` 对容器子树（或全项目）把 Door/Window 按 (类型, 洞口尺寸[mm], 框变体) **分组计数**，返回行 `{ object_type, width_mm, height_mm, leaf_count, with_sill, with_lintel, frame_type, count }`。**仍未覆盖（🔀/🗓）**：宿主墙**不重剪**（开洞为空积填充，属开洞元素独立体积）、正式窗格/百叶几何、斜窗。
+
 **变截面插值方法**：基于 Bentley OBM 拼装钢梁分析（`docs/research/bentley_openroads_components.md §2.1.3`），插值方法从单一线性扩展为 6 种：Constant、Linear、Parabolic Up/Down、Circular Up/Down。覆盖所有已调研平台的结构变截面场景。
 
 **多段变截面**：基于 Bentley OBM Beam Rows + Different End Template 和 OTD 多 Tunnel Unit 分析，`CrossSectionSegment` 列表支持每段独立定义截面。当段内 `start_section == end_section` 时，该段为简单扫掠（无放样）——匹配 OTD §4.1 观察到的"段内插值 + 段间跳跃"工程现实。
@@ -1099,6 +1101,8 @@ message ExternalTarget {
 **钢筋作为 LinearComponent**（源自 Tekla Structures，`docs/research/tekla_components.md §6.1`）：配筋（Rebar）是带圆形截面沿路径（直线或弯折）扫掠的 LinearComponent。除基础 LinearComponent 参数外，关键参数包括：Size（直径）、Grade（等级，如 B500B）、RadiusValues（弯曲半径）、OnPlaneOffsets / FromPlaneOffset（定位）、StartHook / EndHook（弯钩角度）、SpliceType / SpliceOffsets（搭接）、StirrupType（箍筋 vs 非箍筋）、ExcludeType（分布模式）。钢筋修改器（RebarPropertyModifier、RebarSplitter、RebarEndDetailModifier）作为特征引擎中的后生成特征操作来建模。
 
 **标高约束的竖向范围**（源自 Revit，`docs/research/revit_components.md §5.1`）：建筑竖向构件（墙/板/屋顶）约束到标高（顶部/底部）而非绝对高度。LinearComponentGen 支持 `top_level_id` / `bottom_level_id` 约束概念，以实现建筑领域对等：竖向范围相对于命名的标高高度解析，使得标高变化时高度可自动调整。**现状（2026-10-29，P8-S1 + P8-S2）**：基准底座已落地——楼层对象的 `OmniObject.elevation`、`level_id` 关联与轴网基准存储（`Project.grids`，`/api/grids` CRUD）。**竖向范围约束已实现**：`bottom_level_id` + `top_level_id`（成对、校验；顶部须高于底部）把 `elevation` 解析为底部楼层标高，并对路径驱动（`PathSweep`）几何——Wave-3 建筑族——平移路径基高、把扫掠高度置为 `top − bottom`。修改楼层标高会把所有受约束对象作为**单步撤销**重新解析（`Command::ModifyObject.cascade`），删除仍被引用的楼层会被拒绝。Web 创建面板为 layered 族提供底部/顶部标高选择器（P8-S3），IFC 导出写入楼层原生 `Elevation` 属性。**剩余（🔀/🗓）**：普通几何对象仅获得 `elevation` 基准（网格不重写）；目录 `Component` 放置（Extrude 特征几何）尚未按标高约束重新求值。**P8-S4**：路由管通过 `Pipe-Path` 特征树实例化（`PathSweep` + `PathSweepSection::Circular`），管道路由几何走特征树而非游离网格。
+
+**分支管道（Phase 8-3，2026-11-03）**：`POST /api/genrule` 的 pipe 请求支持 `branch_of`（宿主管 id）+ `branch_point` + `target`（可选 `branch_radius`）。`branch_point` 吸附到宿主 `route_points` 折线（容差 0.1 m），随后创建**三通管件**（挂宿主之下，`fitting_type=tee`、`branch_pipe_id`、`bore`）与**支管**（`Pipe-Path` 特征树实例化，路径为 [吸附点, target]，`branch-in` 起点连接器朝向三通、`end` 自由端，`host_pipe_id` 属性记录归属）。整次动作用 `record_create_batch` 记为**单步撤销**。拒绝域：宿主不存在（404）/ 不是管 / 无 route / branch_point 偏离超容差 / target 与 branch_point 重合。三通体的扫掠几何为占位（与弯头同惯例：球体标记交接点，正式三通道体登记为增强）。**仍未覆盖（🔀/🗓）**：管件特征模板、`ComponentSequence` 元件序列（§6.5）、P&ID。
 
 **连接点到连接点的创建模式**（源自 Revit，`docs/research/revit_components.md §7`）：Revit 中的 MEP 构件（管道/风管/电缆桥架）通过选择起点和终点连接器创建，而非仅指定路径。这是线构件的一种额外创建模式：用户不是在现有构件上拾取两个连接器，而是指定几何路径，系统在两者之间自动敷设路径（尊重坡度、净距和连接类型规则）。`main_path` 随后自动生成，而非用户指定。
 

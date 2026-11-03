@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import type { TreeNode } from '../../shared/types';
 import { colorForType } from './ThreeViewer';
+import { IcoChevronDown, IcoChevronRight } from './Icons';
 
 type ObjectTreeProps = {
   nodes: TreeNode[];
@@ -12,7 +13,17 @@ type ObjectTreeProps = {
   onDelete?: (id: string) => void;
   onReparent?: (childId: string, newParentId: string | null) => void;
   onEditComponent?: (id: string) => void;
+  onRename?: (id: string, name: string) => void;
 };
+
+function findNode(nodes: TreeNode[], id: string): TreeNode | undefined {
+  for (const node of nodes) {
+    if (node.id === id) return node;
+    const nested = findNode(node.children, id);
+    if (nested) return nested;
+  }
+  return undefined;
+}
 
 function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
   const q = query.toLowerCase().trim();
@@ -66,6 +77,11 @@ type ObjectTreeNodeProps = {
   onReparent?: (childId: string, newParentId: string | null) => void;
   dragNodeId: string | null;
   setDragNodeId: (id: string | null) => void;
+  level: number;
+  focusedId: string | null;
+  setFocusedId: (id: string) => void;
+  onKeyboardContextMenu: (nodeId: string) => void;
+  onRename?: (id: string, name: string) => void;
 };
 
 function ObjectTreeNode({
@@ -82,11 +98,92 @@ function ObjectTreeNode({
   onReparent,
   dragNodeId,
   setDragNodeId,
+  level,
+  focusedId,
+  setFocusedId,
+  onKeyboardContextMenu,
+  onRename,
 }: ObjectTreeNodeProps) {
   const color = colorForType(node.ifc_class || node.object_type);
   const hexColor = '#' + color.toString(16).padStart(6, '0');
   const isSelected = selectedIds?.includes(node.id) ?? false;
+  const hasChildren = node.children.length > 0;
+  const [expanded, setExpanded] = useState(true);
   const [dragOver, setDragOver] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(node.name);
+  const renameRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) {
+      renameRef.current?.focus();
+      renameRef.current?.select();
+    }
+  }, [editing]);
+
+  const beginRename = () => {
+    setDraftName(node.name);
+    setEditing(true);
+  };
+  const commitRename = () => {
+    const next = draftName.trim();
+    setEditing(false);
+    if (next && next !== node.name) onRename?.(node.id, next);
+  };
+
+  const select = useCallback(() => {
+    onSelectionChanged([node.id]);
+    setFocusedId(node.id);
+  }, [node.id, onSelectionChanged, setFocusedId]);
+
+  const visibleItems = (li: HTMLElement): HTMLElement[] => {
+    const root = li.closest('[role="tree"]');
+    if (!root) return [];
+    return Array.from(root.querySelectorAll<HTMLElement>('[role="treeitem"]')).filter(
+      (item) => item.getClientRects().length > 0,
+    );
+  };
+
+  const focusItem = (item: HTMLElement | undefined | null) => {
+    if (!item) return;
+    item.focus();
+    const id = item.dataset.nodeId;
+    if (id) setFocusedId(id);
+  };
+
+  const moveFocus = (li: HTMLElement, delta: number) => {
+    const items = visibleItems(li);
+    focusItem(items[items.indexOf(li) + delta]);
+  };
+
+  const handleTreeKeyDown = (event: React.KeyboardEvent<HTMLLIElement>) => {
+    // Nested <li> rows bubble: only the focused row may act on the key.
+    if (event.target !== event.currentTarget) return;
+    const li = event.currentTarget;
+    // INTERACTION §5.3: the row owns roving focus, expansion and selection.
+    if (event.key === 'ArrowDown') { event.preventDefault(); moveFocus(li, 1); }
+    else if (event.key === 'ArrowUp') { event.preventDefault(); moveFocus(li, -1); }
+    else if (event.key === 'Home') { event.preventDefault(); focusItem(visibleItems(li)[0]); }
+    else if (event.key === 'End') { event.preventDefault(); const items = visibleItems(li); focusItem(items[items.length - 1]); }
+    else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      if (hasChildren && !expanded) setExpanded(true);
+      else if (hasChildren) focusItem(li.querySelector<HTMLElement>('[role="treeitem"]'));
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      if (hasChildren && expanded) setExpanded(false);
+      else focusItem(li.closest('ul[role="group"]')?.closest<HTMLElement>('[role="treeitem"]'));
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      select();
+    } else if (event.key === 'F2') {
+      event.preventDefault();
+      beginRename();
+    } else if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      event.preventDefault();
+      onKeyboardContextMenu(node.id);
+    }
+  };
 
   const handleDragStart = useCallback(
     (e: React.DragEvent) => {
@@ -133,7 +230,15 @@ function ObjectTreeNode({
   return (
     <li
       className={`tree-node${isSelected ? ' selected' : ''}${dragOver ? ' drag-over' : ''}`}
-      draggable
+      role="treeitem"
+      aria-level={level}
+      aria-selected={isSelected}
+      aria-expanded={hasChildren ? expanded : undefined}
+      tabIndex={focusedId === node.id ? 0 : -1}
+      data-node-id={node.id}
+      draggable={!editing}
+      onFocus={() => setFocusedId(node.id)}
+      onKeyDown={handleTreeKeyDown}
       onClick={(e) => {
         e.stopPropagation();
         const ctrl = e.ctrlKey || e.metaKey;
@@ -144,10 +249,12 @@ function ObjectTreeNode({
         } else {
           onSelectionChanged([node.id]);
         }
+        setFocusedId(node.id);
+        e.currentTarget.focus();
       }}
       onDoubleClick={(e) => {
         e.stopPropagation();
-        onDoubleClick(node.id);
+        beginRename();
       }}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -160,13 +267,52 @@ function ObjectTreeNode({
       onDrop={handleDrop}
       onDragEnd={handleDragEnd}
     >
+      {hasChildren ? (
+        <button
+          type="button"
+          className="tree-toggle"
+          data-tree-toggle
+          aria-label={expanded ? 'Collapse' : 'Expand'}
+          aria-expanded={expanded}
+          onClick={(e) => {
+            e.stopPropagation();
+            setExpanded((v) => !v);
+          }}
+        >
+          {expanded ? <IcoChevronDown size={12} /> : <IcoChevronRight size={12} />}
+        </button>
+      ) : (
+        <span className="tree-toggle-spacer" />
+      )}
       <span className="tree-dot" style={{ background: hexColor }} />
       <div className="tree-info">
-        <div className="tree-name">{node.name || 'Unnamed'}</div>
+        {editing ? (
+          <input
+            ref={renameRef}
+            className="tree-rename"
+            aria-label="Object name"
+            value={draftName}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => setDraftName(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              e.stopPropagation();
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitRename();
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <div className="tree-name">{node.name || 'Unnamed'}</div>
+        )}
         <div className="tree-meta">{node.ifc_class || node.object_type}</div>
       </div>
-      {node.children.length > 0 && (
-        <ul className="tree-children">
+      {hasChildren && expanded && (
+        <ul className="tree-children" role="group">
           {node.children.map((child) => (
             <ObjectTreeNode
               key={child.id}
@@ -183,6 +329,11 @@ function ObjectTreeNode({
               onReparent={onReparent}
               dragNodeId={dragNodeId}
               setDragNodeId={setDragNodeId}
+              level={level + 1}
+              focusedId={focusedId}
+              setFocusedId={setFocusedId}
+              onKeyboardContextMenu={onKeyboardContextMenu}
+              onRename={onRename}
             />
           ))}
         </ul>
@@ -201,6 +352,7 @@ export function ObjectTree({
   onDelete,
   onReparent,
   onEditComponent,
+  onRename,
 }: ObjectTreeProps) {
   const onSelectionChangedRef = useRef(onSelectionChanged);
   const onDblRef = useRef(onDoubleClick);
@@ -209,6 +361,7 @@ export function ObjectTree({
   const onDelRef = useRef(onDelete);
   const onRepRef = useRef(onReparent);
   const onEditRef = useRef(onEditComponent);
+  const onRenameRef = useRef(onRename);
   onSelectionChangedRef.current = onSelectionChanged;
   onDblRef.current = onDoubleClick;
   onCreateRef.current = onCreateChild;
@@ -216,37 +369,79 @@ export function ObjectTree({
   onDelRef.current = onDelete;
   onRepRef.current = onReparent;
   onEditRef.current = onEditComponent;
+  onRenameRef.current = onRename;
 
   const [searchQuery, setSearchQuery] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
     nodeId: string;
+    viaKeyboard: boolean;
   } | null>(null);
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<string | null>(null);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const treeRef = useRef<HTMLUListElement>(null);
+  const previousFocusedRef = useRef<string | null>(null);
 
   const filtered = filterTree(nodes, searchQuery);
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent, nodeId: string) => {
+  useEffect(() => {
+    const previous = previousFocusedRef.current;
+    const previousStillExists = previous ? Boolean(findNode(nodes, previous)) : true;
+    let next = focusedId;
+    if (!next || !findNode(nodes, next)) next = nodes[0]?.id ?? null;
+    previousFocusedRef.current = next;
+    if (next !== focusedId) setFocusedId(next);
+    // A11Y §4: if the focused row was removed, move focus to its neighbour.
+    if (previous && !previousStillExists) {
+      requestAnimationFrame(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const target = next
+          ? treeRef.current?.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(next)}"]`)
+          : null;
+        target?.focus();
+      });
+    }
+  }, [nodes, focusedId]);
+
+  const openContextMenu = useCallback(
+    (nodeId: string, clientX: number, clientY: number, viaKeyboard: boolean) => {
       const menuWidth = 200;
       const menuHeight = 220;
-      let x = e.clientX;
-      let y = e.clientY;
+      let x = clientX;
+      let y = clientY;
       if (x + menuWidth > window.innerWidth) x = window.innerWidth - menuWidth - 4;
       if (y + menuHeight > window.innerHeight) y = window.innerHeight - menuHeight - 4;
       if (x < 0) x = 4;
       if (y < 0) y = 4;
-      setContextMenu({ x, y, nodeId });
+      setContextMenu({ x, y, nodeId, viaKeyboard });
     },
     [],
   );
 
+  const handleContextMenu = useCallback(
+    (e: React.MouseEvent, nodeId: string) => {
+      openContextMenu(nodeId, e.clientX, e.clientY, false);
+    },
+    [openContextMenu],
+  );
+
+  const handleKeyboardContextMenu = useCallback((nodeId: string) => {
+    const row = document.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(nodeId)}"]`);
+    const rect = row?.getBoundingClientRect();
+    openContextMenu(nodeId, rect?.left ?? 0, rect?.bottom ?? 0, true);
+  }, [openContextMenu]);
+
   const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
+    setContextMenu((current) => {
+      if (current) {
+        document.querySelector<HTMLElement>(`[data-node-id="${CSS.escape(current.nodeId)}"]`)?.focus();
+      }
+      return null;
+    });
   }, []);
 
   useEffect(() => {
@@ -259,6 +454,9 @@ export function ObjectTree({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeContextMenu();
     };
+    if (contextMenu.viaKeyboard) {
+      contextMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
+    }
     const timer = setTimeout(() => {
       document.addEventListener('mousedown', handleClick);
       document.addEventListener('keydown', handleKey);
@@ -269,6 +467,29 @@ export function ObjectTree({
       document.removeEventListener('keydown', handleKey);
     };
   }, [contextMenu, closeContextMenu]);
+
+  const handleMenuKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const items = Array.from(
+      event.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'),
+    );
+    const index = items.indexOf(document.activeElement as HTMLElement);
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      items[(index + 1) % items.length]?.focus();
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      items[(index - 1 + items.length) % items.length]?.focus();
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      items[0]?.focus();
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      items[items.length - 1]?.focus();
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeContextMenu();
+    }
+  }, [closeContextMenu]);
 
   const handleFocus = useCallback(() => {
     if (contextMenu) onDblRef.current?.(contextMenu.nodeId);
@@ -328,7 +549,13 @@ export function ObjectTree({
           onChange={(e) => setSearchQuery(e.target.value)}
         />
       </div>
-      <ul className="object-tree">
+      <ul
+        ref={treeRef}
+        className="object-tree"
+        role="tree"
+        aria-label="Object tree"
+        aria-multiselectable="true"
+      >
         {filtered.map((node) => (
           <ObjectTreeNode
             key={node.id}
@@ -345,6 +572,11 @@ export function ObjectTree({
             onReparent={(childId, newParentId) => onRepRef.current?.(childId, newParentId)}
             dragNodeId={dragNodeId}
             setDragNodeId={setDragNodeId}
+            level={1}
+            focusedId={focusedId}
+            setFocusedId={setFocusedId}
+            onKeyboardContextMenu={handleKeyboardContextMenu}
+            onRename={(id, name) => onRenameRef.current?.(id, name)}
           />
         ))}
       </ul>
@@ -353,32 +585,34 @@ export function ObjectTree({
         <div
           ref={contextMenuRef}
           className="tree-context-menu"
+          role="menu"
+          aria-label="Object actions"
+          onKeyDown={handleMenuKeyDown}
           style={{
             position: 'fixed',
             left: contextMenu.x,
             top: contextMenu.y,
-            zIndex: 9999,
           }}
         >
-          <button className="ctx-menu-item" onClick={handleFocus}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleFocus}>
             Focus in 3D
           </button>
-          <button className="ctx-menu-item" onClick={handleProperties}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleProperties}>
             Properties
           </button>
-          <button className="ctx-menu-item" onClick={handleEditComponent}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleEditComponent}>
             Edit Component
           </button>
-          <button className="ctx-menu-item" onClick={handleCreateChild}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleCreateChild}>
             Create Child
           </button>
-          <button className="ctx-menu-item" onClick={handleDuplicate}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleDuplicate}>
             Duplicate
           </button>
-          <button className="ctx-menu-item" onClick={handleDelete}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleDelete}>
             Delete
           </button>
-          <button className="ctx-menu-item" onClick={handleCopyId}>
+          <button className="ctx-menu-item" role="menuitem" tabIndex={-1} onClick={handleCopyId}>
             Copy ID
           </button>
         </div>

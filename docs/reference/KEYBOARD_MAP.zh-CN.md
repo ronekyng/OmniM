@@ -1,7 +1,7 @@
 ---
 title: "OmniM 快捷键表"
 status: design
-last_updated: 2026-10-30
+last_updated: 2026-11-03
 applies_to: "web/"
 evidence: "2026-10-30 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.tsx、OmniPanel.tsx、ObjectTree.tsx、AiChat.tsx 核实"
 ---
@@ -17,9 +17,9 @@ evidence: "2026-10-30 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.ts
 
 | 层 | 产物 |
 |---|---|
-| 命令定义 | 命令注册表（计划） |
-| 快捷键绑定 | `web/src/shared/commands/keymap.ts`（计划） |
-| 本文 | 镜像注册表；生成后不再手改 |
+| 命令定义 | `web/src/app/App.tsx` 的 `commands` 注册表 |
+| 快捷键绑定 | 注册表行的 `shortcut` 字段 + `App.tsx` 全局分发 |
+| 本文 | 镜像注册表；`gen_keymap.py --check` 校验双语一致 |
 | 冲突解决 | 注册表加载时，同作用域重复绑定直接让构建失败 |
 
 ## 2. 全局快捷键
@@ -28,16 +28,17 @@ evidence: "2026-10-30 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.ts
 |---|---|---|---|
 | `Ctrl/Cmd+S` | 保存项目 | 全局 | ✅ |
 | `Ctrl/Cmd+Shift+S` | 另存为 | 全局 | 📅 |
-| `Ctrl/Cmd+Z` | 撤销 | 全局 | 🔀 |
-| `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | 重做 | 全局 | 🔀 |
-| `Ctrl/Cmd+K` | 命令面板 | 全局 | 📅 |
+| `Ctrl/Cmd+Z` | 撤销 | 全局 | ✅ |
+| `Ctrl/Cmd+Shift+Z` / `Ctrl+Y` | 重做 | 全局 | ✅ |
+| `Ctrl/Cmd+K` | 命令面板 | 全局 | ✅ |
 | `Ctrl/Cmd+A` | 选择全部可见对象 | 全局 | 📅 |
 | `Delete` | 删除选中 | 全局 | ✅ |
 | `Esc` | 取消最内层动作 | 全局 | ✅ |
-| `Shift+F10` | 上下文菜单 | 全局 | 📅 |
-| `F1` | 快捷键帮助 | 全局 | 📅 |
-| `F6` | 循环区域 | 全局 | 📅 |
+| `Shift+F10` | 上下文菜单 | 全局 | ✅ |
+| `F1` | 快捷键帮助 | 全局 | ✅ |
+| `F6` | 循环区域 | 全局 | ✅ |
 | `?` | 聚焦控件的上下文帮助 | 全局 | 📅 |
+| `F2` | 就地重命名（聚焦树行） | 全局 | ✅ |
 
 > 注：`Ctrl/Cmd+S` 对应标题栏 **Save** 按钮。"另存为"命令尚无快捷键（📅）——当前 `Ctrl/Cmd+Shift+S` 会落入与 `Ctrl+S` 相同的分支、触发普通保存；请使用标题栏 **Save as** 按钮。
 
@@ -70,10 +71,10 @@ evidence: "2026-10-30 对照 web/src/app/App.tsx、sketch/ComponentEditorPage.ts
 
 | 快捷键 | 动作 | 状态 |
 |---|---|---|
-| `Tab` / `Shift+Tab` | 在弹窗内移动焦点 | 📅 |
-| `Enter` | 确认（安全默认） | 📅 |
-| `Esc` | 关闭 / 取消 | 🔀 |
-| `Space` | 激活聚焦控件 | 📅 |
+| `Tab` / `Shift+Tab` | 在弹窗内移动焦点 | ✅ |
+| `Enter` | 确认（安全默认） | ✅ |
+| `Esc` | 关闭 / 取消 | ✅ |
+| `Space` | 激活聚焦控件 | ✅ |
 
 ## 6. 控制台与编辑器
 

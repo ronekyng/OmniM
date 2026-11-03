@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Baseline (2026-10-29)"
 status: current
-last_updated: 2026-10-29
+last_updated: 2026-11-02
 applies_to: "web/"
 evidence: "static measurements on 2026-10-29; runtime and screenshot measurements pending instrumentation"
 ---
@@ -71,6 +71,9 @@ These are the numbers the design-system and feedback requirements must drive to 
 | ESLint / Prettier configs for `web/` | 0 | Required | — |
 | Layout persistence | None | Required | UI-SHL-06 |
 | Theme provider | None | Required | UI-DS-02 |
+
+> **2026-11-02 re-measure (P11).** The table above remains the 2026-10-29 historical snapshot; current measurements: **0** literal colours outside the token file (`web/src/globals.css`), **0** duplicate token blocks, **0** emoji icons, **0** z-index magic numbers, **73** `aria-*` / **70** `role` attributes; `check_ui_contracts.py --only tokens,zindex,emoji` is 0; axe critical paths report 0 violations. `web/e2e/theme.spec.ts` covers switching, persistence and AA contrast in both themes.
+
 | i18n provider | None | Required | UI-I18N-02 |
 
 ## 5. Runtime Baseline (pending)

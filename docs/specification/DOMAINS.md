@@ -1,7 +1,7 @@
 ---
 title: "OmniM Domain Coverage"
 status: design
-last_updated: 2026-10-27
+last_updated: 2026-11-03
 applies_to: "proto/, crates/model"
 evidence: "n/a (design contract)"
 ---
@@ -64,10 +64,10 @@ Civil Engineering covers infrastructure, transportation, land development, utili
 | Tunnel | Tunnel, Lining, Portal, Shaft, Segment, Ring, CrossPassage | 🔀 Tunnel; 🗓 Lining, Portal, Shaft, Segment, Ring, CrossPassage |
 | Hydraulic | Dam, Culvert, Channel, Drainage, RetentionBasin | ✅ Dam, Culvert; 🗓 Channel, Drainage, RetentionBasin |
 | Utility | WaterPipe, SewerPipe, StormPipe, Manhole, UtilityPole, DuctBank | ✅ Manhole; 🗓 WaterPipe, SewerPipe, StormPipe, UtilityPole, DuctBank |
-| Terrain/Site | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | 🗓 all planned-only |
-| Earthwork | CutVolume, FillVolume, EarthworkBalance, RetainingWall | ✅ RetainingWall; 🗓 CutVolume, FillVolume, EarthworkBalance |
+| Terrain/Site | TerrainModel, GradingSurface, Slope, FeatureLine, ContourLine, SiteComponent | **🔀 TerrainModel delivered** (Phase 8-2, 2026-11-03): `genrule: terrain` fits a Bowyer–Watson TIN from survey points `[x,y,z]` (`ObjectType::TerrainModel`, surface mesh + `survey_points/vertex_count/triangle_count/extent` properties); `GET /api/terrain/{id}/elevation?x=&y=` answers barycentric elevation (404 outside the hull). 🗓 GradingSurface, Slope; FeatureLine/ContourLine exist as objects but are not terrain-aware |
+| Earthwork | CutVolume, FillVolume, EarthworkBalance, RetainingWall | 🔀 **EarthworkBalance delivered (Phase 8-2)**: `POST /api/earthwork` (inline survey points or a TerrainModel id + `design_z`/`cell`) integrates cut/fill/net per grid cell centre against the design level (outside-hull cells are counted, not extrapolated). 🗓 persistent CutVolume/FillVolume objects not built |
 
-> **Proto status** legend: ✅ in proto · 🔀 partial (in proto, simplified workflow) · 🗓 planned-only. Civil: 41 listed / 10 in proto / 31 planned-only.
+> **Proto status** legend: ✅ in proto · 🔀 partial (in proto, simplified workflow) · 🗓 planned-only. Civil: 41 listed / 11 in proto / 30 planned-only (2026-11-03 adds `ObjectType::TerrainModel`).
 
 > **Bentley bridge/tunnel component details** (`docs/research/bentley_openroads_components.md`):
 > - **Bearing types** (§2.3.1): Elastomeric Pad, Pot, Disc, Mechanical

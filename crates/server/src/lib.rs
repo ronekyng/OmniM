@@ -89,6 +89,7 @@ fn build_router(state: SharedState) -> Router {
             "/api/object-types/{type}/properties",
             get(get_object_type_properties),
         )
+        .route("/api/objects/{id}/bom", get(object_bom))
         .route("/api/objects/{id}/properties", put(update_properties))
         .route("/api/objects/{id}/transform", put(transform_object))
         .route("/api/objects/{id}/parent", put(set_parent))
@@ -103,6 +104,14 @@ fn build_router(state: SharedState) -> Router {
         // 2026-10-29 P8-S1: grid datum
         .route("/api/grids", get(list_grids).post(create_grid))
         .route("/api/grids/{id}", put(update_grid).delete(delete_grid))
+        // 2026-11-03 Phase 8-4: motion joints (ASSEMBLY §9)
+        .route("/api/joints", get(list_joints).post(create_joint))
+        .route("/api/joints/{id}", put(update_joint).delete(delete_joint))
+        // 2026-11-03 Phase 8-2: terrain elevation query + grid earthwork
+        .route("/api/terrain/{id}/elevation", get(terrain_elevation))
+        .route("/api/earthwork", post(earthwork_balance))
+        // 2026-11-03 Phase 8-1: door/window schedule over a container subtree
+        .route("/api/schedules/openings", get(openings_schedule))
         .route("/api/lifecycle", get(list_lifecycle).post(create_lifecycle))
         .route("/api/lifecycle/{id}/link/{obj_id}", post(link_record))
         .route(
@@ -825,6 +834,107 @@ async fn get_object(
         .cloned()
         .map(Json)
         .ok_or(StatusCode::NOT_FOUND)
+}
+
+/// One BOM line: an instance with its source and (bbox-based) volume.
+#[derive(Serialize)]
+struct BomRow {
+    object_id: String,
+    name: String,
+    object_type: String,
+    kind: String,
+    component_def_id: Option<String>,
+    series_id: Option<String>,
+    bbox_volume_m3: Option<f64>,
+}
+
+#[derive(Serialize)]
+struct BomTotals {
+    row_count: usize,
+    total_volume_m3: f64,
+}
+
+#[derive(Serialize)]
+struct BomResponse {
+    root_id: String,
+    /// Type name of the root, so clients can decide whether the BOM is a
+    /// container listing (Assembly) or a single-leaf listing.
+    root_object_type: String,
+    rows: Vec<BomRow>,
+    totals: BomTotals,
+}
+
+fn bom_row(obj: &omnim_model::OmniObject) -> BomRow {
+    let kind = if obj.catalog_ref.is_some() {
+        "component"
+    } else if obj.object_type == c::ObjectType::Part as i32 {
+        "part"
+    } else {
+        "proxy"
+    };
+    let bbox_volume_m3 = obj.bbox().and_then(|bbox| {
+        let (min, max) = (bbox.min.as_ref()?, bbox.max.as_ref()?);
+        let dx = (max.x - min.x).abs();
+        let dy = (max.y - min.y).abs();
+        let dz = (max.z - min.z).abs();
+        if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
+            None
+        } else {
+            Some((dx * dy * dz * 1000.0).round() / 1000.0)
+        }
+    });
+    BomRow {
+        object_id: obj.id.clone(),
+        name: obj.name.clone(),
+        object_type: obj.object_type_name().to_string(),
+        kind: kind.to_string(),
+        component_def_id: obj.catalog_ref.as_ref().map(|r| r.component_def_id.clone()),
+        series_id: obj.catalog_ref.as_ref().map(|r| r.series_id.clone()),
+        bbox_volume_m3,
+    }
+}
+
+/// `GET /api/objects/{id}/bom` — Phase 8-4 (ASSEMBLY §1): BOM/quantity rows
+/// for an Assembly subtree. A leaf returns itself; a container returns its
+/// descendants (the container has no geometry of its own).
+async fn object_bom(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> Result<Json<BomResponse>, ApiError> {
+    let p = state.project.read().await;
+    let root = p
+        .objects
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::not_found(format!("object '{}' not found", id)))?;
+    let mut rows: Vec<BomRow> = Vec::new();
+    if !p.objects.children_of(&id).is_empty() {
+        let mut stack: Vec<omnim_model::OmniObject> = p
+            .objects
+            .children_of(&id)
+            .iter()
+            .map(|o| (*o).clone())
+            .collect();
+        while let Some(obj) = stack.pop() {
+            stack.extend(p.objects.children_of(&obj.id).iter().map(|o| (*o).clone()));
+            rows.push(bom_row(&obj));
+        }
+    } else {
+        rows.push(bom_row(&root));
+    }
+    let total_volume_m3 =
+        (rows.iter().filter_map(|r| r.bbox_volume_m3).sum::<f64>() * 1000.0).round() / 1000.0;
+    rows.sort_by(|a, b| a.object_type.cmp(&b.object_type).then(a.name.cmp(&b.name)));
+    let row_count = rows.len();
+    Ok(Json(BomResponse {
+        root_id: root.id.clone(),
+        root_object_type: root.object_type_name().to_string(),
+        rows,
+        totals: BomTotals {
+            row_count,
+            total_volume_m3,
+        },
+    }))
 }
 
 #[derive(Deserialize)]
@@ -1630,6 +1740,187 @@ async fn delete_grid(
     Ok(())
 }
 
+// ── Motion joints (Phase 8-4, ASSEMBLY §9): mechanism constraints ──────────
+
+fn parse_joint_kind(s: &str) -> Result<i32, String> {
+    match s {
+        "revolute" => Ok(c::JointKind::JointRevolute as i32),
+        "prismatic" => Ok(c::JointKind::JointPrismatic as i32),
+        "fixed" => Ok(c::JointKind::JointFixed as i32),
+        "spherical" => Ok(c::JointKind::JointSpherical as i32),
+        other => Err(format!(
+            "unknown joint kind '{}' (revolute | prismatic | fixed | spherical)",
+            other
+        )),
+    }
+}
+
+#[derive(Serialize)]
+struct JointResponse {
+    id: String,
+    name: String,
+    kind: String,
+    from_object_id: String,
+    to_object_id: String,
+    origin: Option<c::Point3D>,
+    axis: Option<c::Vector3D>,
+    limit_min: Option<f64>,
+    limit_max: Option<f64>,
+}
+
+fn joint_response(j: &omnim_model::joint::MotionJoint) -> JointResponse {
+    use omnim_model::joint::JointKind::*;
+    let kind = match j.kind {
+        Revolute => "revolute",
+        Prismatic => "prismatic",
+        Fixed => "fixed",
+        Spherical => "spherical",
+    };
+    JointResponse {
+        id: j.id.clone(),
+        name: j.name.clone(),
+        kind: kind.to_string(),
+        from_object_id: j.from_object_id.clone(),
+        to_object_id: j.to_object_id.clone(),
+        origin: Some(j.origin.clone()),
+        axis: j.axis.clone(),
+        limit_min: j.limit_min,
+        limit_max: j.limit_max,
+    }
+}
+
+#[derive(Deserialize)]
+struct JointRequest {
+    name: String,
+    /// "revolute" | "prismatic" | "fixed" | "spherical" (ASSEMBLY §9).
+    kind: String,
+    from_object_id: String,
+    to_object_id: String,
+    /// Metres; rotation centre / slide datum.
+    origin: Option<c::Point3D>,
+    /// Unit-able axis of motion (required for revolute/prismatic).
+    axis: Option<c::Vector3D>,
+    /// Revolute: radians; prismatic: metres. Both or neither.
+    has_limits: Option<bool>,
+    limit_min: Option<f64>,
+    limit_max: Option<f64>,
+}
+
+impl JointRequest {
+    fn into_proto(&self, kind: i32, joint_id: Option<&str>) -> Result<c::operation::Op, String> {
+        let has_limits = self.has_limits.unwrap_or(false);
+        let limit_min = self.limit_min.unwrap_or(0.0);
+        let limit_max = self.limit_max.unwrap_or(0.0);
+        let base = c::CreateJointOperation {
+            name: self.name.clone(),
+            kind,
+            from_object_id: self.from_object_id.clone(),
+            to_object_id: self.to_object_id.clone(),
+            origin: self.origin.clone(),
+            axis: self.axis.clone(),
+            has_limits,
+            limit_min,
+            limit_max,
+        };
+        match joint_id {
+            None => Ok(c::operation::Op::CreateJoint(base)),
+            Some(id) => Ok(c::operation::Op::UpdateJoint(c::UpdateJointOperation {
+                joint_id: id.to_string(),
+                name: base.name,
+                kind: base.kind,
+                from_object_id: base.from_object_id,
+                to_object_id: base.to_object_id,
+                origin: base.origin,
+                axis: base.axis,
+                has_limits: base.has_limits,
+                limit_min: base.limit_min,
+                limit_max: base.limit_max,
+            })),
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct JointFilter {
+    object_id: Option<String>,
+}
+
+/// `GET /api/joints` — all motion joints, optionally those touching an object.
+async fn list_joints(
+    State(state): State<SharedState>,
+    Query(filter): Query<JointFilter>,
+) -> Json<Vec<JointResponse>> {
+    let p = state.project.read().await;
+    let joints: Vec<JointResponse> = if let Some(oid) = &filter.object_id {
+        p.joints
+            .by_object(oid)
+            .into_iter()
+            .map(|j| joint_response(j))
+            .collect()
+    } else {
+        p.joints.list().iter().map(|j| joint_response(j)).collect()
+    };
+    Json(joints)
+}
+
+async fn create_joint(
+    State(state): State<SharedState>,
+    Json(req): Json<JointRequest>,
+) -> Result<impl axum::response::IntoResponse, ApiError> {
+    let kind = parse_joint_kind(&req.kind).map_err(ApiError::bad_request)?;
+    let op = req.into_proto(kind, None).map_err(ApiError::bad_request)?;
+    let result = mutation::apply(&state, c::Action::CreateJoint, vec![mutation::op(op)]).await?;
+    let result = mutation::require_success(result)?;
+    let id = result
+        .created_ids
+        .first()
+        .cloned()
+        .ok_or_else(|| ApiError::internal("joint creation returned no id"))?;
+    let p = state.project.read().await;
+    let joint = p
+        .joints
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("created joint vanished"))?;
+    Ok((StatusCode::CREATED, Json(joint_response(&joint))))
+}
+
+async fn update_joint(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    Json(req): Json<JointRequest>,
+) -> Result<Json<JointResponse>, ApiError> {
+    let kind = parse_joint_kind(&req.kind).map_err(ApiError::bad_request)?;
+    if state.project.read().await.joints.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("joint '{}' not found", id)));
+    }
+    let op = req
+        .into_proto(kind, Some(&id))
+        .map_err(ApiError::bad_request)?;
+    let result = mutation::apply(&state, c::Action::UpdateJoint, vec![mutation::op(op)]).await?;
+    let _ = mutation::require_success(result)?;
+    let p = state.project.read().await;
+    let joint = p
+        .joints
+        .get(&id)
+        .cloned()
+        .ok_or_else(|| ApiError::internal("updated joint vanished"))?;
+    Ok(Json(joint_response(&joint)))
+}
+
+async fn delete_joint(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, ApiError> {
+    if state.project.read().await.joints.get(&id).is_none() {
+        return Err(ApiError::not_found(format!("joint '{}' not found", id)));
+    }
+    let op = c::operation::Op::DeleteJoint(c::DeleteJointOperation { joint_id: id });
+    let result = mutation::apply(&state, c::Action::DeleteJoint, vec![mutation::op(op)]).await?;
+    let _ = mutation::require_success(result)?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
 #[derive(Deserialize)]
 struct CreateLifecycleRequest {
     phase: String,
@@ -2299,10 +2590,59 @@ enum GenRuleRequest {
         #[serde(default)]
         series_id: Option<String>,
     },
+    #[serde(rename = "bridge")]
+    /// Bridge deck (Phase 8-2): with a picked alignment the deck follows the
+    /// **full** polyline (previously bridges only used first → last); without
+    /// one a straight deck strip is generated.
+    Bridge {
+        name: String,
+        #[serde(default)]
+        length: f64,
+        #[serde(default)]
+        width: f64,
+        /// Deck thickness (metres).
+        #[serde(default)]
+        thickness: f64,
+        #[serde(default)]
+        path: Option<PathInput>,
+        #[serde(default)]
+        alignment: Option<PathInput>,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "tunnel")]
+    /// Tunnel lining tube (Phase 8-2): a circular section swept along the
+    /// **full** picked alignment; without one a straight tube is generated.
+    Tunnel {
+        name: String,
+        #[serde(default)]
+        length: f64,
+        #[serde(default)]
+        radius: f64,
+        #[serde(default)]
+        path: Option<PathInput>,
+        #[serde(default)]
+        alignment: Option<PathInput>,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
+    #[serde(rename = "terrain")]
+    Terrain {
+        name: String,
+        /// ≥ 3 survey points `[x, y, z]` (metres). Duplicate XY replays are
+        /// dropped (first elevation wins); collinear surveys are rejected.
+        points: Vec<[f64; 3]>,
+        #[serde(default)]
+        parent_id: Option<String>,
+    },
     #[serde(rename = "pipe")]
     Pipe {
         name: String,
+        /// Legacy straight-pipe length (metres) — required only when neither
+        /// `path` nor `branch_of` is present.
+        #[serde(default)]
         length: f64,
+        #[serde(default)]
         radius: f64,
         /// P8 pipe routing: N-point route (contract `{ points, closed:false }`).
         /// When absent the legacy straight pipe (`length` + `radius`) is built.
@@ -2312,6 +2652,18 @@ enum GenRuleRequest {
         parent_id: Option<String>,
         #[serde(default)]
         series_id: Option<String>,
+        /// Phase 8-3: attach a branch to an existing routed pipe instead of
+        /// creating a new one. `branch_of` is the host pipe id, `branch_point`
+        /// snaps to the host route (tolerance 0.1 m), `target` is the branch
+        /// far end, `branch_radius` defaults to the host radius.
+        #[serde(default)]
+        branch_of: Option<String>,
+        #[serde(default)]
+        branch_point: Option<[f64; 3]>,
+        #[serde(default)]
+        target: Option<[f64; 3]>,
+        #[serde(default)]
+        branch_radius: Option<f64>,
     },
     #[serde(rename = "door")]
     Door {
@@ -2323,6 +2675,12 @@ enum GenRuleRequest {
         position_z: f64,
         #[serde(default)]
         parent_id: Option<String>,
+        /// Phase 8-1: 1 = single leaf, 2 = double leaf (clamped 1..=2).
+        #[serde(default)]
+        leaf_count: usize,
+        /// Phase 8-1: lintel beam above the opening head.
+        #[serde(default)]
+        with_lintel: bool,
     },
     #[serde(rename = "window")]
     Window {
@@ -2334,6 +2692,14 @@ enum GenRuleRequest {
         position_z: f64,
         #[serde(default)]
         parent_id: Option<String>,
+        /// Phase 8-1: casement count (clamped 1..=4; mullions between leaves).
+        #[serde(default)]
+        leaf_count: usize,
+        /// Phase 8-1: outward sill slab at the opening base.
+        #[serde(default)]
+        with_sill: bool,
+        #[serde(default)]
+        with_lintel: bool,
     },
     /// Standalone opening volume (P8): a host-relative void box
     /// (IfcOpeningElement). The host wall is **not** re-cut — feature-tree
@@ -2493,14 +2859,26 @@ fn str_prop(v: &str) -> c::PropertyValue {
 }
 
 fn prop_string(obj: &omnim_model::OmniObject, name: &str) -> Option<String> {
-    match obj.get_property(name)?.value.as_ref()?.value_type.as_ref()? {
+    match obj
+        .get_property(name)?
+        .value
+        .as_ref()?
+        .value_type
+        .as_ref()?
+    {
         c::property_value::ValueType::StringValue(value) => Some(value.clone()),
         _ => None,
     }
 }
 
 fn prop_f64(obj: &omnim_model::OmniObject, name: &str) -> Option<f64> {
-    match obj.get_property(name)?.value.as_ref()?.value_type.as_ref()? {
+    match obj
+        .get_property(name)?
+        .value
+        .as_ref()?
+        .value_type
+        .as_ref()?
+    {
         c::property_value::ValueType::DoubleValue(value) => Some(*value),
         c::property_value::ValueType::IntValue(value) => Some(*value as f64),
         c::property_value::ValueType::StringValue(value) => value.parse().ok(),
@@ -2521,6 +2899,7 @@ fn build_hosted_fill(
     opening_height: f64,
     position_x: f64,
     position_z: f64,
+    options: omnim_model::gen_rule::door::PanelOptions,
 ) -> c::MeshGeometry {
     use omnim_model::gen_rule::door;
 
@@ -2532,16 +2911,18 @@ fn build_hosted_fill(
     let max = bbox.and_then(|b| b.max.as_ref()).map(|p| [p.x, p.y, p.z]);
 
     let bbox_size = match (min, max) {
-        (Some(a), Some(b)) => Some([(b[0] - a[0]).abs(), (b[1] - a[1]).abs(), (b[2] - a[2]).abs()]),
+        (Some(a), Some(b)) => Some([
+            (b[0] - a[0]).abs(),
+            (b[1] - a[1]).abs(),
+            (b[2] - a[2]).abs(),
+        ]),
         _ => None,
     };
 
     let thickness = prop_f64(wall, "wall_thickness")
         .or_else(|| {
-            prop_f64(wall, "core_thickness").map(|core| {
-                core + 2.0
-                    * prop_f64(wall, "finish_thickness").unwrap_or(0.0)
-            })
+            prop_f64(wall, "core_thickness")
+                .map(|core| core + 2.0 * prop_f64(wall, "finish_thickness").unwrap_or(0.0))
         })
         .or_else(|| bbox_size.map(|s| s[0].min(s[1])))
         .unwrap_or(0.2)
@@ -2568,7 +2949,7 @@ fn build_hosted_fill(
         })
         .unwrap_or(([0.0, 0.0, 0.0], [1.0, 0.0]));
 
-    let panel = door::build_opening_panel(opening_width, opening_height, thickness);
+    let panel = door::build_opening_panel(opening_width, opening_height, thickness, options);
     door::place_panel(&panel, [base[0], base[1], base[2] + position_z], direction)
 }
 
@@ -2596,6 +2977,9 @@ async fn genrule_create(
         GenRuleRequest::Wall { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Slab { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Road { parent_id, .. } => parent_id.as_deref(),
+        GenRuleRequest::Bridge { parent_id, .. } => parent_id.as_deref(),
+        GenRuleRequest::Tunnel { parent_id, .. } => parent_id.as_deref(),
+        GenRuleRequest::Terrain { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Pipe { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Door { parent_id, .. } => parent_id.as_deref(),
         GenRuleRequest::Window { parent_id, .. } => parent_id.as_deref(),
@@ -2803,18 +3187,231 @@ async fn genrule_create(
             }
             obj.clone()
         }
+        GenRuleRequest::Bridge {
+            name,
+            length,
+            width,
+            thickness,
+            path,
+            alignment,
+            ..
+        } => {
+            // Same alignment contract as the road: path wins, alignment is the
+            // legacy alias, both at once is ambiguous (DATA_MODEL §1).
+            let deck_spec: Option<PathSpec> = match (path, alignment) {
+                (Some(_), Some(_)) => {
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into(),
+                    ));
+                }
+                (Some(p), None) => Some(p.clone().normalize(false)),
+                (None, Some(a)) => Some(a.clone().normalize(false)),
+                (None, None) => None,
+            };
+            if deck_spec.is_some() {
+                omnim_model::gen_rule::matrix::authorize("bridge", "linear")
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+            if let Some(ref spec) = deck_spec {
+                if spec.closed {
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "bridge alignment must be open".into(),
+                    ));
+                }
+                validate_spec(spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+            // Phase 8-2: the deck follows the full polyline; the legacy form
+            // keeps the layered straight strip.
+            let mesh = match &deck_spec {
+                Some(spec) => omnim_model::gen_rule::linear_component::build_road_alignment(
+                    &spec.points,
+                    width.max(0.5),
+                    thickness.max(0.1),
+                    30,
+                ),
+                None => omnim_model::gen_rule::linear_component::build_road(
+                    length.max(1.0),
+                    width.max(0.5),
+                    thickness.max(0.1) * 0.7,
+                    thickness.max(0.1) * 0.3,
+                    30,
+                ),
+            };
+            let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
+            let id = p
+                .create_object(omnim_core::ObjectType::Bridge, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
+            obj.geometry = Some(geom);
+            if let Some(spec) = deck_spec {
+                obj.set_property(
+                    "route_points",
+                    str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
+                );
+                obj.set_property("deck_width", str_prop(&format!("{}", width)));
+            }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
+            obj.clone()
+        }
+        GenRuleRequest::Tunnel {
+            name,
+            length,
+            radius,
+            path,
+            alignment,
+            ..
+        } => {
+            let tube_spec: Option<PathSpec> = match (path, alignment) {
+                (Some(_), Some(_)) => {
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "provide either `path` or legacy `alignment`, not both".into(),
+                    ));
+                }
+                (Some(p), None) => Some(p.clone().normalize(false)),
+                (None, Some(a)) => Some(a.clone().normalize(false)),
+                (None, None) => None,
+            };
+            if !(*radius > 0.0) {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    "tunnel radius must be positive".into(),
+                ));
+            }
+            if let Some(ref spec) = tube_spec {
+                omnim_model::gen_rule::matrix::authorize("tunnel", "linear")
+                    .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+                if spec.closed {
+                    return Err((
+                        StatusCode::BAD_REQUEST,
+                        "tunnel alignment must be open".into(),
+                    ));
+                }
+                validate_spec(spec, 2).map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            }
+            // Phase 8-2: the lining tube is swept along the full polyline
+            // (same LinearComponent kernel as routed pipes).
+            let mesh = match &tube_spec {
+                Some(spec) => {
+                    omnim_model::gen_rule::pipe_route::build_pipe_route(&spec.points, *radius, 16)
+                        .map_err(|e| (StatusCode::BAD_REQUEST, e))?
+                }
+                None => omnim_model::gen_rule::linear_component::build_pipe(*length, *radius, 20),
+            };
+            let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
+            let id = p
+                .create_object(omnim_core::ObjectType::Tunnel, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
+            obj.geometry = Some(geom);
+            if let Some(spec) = tube_spec {
+                obj.set_property(
+                    "route_points",
+                    str_prop(&serde_json::to_string(&spec.points).unwrap_or_default()),
+                );
+                obj.set_property("lining_radius", str_prop(&format!("{}", radius)));
+            }
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
+            obj.clone()
+        }
+        GenRuleRequest::Terrain { name, points, .. } => {
+            // Phase 8-2: terrain TIN fitting (Bowyer–Watson) in the same
+            // sanctioned genrule write path; errors map to 400.
+            let tin = omnim_model::civil::TinModel::from_survey_points(points)
+                .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            let stats = tin.stats();
+            let geom = omnim_model::geometry::mesh_to_geometry(&tin.to_mesh());
+            let id = p
+                .create_object(omnim_core::ObjectType::TerrainModel, name)
+                .id
+                .clone();
+            let obj = p
+                .objects
+                .get_mut(&id)
+                .expect("genrule object was just created");
+            obj.geometry = Some(geom);
+            obj.set_property(
+                "survey_points",
+                str_prop(&serde_json::to_string(&tin.points).unwrap_or_default()),
+            );
+            obj.set_property("vertex_count", str_prop(&format!("{}", stats.vertex_count)));
+            obj.set_property(
+                "triangle_count",
+                str_prop(&format!("{}", stats.triangle_count)),
+            );
+            obj.set_property("extent", str_prop(&format!("{:?}", [stats.min, stats.max])));
+            if let Some(pid) = parent_id {
+                if !pid.is_empty() {
+                    obj.parent_id = Some(pid.to_string());
+                }
+            }
+            obj.clone()
+        }
         GenRuleRequest::Pipe {
             name,
             length,
             radius,
             path,
+            branch_of,
+            branch_point,
+            target,
+            branch_radius,
             ..
         } => {
-            if !(*radius > 0.0) {
+            if branch_of.is_none() && !(*radius > 0.0) {
                 return Err((
                     StatusCode::BAD_REQUEST,
                     "pipe radius must be positive".into(),
                 ));
+            }
+
+            // Phase 8-3: branch on an existing routed pipe — a tee fitting at
+            // the junction plus a second routed pipe. Recorded with the tail
+            // undo step (single `record_create_batch`).
+            if let Some(host_id) = branch_of.as_deref() {
+                let bp = branch_point.ok_or_else(|| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        "branch_point is required with branch_of".to_string(),
+                    )
+                })?;
+                let tg = target.ok_or_else(|| {
+                    (
+                        StatusCode::BAD_REQUEST,
+                        "target is required with branch_of".to_string(),
+                    )
+                })?;
+                let br = branch_radius.or(Some(*radius));
+                let branch = genrule_pipe_branch(
+                    &mut p,
+                    &mut exe,
+                    host_id,
+                    bp,
+                    tg,
+                    br,
+                    name,
+                    series_id,
+                    &mut extra_created,
+                )?;
+                return Ok(Json(branch));
             }
             // P8-S4: routed pipes now go through the formal feature-tree path
             // (`Pipe-Path` template → PathSweep with a circular section), while
@@ -2958,18 +3555,26 @@ async fn genrule_create(
             opening_height,
             position_x,
             position_z,
+            leaf_count,
+            with_lintel,
             ..
         } => {
             let wall = p
                 .objects
                 .get(wall_id)
                 .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
+            let options = omnim_model::gen_rule::door::PanelOptions {
+                leaf_count: (*leaf_count).clamp(1, 2),
+                with_sill: false,
+                with_lintel: *with_lintel,
+            };
             let mesh = build_hosted_fill(
                 wall,
                 *opening_width,
                 *opening_height,
                 *position_x,
                 *position_z,
+                options,
             );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             let id = p
@@ -2987,6 +3592,9 @@ async fn genrule_create(
             obj.set_property("opening_height", str_prop(&format!("{}", opening_height)));
             obj.set_property("position_x", str_prop(&format!("{}", position_x)));
             obj.set_property("position_z", str_prop(&format!("{}", position_z)));
+            obj.set_property("leaf_count", str_prop(&format!("{}", options.leaf_count)));
+            obj.set_property("with_lintel", str_prop(&format!("{}", options.with_lintel)));
+            obj.set_property("frame_type", str_prop("panel_with_frame"));
             obj.clone()
         }
         GenRuleRequest::Window {
@@ -2996,18 +3604,27 @@ async fn genrule_create(
             opening_height,
             position_x,
             position_z,
+            leaf_count,
+            with_sill,
+            with_lintel,
             ..
         } => {
             let wall = p
                 .objects
                 .get(wall_id)
                 .ok_or((StatusCode::NOT_FOUND, format!("Wall {} not found", wall_id)))?;
+            let options = omnim_model::gen_rule::door::PanelOptions {
+                leaf_count: (*leaf_count).clamp(1, 4),
+                with_sill: *with_sill,
+                with_lintel: *with_lintel,
+            };
             let mesh = build_hosted_fill(
                 wall,
                 *opening_width,
                 *opening_height,
                 *position_x,
                 *position_z,
+                options,
             );
             let geom = omnim_model::geometry::mesh_to_geometry(&mesh);
             let id = p
@@ -3025,6 +3642,10 @@ async fn genrule_create(
             obj.set_property("opening_height", str_prop(&format!("{}", opening_height)));
             obj.set_property("position_x", str_prop(&format!("{}", position_x)));
             obj.set_property("position_z", str_prop(&format!("{}", position_z)));
+            obj.set_property("leaf_count", str_prop(&format!("{}", options.leaf_count)));
+            obj.set_property("with_sill", str_prop(&format!("{}", options.with_sill)));
+            obj.set_property("with_lintel", str_prop(&format!("{}", options.with_lintel)));
+            obj.set_property("frame_type", str_prop("panel_with_frame"));
             obj.clone()
         }
         GenRuleRequest::Opening {
@@ -3489,6 +4110,413 @@ async fn genrule_create(
     }
 
     Ok(Json(obj))
+}
+
+// ── Opening schedule (Phase 8-1/8-4): door/window table over a subtree ──────
+
+#[derive(Deserialize)]
+struct ScheduleQuery {
+    /// Container root (Building/Storey/Assembly/…): schedule covers the whole
+    /// subtree. Absent → the whole project.
+    #[serde(default)]
+    root_id: Option<String>,
+}
+
+/// One grouped schedule row (DOMIANS civil/quantity concept; BUILDING §8-1).
+#[derive(Serialize)]
+struct ScheduleRow {
+    object_type: String,
+    /// Frame variant properties carried on the family (sizes round to mm).
+    frame_type: Option<String>,
+    leaf_count: Option<u32>,
+    with_sill: Option<bool>,
+    with_lintel: Option<bool>,
+    /// Rounded [mm] instance size.
+    width_mm: u32,
+    height_mm: u32,
+    count: u32,
+}
+
+/// `GET /api/schedules/openings?root_id=` — grouped door/window schedule.
+async fn openings_schedule(
+    State(state): State<SharedState>,
+    Query(q): Query<ScheduleQuery>,
+) -> Result<Json<Vec<ScheduleRow>>, ApiError> {
+    let p = state.project.read().await;
+    // Candidate set: the whole project or the root's subtree.
+    let ids: Vec<String> = if let Some(root) = q.root_id.as_deref() {
+        if p.objects.get(root).is_none() {
+            return Err(ApiError::not_found(format!("object '{}' not found", root)));
+        }
+        let mut stack = vec![root.to_string()];
+        let mut ids = Vec::new();
+        while let Some(id) = stack.pop() {
+            ids.push(id.clone());
+            for child in p.objects.children_of(&id) {
+                stack.push(child.id.clone());
+            }
+        }
+        ids
+    } else {
+        p.objects.list().iter().map(|o| o.id.clone()).collect()
+    };
+
+    // Group by (type, size-mm, frame props).
+    let mut groups: std::collections::HashMap<GroupKey, u32> = Default::default();
+    for id in ids {
+        let Some(obj) = p.objects.get(&id) else {
+            continue;
+        };
+        let kind = match obj.object_type {
+            t if t == omnim_core::ObjectType::Door as i32 => "door",
+            t if t == omnim_core::ObjectType::Window as i32 => "window",
+            _ => continue,
+        };
+        let w = prop_f64(obj, "opening_width").unwrap_or(0.0);
+        let h = prop_f64(obj, "opening_height").unwrap_or(0.0);
+        let key = GroupKey {
+            kind: kind.to_string(),
+            width_mm: (w * 1000.0).round() as u32,
+            height_mm: (h * 1000.0).round() as u32,
+            frame_type: prop_string(obj, "frame_type"),
+            leaf_count: prop_string(obj, "leaf_count")
+                .and_then(|v| v.parse::<u32>().ok()),
+            with_sill: prop_string(obj, "with_sill").map(|v| v == "true"),
+            with_lintel: prop_string(obj, "with_lintel").map(|v| v == "true"),
+        };
+        *groups.entry(key).or_insert(0) += 1;
+    }
+
+    let mut rows: Vec<ScheduleRow> = groups
+        .into_iter()
+        .map(|(k, count): (GroupKey, u32)| ScheduleRow {
+            object_type: k.kind.clone(),
+            frame_type: k.frame_type,
+            leaf_count: k.leaf_count,
+            with_sill: k.with_sill,
+            with_lintel: k.with_lintel,
+            width_mm: k.width_mm,
+            height_mm: k.height_mm,
+            count,
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        a.object_type
+            .cmp(&b.object_type)
+            .then(a.width_mm.cmp(&b.width_mm))
+            .then(a.height_mm.cmp(&b.height_mm))
+    });
+    Ok(Json(rows))
+}
+
+/// Grouping key (type + instance size + frame variants).
+#[derive(Hash, PartialEq, Eq, Clone)]
+struct GroupKey {
+    kind: String,
+    width_mm: u32,
+    height_mm: u32,
+    frame_type: Option<String>,
+    leaf_count: Option<u32>,
+    with_sill: Option<bool>,
+    with_lintel: Option<bool>,
+}
+
+// ── Terrain (Phase 8-2): read-only elevation query + earthwork balance ─────
+
+#[derive(Deserialize)]
+struct ElevationQuery {
+    x: f64,
+    y: f64,
+}
+
+/// `GET /api/terrain/{id}/elevation?x=&y=` — barycentric TIN elevation;
+/// 404 when the query point is outside the hull.
+async fn terrain_elevation(
+    State(state): State<SharedState>,
+    Path(id): Path<String>,
+    Query(q): Query<ElevationQuery>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    let p = state.project.read().await;
+    let obj = p
+        .objects
+        .get(&id)
+        .filter(|o| o.object_type == omnim_core::ObjectType::TerrainModel as i32)
+        .ok_or_else(|| ApiError::not_found(format!("terrain model '{}' not found", id)))?;
+    let points = survey_points_of(obj)?;
+    let tin =
+        omnim_model::civil::TinModel::from_survey_points(&points).map_err(ApiError::internal)?;
+    let Some(z) = tin.elevation_at(q.x, q.y) else {
+        return Err(ApiError::not_found(format!(
+            "point ({}, {}) is outside terrain '{}'",
+            q.x, q.y, obj.name
+        )));
+    };
+    Ok(Json(serde_json::json!({
+        "elevation": (z * 1000.0).round() / 1000.0,
+        "terrain_id": obj.id,
+        "vertex_count": tin.stats().vertex_count,
+        "triangle_count": tin.triangle_count(),
+    })))
+}
+
+#[derive(Deserialize)]
+struct EarthworkRequest {
+    /// Interior point grid cell size (metres).
+    cell: f64,
+    /// Design level (metres).
+    design_z: f64,
+    /// Survey points directly (creates no object).
+    #[serde(default)]
+    points: Vec<[f64; 3]>,
+    /// ...or an existing TerrainModel's id.
+    #[serde(default)]
+    terrain_object_id: Option<String>,
+}
+
+/// `POST /api/earthwork` — grid cut/fill balance (DOMIANS earthwork):
+/// reads the TIN (either an existing terrain object or inline survey points)
+/// and integrates cut/fill per cell centre. No mutation.
+async fn earthwork_balance(
+    State(state): State<SharedState>,
+    Json(req): Json<EarthworkRequest>,
+) -> Result<Json<serde_json::Value>, ApiError> {
+    if !(req.cell > 0.0) {
+        return Err(ApiError::bad_request("cell must be positive"));
+    }
+    let points: Vec<[f64; 3]> = if let Some(tid) = req.terrain_object_id.as_deref() {
+        let p = state.project.read().await;
+        let obj = p
+            .objects
+            .get(tid)
+            .filter(|o| o.object_type == omnim_core::ObjectType::TerrainModel as i32)
+            .ok_or_else(|| ApiError::not_found(format!("terrain model '{}' not found", tid)))?;
+        survey_points_of(obj)?
+    } else if !req.points.is_empty() {
+        req.points.clone()
+    } else {
+        return Err(ApiError::bad_request(
+            "provide either `points` or `terrain_object_id`",
+        ));
+    };
+    let tin =
+        omnim_model::civil::TinModel::from_survey_points(&points).map_err(ApiError::bad_request)?;
+    let balance = tin.earthwork(req.design_z, req.cell);
+    let stats = tin.stats();
+    Ok(Json(serde_json::json!({
+        "cut_volume_m3": balance.cut_volume_m3,
+        "fill_volume_m3": balance.fill_volume_m3,
+        "net_volume_m3": balance.net_volume_m3,
+        "design_z": balance.design_z,
+        "cell_size": balance.cell_size,
+        "grid_cols": balance.grid_cols,
+        "grid_rows": balance.grid_rows,
+        "sampled_cells": balance.sampled_cells,
+        "outside_cells": balance.outside_cells,
+        "vertex_count": stats.vertex_count,
+        "triangle_count": stats.triangle_count,
+    })))
+}
+
+/// Read the survey points stored on a TerrainModel object.
+fn survey_points_of(obj: &omnim_model::OmniObject) -> Result<Vec<[f64; 3]>, ApiError> {
+    let json = prop_string(obj, "survey_points")
+        .ok_or_else(|| ApiError::internal("terrain object has no survey_points"))?;
+    serde_json::from_str(&json)
+        .map_err(|e| ApiError::internal(format!("survey_points are corrupt: {}", e)))
+}
+
+/// Phase 8-3 (ROADMAP): branch a routed pipe.
+///
+/// `branch_point` snaps onto the host's `route_points` polyline (tolerance
+/// 0.1 m); the branch is a second routed pipe from the snapped point to
+/// `target`, plus a tee fitting at the junction parented to the host. The
+/// whole action is one undo step at the caller (`record_create_batch`).
+#[allow(clippy::too_many_arguments)]
+fn genrule_pipe_branch(
+    p: &mut omnim_model::Project,
+    exe: &mut omnim_omcom::Executor,
+    host_id: &str,
+    branch_point: [f64; 3],
+    target: [f64; 3],
+    // `None` or non-positive → fall back to the host pipe's `pipe_radius`.
+    branch_radius: Option<f64>,
+    name: &str,
+    series_id: Option<&str>,
+    extra_created: &mut Vec<omnim_model::OmniObject>,
+) -> Result<omnim_model::OmniObject, (StatusCode, String)> {
+    use omnim_model::gen_rule::pipe_route;
+
+    let (dx, dy, dz) = (
+        target[0] - branch_point[0],
+        target[1] - branch_point[1],
+        target[2] - branch_point[2],
+    );
+    if (dx * dx + dy * dy + dz * dz).sqrt() < 1e-9 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "target must differ from branch_point".into(),
+        ));
+    }
+    let host = p.objects.get(host_id).cloned().ok_or_else(|| {
+        (
+            StatusCode::NOT_FOUND,
+            format!("host pipe '{}' not found", host_id),
+        )
+    })?;
+    if host.object_type != omnim_core::ObjectType::PipePlant as i32 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!("object '{}' is not a pipe", host.name),
+        ));
+    }
+    let branch_radius = branch_radius.filter(|r| *r > 0.0).or_else(|| {
+        host.get_property("pipe_radius")
+            .and_then(|_| prop_string(&host, "pipe_radius"))
+            .and_then(|v| v.parse::<f64>().ok())
+    });
+    let Some(branch_radius) = branch_radius else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "pipe radius must be positive".into(),
+        ));
+    };
+    let route_points: Vec<[f64; 3]> = host
+        .get_property("route_points")
+        .and_then(|_| prop_string(&host, "route_points"))
+        .and_then(|json| serde_json::from_str::<Vec<[f64; 3]>>(&json).ok())
+        .ok_or_else(|| {
+            (
+                StatusCode::BAD_REQUEST,
+                format!("pipe '{}' has no route", host.name),
+            )
+        })?;
+    let Some((snapped, dist)) = nearest_on_route(&route_points, branch_point) else {
+        return Err((StatusCode::BAD_REQUEST, "host route is empty".into()));
+    };
+    if dist > 0.1 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            format!(
+                "branch_point is {:.3} m off the host route (tolerance 0.1 m)",
+                dist
+            ),
+        ));
+    }
+
+    // Branch pipe: two routed points, feature-tree Pipe-Path template.
+    let branch_points = vec![snapped, target];
+    let branch_len = pipe_route::route_length(&branch_points);
+    let params: std::collections::HashMap<String, f64> = [
+        ("length".to_string(), branch_len * 1000.0),
+        ("radius".to_string(), branch_radius * 1000.0),
+    ]
+    .into_iter()
+    .collect();
+    let branch_id = p
+        .instantiate_domain_object(
+            omnim_core::ObjectType::PipePlant,
+            "Pipe-Path",
+            name,
+            &params,
+            branch_points.clone(),
+            false,
+            Vec::new(),
+            0.0,
+            series_id,
+        )
+        .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+    let branch_obj = {
+        let unit = |a: &[f64; 3], b: &[f64; 3]| -> [f64; 3] {
+            let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+            let len = (dx * dx + dy * dy + dz * dz).sqrt().max(1e-12);
+            [dx / len, dy / len, dz / len]
+        };
+        let obj = p
+            .objects
+            .get_mut(&branch_id)
+            .expect("branch pipe was just created");
+        obj.set_property(
+            "route_points",
+            str_prop(&serde_json::to_string(&branch_points).unwrap_or_default()),
+        );
+        obj.set_property("pipe_radius", str_prop(&format!("{}", branch_radius)));
+        obj.set_property("route_length", str_prop(&format!("{}", branch_len)));
+        obj.set_property("host_pipe_id", str_prop(host_id));
+        obj.parent_id = Some(host_id.to_string());
+        // Connectors: start faces the tee, end is the free branch end.
+        obj.instance_connectors = vec![
+            omnim_model::InstanceConnector {
+                id: "branch-in".into(),
+                name: "Branch start".into(),
+                position: snapped,
+                direction: unit(&target, &snapped),
+                bore: branch_radius * 2.0,
+                connection_type_code: "pipe".into(),
+            },
+            omnim_model::InstanceConnector {
+                id: "end".into(),
+                name: "End".into(),
+                position: target,
+                direction: unit(&snapped, &target),
+                bore: branch_radius * 2.0,
+                connection_type_code: "pipe".into(),
+            },
+        ];
+        obj.clone()
+    };
+
+    // Tee fitting at the junction (parented to the host, like elbows).
+    let fid = p
+        .create_object(
+            omnim_core::ObjectType::Fitting,
+            &format!("{}-tee", host.name),
+        )
+        .id
+        .clone();
+    {
+        let fitting = p
+            .objects
+            .get_mut(&fid)
+            .expect("fitting object was just created");
+        fitting.geometry = Some(omnim_model::geometry::mesh_to_geometry(
+            &omnim_model::gen_rule::fitting::build_tee_fitting(snapped, branch_radius * 1.15),
+        ));
+        fitting.parent_id = Some(host_id.to_string());
+        fitting.set_property("host_pipe_id", str_prop(host_id));
+        fitting.set_property("branch_pipe_id", str_prop(&branch_id));
+        fitting.set_property("fitting_type", str_prop("tee"));
+        fitting.set_property("bore", str_prop(&format!("{}", branch_radius * 2.0)));
+        extra_created.push(fitting.clone());
+    }
+
+    // One undo step: branch pipe first, tee pushes after (caller batches).
+    let _ = exe; // undo recorded by caller via record_create_batch
+    Ok(branch_obj)
+}
+
+/// Nearest point on a polyline and its distance (branch snapping).
+fn nearest_on_route(points: &[[f64; 3]], query: [f64; 3]) -> Option<([f64; 3], f64)> {
+    if points.len() < 2 {
+        return None;
+    }
+    let mut best: Option<([f64; 3], f64)> = None;
+    for w in points.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        let (dx, dy, dz) = (b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+        let len2 = dx * dx + dy * dy + dz * dz;
+        if len2 < 1e-18 {
+            continue;
+        }
+        let t = (((query[0] - a[0]) * dx + (query[1] - a[1]) * dy + (query[2] - a[2]) * dz) / len2)
+            .clamp(0.0, 1.0);
+        let pt = [a[0] + t * dx, a[1] + t * dy, a[2] + t * dz];
+        let (ex, ey, ez) = (query[0] - pt[0], query[1] - pt[1], query[2] - pt[2]);
+        let d = (ex * ex + ey * ey + ez * ez).sqrt();
+        if best.map(|(_, bd)| d < bd).unwrap_or(true) {
+            best = Some((pt, d));
+        }
+    }
+    best
 }
 
 /// Helper: create an object via the catalog/series system.
@@ -4561,7 +5589,17 @@ pub async fn start(server_cfg: ServerConfig) {
     if let Err(e) = socket.set_reuseaddr(true) {
         eprintln!("Warning: could not set SO_REUSEADDR: {}", e);
     }
-    socket.bind(sock_addr).expect("bind address");
+    if let Err(e) = socket.bind(sock_addr) {
+        if e.kind() == std::io::ErrorKind::AddrInUse {
+            eprintln!(
+                "[omnim] port {} is already in use — another OmniM server is likely running.",
+                server_cfg.port
+            );
+            eprintln!("[omnim] kill it first (scripts/dev-server.sh does this automatically), or set OMNIM_PORT to a different port.");
+            std::process::exit(1);
+        }
+        panic!("bind {addr}: {e}");
+    }
     let listener = socket.listen(1024).expect("listen");
 
     println!(

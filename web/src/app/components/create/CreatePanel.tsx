@@ -6,6 +6,7 @@ import { ParentSelector } from './ParentSelector';
 import { SeriesSelector } from './SeriesSelector';
 import { CatalogParams } from './CatalogParams';
 import { LayerEditor } from './LayerEditor';
+import { IcoWarning } from '../Icons';
 import type { TreeNode } from '../../../shared/types';
 import { api } from '../../../shared/api';
 
@@ -143,7 +144,7 @@ export function CreatePanel({
         )}
 
         <div className="create-row">
-          <select value={form.objectType} onChange={(e) => handleObjectTypeChange(e.target.value)}>
+          <select aria-label="Object type" value={form.objectType} onChange={(e) => handleObjectTypeChange(e.target.value)}>
             {OBJECT_TYPE_OPTIONS.map((g) => (
               <optgroup key={g.group} label={g.group}>
                 {g.types.map((t) => (
@@ -152,7 +153,7 @@ export function CreatePanel({
               </optgroup>
             ))}
           </select>
-          <input placeholder="名称" value={form.name} onChange={(e) => handleChange({ name: e.target.value })} />
+          <input aria-label="Name" placeholder="名称" value={form.name} onChange={(e) => handleChange({ name: e.target.value })} />
         </div>
         {errors.name && <small className="hint" style={{ color: '#ff6b6b' }}>{errors.name}</small>}
 
@@ -166,6 +167,7 @@ export function CreatePanel({
           <div className="create-row create-row--labeled">
             <span className="field-label">墙形式</span>
             <select
+              aria-label="Wall form"
               value={form.form}
               onChange={(e) => handleChange(withGenesisForm(form, e.target.value as 'panel' | 'region'))}
             >
@@ -182,6 +184,7 @@ export function CreatePanel({
           <div className="create-row create-row--labeled">
             <span className="field-label">屋顶模式</span>
             <select
+              aria-label="Roof mode"
               value={form.roofMode}
               onChange={(e) => {
                 const roofMode = e.target.value as 'footprint' | 'extrusion';
@@ -204,6 +207,7 @@ export function CreatePanel({
           <div className="create-row create-row--labeled">
             <span className="field-label">柱模式</span>
             <select
+              aria-label="Column mode"
               value={form.columnMode}
               onChange={(e) => {
                 const columnMode = e.target.value as 'place' | 'segment';
@@ -219,7 +223,7 @@ export function CreatePanel({
             {form.columnMode === 'place' && (
               <div className="create-row create-row--labeled">
                 <span className="field-label">柱高</span>
-                <input placeholder="m" value={form.columnHeight} onChange={(e) => handleChange({ columnHeight: e.target.value })} />
+                <input aria-label="Column height" placeholder="m" value={form.columnHeight} onChange={(e) => handleChange({ columnHeight: e.target.value })} />
               </div>
             )}
           </div>
@@ -240,7 +244,7 @@ export function CreatePanel({
         {form.objectType === 'storey' && (
           <div className="create-row create-row--labeled">
             <span className="field-label">标高</span>
-            <input placeholder="m（可为负）" value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
+            <input aria-label="Elevation" placeholder="m（可为负）" value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
             {errors.elevation && <span className="field-error">{errors.elevation}</span>}
             <small className="hint">楼层是标高容器，不生成几何。</small>
           </div>
@@ -258,20 +262,20 @@ export function CreatePanel({
 
         {isPrimitive && (
           <div className="create-row create-row--labeled">
-            <select value={form.geometryType} onChange={(e) => handleGeometryTypeChange(e.target.value as GeometryType)}>
+            <select aria-label="Geometry type" value={form.geometryType} onChange={(e) => handleGeometryTypeChange(e.target.value as GeometryType)}>
               <option value="box">Box 长方体</option>
               <option value="cylinder">Cylinder 圆柱</option>
               <option value="sphere">Sphere 球体</option>
               <option value="cone">Cone 圆锥</option>
             </select>
             <span className="field-label">{paramLabels(form.geometryType)[0]}</span>
-            <input placeholder="" value={form.p1} onChange={(e) => handleChange({ p1: e.target.value })} />
+            <input aria-label={paramLabels(form.geometryType)[0]} placeholder="" value={form.p1} onChange={(e) => handleChange({ p1: e.target.value })} />
             <span className="field-label">{paramLabels(form.geometryType)[1]}</span>
-            <input placeholder="" value={form.p2} onChange={(e) => handleChange({ p2: e.target.value })} />
+            <input aria-label={paramLabels(form.geometryType)[1]} placeholder="" value={form.p2} onChange={(e) => handleChange({ p2: e.target.value })} />
             {paramLabels(form.geometryType)[2] && (
               <>
                 <span className="field-label">{paramLabels(form.geometryType)[2]}</span>
-                <input placeholder="" value={form.p3} onChange={(e) => handleChange({ p3: e.target.value })} />
+                <input aria-label={paramLabels(form.geometryType)[2]} placeholder="" value={form.p3} onChange={(e) => handleChange({ p3: e.target.value })} />
               </>
             )}
           </div>
@@ -292,9 +296,9 @@ export function CreatePanel({
         {isCrossSectionLinear && (
           <div className="create-row create-row--labeled" style={{ marginBottom: '6px' }}>
             <span className="field-label">断面宽</span>
-            <input value={form.width} onChange={(e) => handleChange({ width: e.target.value })} />
+            <input aria-label="Section width" value={form.width} onChange={(e) => handleChange({ width: e.target.value })} />
             <span className="field-label">断面高</span>
-            <input value={form.thickness} onChange={(e) => handleChange({ thickness: e.target.value })} />
+            <input aria-label="Section height" value={form.thickness} onChange={(e) => handleChange({ thickness: e.target.value })} />
           </div>
         )}
 
@@ -302,24 +306,24 @@ export function CreatePanel({
           <>
             <div className="create-row create-row--labeled">
               <span className="field-label">起点</span>
-              <input placeholder="X" value={form.startX} onChange={(e) => handleChange({ startX: e.target.value })} />
-              <input placeholder="Y (高度)" value={form.startY} onChange={(e) => handleChange({ startY: e.target.value })} />
-              <input placeholder="Z" value={form.startZ} onChange={(e) => handleChange({ startZ: e.target.value })} />
+              <input aria-label="Start X" placeholder="X" value={form.startX} onChange={(e) => handleChange({ startX: e.target.value })} />
+              <input aria-label="Start Y" placeholder="Y (高度)" value={form.startY} onChange={(e) => handleChange({ startY: e.target.value })} />
+              <input aria-label="Start Z" placeholder="Z" value={form.startZ} onChange={(e) => handleChange({ startZ: e.target.value })} />
             </div>
             <div className="create-row create-row--labeled">
               <span className="field-label">终点</span>
-              <input placeholder="X" value={form.endX} onChange={(e) => handleChange({ endX: e.target.value })} />
-              <input placeholder="Y (高度)" value={form.endY} onChange={(e) => handleChange({ endY: e.target.value })} />
-              <input placeholder="Z" value={form.endZ} onChange={(e) => handleChange({ endZ: e.target.value })} />
+              <input aria-label="End X" placeholder="X" value={form.endX} onChange={(e) => handleChange({ endX: e.target.value })} />
+              <input aria-label="End Y" placeholder="Y (高度)" value={form.endY} onChange={(e) => handleChange({ endY: e.target.value })} />
+              <input aria-label="End Z" placeholder="Z" value={form.endZ} onChange={(e) => handleChange({ endZ: e.target.value })} />
             </div>
           </>
         ) : (
           !isGenrule && !isDatum && (
             <div className="create-row create-row--labeled">
               <span className="field-label">位置</span>
-              <input placeholder="X" value={form.posX} onChange={(e) => handleChange({ posX: e.target.value })} />
-              <input placeholder="Y (高度)" value={form.posY} onChange={(e) => handleChange({ posY: e.target.value })} />
-              <input placeholder="Z" value={form.posZ} onChange={(e) => handleChange({ posZ: e.target.value })} />
+              <input aria-label="Position X" placeholder="X" value={form.posX} onChange={(e) => handleChange({ posX: e.target.value })} />
+              <input aria-label="Position Y" placeholder="Y (高度)" value={form.posY} onChange={(e) => handleChange({ posY: e.target.value })} />
+              <input aria-label="Position Z" placeholder="Z" value={form.posZ} onChange={(e) => handleChange({ posZ: e.target.value })} />
             </div>
           )
         )}
@@ -367,12 +371,12 @@ function LevelFields({
   return (
     <div className="create-row create-row--labeled">
       <span className="field-label">底部标高</span>
-      <select value={form.bottomLevelId} onChange={(e) => onChange({ bottomLevelId: e.target.value })}>
+      <select aria-label="Bottom level" value={form.bottomLevelId} onChange={(e) => onChange({ bottomLevelId: e.target.value })}>
         <option value="">无</option>
         {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
       </select>
       <span className="field-label">顶部标高</span>
-      <select value={form.topLevelId} onChange={(e) => onChange({ topLevelId: e.target.value })}>
+      <select aria-label="Top level" value={form.topLevelId} onChange={(e) => onChange({ topLevelId: e.target.value })}>
         <option value="">无</option>
         {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
       </select>
@@ -409,12 +413,12 @@ function DoorWindowFields({ form, errors, onChange }: {
   }, []);
 
   if (loading) return <div className="create-row"><span>加载墙体列表...</span></div>;
-  if (walls.length === 0) return <div className="create-row"><span className="hint">⚠️ 请先创建一面墙体</span></div>;
+  if (walls.length === 0) return <div className="create-row"><span className="hint"><IcoWarning /> 请先创建一面墙体</span></div>;
 
   return (
     <>
       <div className="create-row">
-        <select value={form.targetWallId} onChange={(e) => onChange({ targetWallId: e.target.value })}>
+        <select aria-label="Target wall" value={form.targetWallId} onChange={(e) => onChange({ targetWallId: e.target.value })}>
           <option value="">-- 选择目标墙体 --</option>
           {walls.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
@@ -422,17 +426,17 @@ function DoorWindowFields({ form, errors, onChange }: {
       {errors.targetWallId && <small className="hint" style={{ color: '#ff6b6b' }}>{errors.targetWallId}</small>}
       <div className="create-row create-row--labeled">
         <span className="field-label">洞口宽</span>
-        <input placeholder="m" value={form.openingWidth} onChange={(e) => onChange({ openingWidth: e.target.value })} />
+        <input aria-label="Opening width" placeholder="m" value={form.openingWidth} onChange={(e) => onChange({ openingWidth: e.target.value })} />
         <span className="field-label">洞口高</span>
-        <input placeholder="m" value={form.openingHeight} onChange={(e) => onChange({ openingHeight: e.target.value })} />
+        <input aria-label="Opening height" placeholder="m" value={form.openingHeight} onChange={(e) => onChange({ openingHeight: e.target.value })} />
       </div>
       {errors.openingWidth && <small className="hint" style={{ color: '#ff6b6b' }}>{errors.openingWidth}</small>}
       {errors.openingHeight && <small className="hint" style={{ color: '#ff6b6b' }}>{errors.openingHeight}</small>}
       <div className="create-row create-row--labeled">
         <span className="field-label">水平位</span>
-        <input placeholder="m" value={form.posX} onChange={(e) => onChange({ posX: e.target.value })} />
+        <input aria-label="Horizontal offset" placeholder="m" value={form.posX} onChange={(e) => onChange({ posX: e.target.value })} />
         <span className="field-label">{form.objectType === 'door' ? '离地高' : '窗台高'}</span>
-        <input placeholder="m" value={form.posZ} onChange={(e) => onChange({ posZ: e.target.value })} />
+        <input aria-label="Vertical offset" placeholder="m" value={form.posZ} onChange={(e) => onChange({ posZ: e.target.value })} />
       </div>
       <small className="hint">在选中的墙体上开{form.objectType === 'door' ? '门' : '窗'}洞</small>
     </>

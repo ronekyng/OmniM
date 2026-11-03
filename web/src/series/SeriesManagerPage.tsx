@@ -4,6 +4,7 @@ import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
 import { PageBreadcrumb } from '../app/components/PageBreadcrumb';
+import { IcoBox, IcoChevronRight, IcoDelete, IcoEdit, IcoHelp } from '../app/components/Icons';
 import type { Series, Selector, Answer, SpecComponent, ComponentDef, ParamConstraint } from '../shared/types';
 
 export function SeriesManagerPage() {
@@ -410,14 +411,14 @@ function MappingOverview({ selector, depth }: { selector: Selector; depth: numbe
   return (
     <div className="mapping-overview" style={{ marginLeft: depth * 16 }}>
       <div className="mapping-overview-selector">
-        ❓ {selector.question}
+        <IcoHelp /> {selector.question}
       </div>
       {selector.answers.map(ans => (
         <div key={ans.id} className="mapping-overview-answer" style={{ marginLeft: 16 }}>
-          <div className="mapping-overview-answer-value">▸ {ans.value}</div>
+          <div className="mapping-overview-answer-value"><IcoChevronRight /> {ans.value}</div>
           {ans.outcome?.component && (
             <div className="mapping-overview-component">
-              📦 {ans.outcome.component.component_def_id}
+              <IcoBox /> {ans.outcome.component.component_def_id}
               {ans.outcome.component.param_constraints.length > 0 && (
                 <span className="mapping-overview-constraint-count">
                   ({ans.outcome.component.param_constraints.length} 约束)
@@ -457,7 +458,7 @@ function SelectorNode({ selector, depth, seriesId, catalog, draggedCompDefId, on
   return (
     <div className="selector-node" style={{ marginLeft: depth * 20 }}>
       <div className="selector-question">
-        <span className="selector-icon">❓</span>
+        <span className="selector-icon"><IcoHelp /></span>
         {selector.question}
         <span className="selector-id" style={{ color: '#666', fontSize: 10, marginLeft: 8 }}>({selector.id})</span>
       </div>
@@ -519,7 +520,7 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
       onDrop={e => { e.preventDefault(); onDrop(answer.id); }}
     >
       <div className="answer-value">
-        <span className="answer-icon">▸</span>
+        <span className="answer-icon"><IcoChevronRight /></span>
         {answer.value}
         {answer.is_numeric_range && (
           <span className="answer-range"> ({answer.range_min}–{answer.range_max})</span>
@@ -539,10 +540,10 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
       {outcome?.component && (
         <div className="component-leaf" style={{ marginLeft: depth * 20 }}>
           <div className="component-leaf-header">
-            <span className="component-leaf-icon">📦</span>
+            <span className="component-leaf-icon"><IcoBox /></span>
             <span className="component-leaf-def">{outcome.component.component_def_id}</span>
             {compDef && <span className="component-leaf-name">{compDef.name}</span>}
-            <button className="series-mgr-btn-sm" onClick={() => setShowMapPicker(!showMapPicker)}>✏️</button>
+            <button className="series-mgr-btn-sm" onClick={() => setShowMapPicker(!showMapPicker)} title="编辑映射" aria-label="编辑映射"><IcoEdit /></button>
           </div>
 
           {showMapPicker && (
@@ -645,8 +646,8 @@ function ConstraintEditor({ constraint, seriesId, compDefId, constraintIdx, onRe
           <span className="component-leaf-constraint-val">默认: {constraint.default_value}</span>
           <span className="component-leaf-constraint-val">范围: {constraint.min_value}–{constraint.max_value}</span>
           <span className="component-leaf-constraint-val">步长: {constraint.step}</span>
-          <button className="series-mgr-btn-sm" onClick={() => setEditing(true)}>✏️</button>
-          <button className="series-mgr-btn-sm" onClick={() => onDelete(compDefId, constraintIdx)}>🗑️</button>
+          <button className="series-mgr-btn-sm" onClick={() => setEditing(true)} title="编辑约束" aria-label="编辑约束"><IcoEdit /></button>
+          <button className="series-mgr-btn-sm" onClick={() => onDelete(compDefId, constraintIdx)} title="删除约束" aria-label="删除约束"><IcoDelete /></button>
         </div>
       )}
     </div>

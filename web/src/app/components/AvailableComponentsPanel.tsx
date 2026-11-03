@@ -4,6 +4,7 @@ import { notify } from '../../shared/toast';
 import { nextAutoName } from '../../shared/naming';
 import type { ComponentDef, ParamDef, Series } from '../../shared/types';
 import { IcoClose } from './Icons';
+import { IcoStar } from './Icons';
 import { useAppStore } from '../store/appStore';
 import { useCatalog, ensureCatalogLoaded, isFavorite, toggleFavorite } from '../../shared/catalog';
 import { ComponentParamPanel } from './create/ComponentParamPanel';
@@ -250,7 +251,7 @@ export function AvailableComponentsPanel({ embedded = false }: { embedded?: bool
                             onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); setFavVersion((v) => v + 1); }}
                             title={fav ? '取消收藏' : '收藏'}
                           >
-                            {fav ? '★' : '☆'}
+                            <IcoStar filled={fav} />
                           </button>
                         </div>
                         <div className="avail-comp-card-meta">{c.category} &middot; {c.ifc_class}</div>

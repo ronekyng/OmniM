@@ -1,29 +1,161 @@
-/* ── Design System Tokens ── */
+/* ── Design System Tokens ──
+ * Single source of truth (UI-DS-01/UI-DS-04). This is the only stylesheet
+ * allowed to contain literal colour values; every component reads a token.
+ * The semantic names in DESIGN_SYSTEM §3.3 are provided as aliases so new
+ * code can follow the contract while the legacy names stay compatible.
+ */
 :root {
   color-scheme: dark;
+
+  /* Surfaces */
   --bg-primary: #1a1d23;
   --bg-secondary: #14161c;
   --bg-tertiary: #1e2128;
   --bg-elevated: rgba(20, 22, 28, 0.97);
   --bg-overlay: rgba(13, 15, 20, 0.96);
+  --bg-overlay-soft: rgba(13, 15, 20, 0.88);
+  --bg-elevated-translucent: rgba(20, 22, 28, 0.92);
+  --bg-panel-translucent: rgba(20, 22, 28, 0.95);
+  --bg-toolbar-translucent: rgba(42, 46, 57, 0.86);
+  --bg-toolbar: #1e2128;
+  --bg-panel: #15171e;
+  --bg-panel-alt: #17181c;
+  --bg-editor: #1a1d2e;
+  --bg-input: #0d0f14;
+  --bg-sunken: #121418;
+  --bg-hover: #2a2d3a;
+  --bg-hover-strong: #39404c;
+  --bg-chip: #252830;
+  --bg-selected: #1e3050;
+  --bg-selected-strong: #22314a;
+  --bg-selected-deep: #1e2235;
+  --bg-selected-dark: #0d2137;
 
+  /* Scrims / overlays */
+  --scrim-light: rgba(0, 0, 0, 0.3);
+  --scrim-soft: rgba(0, 0, 0, 0.4);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --scrim-heavy: rgba(0, 0, 0, 0.6);
+
+  /* Borders */
   --border: #2a2d35;
   --border-light: #3a3d45;
+  --border-strong: #3a3d4a;
+  --border-muted: #33363e;
+  --border-subtle: #2a2d3a;
   --border-accent: #4a90d9;
   --border-active: #4fc3f7;
+  --border-active-soft: #2a4a5a;
+  --border-accent-soft: rgba(74, 144, 217, 0.3);
+  --border-accent-muted: #4a6a8a;
+  --border-danger: #662222;
+  --border-success: rgba(129, 199, 132, 0.2);
+  --border-label: rgba(150, 165, 190, 0.45);
 
+  /* Text */
   --text-primary: #e0e0e0;
   --text-secondary: #ccc;
   --text-muted: #888;
   --text-dim: #555;
+  --text-strong: #e8e8e8;
+  --text-subtle: #aaa;
+  --text-faint: #909090;
+  --text-on-accent: #ffffff;
 
+  /* Accent */
   --accent: #4a90d9;
   --accent-hover: #5ba0e9;
   --accent-active: #4fc3f7;
+  --accent-strong: #4a9eff;
+  --accent-soft: #81d4fa;
+  --accent-ink: #9fd0ff;
+  --accent-ink-soft: #7fb0e8;
+  --accent-ink-bright: #9ccaff;
+  --accent-ink-pale: #e8eefc;
+  --accent-ink-ice: #e0f7ff;
+  --accent-glint: #7db7ef;
+  --accent-deep: #1976d2;
+  --accent-deep-hover: #2188e8;
+  --accent-deep-dark: #1565c0;
+  --accent-blue: #2f6feb;
+  --accent-blue-hover: #3a7bf0;
+  --accent-mid: #3a7bc8;
+  --accent-tint: rgba(74, 144, 217, 0.08);
+  --accent-tint-strong: rgba(74, 144, 217, 0.1);
+  --accent-tint-stronger: rgba(74, 144, 217, 0.12);
+  --accent-tint-active: rgba(74, 144, 217, 0.2);
+  --accent-tint-deep: rgba(74, 144, 217, 0.3);
+  --accent-surface: rgba(74, 144, 217, 0.15);
+  --accent-surface-hover: rgba(74, 144, 217, 0.88);
+  --accent-hover-bg: #1a3a4a;
+  --accent-hover-bg-alt: #1e3a4a;
+
+  /* Filled buttons (component layer; white text meets AA) */
+  --button-primary-bg: #2f6feb;
+  --button-primary-hover: #2563b8;
+  --button-primary-text: #ffffff;
+  --button-danger-bg: #c62828;
+  --button-danger-hover: #a51f18;
+  --button-success-bg: #2e7d32;
+  --button-success-hover: #1b5e20;
+
+  /* Status */
   --danger: #f44336;
   --danger-hover: #ff5252;
+  --danger-text: #ff6b6b;
+  --danger-text-soft: #e57373;
+  --danger-text-strong: #ff4444;
+  --danger-surface: #2d1a1a;
+  --danger-surface-strong: #4a1a1a;
+  --danger-surface-soft: rgba(229, 115, 115, 0.1);
   --success: #81c784;
+  --success-strong: #66bb6a;
+  --success-deep: #388e3c;
+  --success-text: #a5d6a7;
+  --success-surface: rgba(129, 199, 132, 0.08);
+  --success-surface-strong: rgba(129, 199, 132, 0.15);
+  --success-surface-deep: #1b3a1b;
   --warning: #ff9800;
+  --warning-strong: #ffa726;
+  --warning-text: #ffcc00;
+  --warning-gold: #f0b84e;
+  --warning-surface: rgba(255, 167, 38, 0.15);
+
+  /* Syntax highlighting */
+  --syntax-key: #7ec8e3;
+  --syntax-string: #a5d6a7;
+  --syntax-number: #ce93d8;
+  --syntax-keyword: #ef9a9a;
+
+  /* Viewport annotations */
+  --viewport-label-bg: rgba(16, 44, 60, 0.9);
+  --viewport-label-border: rgba(150, 165, 190, 0.45);
+
+  /* Z-index scale (DESIGN_SYSTEM §7) */
+  --z-viewport: 0;
+  --z-overlay: 10;
+  --z-local: 10;
+  --z-local-raised: 11;
+  --z-dock: 20;
+  --z-resize: 25;
+  --z-shell: 30;
+  --z-menu: 31;
+  --z-dialog: 40;
+  --z-toast: 60;
+  --z-debug: 90;
+
+  /* Semantic aliases (DESIGN_SYSTEM §3.3) */
+  --surface-app: var(--bg-primary);
+  --surface-panel: var(--bg-secondary);
+  --surface-raised: var(--bg-tertiary);
+  --surface-sunken: var(--bg-sunken);
+  --border-default: var(--border);
+  --accent-default: var(--accent);
+  --status-danger: var(--danger);
+  --status-warning: var(--warning);
+  --status-success: var(--success);
+  --status-info: var(--accent);
+  --focus-ring: var(--border-active);
 
   --font-sans: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Courier New', monospace;
@@ -52,33 +184,124 @@
   --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 }
 
-/* Light theme (UI-DS-02). Token-level switch; panels that still use literal
- * colours are tracked by UI-DS-04 and will converge on these tokens. */
+/* Light theme (UI-DS-02). Same structure, token-level switch. */
 :root[data-theme='light'] {
   color-scheme: light;
+
   --bg-primary: #f4f6f9;
   --bg-secondary: #e9edf2;
   --bg-tertiary: #ffffff;
   --bg-elevated: rgba(255, 255, 255, 0.98);
   --bg-overlay: rgba(248, 250, 252, 0.97);
+  --bg-overlay-soft: rgba(248, 250, 252, 0.92);
+  --bg-elevated-translucent: rgba(255, 255, 255, 0.94);
+  --bg-panel-translucent: rgba(255, 255, 255, 0.96);
+  --bg-toolbar-translucent: rgba(255, 255, 255, 0.9);
+  --bg-toolbar: #f4f6f9;
+  --bg-panel: #f8fafc;
+  --bg-panel-alt: #ffffff;
+  --bg-editor: #ffffff;
+  --bg-input: #ffffff;
+  --bg-sunken: #eef1f5;
+  --bg-hover: #e8edf3;
+  --bg-hover-strong: #dce3ec;
+  --bg-chip: #eef1f5;
+  --bg-selected: #dce8f8;
+  --bg-selected-strong: #d3e2f6;
+  --bg-selected-deep: #e6eef9;
+  --bg-selected-dark: #dce8f8;
 
-  --border: #d4dae2;
-  --border-light: #c2c9d3;
+  --scrim-light: rgba(20, 30, 50, 0.16);
+  --scrim-soft: rgba(20, 30, 50, 0.24);
+  --scrim: rgba(20, 30, 50, 0.32);
+  --scrim-heavy: rgba(20, 30, 50, 0.44);
+
+  --border: #d5dae2;
+  --border-light: #e3e8ee;
+  --border-strong: #b8c0cb;
+  --border-muted: #dce2ea;
+  --border-subtle: #e6ebf1;
   --border-accent: #2f6fb3;
   --border-active: #1f5f9f;
+  --border-active-soft: #bcd4ea;
+  --border-accent-soft: rgba(47, 111, 179, 0.35);
+  --border-accent-muted: #8fb0d0;
+  --border-danger: #e0b4b0;
+  --border-success: rgba(46, 125, 50, 0.3);
+  --border-label: rgba(80, 95, 120, 0.45);
 
   --text-primary: #1c222b;
   --text-secondary: #374151;
-  --text-muted: #667085;
-  --text-dim: #98a2b3;
+  --text-muted: #5b6575;
+  --text-dim: #5f6a79;
+  --text-strong: #11151a;
+  --text-subtle: #5b6472;
+  --text-faint: #5f6a79;
+  --text-on-accent: #ffffff;
 
   --accent: #2f6fb3;
   --accent-hover: #3b7fc7;
   --accent-active: #1f5f9f;
+  --accent-strong: #2563b8;
+  --accent-soft: #bfdcf7;
+  --accent-ink: #1d5a9e;
+  --accent-ink-soft: #2f6fb3;
+  --accent-ink-bright: #1d5a9e;
+  --accent-ink-pale: #123a63;
+  --accent-ink-ice: #0f2f4f;
+  --accent-glint: #5a9ad6;
+  --accent-deep: #1a6fd4;
+  --accent-deep-hover: #1560b8;
+  --accent-deep-dark: #11509b;
+  --accent-blue: #1a6fd4;
+  --accent-blue-hover: #1560b8;
+  --accent-mid: #2f6fb3;
+  --accent-tint: rgba(47, 111, 179, 0.08);
+  --accent-tint-strong: rgba(47, 111, 179, 0.1);
+  --accent-tint-stronger: rgba(47, 111, 179, 0.12);
+  --accent-tint-active: rgba(47, 111, 179, 0.16);
+  --accent-tint-deep: rgba(47, 111, 179, 0.3);
+  --accent-surface: rgba(47, 111, 179, 0.14);
+  --accent-surface-hover: rgba(47, 111, 179, 0.9);
+  --accent-hover-bg: #e3eef9;
+  --accent-hover-bg-alt: #dbe9f7;
+
+  --button-primary-bg: #2f6fb3;
+  --button-primary-hover: #28629e;
+  --button-primary-text: #ffffff;
+  --button-danger-bg: #c62828;
+  --button-danger-hover: #b3261e;
+  --button-success-bg: #2e7d32;
+  --button-success-hover: #1b5e20;
+
   --danger: #c62828;
   --danger-hover: #d84343;
+  --danger-text: #b3261e;
+  --danger-text-soft: #c0554d;
+  --danger-text-strong: #a51f18;
+  --danger-surface: #fdecea;
+  --danger-surface-strong: #f8d7d3;
+  --danger-surface-soft: rgba(198, 40, 40, 0.08);
   --success: #2e7d32;
+  --success-strong: #2e7d32;
+  --success-deep: #1b5e20;
+  --success-text: #1f6b33;
+  --success-surface: rgba(46, 125, 50, 0.08);
+  --success-surface-strong: rgba(46, 125, 50, 0.14);
+  --success-surface-deep: #e4f2e5;
   --warning: #a15c00;
+  --warning-strong: #a86400;
+  --warning-text: #8a5a00;
+  --warning-gold: #a86400;
+  --warning-surface: rgba(168, 100, 0, 0.12);
+
+  --syntax-key: #0b6f8a;
+  --syntax-string: #1f6b33;
+  --syntax-number: #7b3f8f;
+  --syntax-keyword: #b3261e;
+
+  --viewport-label-bg: rgba(232, 240, 250, 0.95);
+  --viewport-label-border: rgba(80, 95, 120, 0.45);
 
   --shadow-sm: 0 1px 3px rgba(20, 30, 50, 0.12);
   --shadow-md: 0 4px 12px rgba(20, 30, 50, 0.14);

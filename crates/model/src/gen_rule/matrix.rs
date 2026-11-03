@@ -51,6 +51,8 @@ const AUTHORIZED: &[(&str, &str, GenesisClass)] = &[
     ("roof", "panel", GenesisClass::Surface), // 2-point extrusion-profile roof
     // Linear family — LinearComponent (module: linear_component.rs)
     ("road", "linear", GenesisClass::Linear), // alignment + section, segmented mesh
+    ("bridge", "linear", GenesisClass::Linear), // deck follows the full picked alignment (Phase 8-2)
+    ("tunnel", "linear", GenesisClass::Linear), // lining tube follows the full picked alignment (Phase 8-2)
     // Point family — transitional guide-line tube (linear_component::build_guide_line)
     ("line", "point", GenesisClass::Point), // featureLine / contourLine guide tube
                                             // Planned, NOT authorized yet (see ROADMAP "Accepted Designs"):
