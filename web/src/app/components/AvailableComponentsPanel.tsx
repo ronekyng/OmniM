@@ -6,6 +6,7 @@ import type { ComponentDef, ParamDef, Series } from '../../shared/types';
 import { IcoClose } from './Icons';
 import { IcoStar } from './Icons';
 import { useAppStore } from '../store/appStore';
+import { useI18n } from '../../shared/i18n';
 import { useCatalog, ensureCatalogLoaded, isFavorite, toggleFavorite } from '../../shared/catalog';
 import { ComponentParamPanel } from './create/ComponentParamPanel';
 import { MaterialBrowser } from './create/MaterialBrowser';
@@ -21,7 +22,8 @@ export function AvailableComponentsPanel({ embedded = false }: { embedded?: bool
   const refresh = useAppStore((s) => s.refresh);
   const reloadScene = useAppStore((s) => s.reloadScene);
 
-  const [seriesList, setSeriesList] = useState<Series[]>([]);
+    const { t } = useI18n();
+const [seriesList, setSeriesList] = useState<Series[]>([]);
   const { status, catalog, error: catalogError } = useCatalog();
   const [loading, setLoading] = useState(true);
   const [catalogReload, setCatalogReload] = useState(0);
@@ -139,7 +141,7 @@ export function AvailableComponentsPanel({ embedded = false }: { embedded?: bool
   return (
     <div className={`avail-comp-panel ${modeClass}`}>
       <div className="avail-comp-header">
-        <h2>可用构件</h2>
+        <h2>{t('panel.domain.available')}</h2>
         <div className="avail-comp-header-actions">
           <button
             className={showMaterials ? 'active' : ''}

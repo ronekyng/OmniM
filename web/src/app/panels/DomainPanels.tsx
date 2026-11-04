@@ -37,6 +37,7 @@ type QuickCreateAction = {
 
 function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.ReactNode }) {
   const setOpen = useAppStore((s) => s.setDomainPanelOpen);
+  const { t } = useI18n();
   const [catalog, setCatalog] = useState<ComponentDef[]>([]);
   const [objectNames, setObjectNames] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,7 +227,7 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
 
       {/* Quick-create buttons */}
       <div className="domain-panel-section">
-        <label className="domain-panel-section-label">快速创建</label>
+        <label className="domain-panel-section-label">{t('panel.domain.quick_create')}</label>
         <div className="domain-panel-actions">
           {quickActions.map((a) => (
             <button
@@ -247,7 +248,7 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
       {/* Domain component list */}
       <div className="domain-panel-section">
         <label className="domain-panel-section-label">
-          内置构件 ({filtered.length})
+          {t('panel.domain.builtins')} ({filtered.length})
         </label>
         <div className="domain-panel-list">
           {loading && showSkeleton && (
@@ -263,7 +264,8 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
           )}
           {!loading && !error && filtered.length === 0 && (
             <div className="panel-state">
-              该专业暂无内置构件。可先用上方「快速创建」，或在 Catalog / Component 中添加定义。
+                        {t('panel.domain.builtins_none')}
+
             </div>
           )}
           {filtered.map((c) => (
