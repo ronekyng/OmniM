@@ -708,6 +708,18 @@ export type OpeningsScheduleRow = {
   count: number;
 };
 
+/** Editable project metadata (DATA_INTEGRITY §2.3, UI-DAT-07). */
+export type ProjectMeta = {
+  name: string;
+  description: string;
+  author: string;
+  /** Display units only; stored geometry stays metric. */
+  unit_system: string;
+  mode_version: number;
+  created_at?: number | null;
+  modified_at?: number | null;
+};
+
 export type BomRow = {
   object_id: string;
   name: string;

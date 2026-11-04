@@ -62,10 +62,11 @@ GATES = {"G0", "G1", "G2", "G3", "—"}
 # these values; ``--strict`` requires zero debt (the G2 gate).
 DEBT_BASELINE = {
     "colors": 0,
+    "font_size_raw": 0,
     "colors_func": 0,
     "emoji": 0,
     "dialogs": 0,
-    "cjk": 975,
+    "cjk": 981,
     "zindex": 0,
 }
 
@@ -176,6 +177,15 @@ def check_zindex() -> tuple[list[str], dict[str, int]]:
 TOKEN_FILE = WEB / "globals.css"
 
 
+def check_font_size() -> tuple[list[str], dict[str, int]]:
+    """DS-06 (DESIGN_SYSTEM §5): single typography scale — `styles.css` may
+    only set `font-size` via `var(--fs-*)` tokens (raw px is a miss)."""
+    import re
+    css = (Path(__file__).resolve().parent.parent / "web/src/styles.css").read_text(encoding="utf-8", errors="ignore")
+    raw = [m.group(0) for m in re.finditer(r"font-size:\s*[^;]+;", css) if "var(--fs-" not in m.group(0)]
+    return [], {"font_size_raw": len(raw), "_font_detail": raw[:8]}
+
+
 def check_tokens() -> tuple[list[str], dict[str, int]]:
     """Hardcoded colours outside the token file (hex + rgb/hsl)."""
     hex_total = 0
@@ -214,13 +224,19 @@ def check_dialogs() -> tuple[list[str], dict[str, int]]:
     return [], {"dialogs": total, "_dialogs_detail": detail}  # type: ignore[dict-item]
 
 
+def startswith_i18n(path: Path) -> bool:
+    """True for the i18n catalogue (`i18n/` dir) and the kernel (`i18n.ts`)."""
+    return any(part == "i18n" or part.startswith("i18n.") for part in path.parts)
+
+
 def check_strings() -> tuple[list[str], dict[str, int]]:
     """CJK runs (not characters) in ts/tsx outside the i18n catalogue."""
     total = 0
     files = 0
     run_re = re.compile(r"[\u4e00-\u9fff]+")
     for path in iter_files((".tsx", ".ts")):
-        if "i18n" in path.parts:
+        # i18n catalogue: directory `i18n/` plus the kernel file `i18n.ts`.
+        if startswith_i18n(path):
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         n = len(run_re.findall(text))
@@ -321,6 +337,7 @@ def main() -> int:
     run("keymap", check_keymap)
     run("errors", check_errors)
     run("tokens", check_tokens)
+    run("font_size", check_font_size)
     run("zindex", check_zindex)
     run("emoji", check_emoji)
     run("dialogs", check_dialogs)

@@ -1,7 +1,7 @@
 ---
 title: "OmniM 界面数据完整性与项目生命周期"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-03
 applies_to: "web/, crates/server"
 evidence: "n/a (design contract)"
 ---
@@ -58,6 +58,14 @@ evidence: "n/a (design contract)"
 | 模式版本 | 整数 | 当前版本 | 是（只读） |
 | 作者 / 组织 | 字符串 | 空 | 是 |
 | 创建 / 修改时间 | 时间戳 | 当前 | 是（只读） |
+
+**已交付（2026-11-03，G2 · UI-DAT-04/05/07）**：
+
+- **端点**：`GET /api/project/meta`（含文件 mtime/created 只读时间）、`PUT /api/project/meta`（`name/description/author/unit_system`）。重命名 = “写新文件 → 删旧文件”事务（任一步失败旧文件幸存；重名 409）。
+- **界面**：标题栏「项目设置」对话框（`shell.meta.*` 词典键）。
+- **自动保存（UI-DAT-04）**：每次 mutation 命令路径完成后即持久化（`mutation::persist`），失败仅记日志不阻塞请求；持久化周期 ≤ 一次 mutation。
+- **崩溃恢复（UI-DAT-05）**：戊无显式保存的丢失上限为 0 —— 上一次 mutation 即为快照；`Project::load` 重开语义即 main.rs `load_or_new`。
+- 证据：`crates/server/tests/project_meta.rs`（元信息往返/重命名 409/失败盘仍成功/零丢失重开）与 `web/e2e/meta.spec.ts`（对话框编辑 → 服务端真值断言 → 重开回读）。
 
 需求：UI-DAT-07。
 

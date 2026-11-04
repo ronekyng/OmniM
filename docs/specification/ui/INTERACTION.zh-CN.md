@@ -1,7 +1,7 @@
 ---
 title: "OmniM 界面交互契约"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -184,6 +184,8 @@ type Shortcut = {
 
 需求：UI-INT-05。
 
+**已交付（2026-11-04，G2 · INT-05）**：上下文菜单（对象树行）Shift+F10 键盘唤起；`menu/menuitem` 语义、方向键/焦点环与 Esc 关闭；右键与键盘走同一入口。证据：`web/e2e/a11y.spec.ts`（context menu is keyboard-invokable）。
+
 ## 7. 对话框与直接操作
 
 ### 7.1 对话框族
@@ -230,6 +232,8 @@ type Shortcut = {
 | 标签页 | 无动作（避免误关） |
 | 属性值 | 进入编辑态 |
 
+**已交付（2026-11-04，G2 · INT-11）**：对象树行双击=就地重命名（`beginRename`，拦截冒泡保证唯一）；停靠分隔条双击=复位宽度（`AppLayout` 已接线）。其余行的行为与上表一致（视口对象双击补齐为"选中并打开属性"路径，空白双击无动作；标签双击无动作）。证据：`web/e2e/a11y.spec.ts`（F2/双击重命名）+ ` gestures.spec` 语义。
+
 需求：UI-INT-11。
 
 ## 8. 撤销与重做
@@ -271,6 +275,8 @@ type Shortcut = {
 | 面积 | m² | 2 位 |
 
 规则：每个数值输入都以单位后缀显示；切换单位制只转换显示值，不得静默改写已存几何。需求：UI-INT-10。
+
+**已交付（2026-11-04，G2 · INT-10）**：创建面板所有数值输入带 `.field-unit` 后缀——世界域长度一律 `m`、断面厚一律 `mm`、标高/离地高 `m`；目录参数回显 `{value} {unit}`（mm）；图层面板既有 `mm`。单位制切换仅转换显示（DAT-07 `unit_system` 为显示项）。证据：`web/e2e/units.spec.ts`。
 
 ## 10. 视口导航
 

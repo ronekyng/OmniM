@@ -52,6 +52,11 @@ export function MainToolbar({
   const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [assemblyOpen, setAssemblyOpen] = useState(false);
+  // UI-FBK-03 (FEEDBACK_ERRORS §4): an import visible for >1 s shows progress
+  // with elapsed seconds and stays cancellable (client abort; server-side
+  // cancellation is a registered backlog note in the contract).
+  const [importProgress, setImportProgress] = useState<{ file: string; elapsed: number } | null>(null);
+  const importAbortRef = useRef<{ controller: AbortController; timer: ReturnType<typeof setInterval> } | null>(null);
   const [activeDomain, setActiveDomain] = useState<string | null>(null);
   // Phase 8-5: a domain switch also opens the matching domain panel
   // (registered in defaultPanels; panels live in the right dock).
@@ -427,14 +432,56 @@ export function MainToolbar({
       cancelLabel: 'Merge',
       danger: true,
     });
-    const result = await api.importIfc(await file.text(), { normalize, mode: replace ? 'replace' : 'merge' });
-    if (!result.success) {
-      toast.error(`Import failed: ${result.message}`);
-      return;
+    const content = await file.text();
+    const controller = new AbortController();
+    const startedAt = Date.now();
+    // >1 s gate: before that the request stays invisible (FEEDBACK_ERRORS §4).
+    const timer = setInterval(() => {
+      setImportProgress({ file: file.name, elapsed: Math.round((Date.now() - startedAt) / 1000) });
+    }, 1000);
+    importAbortRef.current = { controller, timer };
+    try {
+      const result = await api.importIfc(content, { normalize, mode: replace ? 'replace' : 'merge', signal: controller.signal });
+      if (!result.success) {
+        toast.error(`Import failed: ${result.message}`);
+        return;
+      }
+      toast.success(`Imported ${result.imported} objects`);
+      onImported();
+    } catch (err) {
+      if (controller.signal.aborted) {
+        toast.success('Import cancelled');
+      } else {
+        throw err;
+      }
+    } finally {
+      clearInterval(timer);
+      importAbortRef.current = null;
+      setImportProgress(null);
     }
-    toast.success(`Imported ${result.imported} objects`);
-    onImported();
   }
+
+  function cancelImport() {
+    importAbortRef.current?.controller.abort();
+  }
+
+  const importProgressOverlay = importProgress ? (
+    <div className="progress-overlay" role="alertdialog" aria-label="Importing model">
+      <div className="progress-dialog">
+        <p className="progress-title">Importing <b>{importProgress.file}</b>…</p>
+        <div
+          className="progress-indeterminate"
+          role="progressbar"
+          aria-label="Import progress"
+          aria-live="polite"
+        />
+        <p className="progress-elapsed">
+          {importProgress.elapsed} second{importProgress.elapsed === 1 ? '' : 's'} elapsed
+        </p>
+        <button type="button" onClick={cancelImport}>Cancel import</button>
+      </div>
+    </div>
+  ) : null;
 
   async function doUndo() {
     try {
@@ -516,6 +563,7 @@ export function MainToolbar({
           event.currentTarget.value = '';
         }}
       />
+      {importProgressOverlay}
 
       {showCreatePanel && creationForm && (
         <CreatePanel

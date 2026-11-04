@@ -1,6 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import type { TreeNode } from '../../shared/types';
-import { colorForType } from './ThreeViewer';
+import { colorForType } from './typeColors';
 import { IcoChevronDown, IcoChevronRight } from './Icons';
 
 type ObjectTreeProps = {

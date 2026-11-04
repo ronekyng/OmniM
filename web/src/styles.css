@@ -1,5 +1,8 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-primary); color: var(--text-primary); font-size: var(--fs-sm); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+/* DS-06 (DESIGN_SYSTEM §5): every numeric readout shares tabular figures. */
+body { font-variant-numeric: tabular-nums; }
+.comp-param-value { font-variant-numeric: tabular-nums; }
 
 .app-shell {
   display: grid;
@@ -53,9 +56,9 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .dock-body { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; padding: 10px; gap: 8px; }
 .dock-body > * { min-height: 0; }
 
-.stats-bar { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+.stats-bar { font-size: var(--fs-sm); color: var(--text-muted); flex-shrink: 0; }
 .stats-bar b { color: var(--text-strong); }
-.error { color: var(--danger-hover); font-size: 11px; }
+.error { color: var(--danger-hover); font-size: var(--fs-sm); }
 
 .title-bar {
   flex-shrink: 0;
@@ -134,7 +137,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary);
 }
 .projects-header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
-.projects-header h1 { font-size: 24px; margin-bottom: 4px; }
+.projects-header h1 { font-size: var(--fs-xl); margin-bottom: 4px; }
 .projects-header p { color: var(--text-muted); }
 .projects-local-note {
   max-width: 360px;
@@ -463,7 +466,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 5px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
 }
 
@@ -526,7 +529,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
 }
 .domain-toolbar button:hover { background: var(--border-light); color: var(--text-primary); }
@@ -558,7 +561,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
@@ -598,7 +601,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
   display: inline-flex;
   align-items: center;
@@ -641,7 +644,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 /* Labeled row variant: label on left, inputs filling rest */
 .create-row--labeled { display: flex; gap: 6px; align-items: center; }
-.create-row--labeled .field-label { font-size: 11px; color: var(--text-subtle); min-width: 32px; flex-shrink: 0; margin: 0; }
+.create-row--labeled .field-label { font-size: var(--fs-sm); color: var(--text-subtle); min-width: 32px; flex-shrink: 0; margin: 0; }
 
 .create-panel select,
 .create-panel input {
@@ -651,7 +654,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-strong);
   padding: 4px 6px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .create-panel input:focus { border-color: var(--accent); outline: none; }
@@ -663,7 +666,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .create-panel .hint {
@@ -674,7 +677,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-faint);
   z-index: auto;
   pointer-events: none;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 .section-panel {
@@ -686,7 +689,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border);
   padding: 10px 14px;
   border-radius: 6px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -720,7 +723,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--bg-toolbar-translucent);
   border: 1px solid var(--border-label);
   color: var(--accent-ink-pale);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -746,7 +749,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--accent-ink-ice);
   padding: 8px 18px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   box-shadow: 0 2px 12px var(--scrim-soft);
   pointer-events: none;
 }
@@ -761,7 +764,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border);
   padding: 4px 10px;
   border-radius: var(--radius-md);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   pointer-events: none;
   white-space: nowrap;
@@ -775,7 +778,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: transparent;
   padding: 2px 4px;
   color: var(--text-faint);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   pointer-events: auto;
   display: block;
 } /* ── Tree Search ── */
@@ -790,7 +793,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-strong);
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -817,7 +820,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   all: unset;
   padding: 6px 12px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   cursor: pointer;
   transition: background 0.12s;
@@ -848,7 +851,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   grid-template-columns: 12px 9px minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   transition: all 0.12s;
 }
 
@@ -892,8 +895,8 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 0;
 }
 .tree-info { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 2px; }
-.tree-name { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
-.tree-meta { color: var(--text-faint); font-size: 10px; }
+.tree-name { color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: var(--fs-md); }
+.tree-meta { color: var(--text-faint); font-size: var(--fs-xs); }
 
 .tree-children { grid-column: 1 / -1; margin-left: 12px; display: flex; flex-direction: column; gap: 2px; list-style: none; padding-left: 0; }
 
@@ -901,7 +904,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .properties-panel {
   background: var(--bg-elevated);
   padding: 12px 14px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   overflow-y: auto;
 }
 
@@ -929,10 +932,10 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   min-width: 0;
 }
 
-.properties-panel h3 { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.properties-panel h3 { font-size: var(--fs-md); color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
 .properties-panel h3 b { color: var(--text-strong); }
 
-.prop-row { display: flex; align-items: center; margin: 6px 0; gap: 8px; font-size: 11px; }
+.prop-row { display: flex; align-items: center; margin: 6px 0; gap: 8px; font-size: var(--fs-sm); }
 .prop-cell { flex: 1; display: flex; min-width: 0; }
 .prop-cell .prop-value { width: 100%; }
 .prop-label { color: var(--text-muted); min-width: 70px; }
@@ -943,12 +946,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-strong);
   padding: 4px 8px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 .prop-value:focus { border-color: var(--accent); outline: none; }
 .prop-value[readonly] { border-color: transparent; background: transparent; cursor: default; color: var(--text-subtle); }
-.prop-unit { color: var(--text-faint); font-size: 10px; min-width: 24px; text-align: right; }
-.prop-saving { color: var(--accent); font-size: 10px; animation: pulse 1s infinite; }
+.prop-unit { color: var(--text-faint); font-size: var(--fs-xs); min-width: 24px; text-align: right; }
+.prop-saving { color: var(--accent); font-size: var(--fs-xs); animation: pulse 1s infinite; }
 .prop-value-toggle { display: flex; align-items: center; gap: 6px; cursor: pointer; }
 .prop-value-toggle input[type="checkbox"] { accent-color: var(--accent); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
@@ -959,7 +962,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-strong);
   padding: 4px 8px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   resize: vertical;
   font-family: 'Segoe UI', system-ui, sans-serif;
 }
@@ -973,22 +976,22 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 5px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 .form-actions button:hover { background: var(--button-primary-hover); }
 .form-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .propsets-section { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
-.propsets-section > h3 { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.propsets-section > h3 { font-size: var(--fs-sm); color: var(--text-muted); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 .propset { margin-bottom: 6px; }
-.propset summary { font-size: 11px; color: var(--accent-active); cursor: pointer; padding: 4px 0; }
+.propset summary { font-size: var(--fs-sm); color: var(--accent-active); cursor: pointer; padding: 4px 0; }
 .propset summary:hover { color: var(--accent-soft); }
-.propset-empty { color: var(--text-muted); font-size: 10px; padding: 4px 0 4px 12px; font-style: italic; }
-.propset-prop { display: flex; padding: 2px 0 2px 12px; font-size: 10px; gap: 8px; }
+.propset-empty { color: var(--text-muted); font-size: var(--fs-xs); padding: 4px 0 4px 12px; font-style: italic; }
+.propset-prop { display: flex; padding: 2px 0 2px 12px; font-size: var(--fs-xs); gap: 8px; }
 .propset-prop-name { color: var(--text-subtle); min-width: 100px; }
 .propset-prop-value { color: var(--text-strong); word-break: break-all; }
 
-.properties-panel .error { color: var(--danger); font-size: 11px; padding: 6px 10px; background: var(--danger-surface); border-radius: 3px; margin-bottom: 8px; }
+.properties-panel .error { color: var(--danger); font-size: var(--fs-sm); padding: 6px 10px; background: var(--danger-surface); border-radius: 3px; margin-bottom: 8px; }
 .properties-panel .panel-header-actions {
   display: flex;
   align-items: center;
@@ -999,18 +1002,18 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-light);
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   padding: 1px 6px;
   border-radius: 3px;
   line-height: 1.4;
 }
 .properties-panel .mode-toggle:hover { color: var(--accent-active); border-color: var(--accent-active); }
-.properties-panel .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; padding: 0 4px; }
+.properties-panel .close-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: var(--fs-lg); padding: 0 4px; }
 .properties-panel .close-btn:hover { color: var(--text-strong); }
 .properties-panel .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.prop-row-name { color: var(--text-secondary); font-size: 10px; min-width: auto; margin-bottom: 2px; }
+.prop-row-name { color: var(--text-secondary); font-size: var(--fs-xs); min-width: auto; margin-bottom: 2px; }
 
-.empty-state { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+.empty-state { padding: 20px; text-align: center; color: var(--text-muted); font-size: var(--fs-md); }
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -1018,7 +1021,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   margin-bottom: 10px;
 }
 .panel-header h3 {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1028,7 +1031,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: var(--fs-lg);
   cursor: pointer;
   padding: 0 4px;
   line-height: 1;
@@ -1038,7 +1041,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: none;
   border: none;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   cursor: pointer;
   padding: 2px 4px;
   line-height: 1;
@@ -1046,7 +1049,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .close-btn:hover { color: var(--text-strong); }
 
 /* Assembly panel */
-.panel-header { margin-bottom: 8px; font-size: 13px; color: var(--text-secondary); }
+.panel-header { margin-bottom: 8px; font-size: var(--fs-md); color: var(--text-secondary); }
 .assy-list {
   background: var(--bg-primary);
   border: 1px solid var(--border);
@@ -1062,13 +1065,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--bg-chip);
   border-radius: 3px;
   margin-top: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-strong);
 }
 .assy-item:first-child { margin-top: 6px; }
 .assy-item span:first-child { min-width: 60px; font-weight: 600; }
-.assy-item-detail { color: var(--text-muted); font-size: 10px; }
-.assy-remove { margin-left: auto; background: none; border: none; color: var(--danger-text); cursor: pointer; font-size: 13px; padding: 0 4px; }
+.assy-item-detail { color: var(--text-muted); font-size: var(--fs-xs); }
+.assy-remove { margin-left: auto; background: none; border: none; color: var(--danger-text); cursor: pointer; font-size: var(--fs-md); padding: 0 4px; }
 .assy-add-form {
   background: var(--bg-primary);
   border: 1px solid var(--border);
@@ -1078,7 +1081,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .assy-add-form .create-row { margin-top: 6px; }
 .assy-add-form button { margin-top: 6px; }
-.field-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
+.field-label { font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 2px; }
 .create-btn { margin-top: 6px; }
 
 /* ── Omni Panel (merged Console + AI Chat) ── */
@@ -1110,7 +1113,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-faint);
   padding: 8px 14px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-family: inherit;
   border-bottom: 2px solid transparent;
   transition: all 0.15s;
@@ -1127,12 +1130,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-faint);
   padding: 4px 8px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-family: inherit;
 }
 .omni-btn:hover { color: var(--text-subtle); }
 .omni-btn.close {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: bold;
   padding: 0 10px;
   color: var(--danger-text);
@@ -1147,7 +1150,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .omni-body-console {
   font-family: 'Courier New', monospace;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .omni-footer-actions {
   display: flex;
@@ -1171,7 +1174,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-muted);
   cursor: pointer;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
 }
 .omni-toggle:hover { background: var(--accent-hover-bg); color: var(--accent-soft); }
@@ -1183,12 +1186,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 14px;
   min-height: 60px;
 }
-.console-empty { color: var(--text-muted); font-style: italic; padding: 10px 0; font-size: 11px; }
+.console-empty { color: var(--text-muted); font-style: italic; padding: 10px 0; font-size: var(--fs-sm); }
 .console-entry { margin: 4px 0; padding: 4px 0; border-bottom: 1px solid var(--bg-primary); }
 .console-entry.success .entry-cmd { color: var(--success); }
 .console-entry.error .entry-cmd { color: var(--danger-text-soft); }
 .entry-cmd { color: var(--text-secondary); word-break: break-all; }
-.entry-result { color: var(--text-muted); font-size: 11px; padding-left: 12px; }
+.entry-result { color: var(--text-muted); font-size: var(--fs-sm); padding-left: 12px; }
 .console-templates {
   display: flex;
   gap: 4px;
@@ -1204,7 +1207,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 3px 8px;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-family: 'Courier New', monospace;
 }
 .template-btn:hover { background: var(--bg-chip); color: var(--accent-active); border-color: var(--border-active-soft); }
@@ -1218,7 +1221,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   flex: 1;
   overflow-y: auto;
   padding: 8px 14px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 .console-body {
   display: flex;
@@ -1228,7 +1231,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .ref-group { margin-bottom: 14px; }
 .ref-group-title {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--accent-active);
   margin: 0 0 6px 0;
@@ -1246,7 +1249,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .ref-cmd-name {
   font-weight: 600;
   color: var(--success);
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .ref-cmd-desc {
   color: var(--text-subtle);
@@ -1257,7 +1260,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 4px 6px;
   border-radius: 3px;
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
   white-space: pre-wrap;
   margin: 3px 0 0 0;
@@ -1286,7 +1289,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .console-completion-item {
   padding: 6px 12px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-family: monospace;
   color: var(--text-primary, var(--text-primary));
   cursor: pointer;
@@ -1310,7 +1313,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 10px;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   resize: vertical;
   min-height: 40px;
   position: relative;
@@ -1328,7 +1331,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid transparent;
   border-radius: 4px;
   font-family: 'Courier New', monospace;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   white-space: pre-wrap;
   word-wrap: break-word;
   overflow: hidden;
@@ -1347,7 +1350,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 16px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   font-family: 'Courier New', monospace;
   align-self: flex-end;
@@ -1357,7 +1360,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .console-error {
   padding: 6px 14px;
   color: var(--danger-text-soft);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   border-top: 1px solid var(--border);
 }
 
@@ -1381,7 +1384,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 12px;
   border: 1px solid;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   cursor: pointer;
   box-shadow: 0 4px 16px var(--scrim-soft);
   width: min(420px, 92vw);
@@ -1411,7 +1414,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .toast-message { flex: 1; color: var(--text-strong); }
 .toast-close {
   color: var(--text-faint);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -1455,7 +1458,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .aichat-empty {
   color: var(--text-muted);
   font-style: italic;
-  font-size: 12px;
+  font-size: var(--fs-md);
   text-align: center;
   padding: 20px 0;
 }
@@ -1473,7 +1476,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 4px 10px;
   border-radius: 12px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-family: inherit;
   transition: all 0.15s;
 }
@@ -1495,7 +1498,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -1536,7 +1539,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 2px 8px;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 .aichat-cmd-toggle:hover { background: var(--accent-hover-bg); }
 .aichat-cmd-json {
@@ -1545,7 +1548,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border-radius: 4px;
   padding: 8px;
   margin-top: 4px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-subtle);
   overflow-x: auto;
   max-height: 200px;
@@ -1572,7 +1575,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .aichat-error {
   color: var(--danger-text-soft);
-  font-size: 12px;
+  font-size: var(--fs-md);
   padding: 6px;
   background: var(--danger-surface-soft);
   border-radius: 4px;
@@ -1591,7 +1594,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 10px;
   border-radius: 4px;
   font-family: inherit;
-  font-size: 13px;
+  font-size: var(--fs-md);
   resize: none;
   min-height: 36px;
   max-height: 80px;
@@ -1605,7 +1608,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   align-self: flex-end;
 }
@@ -1639,12 +1642,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .component-back-btn:hover { background: var(--border-strong); }
 
 .component-title {
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--accent-active);
   margin-right: 8px;
@@ -1662,7 +1665,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .component-title-input {
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--accent-active);
   background: var(--bg-editor);
@@ -1685,7 +1688,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   padding: 5px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   min-width: 180px;
 }
 .sketch-name-input {
@@ -1694,7 +1697,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   padding: 5px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   width: 140px;
 }
 .sketch-btn {
@@ -1704,7 +1707,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 5px 12px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .sketch-btn:hover { background: var(--border-strong); }
 .sketch-btn.danger { color: var(--danger-text-soft); }
@@ -1734,7 +1737,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 5px 10px;
   border-radius: 3px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-family: monospace;
   min-width: 32px;
   text-align: center;
@@ -1745,7 +1748,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .sketch-tool-btn.danger { color: var(--danger-text-soft); }
 .sketch-tool-btn.danger:hover:not(:disabled) { background: var(--danger-surface); }
 
-.sketch-constraint-btn { font-size: 14px; }
+.sketch-constraint-btn { font-size: var(--fs-lg); }
 .sketch-solve-btn { color: var(--success-strong); font-weight: 600; }
 .feature-btn { color: var(--warning-strong); }
 
@@ -1774,7 +1777,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-muted);
   padding: 8px 20px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   transition: all 0.15s;
 }
@@ -1813,7 +1816,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   justify-content: center;
   height: 100%;
   color: var(--text-muted);
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-style: italic;
 }
 
@@ -1825,7 +1828,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 4px 16px;
   background: var(--bg-panel);
   border-top: 1px solid var(--bg-hover);
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   flex-shrink: 0;
 }
@@ -1849,7 +1852,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   box-shadow: 0 4px 24px var(--scrim-soft);
 }
 .dimension-edit-header {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--warning-text);
   margin-bottom: 12px;
   font-weight: bold;
@@ -1862,7 +1865,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   border-radius: 4px;
   color: var(--text-primary);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-family: monospace;
   outline: none;
 }
@@ -1882,7 +1885,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-secondary);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .dimension-edit-btn:hover {
   background: var(--bg-hover);
@@ -1918,7 +1921,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .dialog h3 {
   margin: 0 0 16px;
   color: var(--accent-active);
-  font-size: 16px;
+  font-size: var(--fs-lg);
 }
 
 .dialog-row {
@@ -1929,7 +1932,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .dialog-row label {
   width: 140px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-subtle);
   text-align: right;
 }
@@ -1940,7 +1943,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   padding: 6px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .dialog-actions {
@@ -1956,7 +1959,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 7px 18px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .dialog-actions button:hover { background: var(--border-strong); }
 .dialog-actions button.accent { background: var(--button-primary-bg); border-color: var(--button-primary-bg); color: var(--button-primary-text); }
@@ -1970,7 +1973,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   padding: 6px 8px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 /* ── Feature Panel (左边栏) ── */
@@ -1993,7 +1996,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .feature-panel-header {
   padding: 12px 16px;
   border-bottom: 1px solid var(--bg-hover);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--accent-active);
 }
 
@@ -2005,7 +2008,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .feature-empty {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-style: italic;
   text-align: center;
   padding: 24px 16px;
@@ -2040,7 +2043,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .feature-drag-handle {
   cursor: grab;
   color: var(--text-faint);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   user-select: none;
 }
 .feature-drag-handle:active {
@@ -2048,13 +2051,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .feature-type-icon {
-  font-size: 16px;
+  font-size: var(--fs-lg);
   color: var(--warning-strong);
 }
 
 .feature-name {
   flex: 1;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -2068,7 +2071,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   padding: 4px;
   border-radius: 4px;
   transition: background 0.15s;
@@ -2089,7 +2092,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   align-items: center;
   gap: 8px;
   margin-bottom: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .feature-param-label {
@@ -2133,7 +2136,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
   transition: background 0.15s;
 }
 .feature-add-toggle:hover {
@@ -2149,7 +2152,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .feature-add-group-label {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-transform: uppercase;
   margin: 8px 0 4px;
@@ -2170,7 +2173,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   text-align: left;
   transition: background 0.15s;
 }
@@ -2179,7 +2182,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .feature-add-icon {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--warning-strong);
   width: 20px;
   text-align: center;
@@ -2192,7 +2195,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .feature-add-desc {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .feature-rebuild-section {
@@ -2208,7 +2211,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 8px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   transition: background 0.15s;
 }
@@ -2240,7 +2243,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary);
   border-radius: 4px;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   transition: all 0.15s;
 }
 .feature-ribbon-btn:hover {
@@ -2252,12 +2255,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .feature-ribbon-icon {
-  font-size: 18px;
+  font-size: var(--fs-display);
   color: var(--warning-strong);
 }
 
 .feature-ribbon-label {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-subtle);
 }
 
@@ -2278,7 +2281,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--success-surface-deep);
   border-bottom: 1px solid var(--success-deep);
   color: var(--success);
-  font-size: 12px;
+  font-size: var(--fs-md);
   text-align: center;
   flex-shrink: 0;
 }
@@ -2290,7 +2293,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--bg-hover);
   border-radius: 4px;
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 /* ── Entity Properties Panel (浮动右侧面板) ── */
@@ -2305,7 +2308,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   box-shadow: 0 4px 24px var(--scrim);
   z-index: var(--z-shell);
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .entity-props-header {
@@ -2327,7 +2330,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   line-height: 1;
 }
 .entity-props-close:hover { color: var(--text-primary); }
@@ -2348,7 +2351,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .entity-props-row label {
   color: var(--text-muted);
   min-width: 50px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .entity-props-row input {
@@ -2358,7 +2361,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--bg-hover);
   padding: 4px 6px;
   border-radius: 3px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-family: monospace;
 }
 .entity-props-row input:focus {
@@ -2383,7 +2386,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .entity-props-section {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: var(--fs-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-top: 4px;
@@ -2424,7 +2427,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .modal-header h2 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
 }
@@ -2461,7 +2464,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .catalog-card h3,
 .series-card h3 {
   margin: 0 0 4px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--accent, var(--accent));
 }
@@ -2469,31 +2472,31 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .catalog-card .meta,
 .series-card .meta {
   margin: 0 0 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
 }
 
 .catalog-card p,
 .series-card p {
   margin: 0 0 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-secondary, var(--text-secondary));
 }
 
 .catalog-card .tags {
   color: var(--text-dim, var(--text-muted));
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .catalog-card .params-summary {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
 }
 
 .series-card .selector-summary {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
 }
 
@@ -2535,7 +2538,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .avail-comp-header h2 {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
 }
@@ -2560,7 +2563,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 4px;
 }
 .avail-comp-header-actions button {
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 .avail-comp-header-actions button.active {
   color: var(--accent-strong);
@@ -2575,7 +2578,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-subtle);
   cursor: pointer;
   user-select: none;
@@ -2591,7 +2594,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
   padding: 0 2px;
 }
 .avail-comp-fav.active { color: var(--warning-gold); }
@@ -2636,7 +2639,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-family: inherit;
   cursor: pointer;
 }
@@ -2652,7 +2655,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-family: inherit;
 }
 
@@ -2671,7 +2674,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   text-align: center;
   color: var(--text-muted, var(--text-muted));
   padding: 24px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .avail-comp-card {
@@ -2694,20 +2697,20 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .avail-comp-card-name {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--accent, var(--accent));
   margin-bottom: 2px;
 }
 
 .avail-comp-card-meta {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 4px;
 }
 
 .avail-comp-card-desc {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary, var(--text-secondary));
   margin-bottom: 4px;
   display: -webkit-box;
@@ -2717,13 +2720,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .avail-comp-card-tags {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-dim, var(--text-muted));
   margin-bottom: 2px;
 }
 
 .avail-comp-card-params {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
 }
 
@@ -2739,12 +2742,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   justify-content: center;
   height: 100%;
   color: var(--text-muted, var(--text-muted));
-  font-size: 14px;
+  font-size: var(--fs-lg);
 }
 
 .avail-comp-detail-title {
   margin: 0 0 8px;
-  font-size: 18px;
+  font-size: var(--fs-display);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
 }
@@ -2752,13 +2755,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .avail-comp-detail-meta {
   display: flex;
   gap: 16px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 8px;
 }
 
 .avail-comp-detail-desc {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary, var(--text-secondary));
   margin-bottom: 16px;
   line-height: 1.5;
@@ -2770,7 +2773,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .avail-comp-detail-section label {
   display: block;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
   margin-bottom: 8px;
@@ -2783,7 +2786,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .avail-comp-param-header {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-primary, var(--text-primary));
   margin-bottom: 4px;
 }
@@ -2831,7 +2834,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .avail-comp-param-range {
   display: flex;
   justify-content: space-between;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-dim, var(--text-muted));
   margin-top: 2px;
 }
@@ -2843,7 +2846,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border-radius: 6px;
   background: var(--button-primary-bg);
   color: var(--button-primary-text);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
@@ -2878,7 +2881,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .series-mgr-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--fs-display);
   font-weight: 600;
 }
 
@@ -2889,7 +2892,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .series-mgr-back:hover {
@@ -2900,7 +2903,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 10px 20px;
   background: var(--danger-surface);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .series-mgr-body {
@@ -2920,7 +2923,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .series-mgr-sidebar h3 {
   margin: 0;
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted, var(--text-muted));
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -2932,7 +2935,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 20px;
   text-align: center;
   color: var(--text-muted, var(--text-muted));
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .series-mgr-item {
@@ -2952,13 +2955,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .series-mgr-item-name {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   margin-bottom: 2px;
 }
 
 .series-mgr-item-domain {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
 }
 
@@ -2974,7 +2977,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   justify-content: center;
   height: 100%;
   color: var(--text-muted, var(--text-muted));
-  font-size: 15px;
+  font-size: var(--fs-lg);
 }
 
 .series-mgr-info {
@@ -2983,20 +2986,20 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .series-mgr-info h2 {
   margin: 0 0 8px;
-  font-size: 22px;
+  font-size: var(--fs-title);
   font-weight: 600;
 }
 
 .series-mgr-meta {
   display: flex;
   gap: 20px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 8px;
 }
 
 .series-mgr-desc {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary, var(--text-secondary));
   line-height: 1.5;
   margin: 0;
@@ -3009,7 +3012,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .series-mgr-tree h3 {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
@@ -3022,7 +3025,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--accent-tint-strong);
   border: 1px solid var(--border-accent-soft);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   margin-bottom: 4px;
 }
@@ -3041,7 +3044,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .answer-value {
   padding: 6px 10px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-primary, var(--text-primary));
   border-left: 2px solid var(--border-light, var(--border-light));
   margin-bottom: 2px;
@@ -3054,7 +3057,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 
 .answer-range {
   color: var(--text-muted, var(--text-muted));
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 
 .component-leaf {
@@ -3066,7 +3069,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .component-leaf-header {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--success, var(--success));
   margin-bottom: 4px;
@@ -3077,7 +3080,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .component-leaf-prop {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-left: 20px;
 }
@@ -3088,7 +3091,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .component-leaf-constraint {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   font-family: monospace;
 }
@@ -3108,7 +3111,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   transition: border-color 0.15s, background 0.15s;
 }
 .series-mgr-btn:hover { border-color: var(--accent, var(--accent)); }
@@ -3117,7 +3120,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 2px 6px;
   color: var(--text-muted, var(--text-muted));
 }
@@ -3139,10 +3142,10 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .series-mgr-io-msg {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-left: 8px;
 }
@@ -3161,7 +3164,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .series-mgr-info-header {
@@ -3199,7 +3202,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
 }
 .series-mgr-inline-form select {
   min-width: 120px;
@@ -3210,7 +3213,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .component-leaf-def {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--success, var(--success));
   font-family: monospace;
   margin-right: 6px;
@@ -3221,14 +3224,14 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .series-mgr-edit-form h2 {
   margin: 0 0 16px;
-  font-size: 18px;
+  font-size: var(--fs-display);
 }
 .series-mgr-edit-field {
   margin-bottom: 12px;
 }
 .series-mgr-edit-field label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -3242,7 +3245,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 8px 10px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .series-mgr-edit-field textarea { min-height: 60px; resize: vertical; }
 .series-mgr-edit-actions {
@@ -3266,7 +3269,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-muted, var(--text-muted));
   padding: 8px 16px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   transition: color 0.15s, border-color 0.15s;
 }
 .series-mgr-tab:hover { color: var(--text-primary, var(--text-primary)); }
@@ -3281,7 +3284,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .series-mgr-catalog-panel h3 {
   margin: 0 0 8px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 .series-mgr-catalog-search {
@@ -3291,7 +3294,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 8px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   margin-bottom: 8px;
   box-sizing: border-box;
 }
@@ -3319,16 +3322,16 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--success-surface);
 }
 .series-mgr-catalog-card-name {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-primary, var(--text-primary));
 }
 .series-mgr-catalog-card-meta {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
 }
 .series-mgr-catalog-card-tags {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   margin-top: 2px;
 }
@@ -3336,7 +3339,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   position: absolute;
   top: 4px;
   right: 8px;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   padding: 1px 6px;
   background: var(--border-success);
   color: var(--success, var(--success));
@@ -3350,7 +3353,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .mapping-overview {
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .mapping-overview-selector {
   padding: 6px 8px;
@@ -3364,31 +3367,31 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .mapping-overview-answer-value {
   padding: 4px 8px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-primary, var(--text-primary));
   border-left: 2px solid var(--border-light, var(--border-light));
 }
 .mapping-overview-component {
   padding: 4px 8px 4px 16px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--success, var(--success));
   font-family: monospace;
 }
 .mapping-overview-constraint-count {
   color: var(--text-muted, var(--text-muted));
-  font-size: 10px;
+  font-size: var(--fs-xs);
   margin-left: 6px;
   font-family: sans-serif;
 }
 
 .series-mgr-mapping-panel h3 {
   margin: 0 0 12px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
 }
 
 .component-leaf-name {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   margin-left: 6px;
   font-family: sans-serif;
@@ -3398,7 +3401,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 4px;
   padding-left: 4px;
@@ -3408,7 +3411,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 3px 4px;
 }
 .component-leaf-constraint-name {
@@ -3419,7 +3422,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .component-leaf-constraint-val {
   color: var(--text-muted, var(--text-muted));
   font-family: monospace;
-  font-size: 10px;
+  font-size: var(--fs-xs);
 }
 
 /* ── Library Manager ── */
@@ -3442,7 +3445,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .library-mgr-header h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: var(--fs-display);
   font-weight: 600;
 }
 .library-mgr-header-actions {
@@ -3458,7 +3461,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   transition: border-color 0.15s, background 0.15s;
 }
 .library-mgr-btn:hover { border-color: var(--accent, var(--accent)); }
@@ -3466,7 +3469,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 2px 6px;
   color: var(--text-muted, var(--text-muted));
 }
@@ -3480,7 +3483,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 6px 14px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .library-mgr-back:hover { border-color: var(--accent, var(--accent)); }
 
@@ -3498,7 +3501,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .library-mgr-io-bar {
@@ -3517,10 +3520,10 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 6px 10px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 .library-mgr-io-msg {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-left: 8px;
 }
@@ -3529,7 +3532,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 10px 20px;
   background: var(--danger-surface);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .library-mgr-body {
@@ -3549,7 +3552,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .library-mgr-sidebar h3 {
   margin: 0;
   padding: 12px 14px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-muted, var(--text-muted));
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3562,7 +3565,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 20px;
   text-align: center;
   color: var(--text-muted, var(--text-muted));
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 
 .library-mgr-category {
@@ -3574,7 +3577,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 6px;
   padding: 8px 14px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
   background: var(--bg-secondary, var(--bg-secondary));
@@ -3584,13 +3587,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   background: var(--bg-tertiary, var(--bg-tertiary));
 }
 .library-mgr-cat-arrow {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   width: 12px;
 }
 .library-mgr-cat-name { flex: 1; }
 .library-mgr-cat-count {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
 }
 
@@ -3607,12 +3610,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .library-mgr-item.published { border-left: 3px solid var(--success, var(--success)); }
 
 .library-mgr-item-name {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   margin-bottom: 2px;
 }
 .library-mgr-item-meta {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
 }
 
@@ -3628,7 +3631,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   justify-content: center;
   height: 100%;
   color: var(--text-muted, var(--text-muted));
-  font-size: 15px;
+  font-size: var(--fs-lg);
 }
 
 .library-mgr-detail {
@@ -3643,7 +3646,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .library-mgr-detail-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-subtitle);
   font-weight: 600;
 }
 .library-mgr-detail-actions {
@@ -3653,7 +3656,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 
 .library-mgr-badge {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 2px 8px;
   border-radius: 10px;
   font-weight: 600;
@@ -3680,18 +3683,18 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 2px;
 }
 .library-mgr-detail-field label {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 .library-mgr-detail-field span {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-primary, var(--text-primary));
 }
 
 .library-mgr-detail-desc {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary, var(--text-secondary));
   line-height: 1.5;
   margin: 0 0 12px;
@@ -3704,7 +3707,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   margin-bottom: 12px;
 }
 .library-mgr-tag {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 2px 8px;
   background: var(--accent-surface);
   color: var(--accent, var(--accent));
@@ -3716,7 +3719,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .library-mgr-section h4 {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-primary, var(--text-primary));
   border-bottom: 1px solid var(--border, var(--border));
@@ -3729,7 +3732,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   flex-wrap: wrap;
 }
 .library-mgr-mat {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 3px 10px;
   background: var(--bg-tertiary, var(--bg-tertiary));
   border: 1px solid var(--border, var(--border));
@@ -3754,12 +3757,12 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 8px;
 }
 .library-mgr-param-name {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--accent, var(--accent));
 }
 .library-mgr-param-default {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-primary, var(--text-primary));
   font-family: monospace;
 }
@@ -3769,7 +3772,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 4px;
 }
 .library-mgr-param-range {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   margin-top: 4px;
   font-family: monospace;
@@ -3786,7 +3789,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   width: 80px;
 }
 
@@ -3802,7 +3805,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   width: 80px;
 }
 .library-mgr-add-param input:first-child { width: 100px; }
@@ -3815,13 +3818,13 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   margin-bottom: 6px;
 }
 .library-mgr-connector-name {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-primary, var(--text-primary));
   margin-bottom: 4px;
 }
 .library-mgr-connector-detail {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-muted, var(--text-muted));
   font-family: monospace;
 }
@@ -3841,14 +3844,14 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .library-mgr-edit-form h2 {
   margin: 0 0 16px;
-  font-size: 18px;
+  font-size: var(--fs-display);
 }
 .library-mgr-edit-field {
   margin-bottom: 12px;
 }
 .library-mgr-edit-field label {
   display: block;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted, var(--text-muted));
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -3862,7 +3865,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-primary, var(--text-primary));
   padding: 8px 10px;
   border-radius: 4px;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .library-mgr-edit-field textarea { min-height: 60px; resize: vertical; }
 .library-mgr-edit-actions {
@@ -3885,7 +3888,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
   flex-shrink: 0;
 }
@@ -3893,7 +3896,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .domain-panel-header .icon-btn:hover { color: var(--danger-hover); }
 .domain-panel-section { display: flex; flex-direction: column; gap: 6px; }
 .domain-panel-section-label {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -3913,14 +3916,14 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--bg-hover);
   border-radius: 4px;
   color: var(--text-strong);
-  font-size: 12px;
+  font-size: var(--fs-md);
   cursor: pointer;
   text-align: left;
   transition: background 0.15s;
 }
 .domain-panel-action-btn:hover { background: var(--bg-hover); border-color: var(--accent-strong); }
 .domain-panel-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.domain-panel-action-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+.domain-panel-action-icon { font-size: var(--fs-lg); width: 20px; text-align: center; flex-shrink: 0; }
 .domain-panel-action-label { flex: 1; }
 .domain-panel-list {
   display: flex;
@@ -3939,8 +3942,8 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border-radius: 4px;
 }
 .domain-panel-item-info { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.domain-panel-item .name { font-size: 12px; color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.domain-panel-item .meta { font-size: 10px; color: var(--text-faint); }
+.domain-panel-item .name { font-size: var(--fs-md); color: var(--text-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.domain-panel-item .meta { font-size: var(--fs-xs); color: var(--text-faint); }
 .domain-panel-item-btn {
   background: var(--button-primary-bg);
   border: none;
@@ -3948,7 +3951,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--button-primary-text);
   width: 22px;
   height: 22px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   cursor: pointer;
   flex-shrink: 0;
   display: flex;
@@ -3957,8 +3960,8 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .domain-panel-item-btn:hover { background: var(--button-primary-hover); }
 .domain-panel-item-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.domain-panel .muted { color: var(--text-faint); font-size: 12px; }
-.domain-panel .error-text { color: var(--danger-hover); font-size: 12px; }
+.domain-panel .muted { color: var(--text-faint); font-size: var(--fs-md); }
+.domain-panel .error-text { color: var(--danger-hover); font-size: var(--fs-md); }
 .domain-panel-item { cursor: grab; }
 .domain-panel-item:active { cursor: grabbing; }
 
@@ -3978,7 +3981,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--accent-strong);
   border-radius: 6px;
   color: var(--accent-ink-bright);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   pointer-events: none;
   z-index: var(--z-overlay);
 }
@@ -4005,11 +4008,11 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   align-items: baseline;
 }
 .comp-param-name {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-subtle);
 }
 .comp-param-value {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--success-text);
   font-variant-numeric: tabular-nums;
 }
@@ -4022,14 +4025,14 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .comp-param-range {
   display: flex;
   justify-content: space-between;
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
   margin-top: 1px;
 }
 .comp-param-input {
   width: 100%;
   padding: 4px 6px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
   border-radius: 4px;
@@ -4038,7 +4041,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .comp-param-select {
   width: 100%;
   padding: 4px 6px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
   border-radius: 4px;
@@ -4062,9 +4065,9 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   user-select: none;
   padding: 2px 0;
 }
-.layer-editor-title { font-size: 12px; font-weight: 600; color: var(--text-strong); }
-.layer-editor-meta { font-size: 10px; color: var(--text-muted); flex: 1; }
-.layer-editor-toggle { font-size: 10px; color: var(--text-muted); }
+.layer-editor-title { font-size: var(--fs-md); font-weight: 600; color: var(--text-strong); }
+.layer-editor-meta { font-size: var(--fs-xs); color: var(--text-muted); flex: 1; }
+.layer-editor-toggle { font-size: var(--fs-xs); color: var(--text-muted); }
 
 .layer-editor-templates {
   display: flex;
@@ -4073,7 +4076,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   margin: 6px 0;
 }
 .layer-template-btn {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   padding: 3px 8px;
   background: var(--bg-hover);
   border: 1px solid var(--border-strong);
@@ -4097,7 +4100,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   align-items: center;
   justify-content: center;
   width: 100%;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--text-faint);
 }
 
@@ -4121,10 +4124,10 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   flex-shrink: 0;
 }
-.layer-card-title { font-size: 11px; font-weight: 600; color: var(--text-strong); flex: 1; }
+.layer-card-title { font-size: var(--fs-sm); font-weight: 600; color: var(--text-strong); flex: 1; }
 .layer-card-actions { display: flex; gap: 2px; }
 .layer-move-btn, .layer-del-btn {
-  font-size: 10px;
+  font-size: var(--fs-xs);
   width: 20px;
   height: 20px;
   padding: 0;
@@ -4144,11 +4147,11 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   gap: 6px;
   margin-top: 4px;
 }
-.layer-field-label { font-size: 10px; color: var(--text-muted); min-width: 24px; }
+.layer-field-label { font-size: var(--fs-xs); color: var(--text-muted); min-width: 24px; }
 .layer-material-select,
 .layer-function-select,
 .layer-name-input {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 3px 5px;
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
@@ -4162,20 +4165,20 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .layer-thickness-input {
   width: 56px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 3px 5px;
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
   border-radius: 4px;
   color: var(--text-strong);
 }
-.layer-unit { font-size: 10px; color: var(--text-muted); }
+.layer-unit { font-size: var(--fs-xs); color: var(--text-muted); }
 
 .layer-add-btn {
   width: 100%;
   margin-top: 8px;
   padding: 5px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   background: var(--bg-hover);
   border: 1px dashed var(--border-accent-muted);
   border-radius: 4px;
@@ -4184,7 +4187,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .layer-add-btn:hover { background: var(--bg-hover-strong); }
 .layer-browse-btn {
-  font-size: 12px;
+  font-size: var(--fs-md);
   width: 24px;
   height: 24px;
   padding: 0;
@@ -4229,9 +4232,9 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   padding: 10px 12px;
   border-bottom: 1px solid var(--bg-hover);
 }
-.material-browser-header h3 { font-size: 13px; margin: 0; color: var(--text-strong); }
+.material-browser-header h3 { font-size: var(--fs-md); margin: 0; color: var(--text-strong); }
 .material-browser-close {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   width: 22px;
   height: 22px;
   padding: 0;
@@ -4249,7 +4252,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 }
 .material-browser-search {
   flex: 1;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 5px 8px;
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
@@ -4257,7 +4260,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   color: var(--text-strong);
 }
 .material-browser-cat {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   padding: 5px 6px;
   background: var(--bg-panel-alt);
   border: 1px solid var(--border-muted);
@@ -4267,7 +4270,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
 .material-browser-loading,
 .material-browser-error {
   padding: 12px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-subtle);
 }
 .material-browser-error { color: var(--danger-text); }
@@ -4279,7 +4282,7 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   flex-direction: column;
   gap: 6px;
 }
-.material-browser-empty { font-size: 12px; color: var(--text-faint); padding: 12px; }
+.material-browser-empty { font-size: var(--fs-md); color: var(--text-faint); padding: 12px; }
 .material-card {
   padding: 7px 9px;
   background: var(--bg-hover);
@@ -4300,9 +4303,9 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   border: 1px solid var(--border-strong);
   flex-shrink: 0;
 }
-.material-card-name { font-size: 12px; font-weight: 600; color: var(--text-strong); flex: 1; }
+.material-card-name { font-size: var(--fs-md); font-weight: 600; color: var(--text-strong); flex: 1; }
 .material-fav-btn {
-  font-size: 12px;
+  font-size: var(--fs-md);
   padding: 0;
   background: transparent;
   border: none;
@@ -4310,11 +4313,11 @@ body { font-family: var(--font-sans); overflow: hidden; background: var(--bg-pri
   cursor: pointer;
 }
 .material-fav-btn.active { color: var(--warning-gold); }
-.material-card-cat { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.material-card-cat { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
 .material-card-props {
   display: flex;
   gap: 8px;
-  font-size: 10px;
+  font-size: var(--fs-xs);
   color: var(--accent-ink-soft);
   margin-top: 3px;
 }
@@ -4542,3 +4545,234 @@ textarea:focus-visible,
   padding: 0 var(--sp-1);
 }
 .schedule-refresh:hover { color: var(--text-secondary); }
+
+/* Title bar language switcher (I18N_L10N §3): inherits the theme tokens; the
+   select is sized to its own label so 中文/English both fit without reflow. */
+.lang-switch {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.lang-switch:hover { border-color: var(--accent); color: var(--text-primary); }
+
+/* Project-settings dialog (DATA_INTEGRITY §2.3): label/input pairs in the
+   shared confirm-dialog shell; tokens only. */
+.meta-grid {
+  display: grid;
+  gap: var(--sp-3);
+  text-align: start;
+}
+.meta-grid label {
+  display: grid;
+  gap: var(--sp-1);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+.meta-grid input,
+.meta-grid textarea {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--fs-md);
+  padding: var(--sp-1) var(--sp-2);
+}
+.meta-grid select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--fs-md);
+  padding: var(--sp-1) var(--sp-2);
+}
+
+/* Import progress (UI-FBK-03): >1 s gate, indeterminate sweep, cancel. */
+.progress-overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-overlay-soft);
+  z-index: var(--z-dialog);
+}
+.progress-dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--sp-4);
+  display: grid;
+  gap: var(--sp-2);
+  min-width: 260px;
+  text-align: center;
+}
+.progress-title { margin: 0; color: var(--text-primary); font-size: var(--fs-md); }
+.progress-indeterminate {
+  height: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+.progress-indeterminate::after {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  width: 40%;
+  left: 0;
+  background: var(--accent);
+  animation: progress-sweep 1.2s linear infinite;
+}
+@keyframes progress-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(350%); }
+}
+.progress-elapsed { margin: 0; color: var(--text-secondary); font-size: var(--fs-sm); }
+
+/* Floating panel drag/resize (IA_SHELL §4.4, SHL-09): a slim drag strip on
+   top and a corner handle; geometry styles only (tokens). */
+.floating-panel {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+}
+.floating-drag-handle {
+  height: 10px;
+  cursor: grab;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      var(--border) 0 12px,
+      transparent 12px 18px
+    );
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+  margin: 0 var(--sp-1);
+  border-radius: var(--radius-sm);
+}
+.floating-drag-handle:active { cursor: grabbing; }
+.floating-panel-inner {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.floating-resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+}
+
+/* Narrow band 1024–1279 (IA_SHELL §7, SHL-11): both docks fold to 44 px icon
+   strips; the right dock re-opens via a panel drawer. <1024 keeps the
+   blocking notice (precedence). */
+.narrow-shell .sidebar {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+}
+.narrow-shell .left-dock {
+  width: 44px;
+  overflow: hidden;
+}
+.narrow-shell .left-dock .dock-tabs {
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) 2px;
+  border-bottom: none;
+}
+.narrow-shell .left-dock .dock-tabs button {
+  padding: var(--sp-2) 2px;
+  font-size: var(--fs-xs);
+  text-align: center;
+  min-width: 0;
+}
+.narrow-shell .sidebar .left-dock .dock-tabs .btn-label,
+.narrow-shell .sidebar .left-dock .dock-tabs .dock-count,
+.narrow-shell .sidebar .left-dock .dock-body {
+  display: none;
+}
+.right-icon-strip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-2) 2px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  min-width: 44px;
+  max-width: 44px;
+}
+.right-icon-strip .strip-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: var(--fs-sm);
+  padding: 0;
+}
+.right-icon-strip .strip-icon.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.right-icon-strip .strip-icon:hover { border-color: var(--accent); }
+.right-drawer {
+  position: fixed;
+  top: 48px;
+  right: 0;
+  bottom: 0;
+  width: min(360px, 60vw);
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dock);
+  overflow-y: auto;
+}
+
+/* Left drawer anchored to the (folded) left dock */
+.right-drawer.left-anchor {
+  right: auto;
+  left: 0;
+  top: 48px;
+  border-left: none;
+  border-right: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-local-raised);
+}
+.right-drawer.left-anchor .left-dock {
+  width: 280px;
+  height: 100%;
+}
+
+/* INT-10 (INTERACTION §9.2): every numeric input carries a unit suffix. */
+.field-unit {
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  min-width: 24px;
+  text-align: end;
+  flex-shrink: 0;
+}
+
+/* Viewport async chunk (PRF-01/06): the shell paints first; the canvas
+   replaces this status row once the three.js chunk resolves. */
+.viewport-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+  background: var(--bg-primary);
+}

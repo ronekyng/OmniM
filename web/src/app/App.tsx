@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useCallback, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useCallback, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../shared/api';
 import { MainToolbar } from './components/MainToolbar';
@@ -12,14 +12,19 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useConfirm } from './components/ConfirmDialog';
 import { shouldWarnBeforeUnload } from '../shared/saveState';
 import { analyzeDeleteImpact, formatDeleteImpact } from '../shared/deleteImpact';
-import { ThreeViewer, type ThreeViewerHandle } from './components/ThreeViewer';
+import type { ThreeViewerHandle } from './components/ThreeViewer';
+// PRF-01/06 (PERFORMANCE §3/§6): three.js dominates the initial chunk; the
+// shell mounts first and the viewport loads asynchronously.
+const ThreeViewer = lazy(() =>
+  import('./components/ThreeViewer').then((m) => ({ default: m.ThreeViewer })),
+);
 import { ViewCube3D } from './components/ViewCube3D';
 import { ToastContainer } from './components/ToastContainer';
 import { IcoMove, IcoRotate, IcoShaded, IcoWireframe, IcoHiddenLine, IcoRealistic, IcoSection, IcoFit, IcoHome, IcoGrid, IcoLocal, IcoOrtho, IcoMeasureDist, IcoMeasureAngle, IcoMeasureArea, IcoXray, IcoSnap } from './components/Icons';
 import { useToastApi } from '../shared/toast';
-import { ComponentEditorPage } from '../sketch/ComponentEditorPage';
-import { SeriesManagerPage } from '../series/SeriesManagerPage';
-import { LibraryManagerPage } from '../library/LibraryManagerPage';
+const ComponentEditorPage = lazy(() => import('../sketch/ComponentEditorPage').then((m) => ({ default: m.ComponentEditorPage })));
+const SeriesManagerPage = lazy(() => import('../series/SeriesManagerPage').then((mod) => ({ default: mod.SeriesManagerPage })));
+const LibraryManagerPage = lazy(() => import('../library/LibraryManagerPage').then((mod) => ({ default: mod.LibraryManagerPage })));
 import { useAppStore } from './store/appStore';
 import { pickModeForForm, applyPointsToForm, createInitialForm } from '../shared/types/creation';
 import { registerDefaultPanels } from './panels/defaultPanels';
@@ -318,9 +323,9 @@ export function App() {
     <ErrorBoundary scope="Workspace" resetKey={location.pathname}>
     <Routes>
       <Route path="/projects" element={<ProjectsPage />} />
-      <Route path="/component-editor" element={<ComponentEditorPage />} />
-      <Route path="/series-manager" element={<SeriesManagerPage />} />
-      <Route path="/library-manager" element={<LibraryManagerPage />} />
+      <Route path="/component-editor" element={<Suspense fallback={null}><ComponentEditorPage /></Suspense>} />
+      <Route path="/series-manager" element={<Suspense fallback={null}><SeriesManagerPage /></Suspense>} />
+      <Route path="/library-manager" element={<Suspense fallback={null}><LibraryManagerPage /></Suspense>} />
       <Route path="*" element={
         <ThreeViewerContext.Provider value={viewerRef}>
           {/* Dev/e2e aid (UI-FBK-06): throw inside the workspace route to
@@ -353,6 +358,20 @@ export function App() {
               <div className="viewport-storey-control" title="Storey view">
                 <StoreyViewSelect />
               </div>
+              {/* Fallback mirrors the viewer's application landmass so the
+                  a11y shell contract (named regions) holds during the async
+                  chunk load; PRF-01/06. */}
+              <Suspense
+                fallback={
+                  <div
+                    role="application"
+                    aria-label="3D viewport"
+                    className="viewport-loading"
+                  >
+                    <span role="status" aria-live="polite">Loading viewport…</span>
+                  </div>
+                }
+              >
               <ThreeViewer
                 ref={viewerRef}
                 selectedIds={selectedIds}
@@ -368,6 +387,7 @@ export function App() {
                 onPointerWorld={setCursorWorld}
                 onStats={setFps}
               />
+              </Suspense>
               {section.enabled && <SectionPanel section={section} onChange={setSection} />}
               <ViewCube3D viewer={viewerRef} />
               <div className="view-toolbar-vertical">

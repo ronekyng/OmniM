@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -22,9 +22,25 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [2026-11-03] — Phase 8-1/2/3/4：领域交付批次
+## [2026-11-04] — G2 收口批次 II（SHL-09/11 · FBK-03 · DS-01/06/12 · INT-05/10/11 · CMP-05）
 
 ### 新增（Added）
+- **单位后缀全覆盖（UI-INT-10 ✅）**：CreatePanel 全部数值输入带 `.field-unit`（m/mm 分层：标高/离地/偏移/断面/基本体/线构件坐标），目录参数回显 `{value} {unit}`；`e2e/units.spec.ts`。
+- **1280×720 走查（UI-CMP-05 ✅）**：`e2e/narrow.spec` CMP-05 段（全布局可用、无折叠/阻断提示）。
+- **上下文菜单键盘唤起确证（UI-INT-05 ✅）**：Shift+F10 菜单 + menu/menuitem 角色、Esc 关闭（`e2e/a11y.spec` 既有断言），契约 §6 落注记。
+- **视口令牌对（UI-DS-12 ✅）**：`--viewport-label-*` 深浅双主题完整定义；`theme.spec` 无重载切换/AA 对比度；契约 §10 落注记。
+- **令牌门禁确认（UI-DS-01 ✅）**：`--tokens` colors/colors_func=0（既有门禁即证据）。
+- **单一排版刻度与等宽数字（UI-DS-06 ✅）**：styles.css 全部 font-size 走 `--fs-*`（新增 subtitle/title/display 步），新门禁 `font_size_raw`=0；body 全局 `tabular-nums`。
+- **双击语义收口（UI-INT-11 ✅）**：分离条双击=复位宽度；INTERACTION §7.4 上下文表与现状对齐（树行=就地重命名）。
+- **窄带折叠（UI-SHL-11 ✅）**：1024–1279 px 两侧停靠折叠 44 px 图标条（左图标重开抽屉、右侧面板抽屉、≥1280 自动还原、<1024 阻断提示优先）；`e2e/narrow.spec.ts`。
+- **浮动面板拖拽/缩放/位置持久化（UI-SHL-09 ✅）**：浮窗拖动手柄与右下角缩放；`clampFloating` 夹紧（32 px 边距 / 260×180 最小）；`omnim.layout.v1.floating[]` 按面板 id 持久化，重载恢复；`e2e/floating.spec.ts`。
+- **导入 >1 s 进度与取消（UI-FBK-03 ✅）**：导入 IFC 显示不定进度（role=progressbar）与已耗时；取消经 AbortController 中断请求；服务端取消端点登记 backlog；`e2e/importProgress.spec.ts`。
+
+## [2026-11-03] — Phase 8-1/2/3/4 与 8-5 首片：领域交付批次
+
+### 新增（Added）
+- **i18n 内核与语言切换（G2 · I18N-02/03/04 ✅）**：`shared/i18n.ts`（`t()`/`tPlural()`/`useI18n()`，检测顺序 存储选择 → navigator 交集 → zh-CN；缺失键 en-US 回退；`Intl.PluralRules` 复数；坐标/分组计数/短日期/时间制/角度格式函数），`i18n/{zh-CN,en-US}.ts` 双词典，标题栏语言切换器即时生效不重载、`omnim.locale` 持久化、`<html lang>` 同步；单测 19 例 + `e2e/language.spec.ts`。TitleBar/离开确认/另存对话框首批外置（I18N-01 🔀）。
+- **领域面板内容（8-5 首片）**：丝带领域开关同时打开右栏对应领域面板（机械=运动副列表：按选中对象查询 `?object_id`；建筑=门窗表：分组计数 + 刷新）；未选中/空数据有明确空态，加载失败有重试。面板沿用 PanelRegistration/令牌样式，不经新字面量。
 - **门窗面板变体**：door/window 请求 `leaf_count`（门 1–2/窗 1–4，多扇间加中梃）、`with_sill`（窗台外挑板）与 `with_lintel`（过梁）；对象记录 frame 变体属性。
 - **门窗表**：`GET /api/schedules/openings?root_id=` 对容器子树（或全项目）按 (类型, 洞口尺寸[mm], 框变体) 分组计数。
 - **地形 TIN 拟合**：`genrule: terrain` 由 ≥3 个测点 Bowyer–Watson 三角网入库（`ObjectType::TerrainModel`，TIN 网面 + survey_points/统计属性）；重复 XY 取首个标高，共线测点拒绝。

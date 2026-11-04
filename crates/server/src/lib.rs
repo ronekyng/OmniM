@@ -74,6 +74,8 @@ fn build_router(state: SharedState) -> Router {
         .route("/api/project/save-as", post(save_project_as))
         .route("/api/project/recent", get(list_projects))
         .route("/api/project/current", get(current_project))
+        // 2026-11-03 G2 UI-DAT-07: project metadata
+        .route("/api/project/meta", get(get_project_meta).put(update_project_meta))
         .route("/api/project/new", post(new_project))
         .route("/api/project/open", post(open_project))
         .route("/api/tree", get(get_tree))
@@ -310,6 +312,194 @@ async fn save_project_as(
     ))
 }
 
+// ── Project metadata (G2 UI-DAT-07, DATA_INTEGRITY §2.3) ───────────────────
+
+#[derive(Serialize)]
+struct ProjectMeta {
+    /// Editable; unique within the projects root (rename = file rename).
+    name: String,
+    description: String,
+    author: String,
+    /// Display setting only: stored geometry stays metric.
+    unit_system: String,
+    mode_version: u32,
+    /// Read-only: from the project file's mtime (None before first save).
+    created_at: Option<u64>,
+    modified_at: Option<u64>,
+}
+
+/// `GET /api/project/meta` — editable + read-only metadata.
+async fn get_project_meta(State(state): State<SharedState>) -> Result<Json<ProjectMeta>, ApiError> {
+    let p = state.project.read().await;
+    let save_path = state.save_path.read().await.clone();
+    let (created_at, modified_at) = save_path
+        .as_deref()
+        .map(FsPath::new)
+        .map(|path| {
+            let meta = std::fs::metadata(path).ok();
+            (
+                created_of(path, meta.as_ref()),
+                meta.and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs()),
+            )
+        })
+        .unwrap_or((None, None));
+    Ok(Json(ProjectMeta {
+        name: p.name.clone(),
+        description: p.description.clone(),
+        author: p.author.clone(),
+        unit_system: p.unit_system.as_str().to_string(),
+        mode_version: 1,
+        created_at,
+        modified_at,
+    }))
+}
+
+fn created_of(path: &FsPath, meta: Option<&std::fs::Metadata>) -> Option<u64> {
+    meta.and_then(|m| m.created().ok())
+        .or_else(|| meta.and_then(|m| m.modified().ok()))
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        // Be honest rather than wrong: no created-time on platforms without it
+        // falls back to `modified` once more at call-time (close for projects
+        // saved once on day one); a true created stamp needs a meta record.
+        .or_else(|| None)
+        .filter(|v| {
+            let _ = path;
+            true
+        })
+}
+
+#[derive(Deserialize)]
+struct ProjectMetaRequest {
+    /// Rename: slug-unique in the projects root (409 when taken).
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    description: Option<String>,
+    #[serde(default)]
+    author: Option<String>,
+    #[serde(default)]
+    unit_system: Option<String>,
+}
+
+/// `PUT /api/project/meta` — edit + persist. A save_path rename is a single
+/// write-to-new-file-then-delete-old-file transaction: on any failure the old
+/// project file survives.
+///
+/// Write-path note: project-file-level metadata lives **outside** the object
+/// undo model (like `new_project` / `open_project`), so the handler holds the
+/// project write lock directly; official `check_write_paths.py` entry.
+#[allow(dead_code)]
+async fn update_project_meta(
+    State(state): State<SharedState>,
+    Json(req): Json<ProjectMetaRequest>,
+) -> Result<Json<ProjectMeta>, (StatusCode, String)> {
+    // Validate first (unit system, rename target) before touching state.
+    let unit_system = req
+        .unit_system
+        .as_deref()
+        .map(omnim_model::UnitSystem::parse)
+        .map(|parsed| {
+            parsed.ok_or((
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "unknown unit_system '{}' (metric | imperial)",
+                    req.unit_system.clone().unwrap_or_default()
+                ),
+            ))
+        })
+        .transpose()?;
+
+    let mut p = state.project.write().await;
+    let old_path = state.save_path.read().await.clone();
+
+    if let Some(new_name) = req.name.as_deref() {
+        let new_name = new_name.trim();
+        if new_name.is_empty() {
+            return Err((StatusCode::BAD_REQUEST, "project name is required".into()));
+        }
+        if new_name != p.name {
+            let file_name = format!("{}.omnim", slugify_project_name(new_name));
+            let root = resolve_projects_root(old_path.as_deref());
+            let target = root.join(&file_name);
+            let target = resolve_project_path(&root, &file_name)
+                .map_err(|e| (StatusCode::BAD_REQUEST, e))?;
+            std::fs::create_dir_all(&root)
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            if let Some(old) = old_path.as_deref() {
+                if std::fs::canonicalize(&target)
+                    .ok()
+                    .zip(std::fs::canonicalize(old).ok())
+                    .map(|(a, b)| a == b)
+                    .unwrap_or(false)
+                {
+                    // Same file, pure in-place name change.
+                } else if target.exists() {
+                    return Err((
+                        StatusCode::CONFLICT,
+                        format!(
+                            "a project named '{}' already exists in this root",
+                            target.file_stem().unwrap_or_default().to_string_lossy()
+                        ),
+                    ));
+                }
+            }
+            p.name = new_name.to_string();
+            p.save(target.to_string_lossy().as_ref())
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("save failed: {}", e)))?;
+            if let Some(old) = old_path.as_deref() {
+                if let Ok(of) = std::fs::canonicalize(old) {
+                    if of != std::fs::canonicalize(&target).unwrap_or_else(|_| of.clone()) {
+                        std::fs::remove_file(of).ok();
+                    }
+                }
+            }
+            *state.save_path.write().await = Some(target.to_string_lossy().into_owned());
+        } else {
+            p.name = new_name.to_string();
+        }
+    }
+
+    if let Some(description) = req.description {
+        p.description = description;
+    }
+    if let Some(author) = req.author {
+        p.author = author;
+    }
+    if let Some(unit) = unit_system {
+        p.unit_system = unit;
+    }
+    let save_path = state.save_path.read().await.clone();
+    mutation::persist(&save_path, &p);
+
+    // Build the response inline: same values as GET (name from the freshly
+    // updated project; timestamps from the (possibly new) save path).
+    let sp = state.save_path.read().await.clone();
+    let (created_at, modified_at) = sp
+        .as_deref()
+        .map(FsPath::new)
+        .map(|path| {
+            let md = std::fs::metadata(path).ok();
+            (
+                created_of(path, md.as_ref()),
+                md.and_then(|m| m.modified().ok())
+                    .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                    .map(|d| d.as_secs()),
+            )
+        })
+        .unwrap_or((None, None));
+    Ok(Json(ProjectMeta {
+        name: p.name.clone(),
+        description: p.description.clone(),
+        author: p.author.clone(),
+        unit_system: p.unit_system.as_str().to_string(),
+        mode_version: 1,
+        created_at,
+        modified_at,
+    }))
+}
 // ============================================================
 // Project session (project home: new / open / recent)
 // ============================================================

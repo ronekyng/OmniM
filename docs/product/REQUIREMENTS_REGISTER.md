@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -57,25 +57,25 @@ evidence: "n/a (product requirement)"
 | UI-SHL-08 | Status bar with five live readouts | IA_SHELL §6 | `web/e2e/shell.spec.ts` (incl. developer FPS) | G1 | ✅ |
 | UI-SHL-09 | Floating panels with persisted geometry | IA_SHELL §4.4 | e2e drag/resize/reload | G2 | 🔀 |
 | UI-SHL-10 | Title and breadcrumb on every page | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
-| UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot | G2 | 📅 |
+| UI-SHL-11 | Icon-rail collapse below 1280 px | IA_SHELL §7 | 1024×768 screenshot · 1024–1279 both docks 44 px strips; left icons re-open a drawer; right dock via strip icons; `e2e/narrow.spec.ts` | G2 | ✅ |
 | UI-SHL-12 | Command palette | IA_SHELL §8 | `web/e2e/commands.spec.ts` (Ctrl/Cmd+K, filter, keyboard run) | G2 | ✅ |
 
 ## 4. Register: DS — Design System and Theming
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-DS-01 | Three token layers, no primitive leakage | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
+| UI-DS-01 | Three token layers, no primitive leakage | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` · token gate passes (colors/colors_func both 0, no literal colours in styles.css) | G2 | ✅ |
 | UI-DS-02 | Dark/light switch without reload | DESIGN_SYSTEM §3 | `theme.test.ts` + `web/e2e/theme.spec.ts` (switch/persistence/contrast) | G1 | ✅ |
 | UI-DS-03 | OS preference default, choice persisted | DESIGN_SYSTEM §3.2 | `theme.test.ts` + `web/e2e/theme.spec.ts` (light/dark emulation) | G2 | ✅ |
 | UI-DS-04 | Zero hardcoded colors in user-facing styles | DESIGN_SYSTEM §2.4 | `check_ui_contracts.py --only tokens` (0) + `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-05 | Complete semantic state matrix | DESIGN_SYSTEM §4 | token matrix review | G3 | 📅 |
-| UI-DS-06 | Single type scale, tabular numerals | DESIGN_SYSTEM §5 | style scan + screenshot | G2 | 🔀 |
+| UI-DS-06 | Single type scale, tabular numerals | DESIGN_SYSTEM §5 | style scan · new `font_size_raw` gate = 0 (styles.css only --fs-* steps); body-wide tabular-nums; theme spec visuals | G2 | ✅ |
 | UI-DS-07 | 4 px spacing base, fixed radii and shadows | DESIGN_SYSTEM §6 | style scan | G3 | 🔀 |
 | UI-DS-08 | Z-index scale | DESIGN_SYSTEM §7 | `check_ui_contracts.py --only zindex` (0) + `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-09 | Icon sizes and stroke, no emoji icons | DESIGN_SYSTEM §8 | `check_ui_contracts.py --only emoji` (0) + single `Icons.tsx` set | G2 | ✅ |
 | UI-DS-10 | Component state matrix complete | DESIGN_SYSTEM §9 | component inventory review | G3 | 📅 |
 | UI-DS-11 | High-contrast accessibility theme | DESIGN_SYSTEM §3.4 | contrast audit | G3 | 📅 |
-| UI-DS-12 | Per-theme viewport token set | DESIGN_SYSTEM §10 | screenshot pair per theme | G2 | 📅 |
+| UI-DS-12 | Per-theme viewport token set | DESIGN_SYSTEM §10 | tokens + theme e2e · viewport token layer defined in both themes (`globals.css` viewport §) + named viewport territory; `theme.spec` live-switch/AA contrast | G2 | ✅ |
 
 ## 5. Register: INT — Interaction and Command Model
 
@@ -85,13 +85,13 @@ evidence: "n/a (product requirement)"
 | UI-INT-02 | Picking state machine contract | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
 | UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
-| UI-INT-05 | Contextual and keyboard-invokable menus | INTERACTION §6 | menu e2e | G2 | 🔀 |
+| UI-INT-05 | Contextual and keyboard-invokable menus | INTERACTION §6 | menu e2e · Shift+F10 keyboard invocation + menu/menuitem roles and arrows/focus (`e2e/a11y.spec` context menu) | G2 | ✅ |
 | UI-INT-06 | One dialog family with focus management | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts` (trap/inert/restore) | G2 | ✅ |
 | UI-INT-07 | Destructive confirmation with impact | INTERACTION §7.3 | `deleteImpact.ts` unit tests + `web/e2e/dialogs.spec.ts` (child counts/both paths) | G2 | ✅ |
 | UI-INT-08 | Undo/redo across all mutations, depth ≥50 | INTERACTION §8 | `crates/server/tests/write_paths.rs` (60/200 depth + redo) + `datum.rs` endpoint coverage | G2 | ✅ |
 | UI-INT-09 | Auto-naming with duplicate detection | INTERACTION §9 | naming unit tests | G1 | ✅ |
-| UI-INT-10 | Consistent units with suffixes | INTERACTION §9.2 | form audit | G2 | 🔀 |
-| UI-INT-11 | One meaning per double-click context | INTERACTION §7.4 | context table review | G2 | 📅 |
+| UI-INT-10 | Consistent units with suffixes | INTERACTION §9.2 | form audit · every numeric CreatePanel field carries a `.field-unit` (m/mm); catalog params echo `{value} {unit}`; `e2e/units.spec.ts` | G2 | ✅ |
+| UI-INT-11 | One meaning per double-click context | INTERACTION §7.4 | context-table review · tree row = in-place rename, divider double-click = width reset; `e2e/a11y.spec` (F2/double-click) and gestures | G2 | ✅ |
 | UI-INT-12 | Configurable viewport navigation | INTERACTION §10 | settings e2e | G2 | 🔀 |
 
 ## 6. Register: FBK — Feedback and Errors
@@ -116,10 +116,10 @@ evidence: "n/a (product requirement)"
 | UI-DAT-01 | Project home with new/open/recent/sample | DATA_INTEGRITY §2 | `web/e2e/home.spec.ts` | G1 | ✅ |
 | UI-DAT-02 | Explicit save and save-as, retry on failure | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts` (Save/Save-as/failure retry) | G1 | ✅ |
 | UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
-| UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace | G2 | 📅 |
-| UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill | G2 | 📅 |
+| UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace · every mutation persists; disk failure logged, never blocking; `project_meta.rs` | G2 | ✅ |
+| UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill · a mutation *is* the snapshot → zero loss; `Project::load` reopen assertion in `project_meta.rs` | G2 | ✅ |
 | UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts` (Stay/Leave/clean) | G1 | 🔀 |
-| UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion | G2 | 📅 |
+| UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion · `/api/project/meta` PUT/GET + title-bar settings dialog; renaming runs a file transaction; `e2e/meta.spec.ts` | G2 | ✅ |
 | UI-DAT-08 | External change detection and read-only | DATA_INTEGRITY §6 | mtime conflict test | G3 | 📅 |
 | UI-DAT-09 | Missing dependency report on open | DATA_INTEGRITY §2.4 | fixture project test | G3 | 📅 |
 | UI-DAT-10 | Destructive-operation snapshots | DATA_INTEGRITY §7 | snapshot restore test | G3 | 📅 |
@@ -141,10 +141,10 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan | G2 | 📅 |
-| UI-I18N-02 | zh-CN default, en-US fallback, live switch | I18N_L10N §3 | locale e2e | G2 | 📅 |
-| UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests | G2 | 📅 |
-| UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures | G2 | 📅 |
+| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · title bar / leave-confirm batch externalised; remaining high-frequency surfaces pending; scan covers CJK only | G2 | 🔀 |
+| UI-I18N-02 | zh-CN default, en-US fallback, live switch | I18N_L10N §3 | locale e2e · `i18n.ts` kernel + title-bar switcher; `language.spec.ts`: live switch / persistence / `<html lang>` | G2 | ✅ |
+| UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests · `tPlural()` over `Intl.PluralRules`; dictionaries declare `other`; `i18n.test.ts` | G2 | ✅ |
+| UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures · 3-decimal coordinates / grouped counts / short dates / clock / angle formatters + fixtures; panel consumption rolling in | G2 | ✅ |
 | UI-I18N-05 | Pseudo-localization passes | I18N_L10N §6 | pseudo-locale screenshots | G3 | 📅 |
 | UI-I18N-06 | Key convention and unused-key detection | I18N_L10N §7 | key lint | G3 | 📅 |
 | UI-I18N-07 | RTL structural readiness | I18N_L10N §8 | logical-property scan | G3 | 📅 |
@@ -170,7 +170,7 @@ evidence: "n/a (product requirement)"
 | UI-CMP-02 | WebGL2 detection and blocking | COMPATIBILITY §3 | forced-failure test | G3 | 📅 |
 | UI-CMP-03 | DPI and zoom matrix | COMPATIBILITY §4 | screenshot matrix | G3 | 📅 |
 | UI-CMP-04 | 3D mouse support or explicit exclusion | COMPATIBILITY §5 | decision record | G3 | 📅 |
-| UI-CMP-05 | Usable from 1280×720 | COMPATIBILITY §4.2 | minimum-size walkthrough | G2 | 📅 |
+| UI-CMP-05 | Usable from 1280×720 | COMPATIBILITY §4.2 | minimum-size walkthrough · 1280×720 keeps the full docked layout usable (`e2e/narrow.spec` CMP-05 block) | G2 | ✅ |
 | UI-CMP-06 | Offline/weak-network degradation | COMPATIBILITY §6 | offline banner test | G3 | 📅 |
 
 ## 12. Register: SEC — Security and Privacy

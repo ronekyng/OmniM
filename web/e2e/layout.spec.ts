@@ -45,7 +45,7 @@ test('dock widths persist across reload and reset', async ({ page }) => {
   expect(Math.abs(restored - widened)).toBeLessThanOrEqual(2);
 
   // Reset layout restores the documented default (340 px).
-  await page.getByRole('button', { name: 'Reset layout' }).click();
+  await page.getByRole('button', { name: 'Reset docks to defaults' }).click();
   await expect
     .poll(async () => (await page.locator('.right-panel').boundingBox())!.width)
     .toBeLessThanOrEqual(342);

@@ -1,7 +1,7 @@
 ---
 title: "OmniM 开发路线图"
 status: current
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "repo"
 evidence: "对照代码、CHANGELOG 与门禁看板复核；每条状态附证据链接"
 ---
@@ -81,7 +81,7 @@ Project Workspace、草图编辑器、特征树、目录面板、属性面板、
 |---|---|---|---|---|
 | G0 | 契约与需求 | 🔀 | 草案完成，签字栏待填 | 产品/设计/前端三方签字 |
 | G1 | Alpha | 📅 未通过 | 25 条中 23 ✅ / 2 🔀 / 0 📅 | 25 条全部 ✅ 且证据可点开 |
-| G2 | Beta | 🔀 进行中 | 12 / 37（`UI-SHL-12`、`UI-DS-03/04/08/09`、`UI-INT-06/07/08`、`UI-A11Y-01/02/03/04` ✅） | 设计系统、i18n、A11Y、性能全部达标 |
+| G2 | Beta | 🔀 进行中 | 29 / 37（`UI-SHL-12`、`UI-SHL-09/11`、`UI-DS-01/03/04/06/08/12`、`UI-INT-05/06/07/08/10/11`、`UI-A11Y-01/02/03/04`、`UI-I18N-02/03/04`、`UI-DAT-04/05/07`、`UI-FBK-03`、`UI-CMP-05`、`UI-PRF-06` ✅） | 设计系统、i18n、A11Y、性能全部达标 |
 | G3 | GA | 📅 未开始 | 0 / 34 | 兼容/安全/遥测/ACR/发布手册 + 外部评审 |
 
 完整清单：[REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md)；判定规则：[RELEASE_READINESS](RELEASE_READINESS.zh-CN.md)。

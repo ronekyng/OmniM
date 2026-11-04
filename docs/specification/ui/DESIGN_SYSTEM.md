@@ -251,6 +251,8 @@ Rules:
 2. Selection must remain distinguishable from hover at 3:1 against the background.
 3. Requirement: UI-DS-12, UI-A11Y-01.
 
+**Delivered (2026-11-04, G2 · DS-12)**: the viewport token layer (`--viewport-label-*`) is fully defined in both dark and light themes; `theme.spec.ts` covers reload-free switching, persistence and AA contrast for both themes; `e2e/a11y.spec` asserts the viewport territory has a name (text alternative).
+
 ## 11. Governance
 
 | Rule | Value |

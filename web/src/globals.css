@@ -164,6 +164,11 @@
   --fs-sm: 11px;
   --fs-md: 12px;
   --fs-lg: 14px;
+  --fs-xl: 24px;
+  /* display/TITLE steps of the same scale (DS-06) */
+  --fs-display: 18px;
+  --fs-title: 22px;
+  --fs-subtitle: 20px;
 
   --sp-1: 2px;
   --sp-2: 4px;

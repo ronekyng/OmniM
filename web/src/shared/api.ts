@@ -1,4 +1,4 @@
-import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, UpdateObjectRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse, BomResponse, JointItem, OpeningsScheduleRow } from './types';
+import type { GridLine, ComponentDef, ComponentResponse, ExecutionResult, FeatureItem, FeatureResponse, GenRuleRequest, ImportIfcResponse, MeshResponse, OmniObject, LoadSeriesResponse, SelectResult, Series, Sketch, SketchResponse, StatsResponse, TreeNode, UndoRedoResponse, UndoStatusResponse, UpdatePropertiesRequest, UpdateObjectRequest, AmirTranslateRequest, AmirTranslateResponse, AmirChatRequest, AmirChatResponse, AmirDescribeRequest, AmirDescribeResponse, AmirExplainRequest, AmirExplainResponse, InstantiateResponse, PreviewRequest, CatalogPreviewMesh, ExportCatalogResponse, ImportCatalogResponse, SaveSeriesResponse, Material, ObjectPropertyDef, Measurement, MeasurementPoint, ProjectSummary, CurrentProject, CreateAssemblyRequest, CreateAssemblyResponse, BomResponse, JointItem, OpeningsScheduleRow, ProjectMeta } from './types';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, init);
@@ -96,10 +96,16 @@ export const api = {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   }),
-  importIfc: (content: string, options: { normalize: boolean; mode: 'merge' | 'replace' }) => request<ImportIfcResponse>(`/api/import/ifc?normalize=${options.normalize}&mode=${options.mode}`, {
+  // UI-FBK-03: >1 s imports stay cancellable — the fetch carries an optional
+  // AbortSignal (server-side cancellation is a backlog note, see FEEDBACK_ERRORS §4).
+  importIfc: (
+    content: string,
+    options: { normalize: boolean; mode: 'merge' | 'replace'; signal?: AbortSignal },
+  ) => request<ImportIfcResponse>(`/api/import/ifc?normalize=${options.normalize}&mode=${options.mode}`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain' },
     body: content,
+    signal: options.signal,
   }),
   exportIfc: async () => {
     const response = await fetch('/api/export/ifc');
@@ -273,6 +279,15 @@ export const api = {
   // Phase 8-1: grouped door/window schedule (whole project or a subtree).
   openingsSchedule: (rootId?: string) =>
     request<OpeningsScheduleRow[]>(`/api/schedules/openings${rootId ? `?root_id=${encodeURIComponent(rootId)}` : ''}`),
+
+  // G2 UI-DAT-07 (DATA_INTEGRITY §2.3): editable project metadata.
+  projectMeta: () => request<ProjectMeta>('/api/project/meta'),
+  updateProjectMeta: (body: { name?: string; description?: string; author?: string; unit_system?: string }) =>
+    request<ProjectMeta>('/api/project/meta', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
 
   // ── Material endpoints ──
   listMaterials: () => request<Material[]>('/api/materials'),

@@ -1,7 +1,7 @@
 ---
 title: "OmniM UI Data Integrity and Project Lifecycle"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-03
 applies_to: "web/, crates/server"
 evidence: "n/a (design contract)"
 ---
@@ -58,6 +58,14 @@ Editable before the first save and afterwards through Project settings.
 | Schema version | integer | current | Yes (read-only) |
 | Author / organization | string | empty | Yes |
 | Created / modified | timestamps | now | Yes (read-only) |
+
+**Delivered (2026-11-03, G2 · UI-DAT-04/05/07)**:
+
+- **Endpoints**: `GET /api/project/meta` (file mtime/creation times are the read-only stamps) and `PUT /api/project/meta` (`name/description/author/unit_system`). A rename is one write-new-file → delete-old-file transaction (any failure leaves the old file; a taken name is a 409).
+- **UI**: the title-bar "Project settings" dialog (`shell.meta.*` dictionary keys).
+- **Auto-save (UI-DAT-04)**: every mutation persists on completion of the command path (`mutation::persist`); a disk failure is logged and never blocks the response; the persist period is ≤ one mutation.
+- **Crash recovery (UI-DAT-05)**: the loss ceiling is **zero** — the last mutation *is* the snapshot; `Project::load` reopen semantics equals `main.rs load_or_new`.
+- Evidence: `crates/server/tests/project_meta.rs` (metadata round trip / rename 409 / success on a failing disk / zero-loss reopen) and `web/e2e/meta.spec.ts` (dialog edit → server truth → reopen read-back).
 
 Requirement: UI-DAT-07.
 

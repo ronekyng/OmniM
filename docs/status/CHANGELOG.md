@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -22,9 +22,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
-## [2026-11-03] — Phase 8-1/2/3/4: domain delivery batch
+## [2026-11-04] — G2 closing batch II (SHL-09/11 · FBK-03 · DS-01/06/12 · INT-05/10/11 · CMP-05)
 
 ### Added
+- **Unit suffixes everywhere (UI-INT-10 ✅)**: all numeric CreatePanel inputs carry a `.field-unit` (m/mm layers: elevations/offsets/sections/primitives/linear coordinates) and catalog params echo `{value} {unit}`; `e2e/units.spec.ts`.
+- **1280×720 walkthrough (UI-CMP-05 ✅)**: the CMP-05 block in `e2e/narrow.spec` (full layout usable, no folding/blocking notice).
+- **Context-menu keyboard invocation confirmed (UI-INT-05 ✅)**: Shift+F10 menu with menu/menuitem roles, arrows and Esc (`e2e/a11y.spec`), contract §6 annotation added.
+- **Viewport token pair (UI-DS-12 ✅)**: `--viewport-label-*` fully defined in both themes; theme.spec covers live switching/AA contrast; contract §10 annotation.
+- **Token gate confirmation (UI-DS-01 ✅)**: `--tokens` runs colors/colors_func = 0 (the existing gate is the evidence).
+- **Single type scale & tabular numerals (UI-DS-06 ✅)**: every `font-size` in styles.css is on `--fs-*` (new subtitle/title/display steps); the new `font_size_raw` gate = 0; body-wide `tabular-nums`.
+- **Double-click semantics closed (UI-INT-11 ✅)**: divider double-click resets the width; INTERACTION §7.4's context table matches the code (tree row = in-place rename).
+- **Narrow-band folding (UI-SHL-11 ✅)**: 1024–1279 px folds both docks to 44 px icon strips (left icons re-open a drawer, right dock via per-panel strip icons, ≥1280 restores, <1024 blocking notice wins); `e2e/narrow.spec.ts`.
+- **Floating panel drag / resize / position persistence (UI-SHL-09 ✅)**: drag strip + corner resize; `clampFloating` (32 px margins / 260×180 min); `omnim.layout.v1.floating[]` per panel id, restored on reload; `e2e/floating.spec.ts`.
+- **Import progress past 1 s and cancellation (UI-FBK-03 ✅)**: indeterminate progress (role=progressbar) + elapsed time; cancellation via AbortController; a server-side cancel endpoint is backlog; `e2e/importProgress.spec.ts`.
+
+## [2026-11-03] — Phase 8-1/2/3/4 and the first 8-5 slice: domain delivery batch
+
+### Added
+- **i18n kernel & language switcher (G2 · I18N-02/03/04 ✅)**: `shared/i18n.ts` (`t()`/`tPlural()`/`useI18n()`; detection order stored choice → navigator intersection → zh-CN; missing keys fall back to en-US; `Intl.PluralRules` plurals; coordinate/grouped-count/short-date/clock/angle formatters), `i18n/{zh-CN,en-US}.ts` dictionaries, a title-bar switcher that applies instantly without reload, persists to `omnim.locale` and syncs `<html lang>`; 19 unit tests + `e2e/language.spec.ts`. Title bar / leave-confirm / save-as strings externalised (I18N-01 🔀).
+- **Domain panel content (first 8-5 slice)**: the ribbon domain switches also open the matching right-dock panel (mechanical = motion-joint list queried by selection via `?object_id`; building = grouped door/window schedule with refresh). Explicit empty states, retry on load failure; panels ride PanelRegistration/token styles with no new literals.
 - **Opening panel variants**: door/window requests accept `leaf_count` (doors 1–2 / windows 1–4 with mullions), `with_sill` (outward sill slab) and `with_lintel` (spanning beam); objects record the frame-variant properties.
 - **Door/window schedule**: `GET /api/schedules/openings?root_id=` groups Door/Window objects over the root's subtree (or the whole project) by (type, opening size [mm], frame variants).
 - **Terrain TIN fitting**: `genrule: terrain` fits a Bowyer–Watson triangulation from ≥3 survey points (`ObjectType::TerrainModel` surface mesh + survey/stats properties); duplicate XY keeps the first elevation, collinear surveys are refused.

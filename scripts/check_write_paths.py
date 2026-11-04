@@ -44,6 +44,10 @@ EXECUTOR_LOCK_ALLOWED = {
     "import_ifc": "records a whole-project replace command on the Executor (bulk import)",
     "new_project": "replaces the session project, persists it, then clears undo history",
     "open_project": "replaces the session project from disk, then clears undo history",
+    # Project-file-level metadata (G2 UI-DAT-07): rename/save/description live
+    # OUTSIDE the object undo model (like new/open_project); the handler does
+    # one write-new-then-delete-old file transaction, not an object mutation.
+    "update_project_meta": "project metadata edit (rename/description/author/units); not object state",
 }
 
 DIRECT_WRITE_ALLOWED = READ_ONLY_ALLOWED | EXECUTOR_LOCK_ALLOWED
@@ -55,7 +59,7 @@ LIBRARY_ALLOWED = {
     "import_catalog_handler": "bulk .omnimlib import into the session-global library",
 }
 
-SAVE_ALLOWED = {"save_project", "save_project_as", "new_project"}
+SAVE_ALLOWED = {"save_project", "save_project_as", "new_project", "update_project_meta"}
 
 CALL_RE = re.compile(r"^async fn (\w+)\s*\(", re.MULTILINE)
 

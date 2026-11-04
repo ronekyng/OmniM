@@ -1,7 +1,7 @@
 ---
 title: "OmniM UI Interaction Contract"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -184,6 +184,8 @@ Rules:
 
 Requirement: UI-INT-05.
 
+**Delivered (2026-11-04, G2 · INT-05)**: the object-tree context menu opens from the keyboard via Shift+F10; `menu/menuitem` semantics, arrow/focus cycling and an Esc close; right-click and keyboard share one entry. Evidence: `web/e2e/a11y.spec.ts` (context-menu keyboard invocation).
+
 ## 7. Dialogs and Direct Manipulation
 
 ### 7.1 Dialog family
@@ -230,6 +232,8 @@ Requirement: UI-INT-07.
 | Tab | No action (avoid accidental close) |
 | Property value | Enter edit mode |
 
+**Delivered (2026-11-04, G2 · INT-11)**: a tree row's double-click is an in-place rename (`beginRename`, bubbles intercepted so the meaning stays unique); a dock-divier double-click resets the width (`AppLayout` wired). The remaining rows match the table (a viewport-object double-click lands on the "select and open properties" path, an empty double-click is inert, tabs have none). Evidence: `web/e2e/a11y.spec.ts` (F2 / double-click rename) and the gestures spec.
+
 Requirement: UI-INT-11.
 
 ## 8. Undo and Redo
@@ -271,6 +275,8 @@ Requirement: UI-INT-11.
 | Area | m² | 2 decimals |
 
 Rules: every numeric input shows its unit as a suffix; changing the unit system converts displayed values but does not silently rewrite stored geometry. Requirement: UI-INT-10.
+
+**Delivered (2026-11-04, G2 · INT-10)**: every numeric input in the creation panel carries a `.field-unit` suffix — world-space lengths are `m`, section thickness `mm`, elevations/offsets `m`; catalog parameters echo `{value} {unit}` (mm); the layer editor keeps its existing `mm` labels. Unit-system switching only converts the display (`unit_system` in the project settings is display-only). Evidence: `web/e2e/units.spec.ts`.
 
 ## 10. Viewport Navigation
 

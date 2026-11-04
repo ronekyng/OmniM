@@ -11,6 +11,50 @@ export const LAYOUT_VERSION = 1;
 
 export type DockMode = 'docked' | 'floating';
 
+/** A floating panel's window box (IA_SHELL §4.4, UI-SHL-09): keyed by panel
+ * id, stored in viewport CSS px, always clamped inside the viewport (≥32 px
+ * from every edge). */
+export type FloatingWindow = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export const FLOATING_EDGE_MARGIN = 32;
+export const FLOATING_MIN_W = 260;
+export const FLOATING_MIN_H = 180;
+
+/** Keep a floating box inside the viewport; falls back to a centred default
+ * when the viewport is too small for the minimum box. */
+export function clampFloating(
+  box: Pick<FloatingWindow, 'x' | 'y' | 'w' | 'h'>,
+  viewport = { w: window.innerWidth, h: window.innerHeight },
+): FloatingWindow {
+  const vw = Math.max(viewport.w, 0);
+  const vh = Math.max(viewport.h, 0);
+  const w = Math.max(FLOATING_MIN_W, box.w);
+  const h = Math.max(FLOATING_MIN_H, box.h);
+  if (vw < FLOATING_EDGE_MARGIN * 2 + w || vh < FLOATING_EDGE_MARGIN * 2 + h) {
+    // Degenerate viewport: fulcrum at the top-left margin, size at minimum.
+    return {
+      id: 'id-placeholder',
+      x: FLOATING_EDGE_MARGIN,
+      y: FLOATING_EDGE_MARGIN,
+      w: Math.min(w, Math.max(vw - FLOATING_EDGE_MARGIN * 2, FLOATING_MIN_W)),
+      h: Math.min(h, Math.max(vh - FLOATING_EDGE_MARGIN * 2, FLOATING_MIN_H)),
+    };
+  }
+  return {
+    id: 'id-placeholder',
+    x: clamp(box.x, FLOATING_EDGE_MARGIN, vw - w - FLOATING_EDGE_MARGIN),
+    y: clamp(box.y, FLOATING_EDGE_MARGIN, vh - h - FLOATING_EDGE_MARGIN),
+    w,
+    h,
+  };
+}
+
 export type LayoutState = {
   version: typeof LAYOUT_VERSION;
   level: 'workspace';
@@ -20,7 +64,7 @@ export type LayoutState = {
     bottom: { collapsed: boolean; height: number };
   };
   ribbonCollapsed: boolean;
-  floating: [];
+  floating: FloatingWindow[];
 };
 
 export const DEFAULT_LAYOUT: LayoutState = {
@@ -83,7 +127,19 @@ export function parseLayout(raw: string | null | undefined): LayoutState {
       },
     },
     ribbonCollapsed: value.ribbonCollapsed === true,
-    floating: [],
+    floating: Array.isArray(value.floating)
+      ? value.floating
+          .filter(
+            (f): f is FloatingWindow =>
+              !!f &&
+              typeof f === 'object' &&
+              typeof (f as FloatingWindow).id === 'string' &&
+              Number.isFinite((f as FloatingWindow).x) &&
+              Number.isFinite((f as FloatingWindow).y),
+          )
+          .map((f) => clampFloating(f))
+          .map((f) => ({ ...f, id: f.id && f.id !== '' ? f.id : 'default' }))
+      : [],
   };
 }
 

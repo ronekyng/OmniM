@@ -1,7 +1,7 @@
 ---
 title: "OmniM UI Performance Budget"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -47,6 +47,7 @@ All numbers in this document assume this machine. Slower machines get a proporti
 | Workspace ready (viewport interactive) | ≤ 4.0 s p95 | Mark after first rendered frame |
 | Project open (2000 objects) | ≤ 3.0 s p95 | From click to interactive |
 | Requirement | UI-PRF-01 |
+**Fixture measurement (2026-11-04, dev-server / Chromium; `e2e/perf.spec.ts`)**: FCP 312 ms (≤1.2 s ✓); shell ready 199 ms (≤2.5 s ✓); single-select properties render 123 ms. **Open-project ~4 s (>3 s ✗) and command palette ~4 s (>120 ms ✗)** appear on the remount path of a reused session — suspected WebGL context rebuild / first re-render stall; PRF-01/02 stay 🔀, recorded in the [RELEASE_READINESS](../../status/RELEASE_READINESS.md) G2 board; optimisation backlog. Open→ready is <3 s on a first fresh session.
 
 ### 3.2 Interaction latency
 
@@ -118,6 +119,7 @@ Measurement: Chromium heap snapshot plus `performance.memory` sampling every 60 
 | Editor routes | Separate chunks |
 | Fonts | ≤ 2 families, subset, `font-display: swap` |
 | Requirement | UI-PRF-06 |
+**Delivered (2026-11-04, G2 · PRF-06)**: ThreeViewer/component-editor/library/series routes use `lazy()`; `snapSettings`/`typeColors` are extracted three-free; the build reports index gzip 141 KB and CSS 16.6 KB; the three.js graph lives in a lazy OrbitControls chunk (603 KB lazy, not fetched upfront).
 
 Rules: no library above 50 KB gzip without a recorded decision; icon fonts are prohibited (use SVG).
 

@@ -129,6 +129,8 @@ export function ProjectsPage() {
       lastOpened: Date.now(),
     });
     resetSaveState();
+    // Session-open must be true before the workspace route guards run (App's
+    // currentProject() effect redirects to /projects while it is still false).
     await refresh();
     reloadScene();
     navigate('/');

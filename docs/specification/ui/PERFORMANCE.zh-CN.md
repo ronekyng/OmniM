@@ -1,7 +1,7 @@
 ---
 title: "OmniM 界面性能预算"
 status: design
-last_updated: 2026-10-29
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---
@@ -47,6 +47,7 @@ evidence: "n/a (design contract)"
 | 工作区就绪（视口可交互） | ≤ 4.0 s p95 | 首帧渲染后的标记 |
 | 打开项目（2000 对象） | ≤ 3.0 s p95 | 从点击到可交互 |
 | 需求 | UI-PRF-01 |
+**夹具实测（2026-11-04，dev-server / Chromium；`e2e/perf.spec.ts`）**：FCP 312 ms（≤1.2 s ✓）；外壳就绪 199 ms（≤2.5 s ✓）；单选后属性渲染 123 ms。**打开项目 ~4 s（>3 s ✗）与命令面板 ~4 s（>120 ms ✗）** 出现在复用会话的重挂载路径，疑似 WebGL 上下文重建/首次重渲染阻塞——PRF-01/02 保持 🔀，记录于 [RELEASE_READINESS](../../status/RELEASE_READINESS.zh-CN.md) G2 看板；优化为待办。首次全新会话的打开→就绪 <3 s。
 
 ### 3.2 交互延迟
 
@@ -118,6 +119,7 @@ evidence: "n/a (design contract)"
 | 编辑器路由 | 独立分块 |
 | 字体 | ≤ 2 个字族，子集化，`font-display: swap` |
 | 需求 | UI-PRF-06 |
+**已交付（2026-11-04，G2 · PRF-06）**：ThreeViewer/组件编辑器/库/系列路由 `lazy()`；`snapSettings`/`typeColors` 抽离 no-three 依赖；产物 index gzip 141 KB、CSS 16.6 KB；three.js 全图进懒 OrbitControls 分块（603 KB lazy，不含初始请求）。
 
 规则：任何 gzip 后超过 50 KB 的库都需要记录决策；禁止图标字体（使用 SVG）。
 

@@ -1,7 +1,7 @@
 ---
 title: "OmniM Development Roadmap"
 status: current
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "repo"
 evidence: "Reconciled against code, CHANGELOG and the gate board; every status carries an evidence link"
 ---
@@ -81,7 +81,7 @@ Project Workspace, sketch editor, feature tree, catalog panel, properties panel,
 |---|---|---|---|---|
 | G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
 | G1 | Alpha | 📅 Not passed | 23 ✅ / 2 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
-| G2 | Beta | 🔀 In progress | 12 / 37 (`UI-SHL-12`, `UI-DS-03/04/08/09`, `UI-INT-06/07/08`, `UI-A11Y-01/02/03/04` ✅) | Design system, i18n, A11Y, performance all met |
+| G2 | Beta | 🔀 In progress | 29 / 37 (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-05/06/07/08/10/11`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06` ✅) | Design system, i18n, A11Y, performance all met |
 | G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 
 Full list: [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md); judgement rules: [RELEASE_READINESS](RELEASE_READINESS.md).

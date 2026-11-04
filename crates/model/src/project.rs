@@ -32,6 +32,18 @@ pub struct Project {
     pub sketches: omnim_sketch::SketchStore,
     #[serde(default)]
     pub series: SeriesStore,
+
+    /// Editable metadata (G2 UI-DAT-07, DATA_INTEGRITY §2.3). Display-only
+    /// fields; they never re-scale stored geometry.
+    #[serde(default)]
+    pub description: String,
+    /// Author / organisation free text.
+    #[serde(default)]
+    pub author: String,
+    /// Display units setting (`metric` | `imperial`); stored values stay in
+    /// metres regardless.
+    #[serde(default)]
+    pub unit_system: crate::project::UnitSystem,
     #[serde(default)]
     pub external_series_refs: Vec<SeriesRef>,
     #[serde(default)]
@@ -88,6 +100,32 @@ pub struct SeriesRef {
     pub path: Option<String>,
 }
 
+/// Display units system (DATA_INTEGRITY §2.3; UI-DAT-07).
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum UnitSystem {
+    #[default]
+    Metric,
+    Imperial,
+}
+
+impl UnitSystem {
+    /// `metric` | `imperial`.
+    pub fn parse(s: &str) -> Option<Self> {
+        match s {
+            "metric" => Some(UnitSystem::Metric),
+            "imperial" => Some(UnitSystem::Imperial),
+            _ => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            UnitSystem::Metric => "metric",
+            UnitSystem::Imperial => "imperial",
+        }
+    }
+}
+
 impl Project {
     pub fn new(name: impl Into<String>) -> Self {
         let mut p = Self {
@@ -104,6 +142,9 @@ impl Project {
             measurements: MeasurementStore::new(),
             grids: crate::grid::GridStore::new(),
             joints: crate::joint::JointStore::new(),
+            description: String::new(),
+            author: String::new(),
+            unit_system: crate::project::UnitSystem::Metric,
         };
         crate::seed_materials::seed_default_materials(&mut p.materials);
         p

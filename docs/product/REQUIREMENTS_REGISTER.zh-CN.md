@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端需求登记册（RTM）"
 status: design
-last_updated: 2026-11-03
+last_updated: 2026-11-04
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -55,27 +55,27 @@ evidence: "n/a (product requirement)"
 | UI-SHL-06 | 布局持久化与重置 | IA_SHELL §5 | `web/e2e/layout.spec.ts` | G1 | ✅ |
 | UI-SHL-07 | 按专业切换的上下文功能区 | IA_SHELL §3.3 | `web/e2e/ribbon.spec.ts` | G1 | ✅ |
 | UI-SHL-08 | 状态栏五项实时读数 | IA_SHELL §6 | `web/e2e/shell.spec.ts`（含开发者 FPS） | G1 | ✅ |
-| UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e | G2 | 🔀 |
+| UI-SHL-09 | 浮动面板与位置持久化 | IA_SHELL §4.4 | 拖动/缩放/重载 e2e · 拖/缩/夹紧/重载断言，`e2e/floating.spec.ts`；面板 id 键控 `omnim.layout.v1.floating[]` | G2 | ✅ |
 | UI-SHL-10 | 每页标题与面包屑 | IA_SHELL §2.2 | `web/e2e/editors.spec.ts` | G1 | ✅ |
-| UI-SHL-11 | 低于 1280 px 折叠为图标条 | IA_SHELL §7 | 1024×768 截图 | G2 | 📅 |
+| UI-SHL-11 | 低于 1280 px 折叠为图标条 | IA_SHELL §7 | 1024×768 截图 · 1024–1279 两侧 44 px 图标条；左侧点击图标重开抽屉；右停靠经条图标开抽屉；`e2e/narrow.spec.ts` | G2 | ✅ |
 | UI-SHL-12 | 命令面板 | IA_SHELL §8 | `web/e2e/commands.spec.ts`（Ctrl/Cmd+K、过滤、键盘执行） | G2 | ✅ |
 
 ## 4. 登记：DS — 设计系统与主题
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-DS-01 | 三层令牌，无原始令牌泄漏 | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` | G2 | 📅 |
+| UI-DS-01 | 三层令牌，无原始令牌泄漏 | DESIGN_SYSTEM §2 | `check_ui_contracts.py --tokens` · 令牌门禁通过（colors/colors_func 均 0，styles.css 零字面量色） | G2 | ✅ |
 | UI-DS-02 | 深/浅主题切换不重载 | DESIGN_SYSTEM §3 | `theme.test.ts` + `web/e2e/theme.spec.ts`（切换/持久化/对比度） | G1 | ✅ |
 | UI-DS-03 | 跟随系统默认，选择持久化 | DESIGN_SYSTEM §3.2 | `theme.test.ts` + `web/e2e/theme.spec.ts`（浅/深媒体模拟） | G2 | ✅ |
 | UI-DS-04 | 用户界面样式零硬编码颜色 | DESIGN_SYSTEM §2.4 | `check_ui_contracts.py --only tokens`（0）+ `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-05 | 完整语义状态矩阵 | DESIGN_SYSTEM §4 | 令牌矩阵评审 | G3 | 📅 |
-| UI-DS-06 | 单一排版刻度，等宽数字 | DESIGN_SYSTEM §5 | 样式扫描 + 截图 | G2 | 🔀 |
+| UI-DS-06 | 单一排版刻度，等宽数字 | DESIGN_SYSTEM §5 | 样式扫描 · `font_size_raw` 新门禁=0（styles.css 全部走 --fs-* 刻度）；body 全局 tabular-nums；`e2e/theme.spec` 视觉 | G2 | ✅ |
 | UI-DS-07 | 4 px 间距基准，固定圆角与阴影 | DESIGN_SYSTEM §6 | 样式扫描 | G3 | 🔀 |
 | UI-DS-08 | z-index 分层 | DESIGN_SYSTEM §7 | `check_ui_contracts.py --only zindex`（0）+ `designTokens.test.ts` | G2 | ✅ |
 | UI-DS-09 | 图标尺寸与描边，无 emoji 图标 | DESIGN_SYSTEM §8 | `check_ui_contracts.py --only emoji`（0）+ `Icons.tsx` 单一图标集 | G2 | ✅ |
 | UI-DS-10 | 组件状态矩阵完整 | DESIGN_SYSTEM §9 | 组件清单评审 | G3 | 📅 |
 | UI-DS-11 | 高对比可访问性主题 | DESIGN_SYSTEM §3.4 | 对比度审计 | G3 | 📅 |
-| UI-DS-12 | 双主题视口令牌集 | DESIGN_SYSTEM §10 | 每主题截图对 | G2 | 📅 |
+| UI-DS-12 | 双主题视口令牌集 | DESIGN_SYSTEM §10 | 令牌+主题 e2e · 视口令牌层在双主题定义（`globals.css` §viewport）+ 标签可命名；`theme.spec` 断言无重载切换/AA 对比度 | G2 | ✅ |
 
 ## 5. 登记：INT — 交互与命令模型
 
@@ -85,13 +85,13 @@ evidence: "n/a (product requirement)"
 | UI-INT-02 | 拾取状态机契约 | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
 | UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
-| UI-INT-05 | 上下文菜单且可键盘唤起 | INTERACTION §6 | 菜单 e2e | G2 | 🔀 |
+| UI-INT-05 | 上下文菜单且可键盘唤起 | INTERACTION §6 | 菜单 e2e · Shift+F10 键盘唤起+menu/menuitem 角色与方向键/焦点（`e2e/a11y.spec` context menu） | G2 | ✅ |
 | UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts`（焦点陷阱/背景 inert/焦点归还） | G2 | ✅ |
 | UI-INT-07 | 破坏性确认并说明影响 | INTERACTION §7.3 | `deleteImpact.ts` 单测 + `web/e2e/dialogs.spec.ts`（子对象计数/两路径确认） | G2 | ✅ |
 | UI-INT-08 | 全变更撤销/重做，深度 ≥50 | INTERACTION §8 | `crates/server/tests/write_paths.rs`（60/200 深度与 redo）+ `datum.rs` 等端点覆盖 | G2 | ✅ |
 | UI-INT-09 | 自动命名与重名检测 | INTERACTION §9 | 命名单测 | G1 | ✅ |
-| UI-INT-10 | 单位一致且带后缀 | INTERACTION §9.2 | 表单审计 | G2 | 🔀 |
-| UI-INT-11 | 每个上下文双击含义唯一 | INTERACTION §7.4 | 上下文表评审 | G2 | 📅 |
+| UI-INT-10 | 单位一致且带后缀 | INTERACTION §9.2 | 表单审计 · CreatePanel 数值域全部带 .field-unit 后缀（m/mm）；目录参数回显 {value} {unit}；`e2e/units.spec.ts` | G2 | ✅ |
+| UI-INT-11 | 每个上下文双击含义唯一 | INTERACTION §7.4 | 上下文表评审 · 对象树行=就地重命名、分隔条双击=复位宽度；`e2e/a11y.spec`（F2/双击）与gestures | G2 | ✅ |
 | UI-INT-12 | 可配置视口导航 | INTERACTION §10 | 设置 e2e | G2 | 🔀 |
 
 ## 6. 登记：FBK — 反馈与错误
@@ -100,7 +100,7 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-FBK-01 | 每个面板三态齐全 | FEEDBACK_ERRORS §3 | `web/e2e/routeCrash.spec.ts` + 面板清单 | G1 | ✅ |
 | UI-FBK-02 | 骨架屏，400 ms 内不闪烁 | FEEDBACK_ERRORS §3.2 | `web/src/__tests__/delayedVisibility.test.ts` + 面板覆盖 | G1 | ✅ |
-| UI-FBK-03 | 超过 1 秒显示进度并可取消 | FEEDBACK_ERRORS §4 | 导入 e2e | G2 | 📅 |
+| UI-FBK-03 | 超过 1 秒显示进度并可取消 | FEEDBACK_ERRORS §4 | 导入 e2e · 导入 >1 s 弹不定进度+已耗时+取消；`e2e/importProgress.spec.ts`；服务端取消端点登记 backlog | G2 | ✅ |
 | UI-FBK-04 | 带码错误、原因与恢复动作 | FEEDBACK_ERRORS §5 | 错误目录比对 | G3 | 📅 |
 | UI-FBK-05 | 无原生 alert/confirm/prompt | FEEDBACK_ERRORS §6 | `window.*` 扫描 | G1 | ✅ |
 | UI-FBK-06 | 路由与面板级错误边界 | FEEDBACK_ERRORS §7 | `web/e2e/routeCrash.spec.ts` + 面板级 `feedback.spec.ts` | G1 | ✅ |
@@ -116,10 +116,10 @@ evidence: "n/a (product requirement)"
 | UI-DAT-01 | 项目首页含新建/打开/最近/示例 | DATA_INTEGRITY §2 | `web/e2e/home.spec.ts` | G1 | ✅ |
 | UI-DAT-02 | 显式保存与另存为，失败可重试 | DATA_INTEGRITY §3 | `web/e2e/data.spec.ts`（Save/Save-as/失败重试） | G1 | ✅ |
 | UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
-| UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 | G2 | 📅 |
-| UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 | G2 | 📅 |
+| UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 · 每次 mutation 即持久化；盘失败仅记日志不阻塞；`project_meta.rs` | G2 | ✅ |
+| UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 · mutation 即快照 → 零丢失；`Project::load` 重开断言在 `project_meta.rs` | G2 | ✅ |
 | UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts`（Stay/Leave/clean） | G1 | 🔀 |
-| UI-DAT-07 | 项目元信息可编辑并持久化 | DATA_INTEGRITY §2.3 | 重开断言 | G2 | 📅 |
+| UI-DAT-07 | 项目元信息可编辑并持久化 | DATA_INTEGRITY §2.3 | 重开断言 · `/api/project/meta` PUT/GET + 标题栏「项目设置」对话框；重命名文件事务；`e2e/meta.spec.ts` | G2 | ✅ |
 | UI-DAT-08 | 外部修改检测与只读 | DATA_INTEGRITY §6 | mtime 冲突测试 | G3 | 📅 |
 | UI-DAT-09 | 打开时缺失依赖报告 | DATA_INTEGRITY §2.4 | 夹具项目测试 | G3 | 📅 |
 | UI-DAT-10 | 破坏性操作快照 | DATA_INTEGRITY §7 | 快照恢复测试 | G3 | 📅 |
@@ -141,10 +141,10 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 | G2 | 📅 |
-| UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e | G2 | 📅 |
-| UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 | G2 | 📅 |
-| UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 | G2 | 📅 |
+| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · TitleBar/离开确认首批外置；其余高频面未迁，扫描仅覆盖 CJK | G2 | 🔀 |
+| UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e · `i18n.ts` 内核 + 标题栏切换器；`language.spec.ts`：即时切换/持久化/`<html lang>` | G2 | ✅ |
+| UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
+| UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |
 | UI-I18N-05 | 伪本地化通过 | I18N_L10N §6 | 伪语言截图 | G3 | 📅 |
 | UI-I18N-06 | 键名规范与未使用键检测 | I18N_L10N §7 | 键校验 | G3 | 📅 |
 | UI-I18N-07 | RTL 结构就绪 | I18N_L10N §8 | 逻辑属性扫描 | G3 | 📅 |
@@ -170,7 +170,7 @@ evidence: "n/a (product requirement)"
 | UI-CMP-02 | WebGL2 检测与阻断 | COMPATIBILITY §3 | 强制失败测试 | G3 | 📅 |
 | UI-CMP-03 | DPI 与缩放矩阵 | COMPATIBILITY §4 | 截图矩阵 | G3 | 📅 |
 | UI-CMP-04 | 3D 鼠标支持或明确排除 | COMPATIBILITY §5 | 决策记录 | G3 | 📅 |
-| UI-CMP-05 | 1280×720 起可用 | COMPATIBILITY §4.2 | 最小尺寸走查 | G2 | 📅 |
+| UI-CMP-05 | 1280×720 起可用 | COMPATIBILITY §4.2 | 最小尺寸走查 · 1280×720 全布局可用（`e2e/narrow.spec` CMP-05 段） | G2 | ✅ |
 | UI-CMP-06 | 离线/弱网降级 | COMPATIBILITY §6 | 离线横幅测试 | G3 | 📅 |
 
 ## 12. 登记：SEC — 安全与隐私

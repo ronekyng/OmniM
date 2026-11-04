@@ -251,6 +251,10 @@ G2 的最低组件清单：Button、IconButton、SplitButton、Select、Combobox
 2. 选中与悬停相对背景必须保持 3:1 可辨识度。
 3. 需求：UI-DS-12, UI-A11Y-01。
 
+**已交付（2026-11-04，G2 · DS-12）**：视口令牌层（`--viewport-label-*`）在深/浅双主题内完整定义；`theme.spec.ts` 保证无重载切换、持久化与双主题 AA 对比度；`e2e/a11y.spec` 断言视口区域可命名（文本替代）。
+
+**已交付（2026-11-04，G2 · DS-12）**：视口令牌层（`--viewport-label-*` 等）在深/浅双主题内完整定义；`theme.spec.ts` 保证无重载切换、持久化与双主题 AA 对比；`e2e/a11y.spec` 断言视口区域可命名（文本替代）。
+
 ## 11. 治理
 
 | 规则 | 取值 |

@@ -72,6 +72,8 @@ Requirement: UI-CMP-02.
 | 1440×900 | Full layout, reference screenshot size |
 | 1280×720 | **Minimum certified**; side docks collapse to icon rails |
 | 1024×720 – 1279×720 | Degraded: icon rails only, not certified for support |
+
+**Delivered (2026-11-04, G2 · CMP-05)**: a 1280×720 walkthrough is asserted — the full docked layout is usable (properties panel shows, right dock >260 px) with no folding classes and no blocking notice; the 1024–1279 band uses the folded form (see IA_SHELL §7). Evidence: `e2e/narrow.spec.ts` CMP-05 block.
 | <1024×720 | Blocking notice with the minimum requirement |
 
 Requirement: UI-CMP-03, UI-CMP-05.

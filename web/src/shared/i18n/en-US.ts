@@ -1,0 +1,45 @@
+// en-US dictionary — the fallback locale (I18N_L10N §3). Keys are typed
+// against zh-CN so the two dictionaries cannot drift apart silently.
+import type { MessageKey } from './zh-CN';
+
+// The English dictionary extends the key set with per-category plural
+// messages (§4), so it is typed loosely while zh-CN keeps the strict keys.
+export const enUS = {
+  'shell.titlebar.workspace_suffix': ' workspace',
+  'shell.titlebar.back_to_projects': 'Back to projects',
+  'shell.titlebar.dirty_hint': 'Edited (auto-saved server-side); explicit save pending',
+  'shell.breadcrumb.workspace': 'Workspace',
+  'shell.breadcrumb.modeling': 'Modeling',
+  'shell.breadcrumb.transform': 'Transform',
+  'shell.breadcrumb.create': 'Create',
+  'shell.theme.switch_to_light': 'Switch to light theme',
+  'shell.theme.switch_to_dark': 'Switch to dark theme',
+  'shell.action.save': 'Save',
+  'shell.action.save_shortcut': 'Save (Ctrl/Cmd+S)',
+  'shell.action.save_as': 'Save as',
+  'shell.action.reset_layout': 'Reset docks to defaults',
+  'shell.language.switcher': 'Interface language',
+  'shell.saveas.title': 'Save project as',
+  'shell.saveas.hint': 'Path on the server, relative or absolute. Must end with ',
+  'shell.saveas.hint_ext': '.',
+  'shell.saveas.path_label': 'Project file path',
+  'shell.saveas.cancel': 'Cancel',
+  'shell.meta.button': 'Project settings',
+  'shell.meta.title': 'Project settings',
+  'shell.meta.name': 'Name',
+  'shell.meta.description': 'Description',
+  'shell.meta.author': 'Author / organisation',
+  'shell.meta.units': 'Units (display only)',
+  'shell.meta.readonly': 'Stored geometry is always metric; units are display-only; renaming also renames the project file inside the projects root.',
+  'shell.leave.title': 'Leave without saving?',
+  'shell.leave.message': 'The workspace has changes that were not explicitly saved in this session.',
+  'shell.leave.confirm': 'Leave',
+  'shell.leave.cancel': 'Stay',
+  'shell.titlebar.doc_prefix': '— OmniM',
+  // —— English plurals (§4): zero/one/other ——
+  'common.plural.objects.zero': '{count} objects',
+  'common.plural.objects.one': '{count} object',
+  'common.plural.objects.other': '{count} objects',
+  'locale.zh-CN': '中文',
+  'locale.en-US': 'English',
+} as unknown as Record<MessageKey, string>;
