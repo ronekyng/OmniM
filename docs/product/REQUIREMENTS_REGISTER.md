@@ -158,7 +158,7 @@ evidence: "n/a (product requirement)"
 | UI-PRF-03 | Frame-rate budgets at object counts | PERFORMANCE §4 | frame-time harness | G2 | 📅 |
 | UI-PRF-04 | Idle CPU budget | PERFORMANCE §4.3 | idle sample | G2 | 📅 |
 | UI-PRF-05 | Memory ceiling and soak | PERFORMANCE §5 | soak test | G3 | 📅 |
-| UI-PRF-06 | Bundle budget and splitting | PERFORMANCE §6 | bundle report | G2 | 📅 |
+| UI-PRF-06 | Bundle budget and splitting | PERFORMANCE §6 | bundle report · index gzip 141 KB (≤500), CSS 16.6 KB (≤60), three in a lazy OrbitControls chunk, editor/library/series split; `e2e/perf.spec` PRF-06 block | G2 | ✅ |
 | UI-PRF-07 | Tree scroll at 5000 nodes | PERFORMANCE §7 | scroll trace | G3 | 📅 |
 | UI-PRF-08 | Regression gate ±10% | PERFORMANCE §8 | CI job | G3 | 📅 |
 

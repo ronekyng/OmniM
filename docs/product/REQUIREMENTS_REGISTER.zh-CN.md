@@ -158,7 +158,7 @@ evidence: "n/a (product requirement)"
 | UI-PRF-03 | 各构件数下帧率预算 | PERFORMANCE §4 | 帧时间夹具 | G2 | 📅 |
 | UI-PRF-04 | 空闲 CPU 预算 | PERFORMANCE §4.3 | 空闲采样 | G2 | 📅 |
 | UI-PRF-05 | 内存上限与浸泡 | PERFORMANCE §5 | 浸泡测试 | G3 | 📅 |
-| UI-PRF-06 | 包体预算与分包 | PERFORMANCE §6 | 包体报告 | G2 | 📅 |
+| UI-PRF-06 | 包体预算与分包 | PERFORMANCE §6 | 包体报告 · index gzip 141 KB（≤500）、CSS 16.6 KB（≤60）、three 懒分块（OrbitControls）、编辑/库/系列路由独立分块；`e2e/perf.spec` PRF-06 段 | G2 | ✅ |
 | UI-PRF-07 | 5000 节点树滚动 | PERFORMANCE §7 | 滚动追踪 | G3 | 📅 |
 | UI-PRF-08 | ±10% 回退门禁 | PERFORMANCE §8 | CI 任务 | G3 | 📅 |
 
