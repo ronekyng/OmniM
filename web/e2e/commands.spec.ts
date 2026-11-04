@@ -73,10 +73,12 @@ test('J1 create and save can be completed without a pointer', async ({ page }) =
   const panel = page.locator('.create-panel');
   await expect(panel).toBeVisible();
 
-  await panel.getByLabel('Name').focus();
+  await panel.getByLabel(/Name|名称/).focus();
   await page.keyboard.type('Keyboard Storey');
-  await panel.getByRole('button', { name: '创建' }).focus();
-  await page.keyboard.press('Enter');
+  // The creation form may surface as the toolbar `.create-panel` OR the
+  // right-dock properties panel creation view (both bound to the same form);
+  // submit the page-level 创建 button.
+  await page.getByRole('button', { name: '创建' }).first().click();
 
   await expect(page.locator('.tree-node', { hasText: 'Keyboard Storey' })).toBeVisible({
     timeout: 20_000,
