@@ -22,9 +22,13 @@ evidence: "audited against code 2026-10-27"
 
 ---
 
-## [2026-11-04] — G2 收口批次 II（SHL-09/11 · FBK-03 · DS-01/06/12 · INT-05/10/11 · CMP-05）
+## [2026-11-04] — G2 收口批次 II（SHL-09/11 · FBK-03 · DAT · DS · INT · CMP-05 · PRF-06 · I18N）
 
 ### 新增（Added）
+- **单一快捷键注册表（UI-INT-03 ✅）**：`app/commands.ts` `buildWorkspaceCommands` 为命令数组唯一产地；新 `global_keydown` 门禁收敛 window 监听 allow-list；组件编辑器页面键改宿主容器监听。
+- **可配置视口导航（UI-INT-12 ✅）**：注册表命令 `view.nav` 切换 current/contract 两制（contract：left 置空=纯选择、中键轨道、右键平移），`omnim.nav` 持久化 + `applyNavScheme`；Shift+中键映射与契约默认化仍登记 CODE_DEVIATIONS §7。
+- **项目元信息与自动保存语义（UI-DAT-04/05/07 ✅）**：`GET/PUT /api/project/meta`（重命名文件事务）；标题栏「项目设置」；每次 mutation 即持久化、盘失败不阻塞、零丢失重开断言（`project_meta.rs`/`e2e/meta.spec.ts`）。
+- **i18n 内核与语言切换（I18N-02/03/04 ✅，I18N-01 🔀）**：`shared/i18n.ts` + `i18n/{zh-CN,en-US}.ts`，标题栏切换器即时/持久化/`<html lang>` 同步；状态栏/保存状态文案外置；`e2e/language.spec.ts`。
 - **单位后缀全覆盖（UI-INT-10 ✅）**：CreatePanel 全部数值输入带 `.field-unit`（m/mm 分层：标高/离地/偏移/断面/基本体/线构件坐标），目录参数回显 `{value} {unit}`；`e2e/units.spec.ts`。
 - **1280×720 走查（UI-CMP-05 ✅）**：`e2e/narrow.spec` CMP-05 段（全布局可用、无折叠/阻断提示）。
 - **上下文菜单键盘唤起确证（UI-INT-05 ✅）**：Shift+F10 菜单 + menu/menuitem 角色、Esc 关闭（`e2e/a11y.spec` 既有断言），契约 §6 落注记。

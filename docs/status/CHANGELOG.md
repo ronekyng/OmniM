@@ -25,6 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [2026-11-04] — G2 closing batch II (SHL-09/11 · FBK-03 · DS-01/06/12 · INT-05/10/11 · CMP-05)
 
 ### Added
+- **Single shortcut registry (UI-INT-03 ✅)**: `app/commands.ts` `buildWorkspaceCommands` is the single producer of the command array; the new `global_keydown` gate collapses window keyboard listeners to an allow-list; the component editor attaches its page keys to the shell container.
+- **Configurable viewport navigation (UI-INT-12 ✅)**: registry command `view.nav` toggles shipped/contract schemes (contract: left inert = selection-only, middle orbit, right pan), `omnim.nav` persistence + `applyNavScheme`; the SHIFT+middle mapping and contract-default stay in CODE_DEVIATIONS §7.
+- **Project metadata & auto-save semantics (UI-DAT-04/05/07 ✅)**: `GET/PUT /api/project/meta` (file rename transaction); title-bar Project settings; every mutation persists, disk failure logged non-blocking, zero-loss reopen (`project_meta.rs` / `e2e/meta.spec.ts`).
+- **i18n kernel & language switcher (I18N-02/03/04 ✅, I18N-01 🔀)**: `shared/i18n.ts` + dictionaries, title-bar switcher with instant switching/`<html lang>` sync; status bar & save-state copy externalised; `e2e/language.spec.ts`.
 - **Unit suffixes everywhere (UI-INT-10 ✅)**: all numeric CreatePanel inputs carry a `.field-unit` (m/mm layers: elevations/offsets/sections/primitives/linear coordinates) and catalog params echo `{value} {unit}`; `e2e/units.spec.ts`.
 - **1280×720 walkthrough (UI-CMP-05 ✅)**: the CMP-05 block in `e2e/narrow.spec` (full layout usable, no folding/blocking notice).
 - **Context-menu keyboard invocation confirmed (UI-INT-05 ✅)**: Shift+F10 menu with menu/menuitem roles, arrows and Esc (`e2e/a11y.spec`), contract §6 annotation added.
