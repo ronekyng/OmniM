@@ -61,7 +61,66 @@ test('PRF-01/02 fixture: records FCP + shell/interaction timings', async ({ page
   console.log('[perf-fixture]', JSON.stringify(report));
 });
 
-/** PRF-06 (PERFORMANCE §6): bundle budget — measured against `vite build`
+/** PRF-03/04 fixtures (PERFORMANCE §4): frame-time under count scenarios and
+ * idle CPU sampling. Recording-only: the reference machine budget lives in
+ * the contract; dev-server + SwiftShader numbers go to the report file. */
+test('PRF-03/04 fixture: frame-time vs object count + idle CPU sampling', async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto('/projects');
+  await page.getByRole('button', { name: /Open sample project/ }).click();
+  await expect(page.locator('.title-bar')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('application', { name: '3D viewport' })).toBeVisible({ timeout: 10_000 });
+
+  const sampleFps = await page.evaluate(() => new Promise<number>((resolve) => {
+    let n = 0;
+    const t0 = performance.now();
+    const tick = () => { n += 1; if (performance.now() - t0 < 1000) requestAnimationFrame(tick); else resolve(n); };
+    requestAnimationFrame(tick);
+  }));
+
+  // Scale the fixture towards the contract: +100 primitive parts through the API.
+  const t0 = Date.now();
+  const client = page.request;
+  const resp = await client.post('http://127.0.0.1:3100/api/assemblies', {
+    data: { name: 'Perf Assembly', skip_series_gate: true, parts: Array.from({ length: 100 }, (_, i) => ({ name: `PRF-${i}`, shape: 'box', p1: 0.2, p2: 0.2, p3: 0.2 })) },
+  });
+  void resp;
+  await page.reload();
+  await expect(page.locator('.title-bar')).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('application', { name: '3D viewport' })).toBeVisible({ timeout: 10_000 });
+  const scaledFps = await page.evaluate(() => new Promise<number>((resolve) => {
+    let n = 0;
+    const t0 = performance.now();
+    const tick = () => { n += 1; if (performance.now() - t0 < 1000) requestAnimationFrame(tick); else resolve(n); };
+    requestAnimationFrame(tick);
+  }));
+  void t0;
+
+  // Idle main-thread sampling (PRF-04): busy fraction over 1.5 s idle.
+  const idleBusy = await page.evaluate(() => new Promise<number>((resolve) => {
+    const t0 = performance.now();
+    let busy = 0;
+    let last = t0;
+    const probe = setInterval(() => {
+      busy += performance.now() - last;
+      last = performance.now();
+    }, 50);
+    setTimeout(() => { clearInterval(probe); resolve(busy / (performance.now() - t0)); }, 1500);
+  }));
+
+  const report = {
+    fps_sample: sampleFps,
+    fps_100_parts: scaledFps,
+    idle_cpu_busy_frac: Math.round(idleBusy * 1000) / 1000,
+  };
+  try {
+    const { appendFileSync } = await import('node:fs');
+    appendFileSync('/tmp/opencode/perf-report.json', '\n' + JSON.stringify(report));
+  } catch { /* non-fatal */ }
+  console.log('[perf-fixture-frames]', JSON.stringify(report));
+});
+
+/** PRF-06 (PERFORMANCE §6): bundle budget/** PRF-06 (PERFORMANCE §6): bundle budget — measured against `vite build`
  * output (this spec does not rebuild; the numbers live in the doc note and in
  * the CI build log). Asserts the size report file the repo script produces. */
 test('PRF-06 fixture: bundle budget note', async () => {

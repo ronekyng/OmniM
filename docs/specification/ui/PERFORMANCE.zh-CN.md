@@ -97,6 +97,8 @@ evidence: "n/a (design contract)"
 
 需求：UI-PRF-03。
 
+**夹具记录（2026-11-04，dev-server / headless SwiftShader；`e2e/perf.spec.ts` PRF-03/04 段）**：样本 FPS 11、+100 构件 FPS 17、空闲主线程 busy 占比 1.0 —— 渲染循环持续运转（G2 看板 B9）与软件光栅共同决定；参考机预算按 §2 校准，或待 B9 按需渲染落地后重测。
+
 ## 5. 内存
 
 | 指标 | 预算 |

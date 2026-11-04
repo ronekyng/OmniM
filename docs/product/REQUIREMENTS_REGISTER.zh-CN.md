@@ -155,8 +155,8 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-PRF-01 | 首屏与就绪预算 | PERFORMANCE §3 | 性能夹具 | G2 | 📅 |
 | UI-PRF-02 | 交互延迟预算 | PERFORMANCE §3.2 | 交互追踪 | G2 | 📅 |
-| UI-PRF-03 | 各构件数下帧率预算 | PERFORMANCE §4 | 帧时间夹具 | G2 | 📅 |
-| UI-PRF-04 | 空闲 CPU 预算 | PERFORMANCE §4.3 | 空闲采样 | G2 | 📅 |
+| UI-PRF-03 | 各构件数下帧率预算 | PERFORMANCE §4 | 帧时间夹具 · `e2e/perf.spec` PRF-03/04 段记录 sample/F+100构件 FPS 与 idle 采样；无头 SwiftShader 下 FPS 低且 idle busy=1（持续渲染循环 B9 未解）→ 🔀 | G2 | 🔀 |
+| UI-PRF-04 | 空闲 CPU 预算 | PERFORMANCE §4.3 | 空闲采样 · 夹具已记录 idle busy 比值；持续渲染循环（B9）未解 → 🔀 | G2 | 🔀 |
 | UI-PRF-05 | 内存上限与浸泡 | PERFORMANCE §5 | 浸泡测试 | G3 | 📅 |
 | UI-PRF-06 | 包体预算与分包 | PERFORMANCE §6 | 包体报告 · index gzip 141 KB（≤500）、CSS 16.6 KB（≤60）、three 懒分块（OrbitControls）、编辑/库/系列路由独立分块；`e2e/perf.spec` PRF-06 段 | G2 | ✅ |
 | UI-PRF-07 | 5000 节点树滚动 | PERFORMANCE §7 | 滚动追踪 | G3 | 📅 |

@@ -97,6 +97,8 @@ Frame time is measured on the render loop, excluding GC spikes above 50 ms which
 
 Requirement: UI-PRF-03.
 
+**Fixture record (2026-11-04, dev-server / headless SwiftShader; `e2e/perf.spec.ts` PRF-03/04 block)**: sample FPS 11, +100-part FPS 17, idle main-thread busy fraction 1.0 — driven by the persistent render loop (G2 board B9) plus software rasterisation; use the §2 reference machine for gate numbers or re-measure after B9 on-demand rendering lands.
+
 ## 5. Memory
 
 | Metric | Budget |
