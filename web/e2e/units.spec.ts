@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** INTERACTION §9.2 (UI-INT-10): every numeric input in the creation panel
  * carries its unit suffix — m for world-space lengths, mm for section
  * thicknesses; catalog params echo `{value} {unit}` (mm). */

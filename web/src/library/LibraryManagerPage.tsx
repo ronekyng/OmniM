@@ -247,7 +247,7 @@ export function LibraryManagerPage() {
 
   return (
     <div className="library-mgr-page">
-      <PageBreadcrumb trail={['项目', '编辑器', 'Library Manager']} />
+      <PageBreadcrumb trail={['crumb.projects', 'crumb.editors', 'Library Manager']} />
       <div className="library-mgr-header">
         <h1>Library Manager</h1>
         <div className="library-mgr-header-actions">

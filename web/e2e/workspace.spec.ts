@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /**
  * G1 smoke: project home → sample workspace → theme toggle → left-dock tabs
  * (Objects / Grids+levels / Catalog) → create and read back a storey.
@@ -13,12 +15,12 @@ test('sample project: theme, dock tabs and storey creation', async ({ page }) =>
 
   await page.getByRole('button', { name: /Open sample project/ }).click();
   await expect(page.locator('.title-bar')).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('tab', { name: /Objects/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /对象/ })).toBeVisible();
 
   // Theme toggle writes <html data-theme> and persists it.
   const html = page.locator('html');
   const before = await html.getAttribute('data-theme');
-  await page.getByRole('button', { name: /Switch to (light|dark) theme/ }).click();
+  await page.getByRole('button', { name: /切换到(浅色|深色)主题/ }).click();
   await expect
     .poll(async () => html.getAttribute('data-theme'), { timeout: 5_000 })
     .not.toBe(before);
@@ -26,7 +28,7 @@ test('sample project: theme, dock tabs and storey creation', async ({ page }) =>
   expect(after === 'light' || after === 'dark').toBe(true);
 
   // Left dock: levels live next to grids (IA_SHELL §3.4).
-  await page.getByRole('tab', { name: 'Grids' }).click();
+  await page.getByRole('tab', { name: '轴网' }).click();
   await expect(page.getByText('楼层 Levels')).toBeVisible();
   await page.getByLabel('Name').fill('E2E-Level');
   await page.getByLabel('Elevation (m)').fill('4.5');

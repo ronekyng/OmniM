@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../shared/api';
 import { storeyOptions, type StoreyOption } from '../../shared/types/creation';
 import { useAppStore } from '../store/appStore';
+import { useI18n } from '../../shared/i18n';
 
 /** Storey view selector (P8-S4): filters the viewport to the chosen storey and
  *  sets a plan section cut 1.2 m above its datum. "全部" restores everything and
  *  disables the storey-driven section. */
 export function StoreyViewSelect() {
+  const { t } = useI18n();
   const activeStoreyId = useAppStore((s) => s.activeStoreyId);
   const setActiveStorey = useAppStore((s) => s.setActiveStorey);
   const setSection = useAppStore((s) => s.setSection);
@@ -52,7 +54,7 @@ export function StoreyViewSelect() {
       title="楼层视图（按标高过滤 + 剖切）"
       style={{ maxWidth: 132 }}
     >
-      <option value="">全部楼层</option>
+      <option value="">{t('storey.all')}</option>
       {storeys.map((s) => (
         <option key={s.id} value={s.id}>
           {s.name}（{s.elevation.toFixed(2)} m）

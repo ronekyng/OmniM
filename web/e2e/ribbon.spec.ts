@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** UI-SHL-07: contextual ribbon row always visible; switching the discipline
  *  replaces the command set instead of hiding it. */
 test('ribbon keeps the command row visible across disciplines', async ({ page }) => {

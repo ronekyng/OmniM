@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** UI-A11Y-03: visible focus, F6 region cycling, focus restoration, route focus. */
 
 async function openSample(page: import('@playwright/test').Page) {
@@ -14,7 +16,7 @@ test('keyboard focus is visible and F6 cycles shell regions', async ({ page }) =
   // F6 lands on the next region's first focusable control, with a 2 px ring.
   await page.locator('.main-toolbar button').first().focus();
   await page.keyboard.press('F6');
-  const tab = page.getByRole('tab', { name: /Objects/ });
+  const tab = page.getByRole('tab', { name: /对象/ });
   await expect(tab).toBeFocused();
   const ring = await tab.evaluate((el) => {
     const style = getComputedStyle(el);

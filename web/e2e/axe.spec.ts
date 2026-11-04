@@ -1,6 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** UI-A11Y-01: axe audit of the critical paths (WCAG 2.2 AA tags). */
 
 async function audit(page: Page, label: string) {
@@ -42,11 +44,11 @@ test('critical paths have no serious axe violations', async ({ page }) => {
   await page.waitForTimeout(300);
   await audit(page, 'workspace-dark');
 
-  await page.getByRole('button', { name: 'Switch to light theme' }).click();
+  await page.getByRole('button', { name: '切换到浅色主题' }).click();
   await page.waitForTimeout(300);
   await audit(page, 'workspace-light');
 
-  await page.getByRole('button', { name: 'Save as' }).click();
+  await page.getByRole('button', { name: '另存为' }).click();
   await expect(page.getByRole('dialog')).toBeVisible();
   await audit(page, 'save-as-dialog');
   await page.keyboard.press('Escape');
@@ -79,7 +81,7 @@ test('critical paths have no serious axe violations', async ({ page }) => {
 
   // Error recovery: a rejected save surfaces a persistent toast.
   await page.route('**/api/project/save', (route) => route.fulfill({ status: 500, body: 'boom' }));
-  await page.locator('.title-actions').getByRole('button', { name: 'Save', exact: true }).click();
+  await page.locator('.title-actions').getByRole('button', { name: '保存', exact: true }).click();
   await expect(page.locator('.toast-item.error')).toBeVisible();
   await audit(page, 'save-error-toast');
   await page.unroute('**/api/project/save');

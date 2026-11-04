@@ -13,7 +13,7 @@ test('editor pages expose breadcrumbs back to the workspace', async ({ page }) =
   ] as const) {
     await page.goto(route);
     await expect(page.locator('.page-breadcrumb')).toBeVisible();
-    await expect(page.locator('.page-breadcrumb')).toContainText('项目');
+    await expect(page.locator('.page-breadcrumb')).toContainText(/项目|Projects/);
     await expect(page.locator('.page-breadcrumb')).toContainText(tail);
     await page.locator('.page-breadcrumb .breadcrumb-home').click();
     await expect(page).toHaveURL(/^http:\/\/127\.0\.0\.1:5174\/$/);

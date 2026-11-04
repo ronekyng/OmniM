@@ -67,7 +67,7 @@ DEBT_BASELINE = {
     "colors_func": 0,
     "emoji": 0,
     "dialogs": 0,
-    "cjk": 962,
+    "cjk": 941,
     "zindex": 0,
 }
 

@@ -3,6 +3,7 @@ import { ObjectTreePanel } from '../panels/ObjectTreePanel';
 import { GridPanel } from '../components/GridPanel';
 import { AvailableComponentsPanel } from '../components/AvailableComponentsPanel';
 import { useAppStore } from '../store/appStore';
+import { useI18n } from '../../shared/i18n';
 
 type LeftTab = 'objects' | 'grids' | 'catalog';
 
@@ -12,6 +13,7 @@ type LeftTab = 'objects' | 'grids' | 'catalog';
 const TABS: LeftTab[] = ['objects', 'grids', 'catalog'];
 
 export function LeftDock() {
+  const { t } = useI18n();
   const [tab, setTab] = useState<LeftTab>('objects');
   const objectCount = useAppStore((s) => s.stats?.object_count ?? 0);
 
@@ -48,7 +50,7 @@ export function LeftDock() {
           className={tab === 'objects' ? 'active' : ''}
           onClick={() => setTab('objects')}
         >
-          Objects <span className="dock-count">{objectCount}</span>
+          {t('left.tab.objects')} <span className="dock-count">{objectCount}</span>
         </button>
         <button
           id="left-tab-grids"
@@ -60,7 +62,7 @@ export function LeftDock() {
           className={tab === 'grids' ? 'active' : ''}
           onClick={() => setTab('grids')}
         >
-          Grids
+          {t('left.tab.grids')}
         </button>
         <button
           id="left-tab-catalog"
@@ -72,7 +74,7 @@ export function LeftDock() {
           className={tab === 'catalog' ? 'active' : ''}
           onClick={() => setTab('catalog')}
         >
-          构件库
+          {t('left.tab.catalog')}
         </button>
       </div>
       <div

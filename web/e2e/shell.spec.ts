@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /**
  * G1 shell evidence: seven fixed regions (UI-SHL-02), breadcrumb (UI-SHL-10),
  * status-bar readings (UI-SHL-08), input shortcut guard (UI-INT-04) and
@@ -24,8 +26,8 @@ test('workspace exposes the seven regions and guards shortcuts in inputs', async
   await expect(page.locator('.right-panel')).toBeVisible();
 
   // Breadcrumb + status readings.
-  await expect(page.locator('.breadcrumb')).toContainText('Workspace');
-  await expect(page.locator('.breadcrumb')).toContainText('Modeling');
+  await expect(page.locator('.breadcrumb')).toContainText(/Workspace|工作区/);
+  await expect(page.locator('.breadcrumb')).toContainText(/Modeling|建模/);
   await expect(page.locator('.status-coords')).toBeVisible();
   await expect(page.locator('.status-selection')).toContainText('Ground Floor');
   await expect(page.locator('.status-units')).toHaveText('m');
@@ -39,7 +41,7 @@ test('workspace exposes the seven regions and guards shortcuts in inputs', async
   await expect(page.locator('.tree-node', { hasText: 'Ground Floor' })).toHaveCount(1);
 
   // Theme screenshots (attached to the report as UI-DS-02 evidence).
-  const toggle = page.getByRole('button', { name: /Switch to (light|dark) theme/ });
+  const toggle = page.getByRole('button', { name: /切换到(浅色|深色)主题/ });
   await toggle.click();
   await test.info().attach('theme-a.png', {
     body: await page.screenshot(),

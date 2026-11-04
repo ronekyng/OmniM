@@ -1108,7 +1108,7 @@ export function ComponentEditorPage() {
   if (!currentComponentId) {
     return (
       <div className="component-editor-shell">
-        <PageBreadcrumb trail={['项目', '编辑器', 'Component Editor']} />
+        <PageBreadcrumb trail={['crumb.projects', 'crumb.editors', 'Component Editor']} />
         <div className="component-topbar">
           <button onClick={handleBack} className="component-back-btn">&larr; Back</button>
           <span className="component-title">Component Editor</span>
@@ -1125,7 +1125,7 @@ export function ComponentEditorPage() {
   return (
     <div className="component-editor-shell">
       {/* Top bar */}
-      <PageBreadcrumb trail={['项目', '编辑器', 'Component Editor']} />
+      <PageBreadcrumb trail={['crumb.projects', 'crumb.editors', 'Component Editor']} />
       <div className="component-topbar">
         <button onClick={handleBack} className="component-back-btn">&larr; Back</button>
         {editingName ? (

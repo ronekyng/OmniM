@@ -380,6 +380,12 @@ export function MainToolbar({
     return { Cone: { radius_bottom: p1, radius_top: p2, height: p3, segments: 16 } };
   }
 
+  const typeLabel = (type: string): string => {
+    const key = `nav.type.${type}`;
+    const translated = t(key as never);
+    return translated !== key ? translated : (DOMAIN_GROUPS[activeDomain ?? 'building']?.labels[type] ?? type);
+  };
+
   function handleDomainObjectClick(t: string) {
     if (PICKING_TYPES.has(t as ObjectType)) {
       creationDispatch({ type: 'startPicking', objectType: t as ObjectType });
@@ -531,27 +537,27 @@ export function MainToolbar({
         <button onClick={() => navigate('/series-manager')} title="Series Manager"><IcoSeries /><span className="btn-label">Series</span></button>
         <button onClick={() => navigate('/library-manager')} title="Library Manager"><IcoCatalog /><span className="btn-label">Library</span></button>
         <span className="separator" />
-        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => handleDomainSwitch('building')} title="建筑" aria-pressed={activeDomain === 'building'}><IcoGrid /><span className="btn-label">建筑</span></button>
-        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => handleDomainSwitch('civil')} title="土木" aria-pressed={activeDomain === 'civil'}><IcoGrid /><span className="btn-label">土木</span></button>
-        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => handleDomainSwitch('plant')} title="工厂" aria-pressed={activeDomain === 'plant'}><IcoGrid /><span className="btn-label">工厂</span></button>
-        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => handleDomainSwitch('mechanical')} title="机械" aria-pressed={activeDomain === 'mechanical'}><IcoGrid /><span className="btn-label">机械</span></button>
+        <button className={`domain-switch ${activeDomain === 'building' ? 'active' : ''}`} onClick={() => handleDomainSwitch('building')} title={t('nav.group.label.building')} aria-pressed={activeDomain === 'building'}><IcoGrid /><span className="btn-label">{t('nav.group.label.building')}</span></button>
+        <button className={`domain-switch ${activeDomain === 'civil' ? 'active' : ''}`} onClick={() => handleDomainSwitch('civil')} title={t('nav.group.label.civil')} aria-pressed={activeDomain === 'civil'}><IcoGrid /><span className="btn-label">{t('nav.group.label.civil')}</span></button>
+        <button className={`domain-switch ${activeDomain === 'plant' ? 'active' : ''}`} onClick={() => handleDomainSwitch('plant')} title={t('nav.group.label.plant')} aria-pressed={activeDomain === 'plant'}><IcoGrid /><span className="btn-label">{t('nav.group.label.plant')}</span></button>
+        <button className={`domain-switch ${activeDomain === 'mechanical' ? 'active' : ''}`} onClick={() => handleDomainSwitch('mechanical')} title={t('nav.group.label.mechanical')} aria-pressed={activeDomain === 'mechanical'}><IcoGrid /><span className="btn-label">{t('nav.group.label.mechanical')}</span></button>
       </div>
 
       {activeDomain && (
-        <div className="domain-toolbar" role="toolbar" aria-label={`${DOMAIN_GROUPS[activeDomain].label} 命令组`}>
-          <span className="ribbon-group-label">创建</span>
-          {DOMAIN_GROUPS[activeDomain]?.types.map((t) => (
+        <div className="domain-toolbar" role="toolbar" aria-label={`${t(`nav.group.label.${activeDomain}` as never)} ${t('nav.group.create')}`}>
+          <span className="ribbon-group-label">{t('nav.group.create')}</span>
+          {DOMAIN_GROUPS[activeDomain ?? 'building']?.types.map((type) => (
             <button
-              key={t}
-              className={creationObjectType === t ? 'active' : ''}
-              onClick={() => handleDomainObjectClick(t)}
-              title={t}
+              key={type}
+              className={creationObjectType === type ? 'active' : ''}
+              onClick={() => handleDomainObjectClick(type)}
+              title={type}
             >
-              {DOMAIN_GROUPS[activeDomain]?.labels[t] || t}
+              {typeLabel(type)}
             </button>
           ))}
           {creationObjectType && (
-            <span className="domain-tool-indicator">当前：{DOMAIN_GROUPS[activeDomain]?.labels[creationObjectType] || creationObjectType} · Esc 取消</span>
+            <span className="domain-tool-indicator">当前：{creationObjectType ? typeLabel(creationObjectType) : ''}</span>
           )}
         </div>
       )}

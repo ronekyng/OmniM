@@ -227,7 +227,7 @@ export function SeriesManagerPage() {
 
   return (
     <div className="series-mgr-page">
-      <PageBreadcrumb trail={['项目', '编辑器', 'Series Manager']} />
+      <PageBreadcrumb trail={['crumb.projects', 'crumb.editors', 'Series Manager']} />
       <div className="series-mgr-header">
         <h1>SeriesStore Manager</h1>
         <div className="series-mgr-header-actions">
