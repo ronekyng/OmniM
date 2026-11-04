@@ -30,6 +30,7 @@ export function buildWorkspaceCommands(ctx: {
   ortho: { toggle: () => void };
   transformSpaceSetting: { get: 'world' | 'local'; toggle: () => void };
   transformMode: { current: 'translate' | 'rotate' | 'scale' | null; set: (mode: 'translate' | 'rotate' | 'scale' | null) => void };
+  navCycle: () => void;
   create: (objectType: 'storey' | 'door') => void;
   navigate: (to: NavTarget) => void;
   help: () => void;
@@ -51,6 +52,9 @@ export function buildWorkspaceCommands(ctx: {
     { id: 'nav.projects', title: 'Go to projects', scope: 'Navigation', run: () => ctx.navigate('/projects') },
     { id: 'nav.series', title: 'Open Series Manager', scope: 'Navigation', run: () => ctx.navigate('/series-manager') },
     { id: 'nav.library', title: 'Open Library Manager', scope: 'Navigation', run: () => ctx.navigate('/library-manager') },
+    // INT-12 (INTERACTION §10): the configurable navigation scheme lives in
+    // the registry so it is discoverable/fixed like every other command.
+    { id: 'view.nav', title: 'Viewport navigation scheme', scope: 'Viewport', run: () => ctx.navCycle() },
     { id: 'help.shortcuts', title: 'Keyboard shortcuts', shortcut: 'F1', scope: 'Help', run: ctx.help },
   ];
 }

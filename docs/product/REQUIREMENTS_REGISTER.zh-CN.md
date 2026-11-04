@@ -92,7 +92,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-09 | 自动命名与重名检测 | INTERACTION §9 | 命名单测 | G1 | ✅ |
 | UI-INT-10 | 单位一致且带后缀 | INTERACTION §9.2 | 表单审计 · CreatePanel 数值域全部带 .field-unit 后缀（m/mm）；目录参数回显 {value} {unit}；`e2e/units.spec.ts` | G2 | ✅ |
 | UI-INT-11 | 每个上下文双击含义唯一 | INTERACTION §7.4 | 上下文表评审 · 对象树行=就地重命名、分隔条双击=复位宽度；`e2e/a11y.spec`（F2/双击）与gestures | G2 | ✅ |
-| UI-INT-12 | 可配置视口导航 | INTERACTION §10 | 设置 e2e | G2 | 🔀 |
+| UI-INT-12 | 可配置视口导航 | INTERACTION §10 | 设置 e2e · 导航方案（current 发版行为 / contract 目标：左惰·中轨道·右平移）经命令面板切换、`omnim.nav` 持久化并应用到视口；`e2e/navScheme.spec`（现偏差仍登记 CODE_DEVIATIONS §7） | G2 | ✅ |
 
 ## 6. 登记：FBK — 反馈与错误
 

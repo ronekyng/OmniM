@@ -81,7 +81,7 @@ Project Workspace, sketch editor, feature tree, catalog panel, properties panel,
 |---|---|---|---|---|
 | G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
 | G1 | Alpha | 📅 Not passed | 23 ✅ / 2 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
-| G2 | Beta | 🔀 In progress | 30 / 37 (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-03/05/06/07/08/10/11`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06` ✅) | Design system, i18n, A11Y, performance all met |
+| G2 | Beta | 🔀 In progress | 31 / 37 (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-03/05/06/07/08/10/11/12`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06` ✅) | Design system, i18n, A11Y, performance all met |
 | G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 
 Full list: [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md); judgement rules: [RELEASE_READINESS](RELEASE_READINESS.md).

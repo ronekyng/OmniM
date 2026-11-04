@@ -59,6 +59,9 @@ export type ThreeViewerHandle = {
   focusObject: (id: string) => void;
   toggleGrid: () => boolean;
   toggleOrtho: () => boolean;
+  /// INT-12: configurable navigation scheme (null left button = inert, so
+  /// plain clicks stay selection-only; middle orbit; right pan; wheel zoom).
+  applyNavScheme: (scheme: 'current' | 'contract') => void;
   setTransformSpace: (space: 'world' | 'local') => void;
   getTransformSpace: () => 'world' | 'local';
   clearMeasurements: () => void;
@@ -265,6 +268,13 @@ focusObject: (id) => {
       if (!s) return false;
       s.grid.visible = !s.grid.visible;
       return s.grid.visible;
+    },
+    applyNavScheme: (scheme) => {
+      const s = stateRef.current;
+      if (!s) return;
+      s.controls.mouseButtons = scheme === 'contract'
+        ? { LEFT: null, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN }
+        : { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
     },
     toggleOrtho: () => {
       const s = stateRef.current;

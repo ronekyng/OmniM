@@ -298,6 +298,8 @@ type Shortcut = {
 3. 导航不得清空选择。
 4. 需求：UI-INT-12。
 
+**已交付（2026-11-04，G2 · INT-12）**：导航绑定成为**真实设置**——注册表命令 `view.nav` 在命令面板可发现，切换 `current`/`contract` 两制并持久化 `omnim.nav`（Private 模式降内存内），`applyNavScheme` 在工作域挂载与设置变更时施加到 OrbitControls（contract：左键置空=纯选择、中键=轨道、右键=平移、滚轮=朝光标缩放）。仍未完成：Shift+中键平移组合（OrbitControls 无法一键映射修饰键）与"契约制成为默认"——已登记 CODE_DEVIATIONS §7 保持诚实。证据：`e2e/navScheme.spec.ts`。
+
 ## 11. 非目标
 
 1. 视口内的自由文本命令行语法（使用控制台）。

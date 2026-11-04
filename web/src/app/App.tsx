@@ -103,6 +103,7 @@ export function App() {
     setTransformOpen, setVisualOpen,
     setGridVisible, setIsOrtho, setTransformSpace,
     snapSettings, setSnapSettings,
+    navScheme, setNavScheme,
     creationDispatch,
     refresh, reloadScene, markDirty, saveProject, saveState,
     setCursorWorld, setFps,
@@ -164,6 +165,13 @@ export function App() {
   }, [isMain, navigate]);
   useEffect(() => { refresh(); reloadScene(); }, []);
   useEffect(() => { if (isMain) { refresh(); reloadScene(); } }, [location.pathname]);
+
+  // INT-12 (INTERACTION §10): keep the viewport navigation scheme applied
+  // whenever the workspace mounts or the setting flips.
+  useEffect(() => {
+    if (!isMain) return;
+    viewerRef.current?.applyNavScheme(navScheme);
+  }, [isMain, navScheme, reloadToken]);
 
   const previousPathRef = useRef(location.pathname);
   useEffect(() => {
@@ -314,6 +322,11 @@ export function App() {
     ortho: { toggle: () => { setIsOrtho((v) => !v); viewerRef.current?.toggleOrtho(); } },
     transformSpaceSetting: { get: transformSpace, toggle: () => { const next = transformSpace === 'world' ? 'local' : 'world'; setTransformSpace(next); viewerRef.current?.setTransformSpace(next); } },
     transformMode: { current: transformMode, set: (mode) => setTransformMode(mode) },
+    navCycle: () => {
+      const next = navScheme === 'contract' ? 'current' : 'contract';
+      setNavScheme(next);
+      toast.success(next === 'contract' ? 'Viewport nav: contract target (left inert · middle orbit · right pan)' : 'Viewport nav: shipped scheme (left pan · middle dolly · right rotate)');
+    },
     create: (objectType) => creationDispatch({ type: 'completePicking', form: createInitialForm(objectType, []) }),
     navigate,
     help: () => setHelpOpen(true),

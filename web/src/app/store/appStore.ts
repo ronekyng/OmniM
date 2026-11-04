@@ -17,6 +17,8 @@ export type AppState = {
   primaryMeshInfo: MeshInfo | null;
   transformMode: TransformMode;
   visualMode: VisualMode;
+  /// INT-12 (INTERACTION §10): viewport navigation scheme setting.
+  navScheme: 'current' | 'contract';
   section: SectionState;
   measureMode: MeasureMode;
   reloadToken: number;
@@ -57,6 +59,7 @@ type AppActions = {
   setSelectedIds: (ids: string[] | ((prev: string[]) => string[])) => void;
   setPrimaryMeshInfo: (info: MeshInfo | null) => void;
   setTransformMode: (mode: TransformMode | ((prev: TransformMode) => TransformMode)) => void;
+  setNavScheme: (scheme: 'current' | 'contract') => void;
   setVisualMode: (mode: VisualMode) => void;
   setSection: (section: SectionState | ((prev: SectionState) => SectionState)) => void;
   setMeasureMode: (mode: MeasureMode | ((prev: MeasureMode) => MeasureMode)) => void;
@@ -97,6 +100,16 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
     selectedIds: [],
     primaryMeshInfo: null,
     transformMode: null as TransformMode,
+  /// INT-12 (INTERACTION §10): configurable viewport navigation scheme.
+  /// 'current' keeps the shipped pointer behaviour (CODE_DEVIATIONS §7);
+  /// 'contract' applies the target table (left inert, middle orbit,
+  /// right pan, wheel zoom).
+  navScheme: ((): 'current' | 'contract' => {
+    try {
+      const saved = localStorage.getItem('omnim.nav');
+      return saved === 'contract' ? 'contract' : 'current';
+    } catch { return 'current'; }
+  })(),
     visualMode: 'shaded' as VisualMode,
     section: { enabled: false, axis: 'x', value: 0 },
     measureMode: 'none' as MeasureMode,
@@ -133,6 +146,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => {
       else set({ selectedIds: ids });
     },
     setPrimaryMeshInfo: (info) => set({ primaryMeshInfo: info }),
+    setNavScheme: (scheme) => {
+      set({ navScheme: scheme });
+      try { localStorage.setItem('omnim.nav', scheme); } catch { /* private mode */ }
+    },
     setTransformMode: (mode) => {
       if (typeof mode === 'function') set((s) => ({ transformMode: (mode as (prev: TransformMode) => TransformMode)(s.transformMode) }));
       else set({ transformMode: mode });

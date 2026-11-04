@@ -92,7 +92,7 @@ evidence: "n/a (product requirement)"
 | UI-INT-09 | Auto-naming with duplicate detection | INTERACTION §9 | naming unit tests | G1 | ✅ |
 | UI-INT-10 | Consistent units with suffixes | INTERACTION §9.2 | form audit · every numeric CreatePanel field carries a `.field-unit` (m/mm); catalog params echo `{value} {unit}`; `e2e/units.spec.ts` | G2 | ✅ |
 | UI-INT-11 | One meaning per double-click context | INTERACTION §7.4 | context-table review · tree row = in-place rename, divider double-click = width reset; `e2e/a11y.spec` (F2/double-click) and gestures | G2 | ✅ |
-| UI-INT-12 | Configurable viewport navigation | INTERACTION §10 | settings e2e | G2 | 🔀 |
+| UI-INT-12 | Configurable viewport navigation | INTERACTION §10 | settings e2e · navigation scheme (shipped vs contract-target: left inert · middle orbit · right pan) via the palette, `omnim.nav` persistence and viewport application; `e2e/navScheme.spec` (the shipped-scheme deviation stays registered in CODE_DEVIATIONS §7) | G2 | ✅ |
 
 ## 6. Register: FBK — Feedback and Errors
 

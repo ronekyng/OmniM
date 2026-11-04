@@ -298,6 +298,8 @@ Rules:
 3. Selection must not be cleared by navigation.
 4. Requirement: UI-INT-12.
 
+**Delivered (2026-11-04, G2 · INT-12)**: navigation binding is a real setting — the registry command `view.nav` is discoverable in the palette and toggles `current`/`contract`, persisted to `omnim.nav` (in-memory fallback in private mode) and applied to OrbitControls via `applyNavScheme` on workspace mount and on change (contract: inert left = selection-only, middle orbit, right pan, wheel zoom-to-cursor). Still outstanding: the SHIFT+middle pan modifier mapping and making the contract scheme the default — recorded honestly in CODE_DEVIATIONS §7. Evidence: `e2e/navScheme.spec.ts`.
+
 ## 11. Non-Goals
 
 1. Free-form command-line syntax in the viewport (use the console).
