@@ -1,7 +1,7 @@
 ---
 title: "OmniM 前端需求登记册（RTM）"
 status: design
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量（TitleBar/状态栏/保存状态/左停靠/面包屑/领域条/楼层视图/导入）、域面板节标签、CreatePanel 全表单、可用构件/内置构件节；CJK 899；余：DomainPanels 快建动作标签域、AssemblyPanel、Catalog 侧栏 | G2 | 🔀 |
+| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + 域面板节标签/动作标签（24 快建项）/域下拉名（可用构件/库管理）/CreatePanel 全表单；CJK 866；余：AssemblyPanel、Catalog 侧栏、快建 toast 之外的零散错误文案 | G2 | 🔀 |
 | UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e · `i18n.ts` 内核 + 标题栏切换器；`language.spec.ts`：即时切换/持久化/`<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |

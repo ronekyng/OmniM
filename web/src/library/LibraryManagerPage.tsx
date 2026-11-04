@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../shared/i18n';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { api } from '../shared/api';
@@ -12,6 +13,7 @@ import type { ComponentDef, ParamDef, CatalogPreviewMesh } from '../shared/types
 export function LibraryManagerPage() {
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const { t } = useI18n();
   const [catalog, setCatalog] = useState<ComponentDef[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -62,13 +64,10 @@ export function LibraryManagerPage() {
 
   const selectedComp = catalog.find(c => c.id === selectedId) || null;
 
-  const DOMAIN_LABELS: Record<string, string> = {
-    structural: '建筑结构',
-    building: '建筑',
-    civil: '土木',
-    plant: '工厂',
-    mechanical: '机械',
-    piping: '管道',
+  const domainLabelOf = (d: string): string => {
+    const key = `domain.${d}`;
+    const v = t(key as never);
+    return v !== key ? v : d;
   };
 
   const domains = [...new Set(catalog.map(c => c.domain))].sort();
@@ -288,7 +287,7 @@ export function LibraryManagerPage() {
                 key={d}
                 className={`library-mgr-domain-tab ${domainFilter === d ? 'active' : ''}`}
                 onClick={() => setDomainFilter(d)}
-              >{DOMAIN_LABELS[d] || d}</button>
+              >{domainLabelOf(d)}</button>
             ))}
           </div>
           {loading && <div className="library-mgr-loading">加载中...</div>}

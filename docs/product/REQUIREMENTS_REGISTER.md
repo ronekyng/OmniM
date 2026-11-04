@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-11-04
+last_updated: 2026-11-05
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised so far: whole shell (title bar/status/save/docks/breadcrumb/domain strip/story view/import), domain panel section labels, the whole CreatePanel form, available/builtins sections; CJK 899; remaining: DomainPanels quick-create action labels, AssemblyPanel, catalog sidebar | G2 | 🔀 |
+| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised so far: whole shell + domain panel section labels & 24 quick-create action labels + domain dropdowns (available/library) + full CreatePanel; CJK 866; remaining: AssemblyPanel, catalog sidebar, scattered error copy | G2 | 🔀 |
 | UI-I18N-02 | zh-CN default, en-US fallback, live switch | I18N_L10N §3 | locale e2e · `i18n.ts` kernel + title-bar switcher; `language.spec.ts`: live switch / persistence / `<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests · `tPlural()` over `Intl.PluralRules`; dictionaries declare `other`; `i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures · 3-decimal coordinates / grouped counts / short dates / clock / angle formatters + fixtures; panel consumption rolling in | G2 | ✅ |
