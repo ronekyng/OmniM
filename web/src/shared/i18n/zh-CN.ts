@@ -47,6 +47,22 @@ export const zhCN = {
   // —— 复数（§4：中文只需 other） ——
   'common.plural.objects.other': '{count} 个对象',
   // —— 语言自命名 ——
+  'panel.domain.joints': '运动副（选中对象）',
+  'panel.domain.joints_none': '选中对象未参与任何运动副。',
+  'panel.domain.joints_error': '运动副列表加载失败。',
+  'panel.domain.schedule': '门窗表',
+  'panel.domain.schedule_refresh': '刷新',
+  'panel.domain.schedule_none': '项目暂无门/窗对象。',
+  'panel.domain.schedule_error': '门窗表加载失败。',
+  'panel.domain.retry': '重试',
+  'panel.domain.col_type': '类型',
+  'panel.domain.col_size': '宽×高 mm',
+  'panel.domain.col_count': '数量',
+  'panel.domain.type_door': '门',
+  'panel.domain.type_window': '窗',
+  'panel.import.title': '正在导入',
+  'panel.import.elapsed_s': '已耗时 {count} 秒',
+  'panel.import.cancel': '取消导入',
   'locale.zh-CN': '中文',
   'locale.en-US': '英文',
 } as const;

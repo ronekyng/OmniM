@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** Phase 8-5: domain surfaces — the mechanical panel lists the motion joints
  * of the selected object; the building panel lists the door/window schedule. */
 

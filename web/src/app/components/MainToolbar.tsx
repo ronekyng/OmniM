@@ -7,6 +7,7 @@ import { useToastApi } from '../../shared/toast';
 import { useConfirm } from './ConfirmDialog';
 import { nextAutoName } from '../../shared/naming';
 import { useAppStore } from '../store/appStore';
+import { useI18n } from '../../shared/i18n';
 import { CreatePanel } from './create/CreatePanel';
 import { AssemblyPanel } from './create/AssemblyPanel';
 import type { ObjectType, GeometryType, CreationForm } from '../../shared/types/creation';
@@ -51,6 +52,7 @@ export function MainToolbar({
   const toast = useToastApi();
   const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const { t } = useI18n();
   const [assemblyOpen, setAssemblyOpen] = useState(false);
   // UI-FBK-03 (FEEDBACK_ERRORS §4): an import visible for >1 s shows progress
   // with elapsed seconds and stays cancellable (client abort; server-side
@@ -450,7 +452,7 @@ export function MainToolbar({
       onImported();
     } catch (err) {
       if (controller.signal.aborted) {
-        toast.success('Import cancelled');
+        toast.success(t('panel.import.cancel'));
       } else {
         throw err;
       }
@@ -468,17 +470,15 @@ export function MainToolbar({
   const importProgressOverlay = importProgress ? (
     <div className="progress-overlay" role="alertdialog" aria-label="Importing model">
       <div className="progress-dialog">
-        <p className="progress-title">Importing <b>{importProgress.file}</b>…</p>
+        <p className="progress-title">{t('panel.import.title')} <b>{importProgress.file}</b>…</p>
         <div
           className="progress-indeterminate"
           role="progressbar"
           aria-label="Import progress"
           aria-live="polite"
         />
-        <p className="progress-elapsed">
-          {importProgress.elapsed} second{importProgress.elapsed === 1 ? '' : 's'} elapsed
-        </p>
-        <button type="button" onClick={cancelImport}>Cancel import</button>
+        <p className="progress-elapsed">{t('panel.import.elapsed_s', { count: importProgress.elapsed })}</p>
+        <button type="button" onClick={cancelImport}>{t('panel.import.cancel')}</button>
       </div>
     </div>
   ) : null;

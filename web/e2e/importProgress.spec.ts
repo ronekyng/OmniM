@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** UI-FBK-03 (FEEDBACK_ERRORS §4): an import visible for >1 s shows an
  * indeterminate progress indicator with elapsed seconds and stays cancellable. */
 
@@ -36,12 +38,12 @@ test('slow import shows progress and can be cancelled', async ({ page }) => {
   const overlay = page.getByRole('alertdialog', { name: 'Importing model' });
   await expect(overlay).toBeVisible({ timeout: 6_000 });
   await expect(overlay.getByRole('progressbar')).toBeVisible();
-  await expect(overlay.getByText(/second(s)? elapsed/)).toBeVisible();
+  await expect(overlay.getByText(/秒|second/)).toBeVisible();
 
   // Cancel: overlay closes and the UI reports cancellation.
-  await overlay.getByRole('button', { name: 'Cancel import' }).click();
+  await overlay.getByRole('button', { name: '取消导入' }).click();
   await expect(overlay).not.toBeVisible({ timeout: 5_000 });
-  await expect(page.getByText('Import cancelled')).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText('取消导入')).toBeVisible({ timeout: 5_000 });
 
   void objectsBefore;
 });

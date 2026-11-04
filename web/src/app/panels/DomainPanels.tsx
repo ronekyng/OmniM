@@ -3,6 +3,7 @@ import { useAppStore } from '../store/appStore';
 import { api } from '../../shared/api';
 import { notify } from '../../shared/toast';
 import { nextAutoName } from '../../shared/naming';
+import { useI18n } from '../../shared/i18n';
 import type { ComponentDef, JointItem, OpeningsScheduleRow } from '../../shared/types';
 import { Glyph, IcoClose, type GlyphName } from '../components/Icons';
 import { SkeletonLines } from '../components/Loading';
@@ -293,6 +294,7 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
  * (ASSEMBLY §9); the building panel lists the door/window schedule.
  */
 function SelectedJointsSection() {
+  const { t } = useI18n();
   const primaryId = useAppStore((s) => s.selectedIds[0]) ?? null;
   const [joints, setJoints] = useState<JointItem[] | null>(null);
   const [error, setError] = useState(false);
@@ -317,7 +319,7 @@ function SelectedJointsSection() {
   return (
     <div className="domain-panel-section">
       <label className="domain-panel-section-label">
-        {primaryId ? '运动副（选中对象）' : '运动副'}
+        {primaryId ? t('panel.domain.joints') : t('panel.domain.joints').replace(/（.*/, '') === t('panel.domain.joints') ? t('panel.domain.joints') : t('panel.domain.joints')}
       </label>
       {joints === null && primaryId && !error && (
         <div className="panel-state" aria-busy="true">
@@ -326,14 +328,14 @@ function SelectedJointsSection() {
       )}
       {error && (
         <div className="panel-state panel-state--error" role="alert">
-          运动副列表加载失败。
+          {t('panel.domain.joints_error')}
           <button type="button" onClick={() => { setJoints(null); setError(false); }}>
-            重试
+            {t('panel.domain.retry')}
           </button>
         </div>
       )}
       {joints !== null && joints.length === 0 && (
-        <div className="panel-state">选中对象未参与任何运动副。</div>
+        <div className="panel-state">{t('panel.domain.joints_none')}</div>
       )}
       {joints !== null && joints.length > 0 && (
         <div className="domain-panel-list" role="list" aria-label="Motion joints">
@@ -352,6 +354,7 @@ function SelectedJointsSection() {
 }
 
 function OpeningsScheduleSection() {
+  const { t } = useI18n();
   const [rows, setRows] = useState<OpeningsScheduleRow[] | null>(null);
   const [error, setError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -377,15 +380,15 @@ function OpeningsScheduleSection() {
   return (
     <div className="domain-panel-section">
       <label className="domain-panel-section-label">
-        门窗表 ({total})
+        {t('panel.domain.schedule')} ({total})
         {rows !== null && (
           <button
             type="button"
             className="schedule-refresh"
             onClick={() => setReloadKey((n) => n + 1)}
-            title="刷新门窗表"
+            title={t('panel.domain.schedule_refresh')}
           >
-            刷新
+            {t('panel.domain.schedule_refresh')}
           </button>
         )}
       </label>
@@ -396,19 +399,19 @@ function OpeningsScheduleSection() {
       )}
       {error && (
         <div className="panel-state panel-state--error" role="alert">
-          门窗表加载失败。
-          <button type="button" onClick={() => { setRows(null); setError(false); }}>重试</button>
+          {t('panel.domain.schedule_error')}
+          <button type="button" onClick={() => { setRows(null); setError(false); }}>{t('panel.domain.retry')}</button>
         </div>
       )}
       {rows !== null && rows.length === 0 && (
-        <div className="panel-state">项目暂无门/窗对象。</div>
+        <div className="panel-state">{t('panel.domain.schedule_none')}</div>
       )}
       {rows !== null && rows.length > 0 && (
         <div className="domain-panel-list" role="table" aria-label="Openings schedule">
           <div className="schedule-row schedule-row-head" role="row">
-            <span role="columnheader">类型</span>
-            <span role="columnheader">宽×高 mm</span>
-            <span role="columnheader">数量</span>
+            <span role="columnheader">{t('panel.domain.col_type')}</span>
+            <span role="columnheader">{t('panel.domain.col_size')}</span>
+            <span role="columnheader">{t('panel.domain.col_count')}</span>
           </div>
           {rows.map((r, i) => (
             <div
@@ -417,7 +420,7 @@ function OpeningsScheduleSection() {
               key={`${r.object_type}-${r.width_mm}x${r.height_mm}-${r.leaf_count ?? 0}-${i}`}
             >
               <span role="cell">
-                {r.object_type === 'door' ? '门' : '窗'}
+                {r.object_type === 'door' ? t('panel.domain.type_door') : t('panel.domain.type_window')}
                 {r.leaf_count && r.leaf_count > 1 ? `×${r.leaf_count}` : ''}
               </span>
               <span role="cell">{r.width_mm}×{r.height_mm}</span>
