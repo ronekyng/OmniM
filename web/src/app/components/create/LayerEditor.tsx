@@ -6,6 +6,7 @@ import type { Material } from '../../../shared/types';
 import { DEFAULT_LAYERS_WALL, DEFAULT_LAYERS_SLAB } from '../../../shared/types/creation';
 import { MaterialBrowser } from './MaterialBrowser';
 import { IcoChevronDown, IcoChevronRight, IcoChevronUp } from '../Icons';
+import { useI18n } from '../../../shared/i18n';
 
 type Props = {
   value: LayerDefInput[];
@@ -70,7 +71,8 @@ const SLAB_TEMPLATES: { name: string; layers: () => LayerDefInput[] }[] = [
  *  Supports: add/remove layers, thickness sliders, material selection,
  *  function tagging, templates, and a visual section preview. */
 export function LayerEditor({ value, mode, onChange }: Props) {
-  const [materials, setMaterials] = useState<Material[]>([]);
+    const { t } = useI18n();
+const [materials, setMaterials] = useState<Material[]>([]);
   const [expanded, setExpanded] = useState(true);
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
 
@@ -119,8 +121,8 @@ export function LayerEditor({ value, mode, onChange }: Props) {
   return (
     <div className="layer-editor">
       <div className="layer-editor-header" onClick={() => setExpanded((v) => !v)}>
-        <span className="layer-editor-title">层结构</span>
-        <span className="layer-editor-meta">{value.length} 层 · {totalThickness} mm</span>
+        <span className="layer-editor-title">{t('layer.title')}</span>
+        <span className="layer-editor-meta">{t('layer.count', { count: value.length })} · {totalThickness} mm</span>
         <span className="layer-editor-toggle">{expanded ? <IcoChevronDown /> : <IcoChevronRight />}</span>
       </div>
 
@@ -141,7 +143,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
           </div>
 
           <div className="layer-section-preview">
-            {value.length === 0 && <div className="layer-preview-empty">无层</div>}
+            {value.length === 0 && <div className="layer-preview-empty">{t('layer.none')}</div>}
             {value.map((l, i) => (
               <div
                 key={i}
@@ -161,11 +163,11 @@ export function LayerEditor({ value, mode, onChange }: Props) {
               <div key={i} className="layer-card">
                 <div className="layer-card-head">
                   <span className="layer-swatch" style={{ background: l.color || '#999' }} />
-                  <span className="layer-card-title">{l.name || `层 ${i + 1}`}</span>
+                  <span className="layer-card-title">{l.name || t('layer.nth', { n: i + 1 })}</span>
                   <div className="layer-card-actions">
-                    <button type="button" className="layer-move-btn" disabled={i === 0} onClick={() => moveLayer(i, -1)} title="上移"><IcoChevronUp /></button>
-                    <button type="button" className="layer-move-btn" disabled={i === value.length - 1} onClick={() => moveLayer(i, 1)} title="下移"><IcoChevronDown /></button>
-                    <button type="button" className="layer-del-btn" onClick={() => removeLayer(i)} title="删除层">×</button>
+                    <button type="button" className="layer-move-btn" disabled={i === 0} onClick={() => moveLayer(i, -1)} title={t('layer.up')}><IcoChevronUp /></button>
+                    <button type="button" className="layer-move-btn" disabled={i === value.length - 1} onClick={() => moveLayer(i, 1)} title={t('layer.down')}><IcoChevronDown /></button>
+                    <button type="button" className="layer-del-btn" onClick={() => removeLayer(i)} title={t('layer.delete')}>×</button>
                   </div>
                 </div>
 
@@ -191,7 +193,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                 </div>
 
                 <div className="layer-card-field">
-                  <span className="layer-field-label">厚度 (mm)</span>
+                  <span className="layer-field-label">{t('layer.thickness')}</span>
                   <input
                     type="range"
                     className="layer-thickness-slider"
@@ -215,25 +217,25 @@ export function LayerEditor({ value, mode, onChange }: Props) {
                 </div>
 
                 <div className="layer-card-field">
-                  <span className="layer-field-label">功能</span>
+                  <span className="layer-field-label">{t('layer.function')}</span>
                   <select
                     className="layer-function-select"
                     aria-label={`Layer ${i + 1} function`}
                     value={l.function}
                     onChange={(e) => updateLayer(i, { function: e.target.value })}
                   >
-                    <option value="structural">承重</option>
-                    <option value="insulation">保温</option>
-                    <option value="finish">饰面</option>
-                    <option value="membrane">防水</option>
-                    <option value="vapor">隔汽</option>
-                    <option value="cladding">覆面</option>
+                    <option value="structural">{t('layer.fn_structural')}</option>
+                    <option value="insulation">{t('layer.fn_insulation')}</option>
+                    <option value="finish">{t('layer.fn_finish')}</option>
+                    <option value="membrane">{t('layer.fn_membrane')}</option>
+                    <option value="vapor">{t('layer.fn_vapor')}</option>
+                    <option value="cladding">{t('layer.fn_cladding')}</option>
                   </select>
                   <input
                     type="text"
                     className="layer-name-input"
                     aria-label={`Layer ${i + 1} name`}
-                    placeholder="层名"
+                    placeholder={t('layer.name_ph')}
                     value={l.name}
                     onChange={(e) => updateLayer(i, { name: e.target.value })}
                   />
@@ -242,7 +244,7 @@ export function LayerEditor({ value, mode, onChange }: Props) {
             ))}
           </div>
 
-          <button type="button" className="layer-add-btn" onClick={addLayer}>+ 添加层</button>
+          <button type="button" className="layer-add-btn" onClick={addLayer}>+ {t('layer.add')}</button>
         </>
       )}
 
