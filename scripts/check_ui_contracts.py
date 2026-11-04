@@ -63,6 +63,7 @@ GATES = {"G0", "G1", "G2", "G3", "—"}
 DEBT_BASELINE = {
     "colors": 0,
     "font_size_raw": 0,
+    "global_keydown": 2,
     "colors_func": 0,
     "emoji": 0,
     "dialogs": 0,
@@ -224,6 +225,42 @@ def check_dialogs() -> tuple[list[str], dict[str, int]]:
     return [], {"dialogs": total, "_dialogs_detail": detail}  # type: ignore[dict-item]
 
 
+# Global keyboard-listener allow-list (INTERACTION §5.1, INT-03): the
+# workspace registry consumer (dispatch in App) is the only window-level
+# registration. React's scoped `onKeyDown` props don't count.
+GLOBAL_KEYDOWN_ALLOWED = {
+    # INTERACTION §5.1: the workspace dispatch reads the single registry in
+    # `commands.ts` — only allowed general-purpose window listener.
+    "src/app/App.tsx": "workspace command dispatch (single registry consumer)",
+    # Dialog contract: the focus trap lives only while a dialog is open.
+    "src/app/components/useDialogFocus.ts": "dialog focus trap (capture; removed with the dialog)",
+}
+
+
+def check_global_keydown() -> tuple[list[str], dict[str, int]]:
+    import re
+    offenders = []
+    for path in iter_files((".tsx", ".ts")):
+        rel_key = rel(path)
+        if rel_key.startswith("web/"):
+            rel_key = rel_key[len("web/"):]
+        else:
+            rel_key = rel_key[len("web/"):] if "/web/" in rel_key else rel_key
+        if rel_key.startswith("test") or "__tests__" in rel_key or rel_key.startswith("node_modules"):
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        n = len(re.findall(r"window[.]addEventListener\(.(?:keydown).", text))
+        if n and rel_key not in GLOBAL_KEYDOWN_ALLOWED:
+            offenders.append(rel_key)
+    detail = ", ".join(offenders)
+    result: list[str] = []
+    if offenders:
+        result.append(
+            f"{len(offenders)} file(s) register window key listeners outside the allow-list ({detail})"
+        )
+    return result, {"global_keydown": len(offenders), "_global_keydown_detail": detail}
+
+
 def startswith_i18n(path: Path) -> bool:
     """True for the i18n catalogue (`i18n/` dir) and the kernel (`i18n.ts`)."""
     return any(part == "i18n" or part.startswith("i18n.") for part in path.parts)
@@ -338,6 +375,7 @@ def main() -> int:
     run("errors", check_errors)
     run("tokens", check_tokens)
     run("font_size", check_font_size)
+    run("global_keydown", check_global_keydown)
     run("zindex", check_zindex)
     run("emoji", check_emoji)
     run("dialogs", check_dialogs)

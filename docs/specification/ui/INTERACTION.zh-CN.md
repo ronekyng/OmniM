@@ -127,6 +127,8 @@ type Shortcut = {
 
 [KEYBOARD_MAP](../../reference/KEYBOARD_MAP.zh-CN.md) 镜像命令注册表。注册表落地前，`scripts/gen_keymap.py --check` 校验表内一致性与中英对齐；注册表就绪后改为从注册表生成。
 
+**已交付（2026-11-04，G2 · INT-03）**：单一注册表落地——`web/src/app/commands.ts` 的 `buildWorkspaceCommands` 是命令数组唯一产地；`CommandPalette`/`ShortcutHelp` 原样消费；类型 `PaletteCommand` 定义于注册表模块。全局 `window` 键盘监听收敛至 allow-list（`check_ui_contracts global_keydown` 门禁：工作区 dispatch（App.tsx，读注册表）+ 对话框焦点陷阱 useDialogFocus）；组件编辑器的页面键改为**宿主容器监听**（曼面度证件：非 window）。`scripts/gen_keymap.py --check` 继续锁定中英 KEYBOARD_MAP 对齐。
+
 需求：UI-INT-03。
 
 ### 5.3 焦点规则

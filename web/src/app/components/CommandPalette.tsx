@@ -2,15 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogFocus } from './useDialogFocus';
 
-export type PaletteCommand = {
-  id: string;
-  title: string;
-  shortcut?: string;
-  scope?: string;
-  disabled?: boolean;
-  run: () => void;
-};
-
+// The command type + registry live in `app/commands.ts` (single source).
+export type { PaletteCommand } from '../commands';
+import type { PaletteCommand } from '../commands';
 /** UI-SHL-12 / A11Y §3: keyboard command palette (Ctrl/Cmd+K). */
 export function CommandPalette({
   open,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
-import { saveLabel, shouldWarnBeforeUnload } from '../../shared/saveState';
+import { saveLabelKey, shouldWarnBeforeUnload } from '../../shared/saveState';
 import { useConfirm } from './ConfirmDialog';
 import { useDialogFocus } from './useDialogFocus';
 import { IcoMoon, IcoSun } from './Icons';
@@ -106,7 +106,11 @@ export function TitleBar() {
         <span aria-current="page">{tool}</span>
       </nav>
       <span className={`save-indicator status-${saveState.status}`} title={saveState.error ?? undefined}>
-        {saveState.status === 'clean' ? '' : saveLabel(saveState)}
+        {(() => {
+          const { key } = saveLabelKey(saveState);
+          if (saveState.status === 'clean') return '';
+          return t(key);
+        })()}
       </span>
       <div className="title-actions">
         {/* I18N §3: 即时切换、不重载、`<html lang>` 同步。语言以自身语言命名。 */}

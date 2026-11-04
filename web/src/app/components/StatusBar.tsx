@@ -1,5 +1,6 @@
 import { useAppStore } from '../store/appStore';
-import { saveLabel } from '../../shared/saveState';
+import { useI18n } from '../../shared/i18n';
+import { saveLabelKey } from '../../shared/saveState';
 import type { TreeNode } from '../../shared/types';
 
 function findNode(nodes: TreeNode[], id: string): TreeNode | undefined {
@@ -21,18 +22,21 @@ function developerMode(): boolean {
 
 /** Read-only workspace status bar (IA_SHELL §6, UI-SHL-08). */
 export function StatusBar() {
+  const { t } = useI18n();
   const selectedIds = useAppStore((s) => s.selectedIds);
   const tree = useAppStore((s) => s.tree);
   const cursorWorld = useAppStore((s) => s.cursorWorld);
   const saveState = useAppStore((s) => s.saveState);
   const fps = useAppStore((s) => s.fps);
 
-  let selection = 'No selection';
+  let selection = t('shell.statusbar.no_selection');
   if (selectedIds.length === 1) {
     const node = findNode(tree, selectedIds[0]);
-    selection = node ? `${node.name} (${node.object_type})` : '1 selected';
+    selection = node
+      ? `${node.name} (${node.object_type})`
+      : t('shell.statusbar.one_selected');
   } else if (selectedIds.length > 1) {
-    selection = `${selectedIds.length} selected`;
+    selection = t('shell.statusbar.n_selected', { count: selectedIds.length });
   }
 
   const coordinates = cursorWorld
@@ -41,11 +45,16 @@ export function StatusBar() {
 
   return (
     <footer className="status-bar" role="status" aria-live="polite">
-      <span className="status-slot status-coords" title="Cursor world position (m)">{coordinates} m</span>
+      <span className="status-slot status-coords" title={t('shell.statusbar.coords_hint')}>{coordinates} m</span>
       <span className="status-slot status-selection">{selection}</span>
-      <span className="status-slot status-units" title="Display units">m</span>
+      <span className="status-slot status-units" title={t('shell.statusbar.units_hint')}>m</span>
       <span className={`status-slot status-save status-${saveState.status}`} title={saveState.error ?? undefined}>
-        {saveLabel(saveState)}
+        {(() => {
+          const { key, time } = saveLabelKey(saveState);
+          return time != null && saveState.status === 'clean'
+            ? t('shell.save.clean_at', { time })
+            : t(key);
+        })()}
       </span>
       {developerMode() && <span className="status-slot status-fps">{fps ?? '—'} fps</span>}
     </footer>

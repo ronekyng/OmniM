@@ -127,6 +127,8 @@ One module exports the full array; nothing else registers global listeners.
 
 [KEYBOARD_MAP](../../reference/KEYBOARD_MAP.md) mirrors the registry. Until the registry lands, `scripts/gen_keymap.py --check` validates internal consistency and en/zh parity; generation from the registry replaces the manual table once the registry exists.
 
+**Delivered (2026-11-04, G2 · INT-03)**: the single registry lives in `web/src/app/commands.ts` (`buildWorkspaceCommands` is the only producer of the command array); `CommandPalette`/`ShortcutHelp` consume it verbatim and the `PaletteCommand` type is owned by the registry module. Window-level keyboard listeners are collapsed to an allow-list (`check_ui_contracts global_keydown` gate: the workspace dispatch in App.tsx reading the registry + the dialog focus trap); the component editor attaches its page keys to the shell container instead of `window`. `scripts/gen_keymap.py --check` keeps the en/zh KEYBOARD_MAP aligned.
+
 Requirement: UI-INT-03.
 
 ### 5.3 Focus rules

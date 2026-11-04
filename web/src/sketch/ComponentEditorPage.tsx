@@ -225,8 +225,15 @@ export function ComponentEditorPage() {
         handleDeleteEntity();
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    // Page-scoped (INTERACTION §5.1): attached to the editor shell container,
+    // not `window` — the workspace registry is the only global listener.
+    const shell = document.querySelector('.component-editor-shell');
+    const target = (shell ?? window) as HTMLElement | Window;
+    const listener = handler as EventListener;
+    target.addEventListener('keydown', listener);
+    return () => {
+      target.removeEventListener('keydown', listener);
+    };
   }, [activeTool, pendingPolyPoints, selectedEntityIdx, currentSketch, handleUndo, handleRedo]);
 
   // Auto-load a sketch when features exist but no sketch is selected

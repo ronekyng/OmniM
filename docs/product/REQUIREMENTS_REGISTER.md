@@ -83,7 +83,7 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-INT-01 | Five selection gestures | INTERACTION §3 | interaction e2e | G1 | 🔀 |
 | UI-INT-02 | Picking state machine contract | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
-| UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
+| UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` · 32 bindings, en/zh aligned; command array owns `app/commands.ts` as single source; `global_keydown` gate allow-lists window listeners | G2 | ✅ |
 | UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | Contextual and keyboard-invokable menus | INTERACTION §6 | menu e2e · Shift+F10 keyboard invocation + menu/menuitem roles and arrows/focus (`e2e/a11y.spec` context menu) | G2 | ✅ |
 | UI-INT-06 | One dialog family with focus management | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts` (trap/inert/restore) | G2 | ✅ |

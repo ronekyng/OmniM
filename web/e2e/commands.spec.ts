@@ -13,7 +13,13 @@ async function tabTo(page: Page, text: string, limit = 40) {
 
 async function openSampleWithKeyboard(page: Page) {
   await page.goto('/projects');
-  expect(await tabTo(page, 'Open sample project')).toBe(true);
+  // The sample button is disabled until the recent list resolves; in a
+  // long-lived E2E root the list can take a few hundred ms, so wait for the
+  // enabled state (the tab walk alone only matches textContent).
+  const sample = page.getByRole('button', { name: /Open sample project/ });
+  await expect(sample).toBeDisabled({ timeout: 10_000 }).catch(() => {});
+  await expect(sample).toBeEnabled({ timeout: 10_000 });
+  await sample.focus();
   await page.keyboard.press('Enter');
   await expect(page.locator('.title-bar')).toBeVisible({ timeout: 20_000 });
 }

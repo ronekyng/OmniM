@@ -49,17 +49,30 @@ export function formatClock(ms: number): string {
  *  which was a false alarm when server-side auto-persist is on — every
  *  mutation is already on disk. The copy states that fact and points at the
  *  explicit snapshot shortcut instead. */
-export function saveLabel(state: SaveState): string {
+/** Status slot key (I18N_L10N §2): components resolve via `t()`/format. */
+export type SaveLabelKey =
+  | 'shell.save.clean_at'
+  | 'shell.save.dirty_hint'
+  | 'shell.save.saving'
+  | 'shell.save.failed';
+
+export function saveLabelKey(state: SaveState): { key: SaveLabelKey; time?: string } {
   switch (state.status) {
     case 'clean':
-      return state.lastSavedAt ? `Saved ${formatClock(state.lastSavedAt)}` : 'Saved';
+      return { key: 'shell.save.clean_at', time: state.lastSavedAt ? formatClock(state.lastSavedAt) : undefined };
     case 'dirty':
-      return 'Auto-saved server-side · Ctrl+S to snapshot';
+      return { key: 'shell.save.dirty_hint' };
     case 'saving':
-      return 'Saving…';
+      return { key: 'shell.save.saving' };
     case 'failed':
-      return 'Save failed';
+      return { key: 'shell.save.failed' };
   }
+}
+
+export function saveLabel(state: SaveState): string {
+  const { key, time } = saveLabelKey(state);
+  if (key === 'shell.save.clean_at') return time ? `Saved ${time}` : 'Saved';
+  return { 'shell.save.dirty_hint': 'Auto-saved server-side · Ctrl+S to snapshot', 'shell.save.saving': 'Saving…', 'shell.save.failed': 'Save failed' }[key] ?? key;
 }
 
 /** Whether an unload/navigation needs the unsaved-changes prompt. */

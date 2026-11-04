@@ -183,3 +183,21 @@ describe('setLocale side effects (§3)', () => {
 // useI18n() 本体（useSyncExternalStore 外部 store）在 e2e/language.spec 的真实
 // React 渲染路径里覆盖；这里测底下 subscribe/emit 语义已足够。
 
+describe('save-state keys (i18n)', () => {
+  it('saveLabelKey maps statuses to dictionary keys', async () => {
+    const { saveLabelKey } = await import('../shared/saveState');
+    expect(saveLabelKey({ status: 'failed', lastSavedAt: null, error: 'x' }).key).toBe('shell.save.failed');
+    expect(saveLabelKey({ status: 'saving', lastSavedAt: null, error: null }).key).toBe('shell.save.saving');
+    expect(saveLabelKey({ status: 'clean', lastSavedAt: null, error: null }).key).toBe('shell.save.clean_at');
+  });
+
+  it('t resolves the save keys in both locales', async () => {
+    const i18n = await freshI18n();
+    i18n.setLocale('en-US');
+    expect(i18n.t('shell.save.failed')).toBe('Save failed');
+    i18n.setLocale('zh-CN');
+    expect(i18n.t('shell.save.failed')).toBe('保存失败');
+    expect(i18n.t('shell.save.saving')).toBe('保存中…');
+    expect(i18n.t('shell.save.dirty_hint')).toBe('服务器自动保存 · Ctrl+S 显式快照');
+  });
+});

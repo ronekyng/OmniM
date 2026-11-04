@@ -83,7 +83,7 @@ evidence: "n/a (product requirement)"
 |---|---|---|---|---|---|
 | UI-INT-01 | 五种选择手势 | INTERACTION §3 | 交互 e2e | G1 | 🔀 |
 | UI-INT-02 | 拾取状态机契约 | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
-| UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` | G2 | 📅 |
+| UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` · 32 绑定中英一致；命令数组收敛 `app/commands.ts` 单一产地；`global_keydown` 门禁收口 window 监听 allow-list | G2 | ✅ |
 | UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
 | UI-INT-05 | 上下文菜单且可键盘唤起 | INTERACTION §6 | 菜单 e2e · Shift+F10 键盘唤起+menu/menuitem 角色与方向键/焦点（`e2e/a11y.spec` context menu） | G2 | ✅ |
 | UI-INT-06 | 统一对话框与焦点管理 | INTERACTION §7 | `useDialogFocus.ts` + `web/e2e/dialogs.spec.ts`（焦点陷阱/背景 inert/焦点归还） | G2 | ✅ |

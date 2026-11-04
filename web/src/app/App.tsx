@@ -33,7 +33,8 @@ import { PanelSlot } from './panels/PanelRegistry';
 import { ThreeViewerContext } from './context/ThreeViewerContext';
 import type { ReactNode } from 'react';
 import { applyTheme } from '../shared/theme';
-import { CommandPalette, type PaletteCommand } from './components/CommandPalette';
+import { CommandPalette } from './components/CommandPalette';
+import { buildWorkspaceCommands } from './commands';
 import { ShortcutHelp } from './components/ShortcutHelp';
 
 const FOCUS_REGIONS = [
@@ -299,25 +300,25 @@ export function App() {
     reloadScene();
   };
 
-  const commands: PaletteCommand[] = [
-    { id: 'file.save', title: 'Save project', shortcut: 'Ctrl/Cmd+S', scope: 'Global', run: () => void saveProject() },
-    { id: 'edit.undo', title: 'Undo', shortcut: 'Ctrl/Cmd+Z', scope: 'Global', disabled: !canUndo, run: () => void undoCommand() },
-    { id: 'edit.redo', title: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', scope: 'Global', disabled: !canRedo, run: () => void redoCommand() },
-    { id: 'edit.delete', title: 'Delete selected objects', shortcut: 'Delete', scope: 'Global', disabled: selectedIds.length === 0, run: () => void deleteSelected() },
-    { id: 'view.fit', title: 'Fit view', shortcut: 'F', scope: 'Viewport', run: () => viewerRef.current?.fit() },
-    { id: 'view.home', title: 'Home view', shortcut: 'H', scope: 'Viewport', run: () => viewerRef.current?.home() },
-    { id: 'view.grid', title: 'Toggle grid', shortcut: 'G', scope: 'Viewport', run: () => { setGridVisible((v) => !v); viewerRef.current?.toggleGrid(); } },
-    { id: 'view.ortho', title: 'Toggle orthographic / perspective', shortcut: 'O', scope: 'Viewport', run: () => { setIsOrtho((v) => !v); viewerRef.current?.toggleOrtho(); } },
-    { id: 'view.space', title: 'Toggle local / world transform space', shortcut: 'X', scope: 'Viewport', run: () => { const next = transformSpace === 'world' ? 'local' : 'world'; setTransformSpace(next); viewerRef.current?.setTransformSpace(next); } },
-    { id: 'transform.move', title: 'Move mode', shortcut: 'W', scope: 'Viewport', run: () => setTransformMode((prev) => prev === 'translate' ? null : 'translate') },
-    { id: 'transform.rotate', title: 'Rotate mode', shortcut: 'E', scope: 'Viewport', run: () => setTransformMode((prev) => prev === 'rotate' ? null : 'rotate') },
-    { id: 'create.storey', title: 'Create storey', scope: 'Create', run: () => creationDispatch({ type: 'completePicking', form: createInitialForm('storey', []) }) },
-    { id: 'create.door', title: 'Create door', scope: 'Create', run: () => creationDispatch({ type: 'completePicking', form: createInitialForm('door', []) }) },
-    { id: 'nav.projects', title: 'Go to projects', scope: 'Navigation', run: () => navigate('/projects') },
-    { id: 'nav.series', title: 'Open Series Manager', scope: 'Navigation', run: () => navigate('/series-manager') },
-    { id: 'nav.library', title: 'Open Library Manager', scope: 'Navigation', run: () => navigate('/library-manager') },
-    { id: 'help.shortcuts', title: 'Keyboard shortcuts', shortcut: 'F1', scope: 'Help', run: () => setHelpOpen(true) },
-  ];
+  // INTERACTION §5 (INT-03): the single registry lives in `app/commands.ts`.
+  const commands = buildWorkspaceCommands({
+    save: () => void saveProject(),
+    undo: () => void undoCommand(),
+    redo: () => void redoCommand(),
+    delete: () => void deleteSelected(),
+    canUndo,
+    canRedo,
+    selectionCount: selectedIds.length,
+    viewer: viewerRef,
+    grid: { visible: gridVisible, toggle: () => { setGridVisible((v) => !v); viewerRef.current?.toggleGrid(); } },
+    ortho: { toggle: () => { setIsOrtho((v) => !v); viewerRef.current?.toggleOrtho(); } },
+    transformSpaceSetting: { get: transformSpace, toggle: () => { const next = transformSpace === 'world' ? 'local' : 'world'; setTransformSpace(next); viewerRef.current?.setTransformSpace(next); } },
+    transformMode: { current: transformMode, set: (mode) => setTransformMode(mode) },
+    create: (objectType) => creationDispatch({ type: 'completePicking', form: createInitialForm(objectType, []) }),
+    navigate,
+    help: () => setHelpOpen(true),
+  });
+
 
   return (
     <ErrorBoundary scope="Workspace" resetKey={location.pathname}>

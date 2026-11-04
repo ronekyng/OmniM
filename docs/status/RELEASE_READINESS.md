@@ -96,7 +96,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 
 **Deferred to G3 on 2026-10-29** (O1 gate rebalance): `UI-DS-05`, `UI-DS-07`, `UI-DS-10`, `UI-A11Y-06`, `UI-A11Y-08`, `UI-I18N-05`. Rationale: G2 is the external-pilot gate; completeness tiers belong to GA. `UI-DS-08` stays at G2 because the z-index scale is a shell prerequisite and cheap to enforce.
 
-**G2 verdict:** 🔀 **in progress.** 29 of 37 complete (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-05/06/07/08/10/11`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06`); `UI-I18N-01`/`UI-PRF-01/02` partial (title-bar batch externalised; perf fixture built, open-to-ready ~4 s over budget), the rest not started.
+**G2 verdict:** 🔀 **in progress.** 30 of 37 complete (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-03/05/06/07/08/10/11`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06`); `UI-I18N-01`/`UI-PRF-01/02` partial (title-bar batch externalised; perf fixture built, open-to-ready ~4 s over budget), the rest not started.
 
 ## 6. G3 GA Readiness
 
