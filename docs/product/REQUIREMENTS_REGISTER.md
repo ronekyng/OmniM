@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised: whole shell + domain panel (sections/24 actions/domain dropdowns) + full CreatePanel + all LayerEditor UI (17 keys); CJK 849; remaining: AssemblyPanel, catalog/list sidebars, template & material defaults (model data — out of scope per §1) | G2 | 🔀 |
+| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised: whole shell + full domain panels + CreatePanel + LayerEditor + AssemblyPanel (title/units note/name/parent/parts list/add/kind/pick-def/error toasts + shapeLabels); CJK 809; remaining: catalog sidebar, template & material defaults (model data, out of scope) | G2 | 🔀 |
 | UI-I18N-02 | zh-CN default, en-US fallback, live switch | I18N_L10N §3 | locale e2e · `i18n.ts` kernel + title-bar switcher; `language.spec.ts`: live switch / persistence / `<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests · `tPlural()` over `Intl.PluralRules`; dictionaries declare `other`; `i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures · 3-decimal coordinates / grouped counts / short dates / clock / angle formatters + fixtures; panel consumption rolling in | G2 | ✅ |

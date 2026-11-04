@@ -10,6 +10,7 @@ import type {
   TreeNode,
 } from '../../../shared/types';
 import { useToastApi } from '../../../shared/toast';
+import { useI18n } from '../../../shared/i18n';
 import { IcoClose } from '../Icons';
 
 type PartSource = 'component' | 'primitive';
@@ -52,16 +53,16 @@ function flattenTree(nodes: TreeNode[], depth = 0, out: { id: string; label: str
   return out;
 }
 
-function shapeLabels(shape: string): [string, string, string] {
+function shapeLabels(shape: string, t: (k: 'create.p.radius' | 'create.p.height' | 'create.p.r_base' | 'create.p.r_top' | 'create.p.width' | 'create.p.depth_assy') => string): [string, string, string] {
   switch (shape) {
     case 'cylinder':
-      return ['半径', '高度', ''];
+      return [t('create.p.radius'), t('create.p.height'), ''];
     case 'sphere':
-      return ['半径', '', ''];
+      return [t('create.p.radius'), '', ''];
     case 'cone':
-      return ['底半径', '顶半径', '高度'];
+      return [t('create.p.r_base'), t('create.p.r_top'), t('create.p.height')];
     default:
-      return ['宽', '高', '深'];
+      return [t('create.p.width'), t('create.p.height'), t('create.p.depth_assy')];
   }
 }
 
@@ -79,6 +80,7 @@ export function AssemblyPanel({
   tree?: TreeNode[];
 }) {
   const toast = useToastApi();
+  const { t } = useI18n();
   const [panelOpen, setPanelOpen] = useState(true);
   const [assyName, setAssyName] = useState('');
   const [parentId, setParentId] = useState('');
@@ -119,13 +121,13 @@ export function AssemblyPanel({
   function addPart() {
     const name = draft.name.trim();
     if (!name) {
-      toast.error('请填写部件名称');
+      toast.error(t('assy.err_name_required'));
       return;
     }
     const position = { x: draft.x, y: draft.y, z: draft.z };
     if (draft.source === 'component') {
       if (!draft.componentDefId) {
-        toast.error('请选择目录构件');
+        toast.error(t('assy.err_def_required'));
         return;
       }
       setParts((prev) => [
@@ -149,7 +151,7 @@ export function AssemblyPanel({
               ? draft.p1 > 0
               : draft.p1 > 0 && draft.p3 > 0;
       if (!valid) {
-        toast.error('请填写正数尺寸（米）');
+        toast.error(t('assy.err_dims_positive'));
         return;
       }
       setParts((prev) => [
@@ -180,14 +182,14 @@ export function AssemblyPanel({
         skip_series_gate: true,
         parts,
       });
-      toast.success(`已创建装配 ${name}（${res.part_count} 个子件）`);
+      toast.success(t('assy.created', { name, count: res.part_count }));
       setParts([]);
       setAssyName('');
       setParentId('');
       setPanelOpen(false);
       onCreated();
     } catch (err) {
-      toast.error(`创建装配失败: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`${t('assy.create_failed')}: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setBusy(false);
     }
@@ -198,7 +200,7 @@ export function AssemblyPanel({
   return (
     <div className="create-panel">
       <div className="panel-header">
-        <strong>Assembly — 装配容器与子件</strong>
+        <strong>{t('assy.title')}</strong>
         <button className="panel-close" onClick={() => setPanelOpen(false)} title="Close">
           &times;
         </button>
@@ -206,20 +208,20 @@ export function AssemblyPanel({
       {/* F4 (UI/UX audit): the mm/m unit trap — catalog params are mm while
           positions are metres. */}
       <p className="field-label" style={{ color: 'var(--text-muted, #9aa3ad)' }}>
-        单位：位置/偏移为<b>米 (m)</b>；目录构件参数是<b>毫米 (mm)</b>；旋转为<b>度 (°)</b>。
-        子件创建后会出现在对象树中，可单独选择；删除容器会连同子件一起删除。
+        {t('assy.units_note')}
+        
       </p>
 
       <div className="create-row">
         <input
-          placeholder="装配名称"
+          placeholder={t('assy.name_ph')}
           value={assyName}
           onChange={(e) => setAssyName(e.target.value)}
         />
       </div>
       <div className="create-row">
         <select value={parentId} onChange={(e) => setParentId(e.target.value)}>
-          <option value="">父级：无（直接放在项目根）</option>
+          <option value="">{t('assy.parent_root')}</option>
           {parentOptions.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
@@ -230,18 +232,18 @@ export function AssemblyPanel({
 
       {parts.length > 0 && (
         <div className="assy-list">
-          <label className="field-label">子件列表 ({parts.length})</label>
+          <label className="field-label">{t('assy.parts_count', { count: parts.length })}</label>
           {parts.map((p, i) => (
             <div key={i} className="assy-item">
               <span>{p.name}</span>
-              <span className="assy-item-detail">{p.component_def_id ? '目录构件' : p.shape}</span>
+              <span className="assy-item-detail">{p.component_def_id ? t('assy.def_source') : p.shape}</span>
               <span className="assy-item-detail">
                 pos: {p.position?.x ?? 0},{p.position?.y ?? 0},{p.position?.z ?? 0}
               </span>
               <button
                 className="assy-remove"
                 onClick={() => setParts(parts.filter((_, j) => j !== i))}
-                title="移除子件"
+                title={t('assy.remove')}
               >
                 <IcoClose />
               </button>
@@ -251,10 +253,10 @@ export function AssemblyPanel({
       )}
 
       <div className="assy-add-form">
-        <label className="field-label">添加子件</label>
+        <label className="field-label">{t('assy.add_part')}</label>
         <div className="create-row">
           <input
-            placeholder="名称"
+            placeholder={t('layer.name_ph')}
             value={draft.name}
             onChange={(e) => updateDraft({ name: e.target.value })}
           />
@@ -262,8 +264,8 @@ export function AssemblyPanel({
             value={draft.source}
             onChange={(e) => updateDraft({ source: e.target.value as PartSource })}
           >
-            <option value="primitive">基本体</option>
-            <option value="component">目录构件</option>
+            <option value="primitive">{t('assy.kind_primitive')}</option>
+            <option value="component">{t('assy.kind_component')}</option>
           </select>
         </div>
 
@@ -274,7 +276,7 @@ export function AssemblyPanel({
                 value={draft.componentDefId}
                 onChange={(e) => updateDraft({ componentDefId: e.target.value })}
               >
-                <option value="">选择目录构件…</option>
+                <option value="">{t('assy.pick_def')}</option>
                 {catalog.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}
@@ -308,7 +310,7 @@ export function AssemblyPanel({
             </div>
             <div className="create-row">
               {(() => {
-                const [a, b, c] = shapeLabels(draft.shape);
+                const [a, b, c] = shapeLabels(draft.shape, t);
                 return (
                   <>
                     <input
