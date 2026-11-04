@@ -49,6 +49,8 @@ evidence: "n/a (design contract)"
 | 需求 | UI-PRF-01 |
 **夹具实测（2026-11-04，dev-server / Chromium；`e2e/perf.spec.ts`）**：FCP 312 ms（≤1.2 s ✓）；外壳就绪 199 ms（≤2.5 s ✓）；单选后属性渲染 123 ms。**打开项目 ~4 s（>3 s ✗）与命令面板 ~4 s（>120 ms ✗）** 出现在复用会话的重挂载路径，疑似 WebGL 上下文重建/首次重渲染阻塞——PRF-01/02 保持 🔀，记录于 [RELEASE_READINESS](../../status/RELEASE_READINESS.zh-CN.md) G2 看板；优化为待办。首次全新会话的打开→就绪 <3 s。
 
+**复用会话重挂载根因定位（2026-11-04 仪器化排查）**：API 流（`new`+`refresh`+`reloadScene`）合计 <100 ms，路由在 ~0.9 s 内切换至 `/`；`.title-bar` 入 DOM 却要 ~4.4 s——即**工作区根组件 React commit 阶段独占 ~3.5 s**（viewer effect 仅 ~100 ms，见 `performance.mark` 实测 renderer 13-19 ms / PMREM 88-108 ms）。下一刀在 commit 侧：工作区面板/store 挂载批处理、dev 引擎（React 18 strict 与 dev 编译开销）与 Suspense 重试链，非 WebGL/网络。
+
 ### 3.2 交互延迟
 
 | 交互 | 预算 |

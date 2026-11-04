@@ -49,6 +49,8 @@ All numbers in this document assume this machine. Slower machines get a proporti
 | Requirement | UI-PRF-01 |
 **Fixture measurement (2026-11-04, dev-server / Chromium; `e2e/perf.spec.ts`)**: FCP 312 ms (≤1.2 s ✓); shell ready 199 ms (≤2.5 s ✓); single-select properties render 123 ms. **Open-project ~4 s (>3 s ✗) and command palette ~4 s (>120 ms ✗)** appear on the remount path of a reused session — suspected WebGL context rebuild / first re-render stall; PRF-01/02 stay 🔀, recorded in the [RELEASE_READINESS](../../status/RELEASE_READINESS.md) G2 board; optimisation backlog. Open→ready is <3 s on a first fresh session.
 
+**Remount root cause narrowed (2026-11-04, instrumented)**: the API flow (`new` + `refresh` + `reloadScene`) totals <100 ms and the route switches to `/` by ~0.9 s, but `.title-bar` enters the DOM only at ~4.4 s — the **workspace root's React commit phase alone occupies ~3.5 s** (the viewer effect is fast: renderer 13–19 ms, PMREM 88–108 ms via `performance.mark` traces). The next cut is on the commit side: workspace panel/store mount batching, dev-mode overheads and the Suspense retry chain — not WebGL, not the network.
+
 ### 3.2 Interaction latency
 
 | Interaction | Budget |
