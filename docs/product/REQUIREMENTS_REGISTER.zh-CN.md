@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置全部壳表 + EditorToolbar + AddFeatureDialog（对话框/14 参数字段/轮廓/轴线/空心/取消/保存添加）+ ComponentEditorPage（role keys/15 失败 toast/镜像轴缺失警告/树无 Selection 重插值/约束名/确认取消按钮/创建横幅）+ LayerEditor + AssemblyPanel + ObjectPropertiesPanel + CreatePanel；CJK 622；余：Series/Library 内部清单、Catalog 侧栏 | G2 | 🔀 |
+| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + 域面板/CreatePanel/LayerEditor/AssemblyPanel/ObjectPropertiesPanel + EditorToolbar + AddFeatureDialog + ComponentEditorPage + SeriesManagerPage（页头全部按钮/输入、系列列表/空态/详情/编辑表单/三个 tab/决策树/构件目录/映射概览、leaf 约束编辑器、全部失败/成功 toast≈96 段直降 16 段余）+ AddFeatureDialog；CJK 526；余：LibraryManagerPage（82）、Catalog 侧栏零散 | G2 | 🔀 |
 | UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e · `i18n.ts` 内核 + 标题栏切换器；`language.spec.ts`：即时切换/持久化/`<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |

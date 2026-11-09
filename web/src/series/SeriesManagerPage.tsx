@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../shared/i18n';
 import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
@@ -10,6 +11,7 @@ import type { Series, Selector, Answer, SpecComponent, ComponentDef, ParamConstr
 export function SeriesManagerPage() {
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const { t } = useI18n();
   const [seriesList, setSeriesList] = useState<Series[]>([]);
   const [selectedSeries, setSelectedSeries] = useState<Series | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,7 +65,7 @@ export function SeriesManagerPage() {
       setSelectedSeries(detail);
       setEditing(false);
     } catch (e) {
-      setError('加载系列详情失败: ' + (e instanceof Error ? e.message : String(e)));
+      setError(`${t('series.load_detail_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -89,18 +91,18 @@ export function SeriesManagerPage() {
       loadSeries();
       await handleSelect({ ...selectedSeries, name: editName, description: editDesc, domain: editDomain, standard_reference: editStd });
     } catch (e) {
-      notify.error('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.save_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleCreate = async () => {
-    if (!createName) { notify.error('名称不能为空'); return; }
+    if (!createName) { notify.error(t('series.name_required')); return; }
     try {
       await api.createSeries({ name: createName, domain: createDomain });
       setCreateName(''); setCreateDomain(''); setShowCreateForm(false);
       loadSeries();
     } catch (e) {
-      notify.error('创建失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.create_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -111,7 +113,7 @@ export function SeriesManagerPage() {
       if (selectedSeries?.id === id) setSelectedSeries(null);
       loadSeries();
     } catch (e) {
-      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.delete_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -123,7 +125,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      notify.error('添加选择器失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.add_selector_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -138,7 +140,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      notify.error('添加答案失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.add_answer_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -149,28 +151,28 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      notify.error('映射构件失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.map_failure')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleSave = async () => {
     try {
       const res = await api.saveSeries();
-      setSaveMsg(`保存成功: ${res.path} (${res.saved_count} 个系列)`);
+      setSaveMsg(t('series.save_ok', { path: res.path, count: res.saved_count }));
     } catch (e) {
-      setSaveMsg('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      setSaveMsg(`${t('series.save_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleLoad = async () => {
-    if (!loadPath) { notify.error('请输入文件路径'); return; }
+    if (!loadPath) { notify.error(t('series.path_required')); return; }
     try {
       const res = await api.loadSeries(loadPath, 'standalone');
       setLoadPath('');
       loadSeries();
-      notify.success(`加载成功: ${res.loaded_count} 个系列 (${res.series_names.join(', ')})`);
+      notify.success(t('series.load_ok', { count: res.loaded_count, names: res.series_names.join(', ') }));
     } catch (e) {
-      notify.error('加载失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.load_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -195,7 +197,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      notify.error('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.add_constraint_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -206,7 +208,7 @@ export function SeriesManagerPage() {
       const detail = await api.getSeries(selectedSeries.id);
       setSelectedSeries(detail);
     } catch (e) {
-      notify.error('删除约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.delete_constraint_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -231,24 +233,24 @@ export function SeriesManagerPage() {
       <div className="series-mgr-header">
         <h1>SeriesStore Manager</h1>
         <div className="series-mgr-header-actions">
-          <button className="series-mgr-btn" onClick={() => setShowCreateForm(!showCreateForm)}>+ 新建系列</button>
-          <button className="series-mgr-btn" onClick={handleSave}>保存 .omnimseries</button>
-          <button className="series-mgr-back" onClick={() => navigate('/')}>← 返回</button>
+          <button className="series-mgr-btn" onClick={() => setShowCreateForm(!showCreateForm)}>{t('series.btn.new')}</button>
+          <button className="series-mgr-btn" onClick={handleSave}>{t('series.btn.save_file')}</button>
+          <button className="series-mgr-back" onClick={() => navigate('/')}>{t('series.btn.back')}</button>
         </div>
       </div>
 
       <div className="series-mgr-io-bar">
-        <input placeholder="加载 .omnimseries 文件路径" value={loadPath} onChange={e => setLoadPath(e.target.value)} />
-        <button className="series-mgr-btn" onClick={handleLoad}>加载</button>
+        <input placeholder={t('series.ph.load_path')} value={loadPath} onChange={e => setLoadPath(e.target.value)} />
+        <button className="series-mgr-btn" onClick={handleLoad}>{t('series.btn.load')}</button>
         {saveMsg && <span className="series-mgr-io-msg">{saveMsg}</span>}
       </div>
 
       {showCreateForm && (
         <div className="series-mgr-create-form">
-          <input placeholder="系列名称" value={createName} onChange={e => setCreateName(e.target.value)} />
-          <input placeholder="领域 (可选)" value={createDomain} onChange={e => setCreateDomain(e.target.value)} />
-          <button className="series-mgr-btn" onClick={handleCreate}>确认创建</button>
-          <button className="series-mgr-btn" onClick={() => setShowCreateForm(false)}>取消</button>
+          <input placeholder={t('series.ph.name')} value={createName} onChange={e => setCreateName(e.target.value)} />
+          <input placeholder={t('series.ph.domain')} value={createDomain} onChange={e => setCreateDomain(e.target.value)} />
+          <button className="series-mgr-btn" onClick={handleCreate}>{t('series.btn.create')}</button>
+          <button className="series-mgr-btn" onClick={() => setShowCreateForm(false)}>{t('series.btn.cancel')}</button>
         </div>
       )}
 
@@ -256,9 +258,9 @@ export function SeriesManagerPage() {
 
       <div className="series-mgr-body">
         <div className="series-mgr-sidebar">
-          <h3>系列列表</h3>
-          {loading && <div className="series-mgr-loading">加载中...</div>}
-          {!loading && seriesList.length === 0 && <div className="series-mgr-empty">暂无系列</div>}
+          <h3>{t('series.list.title')}</h3>
+          {loading && <div className="series-mgr-loading">{t('series.list.loading')}</div>}
+          {!loading && seriesList.length === 0 && <div className="series-mgr-empty">{t('series.list.empty')}</div>}
           {seriesList.map((s) => (
             <div
               key={s.id}
@@ -278,36 +280,36 @@ export function SeriesManagerPage() {
                 <div className="series-mgr-info-header">
                   <h2>{selectedSeries.name}</h2>
                   <div className="series-mgr-info-actions">
-                    <button className="series-mgr-btn" onClick={handleStartEdit}>编辑</button>
-                    <button className="series-mgr-btn danger" onClick={() => handleDeleteSeries(selectedSeries.id)}>删除</button>
+                    <button className="series-mgr-btn" onClick={handleStartEdit}>{t('series.btn.edit')}</button>
+                    <button className="series-mgr-btn danger" onClick={() => handleDeleteSeries(selectedSeries.id)}>{t('series.btn.delete')}</button>
                   </div>
                 </div>
                 <div className="series-mgr-meta">
-                  <span>领域: {selectedSeries.domain}</span>
-                  <span>标准: {selectedSeries.standard_reference}</span>
-                  <span>阶段: {selectedSeries.applicable_phases.join(', ') || '通用'}</span>
+                  <span>{t('series.field.domain_short', { domain: selectedSeries.domain })}</span>
+                  <span>{t('series.field.standard_short', { standard: selectedSeries.standard_reference })}</span>
+                  <span>{t('series.field.phases_short', { phases: selectedSeries.applicable_phases.join(', ') || t('series.field.phases_default') })}</span>
                 </div>
                 <p className="series-mgr-desc">{selectedSeries.description}</p>
               </div>
 
               <div className="series-mgr-tabs">
-                <button className={`series-mgr-tab ${selectedTab === 'tree' ? 'active' : ''}`} onClick={() => setSelectedTab('tree')}>决策树</button>
-                <button className={`series-mgr-tab ${selectedTab === 'catalog' ? 'active' : ''}`} onClick={() => setSelectedTab('catalog')}>构件目录</button>
-                <button className={`series-mgr-tab ${selectedTab === 'mapping' ? 'active' : ''}`} onClick={() => setSelectedTab('mapping')}>映射概览</button>
+                <button className={`series-mgr-tab ${selectedTab === 'tree' ? 'active' : ''}`} onClick={() => setSelectedTab('tree')}>{t('series.tab.tree')}</button>
+                <button className={`series-mgr-tab ${selectedTab === 'catalog' ? 'active' : ''}`} onClick={() => setSelectedTab('catalog')}>{t('series.tab.catalog')}</button>
+                <button className={`series-mgr-tab ${selectedTab === 'mapping' ? 'active' : ''}`} onClick={() => setSelectedTab('mapping')}>{t('series.tab.mapping')}</button>
               </div>
 
               {selectedTab === 'tree' && (
                 <div className="series-mgr-tree">
                   <div className="series-mgr-tree-header">
-                    <h3>决策树</h3>
-                    <button className="series-mgr-btn" onClick={() => setShowAddSelector(!showAddSelector)}>+ 添加选择器</button>
+                    <h3>{t('series.tree.title')}</h3>
+                    <button className="series-mgr-btn" onClick={() => setShowAddSelector(!showAddSelector)}>{t('series.btn.add_selector')}</button>
                   </div>
                   {showAddSelector && (
                     <div className="series-mgr-inline-form">
-                      <input placeholder="选择器ID" value={newSelectorId} onChange={e => setNewSelectorId(e.target.value)} />
-                      <input placeholder="问题" value={newSelectorQ} onChange={e => setNewSelectorQ(e.target.value)} />
-                      <button className="series-mgr-btn" onClick={handleAddSelector}>确认</button>
-                      <button className="series-mgr-btn" onClick={() => setShowAddSelector(false)}>取消</button>
+                      <input placeholder={t('series.ph.selector_id')} value={newSelectorId} onChange={e => setNewSelectorId(e.target.value)} />
+                      <input placeholder={t('series.ph.question')} value={newSelectorQ} onChange={e => setNewSelectorQ(e.target.value)} />
+                      <button className="series-mgr-btn" onClick={handleAddSelector}>{t('series.btn.confirm')}</button>
+                      <button className="series-mgr-btn" onClick={() => setShowAddSelector(false)}>{t('series.btn.cancel')}</button>
                     </div>
                   )}
                   {selectedSeries.root_selector ? (
@@ -330,22 +332,22 @@ export function SeriesManagerPage() {
                       onDeleteConstraint={handleDeleteConstraint}
                     />
                   ) : (
-                    <div className="series-mgr-empty">此系列没有决策树，请添加选择器</div>
+                    <div className="series-mgr-empty">{t('series.tree.empty')}</div>
                   )}
                 </div>
               )}
 
               {selectedTab === 'catalog' && (
                 <div className="series-mgr-catalog-panel">
-                  <h3>构件目录</h3>
+                  <h3>{t('series.catalog.title')}</h3>
                   <input
                     className="series-mgr-catalog-search"
-                    placeholder="搜索构件名称、类别、标签..."
+                    placeholder={t('series.ph.component_search')}
                     value={catalogSearch}
                     onChange={e => setCatalogSearch(e.target.value)}
                   />
                   <div className="series-mgr-catalog-list">
-                    {filteredCatalog.length === 0 && <div className="series-mgr-empty">无匹配构件</div>}
+                    {filteredCatalog.length === 0 && <div className="series-mgr-empty">{t('series.catalog.none')}</div>}
                     {filteredCatalog.map(c => (
                       <div
                         key={c.id}
@@ -357,7 +359,7 @@ export function SeriesManagerPage() {
                         <div className="series-mgr-catalog-card-name">{c.name}</div>
                         <div className="series-mgr-catalog-card-meta">{c.category} · {c.ifc_class}</div>
                         <div className="series-mgr-catalog-card-tags">{c.tags.join(', ')}</div>
-                        {mappedCompDefIds.has(c.id) && <span className="series-mgr-catalog-card-badge">已映射</span>}
+                        {mappedCompDefIds.has(c.id) && <span className="series-mgr-catalog-card-badge">{t('series.catalog.mapped')}</span>}
                       </div>
                     ))}
                   </div>
@@ -366,40 +368,40 @@ export function SeriesManagerPage() {
 
               {selectedTab === 'mapping' && (
                 <div className="series-mgr-mapping-panel">
-                  <h3>系列 → 构件映射概览</h3>
+                  <h3>{t('series.mapping.title')}</h3>
                   {selectedSeries.root_selector ? (
                     <MappingOverview selector={selectedSeries.root_selector} depth={0} />
                   ) : (
-                    <div className="series-mgr-empty">无映射</div>
+                    <div className="series-mgr-empty">{t('series.mapping.none')}</div>
                   )}
                 </div>
               )}
             </>
           ) : selectedSeries && editing ? (
             <div className="series-mgr-edit-form">
-              <h2>编辑系列</h2>
+              <h2>{t('series.edit.title')}</h2>
               <div className="series-mgr-edit-field">
-                <label>名称</label><input value={editName} onChange={e => setEditName(e.target.value)} />
+                <label>{t('series.field.name')}</label><input value={editName} onChange={e => setEditName(e.target.value)} />
               </div>
               <div className="series-mgr-edit-field">
-                <label>描述</label><textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} />
+                <label>{t('series.field.description')}</label><textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} />
               </div>
               <div className="series-mgr-edit-field">
-                <label>领域</label><input value={editDomain} onChange={e => setEditDomain(e.target.value)} />
+                <label>{t('series.field.domain')}</label><input value={editDomain} onChange={e => setEditDomain(e.target.value)} />
               </div>
               <div className="series-mgr-edit-field">
-                <label>标准参考</label><input value={editStd} onChange={e => setEditStd(e.target.value)} />
+                <label>{t('series.field.standard')}</label><input value={editStd} onChange={e => setEditStd(e.target.value)} />
               </div>
               <div className="series-mgr-edit-field">
-                <label>适用阶段 (逗号分隔)</label><input value={editPhases} onChange={e => setEditPhases(e.target.value)} />
+                <label>{t('series.field.phases')}</label><input value={editPhases} onChange={e => setEditPhases(e.target.value)} />
               </div>
               <div className="series-mgr-edit-actions">
-                <button className="series-mgr-btn" onClick={handleSaveEdit}>保存</button>
-                <button className="series-mgr-btn" onClick={() => setEditing(false)}>取消</button>
+                <button className="series-mgr-btn" onClick={handleSaveEdit}>{t('series.btn.save')}</button>
+                <button className="series-mgr-btn" onClick={() => setEditing(false)}>{t('series.btn.cancel')}</button>
               </div>
             </div>
           ) : (
-            <div className="series-mgr-placeholder">选择一个系列查看详情</div>
+            <div className="series-mgr-placeholder">{t('series.empty')}</div>
           )}
         </div>
       </div>
@@ -408,6 +410,7 @@ export function SeriesManagerPage() {
 }
 
 function MappingOverview({ selector, depth }: { selector: Selector; depth: number }) {
+  const { t } = useI18n();
   return (
     <div className="mapping-overview" style={{ marginLeft: depth * 16 }}>
       <div className="mapping-overview-selector">
@@ -421,7 +424,7 @@ function MappingOverview({ selector, depth }: { selector: Selector; depth: numbe
               <IcoBox /> {ans.outcome.component.component_def_id}
               {ans.outcome.component.param_constraints.length > 0 && (
                 <span className="mapping-overview-constraint-count">
-                  ({ans.outcome.component.param_constraints.length} 约束)
+                  {t('series.constraint.count', { count: ans.outcome.component.param_constraints.length })}
                 </span>
               )}
             </div>
@@ -455,6 +458,7 @@ type SelectorNodeProps = {
 };
 
 function SelectorNode({ selector, depth, seriesId, catalog, draggedCompDefId, onDropOnAnswer, showAddAnswer, onShowAddAnswer, newAnswerId, setNewAnswerId, newAnswerValue, setNewAnswerValue, onAddAnswer, onRefresh, onAddConstraint, onDeleteConstraint }: SelectorNodeProps) {
+  const { t } = useI18n();
   return (
     <div className="selector-node" style={{ marginLeft: depth * 20 }}>
       <div className="selector-question">
@@ -480,14 +484,14 @@ function SelectorNode({ selector, depth, seriesId, catalog, draggedCompDefId, on
         <div className="selector-add-answer">
           {showAddAnswer === selector.id ? (
             <div className="series-mgr-inline-form">
-              <input placeholder="答案ID" value={newAnswerId} onChange={e => setNewAnswerId(e.target.value)} />
-              <input placeholder="答案值" value={newAnswerValue} onChange={e => setNewAnswerValue(e.target.value)} />
-              <button className="series-mgr-btn" onClick={() => onAddAnswer(selector.id)}>添加</button>
-              <button className="series-mgr-btn" onClick={() => onAddAnswer(selector.id, catalog[0]?.id)}>+ 映射</button>
-              <button className="series-mgr-btn" onClick={() => onShowAddAnswer(null)}>取消</button>
+              <input placeholder={t('series.ph.answer_id')} value={newAnswerId} onChange={e => setNewAnswerId(e.target.value)} />
+              <input placeholder={t('series.ph.answer_value')} value={newAnswerValue} onChange={e => setNewAnswerValue(e.target.value)} />
+              <button className="series-mgr-btn" onClick={() => onAddAnswer(selector.id)}>{t('series.btn.add')}</button>
+              <button className="series-mgr-btn" onClick={() => onAddAnswer(selector.id, catalog[0]?.id)}>{t('series.btn.map')}</button>
+              <button className="series-mgr-btn" onClick={() => onShowAddAnswer(null)}>{t('series.btn.cancel')}</button>
             </div>
           ) : (
-            <button className="series-mgr-btn-sm" onClick={() => onShowAddAnswer(selector.id)}>+ 答案</button>
+            <button className="series-mgr-btn-sm" onClick={() => onShowAddAnswer(selector.id)}>{t('series.btn.add_answer')}</button>
           )}
         </div>
       </div>
@@ -502,6 +506,7 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
   onAddConstraint: (compDefId: string, paramName: string) => void;
   onDeleteConstraint: (compDefId: string, constraintIdx: number) => void;
 }) {
+  const { t } = useI18n();
   const outcome = answer.outcome;
   const [showMapPicker, setShowMapPicker] = useState(false);
   const [showConstrEditor, setShowConstrEditor] = useState(false);
@@ -543,7 +548,7 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
             <span className="component-leaf-icon"><IcoBox /></span>
             <span className="component-leaf-def">{outcome.component.component_def_id}</span>
             {compDef && <span className="component-leaf-name">{compDef.name}</span>}
-            <button className="series-mgr-btn-sm" onClick={() => setShowMapPicker(!showMapPicker)} title="编辑映射" aria-label="编辑映射"><IcoEdit /></button>
+            <button className="series-mgr-btn-sm" onClick={() => setShowMapPicker(!showMapPicker)} title={t('series.edit_map')} aria-label={t('series.edit_map')}><IcoEdit /></button>
           </div>
 
           {showMapPicker && (
@@ -557,18 +562,18 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
               >
                 {catalog.map(c => <option key={c.id} value={c.id}>{c.name} ({c.category})</option>)}
               </select>
-              <button className="series-mgr-btn" onClick={() => setShowMapPicker(false)}>关闭</button>
+              <button className="series-mgr-btn" onClick={() => setShowMapPicker(false)}>{t('series.btn.close')}</button>
             </div>
           )}
 
           {outcome.component.material && (
-            <div className="component-leaf-prop">材质: {outcome.component.material}</div>
+            <div className="component-leaf-prop">{t('series.material', { material: outcome.component.material })}</div>
           )}
 
           {outcome.component.param_constraints.length > 0 && (
             <div className="component-leaf-constraints">
               <div className="component-leaf-constraints-header">
-                <span>参数约束</span>
+                <span>{t('props.section.params')}</span>
                 <button className="series-mgr-btn-sm" onClick={() => setShowConstrEditor(!showConstrEditor)}>+</button>
               </div>
               {outcome.component.param_constraints.map((pc, ci) => (
@@ -588,11 +593,11 @@ function AnswerNode({ answer, depth, seriesId, catalog, draggedCompDefId, onDrop
           {showConstrEditor && (
             <div className="series-mgr-inline-form">
               <select value={newConstrParam} onChange={e => setNewConstrParam(e.target.value)}>
-                <option value="">选择参数</option>
+                <option value="">{t('series.constraint.ph_param')}</option>
                 {compDef?.params.map(p => <option key={p.name} value={p.name}>{p.name}</option>)}
               </select>
-              <button className="series-mgr-btn" onClick={() => { if (newConstrParam) { onAddConstraint(outcome.component!.component_def_id, newConstrParam); setNewConstrParam(''); setShowConstrEditor(false); } }}>添加</button>
-              <button className="series-mgr-btn" onClick={() => setShowConstrEditor(false)}>取消</button>
+              <button className="series-mgr-btn" onClick={() => { if (newConstrParam) { onAddConstraint(outcome.component!.component_def_id, newConstrParam); setNewConstrParam(''); setShowConstrEditor(false); } }}>{t('series.btn.add')}</button>
+              <button className="series-mgr-btn" onClick={() => setShowConstrEditor(false)}>{t('series.btn.cancel')}</button>
             </div>
           )}
         </div>
@@ -605,6 +610,7 @@ function ConstraintEditor({ constraint, seriesId, compDefId, constraintIdx, onRe
   constraint: ParamConstraint; seriesId: string; compDefId: string; constraintIdx: number;
   onRefresh: () => void; onDelete: (compDefId: string, constraintIdx: number) => void;
 }) {
+  const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   const [editDefault, setEditDefault] = useState(constraint.default_value.toString());
   const [editMin, setEditMin] = useState(constraint.min_value.toString());
@@ -624,7 +630,7 @@ function ConstraintEditor({ constraint, seriesId, compDefId, constraintIdx, onRe
       setEditing(false);
       onRefresh();
     } catch (e) {
-      notify.error('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('series.constraint.update_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -633,21 +639,21 @@ function ConstraintEditor({ constraint, seriesId, compDefId, constraintIdx, onRe
       {editing ? (
         <div className="series-mgr-inline-form">
           <span className="component-leaf-constraint-name">{constraint.param_name}</span>
-          <input type="number" value={editDefault} onChange={e => setEditDefault(e.target.value)} title="默认值" />
-          <input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} title="最小值" />
-          <input type="number" value={editMax} onChange={e => setEditMax(e.target.value)} title="最大值" />
-          <input type="number" value={editStep} onChange={e => setEditStep(e.target.value)} title="步长" />
-          <button className="series-mgr-btn" onClick={handleSave}>保存</button>
-          <button className="series-mgr-btn" onClick={() => setEditing(false)}>取消</button>
+          <input type="number" value={editDefault} onChange={e => setEditDefault(e.target.value)} title={t('series.constraint.field_default')} />
+          <input type="number" value={editMin} onChange={e => setEditMin(e.target.value)} title={t('series.constraint.field_min')} />
+          <input type="number" value={editMax} onChange={e => setEditMax(e.target.value)} title={t('series.constraint.field_max')} />
+          <input type="number" value={editStep} onChange={e => setEditStep(e.target.value)} title={t('series.constraint.field_step')} />
+          <button className="series-mgr-btn" onClick={handleSave}>{t('series.btn.save')}</button>
+          <button className="series-mgr-btn" onClick={() => setEditing(false)}>{t('series.btn.cancel')}</button>
         </div>
       ) : (
         <div className="component-leaf-constraint-row">
           <span className="component-leaf-constraint-name">{constraint.param_name}</span>
-          <span className="component-leaf-constraint-val">默认: {constraint.default_value}</span>
-          <span className="component-leaf-constraint-val">范围: {constraint.min_value}–{constraint.max_value}</span>
-          <span className="component-leaf-constraint-val">步长: {constraint.step}</span>
-          <button className="series-mgr-btn-sm" onClick={() => setEditing(true)} title="编辑约束" aria-label="编辑约束"><IcoEdit /></button>
-          <button className="series-mgr-btn-sm" onClick={() => onDelete(compDefId, constraintIdx)} title="删除约束" aria-label="删除约束"><IcoDelete /></button>
+          <span className="component-leaf-constraint-val">{t('series.constraint.default', { value: constraint.default_value })}</span>
+          <span className="component-leaf-constraint-val">{t('series.constraint.range', { min: constraint.min_value, max: constraint.max_value })}</span>
+          <span className="component-leaf-constraint-val">{t('series.constraint.step', { value: constraint.step })}</span>
+          <button className="series-mgr-btn-sm" onClick={() => setEditing(true)} title={t('series.constraint.edit')} aria-label={t('series.constraint.edit')}><IcoEdit /></button>
+          <button className="series-mgr-btn-sm" onClick={() => onDelete(compDefId, constraintIdx)} title={t('series.constraint.delete')} aria-label={t('series.constraint.delete')}><IcoDelete /></button>
         </div>
       )}
     </div>
