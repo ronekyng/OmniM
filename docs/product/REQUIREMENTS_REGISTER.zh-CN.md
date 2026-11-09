@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + 域面板全量 + CreatePanel + LayerEditor + AssemblyPanel + ObjectPropertiesPanel（创建标题/基本属性/几何/材质/BOM 表+列名+来源/目录引用/实例参数/创建按钮/hints/模式切换/保存失败 toast）+ LayerEditor 全 UI；CJK 757；余：Catalog 侧栏、editor 页面内部（Series/Library/Editor 工具条/Sketch 面板） | G2 | 🔀 |
+| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + 域面板全量 + CreatePanel + LayerEditor + AssemblyPanel + ObjectPropertiesPanel + EditorToolbar（19 约束/11 特征/工具提示/快捷提示/删除标签）+ 状态栏/保存；CJK 680；余：sketch 面板内部（AddFeatureDialog/ComponentEditorPage 文案）、Series/Library 内部、Catalog 侧栏 | G2 | 🔀 |
 | UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e · `i18n.ts` 内核 + 标题栏切换器；`language.spec.ts`：即时切换/持久化/`<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |

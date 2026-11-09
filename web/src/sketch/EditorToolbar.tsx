@@ -1,5 +1,6 @@
 import type { SketchConstraintType } from '../shared/types';
 import { Glyph, IcoCheck, IcoClose, IcoMagnet } from '../app/components/Icons';
+import { useI18n } from '../shared/i18n';
 
 export type FeatureType = 'extrude' | 'revolve' | 'sweep' | 'loft' | 'fusion' | 'lofted_fusion' | 'boolean' | 'chamfer' | 'fillet' | 'pattern' | 'shell';
 
@@ -40,26 +41,26 @@ type Props = {
   onUpdateFeatureAngle: (a: number) => void;
 };
 
-const CONSTRAINTS: { key: SketchConstraintType; label: string; title: string }[] = [
-  { key: 'Horizontal', label: 'H', title: '水平' },
-  { key: 'Vertical', label: 'V', title: '垂直' },
-  { key: 'Coincident', label: '⦿', title: '重合' },
-  { key: 'Parallel', label: '∥', title: '平行' },
-  { key: 'Perpendicular', label: '⊥', title: '正交' },
-  { key: 'Length', label: 'L=', title: '长度' },
-  { key: 'Distance', label: 'D=', title: '距离' },
-  { key: 'Angle', label: '∠', title: '角度' },
-  { key: 'Radius', label: 'R', title: '半径' },
-  { key: 'Diameter', label: 'Ø', title: '直径' },
-  { key: 'Fixed', label: 'FIX', title: '固定' },
-  { key: 'Tangent', label: '⌒', title: '相切' },
-  { key: 'AtMidpoint', label: 'MID', title: '中点' },
-  { key: 'EqualLength', label: 'L≃', title: '等长' },
-  { key: 'EqualRadius', label: 'R≃', title: '等半径' },
-  { key: 'Symmetric', label: '↔', title: '对称' },
-  { key: 'PtOnLine', label: '⊞', title: '点在线上' },
-  { key: 'PtOnCircle', label: '⊟', title: '点在圆上' },
-  { key: 'SameOrientation', label: '↗', title: '同向' },
+const CONSTRAINTS: { key: SketchConstraintType; label: string; titleKey: string }[] = [
+  { key: 'Horizontal', label: 'H', titleKey: 'sketch.c_horizontal' },
+  { key: 'Vertical', label: 'V', titleKey: 'sketch.c_vertical' },
+  { key: 'Coincident', label: '⦿', titleKey: 'sketch.c_coincident' },
+  { key: 'Parallel', label: '∥', titleKey: 'sketch.c_parallel' },
+  { key: 'Perpendicular', label: '⊥', titleKey: 'sketch.c_perpendicular' },
+  { key: 'Length', label: 'L=', titleKey: 'sketch.c_length' },
+  { key: 'Distance', label: 'D=', titleKey: 'sketch.c_distance' },
+  { key: 'Angle', label: '∠', titleKey: 'sketch.c_angle' },
+  { key: 'Radius', label: 'R', titleKey: 'sketch.c_radius' },
+  { key: 'Diameter', label: 'Ø', titleKey: 'sketch.c_diameter' },
+  { key: 'Fixed', label: 'FIX', titleKey: 'sketch.c_fixed' },
+  { key: 'Tangent', label: '⌒', titleKey: 'sketch.c_tangent' },
+  { key: 'AtMidpoint', label: 'MID', titleKey: 'sketch.c_atmidpoint' },
+  { key: 'EqualLength', label: 'L≃', titleKey: 'sketch.c_equallength' },
+  { key: 'EqualRadius', label: 'R≃', titleKey: 'sketch.c_equalradius' },
+  { key: 'Symmetric', label: '↔', titleKey: 'sketch.c_symmetric' },
+  { key: 'PtOnLine', label: '⊞', titleKey: 'sketch.c_ptonline' },
+  { key: 'PtOnCircle', label: '⊟', titleKey: 'sketch.c_ptoncircle' },
+  { key: 'SameOrientation', label: '↗', titleKey: 'sketch.c_sameorientation' },
 ];
 
 const TOOLS = [
@@ -76,18 +77,18 @@ const TOOLS = [
   { key: 'extend' as const, label: 'Extend', shortcut: 'X' },
 ];
 
-const FEATURE_BUTTONS: { type: FeatureType; label: string; tooltip: string }[] = [
-  { type: 'extrude', label: '拉伸', tooltip: '拉伸 - 从轮廓创建实体' },
-  { type: 'revolve', label: '旋转', tooltip: '旋转 - 绕轴旋转轮廓' },
-  { type: 'sweep', label: '扫掠', tooltip: '扫掠 - 沿路径移动轮廓' },
-  { type: 'loft', label: '放样', tooltip: '放样 - 连接多个截面' },
-  { type: 'fusion', label: '融合', tooltip: '融合 - 两个截面之间的过渡实体 (如大小头、天圆地方)' },
-  { type: 'lofted_fusion', label: '放样融合', tooltip: '放样融合 - 两个截面沿路径渐变过渡' },
-  { type: 'boolean', label: '布尔', tooltip: '布尔 - 两个实体运算 (并集/差集/交集)' },
-  { type: 'chamfer', label: '倒角', tooltip: '倒角 - 边缘倒角' },
-  { type: 'fillet', label: '圆角', tooltip: '圆角 - 边缘圆角' },
-  { type: 'pattern', label: '阵列', tooltip: '阵列 - 复制排列' },
-  { type: 'shell', label: '抽壳', tooltip: '抽壳 - 变薄壁' },
+const FEATURE_BUTTONS: { type: FeatureType; labelKey: string; tooltipKey: string }[] = [
+  { type: 'extrude', labelKey: 'sketch.f_extrude', tooltipKey: 'sketch.tt_extrude' },
+  { type: 'revolve', labelKey: 'sketch.f_revolve', tooltipKey: 'sketch.tt_revolve' },
+  { type: 'sweep', labelKey: 'sketch.f_sweep', tooltipKey: 'sketch.tt_sweep' },
+  { type: 'loft', labelKey: 'sketch.f_loft', tooltipKey: 'sketch.tt_loft' },
+  { type: 'fusion', labelKey: 'sketch.f_fusion', tooltipKey: 'sketch.tt_fusion' },
+  { type: 'lofted_fusion', labelKey: 'sketch.f_lofted_fusion', tooltipKey: 'sketch.tt_lofted_fusion' },
+  { type: 'boolean', labelKey: 'sketch.f_boolean', tooltipKey: 'sketch.tt_boolean' },
+  { type: 'chamfer', labelKey: 'sketch.f_chamfer', tooltipKey: 'sketch.tt_chamfer' },
+  { type: 'fillet', labelKey: 'sketch.f_fillet', tooltipKey: 'sketch.tt_fillet' },
+  { type: 'pattern', labelKey: 'sketch.f_pattern', tooltipKey: 'sketch.tt_pattern' },
+  { type: 'shell', labelKey: 'sketch.f_shell', tooltipKey: 'sketch.tt_shell' },
 ];
 
 export function EditorToolbar({
@@ -101,6 +102,7 @@ export function EditorToolbar({
   onUndo, onRedo,
   onUpdateSketchZ, onUpdateFeatureDepth, onUpdateFeatureAngle,
 }: Props) {
+  const { t } = useI18n();
   return (
     <div className="sketch-toolbar-wrapper">
       {/* Row 1: Feature type buttons (创建实体) */}
@@ -112,10 +114,10 @@ export function EditorToolbar({
               className="sketch-tool-btn feature-ribbon-btn"
               onClick={() => onAddFeature(f.type)}
               disabled={!!creatingFeature}
-              title={f.tooltip}
+              title={t(f.tooltipKey as never)}
             >
               <span className="feature-ribbon-icon"><Glyph name={f.type} /></span>
-              <span className="feature-ribbon-label">{f.label}</span>
+              <span className="feature-ribbon-label">{t(f.labelKey as never)}</span>
             </button>
           ))}
         </div>
@@ -147,8 +149,8 @@ export function EditorToolbar({
               className="sketch-tool-btn sketch-constraint-btn"
               onClick={() => onSelectConstraint(c.key)}
               disabled={!hasSelection || !!creatingFeature}
-              title={`${c.title} (${c.key})`}
-              aria-label={`${c.title}约束`}
+              title={`${t(c.titleKey as never)} (${c.key})`}
+              aria-label={`${t(c.titleKey as never)}${t('sketch.constraint_suffix')}`}
             >
               {c.label}
             </button>
@@ -220,8 +222,8 @@ export function EditorToolbar({
                 className="sketch-tool-btn danger"
                 onClick={onDeleteEntity}
                 disabled={!hasSelection}
-                title="删除选中图元 (Del)"
-                aria-label="删除选中图元"
+                title={t('sketch.delete_entities')}
+                aria-label={t('sketch.delete_entities_a')}
               >
                 Del
               </button>
@@ -260,7 +262,7 @@ export function EditorToolbar({
                 disabled={!hasSelection}
                 title="Offset selected line"
               >∥</button>
-              <label style={{ color: '#888', fontSize: 11 }}>偏移 (m):</label>
+              <label style={{ color: '#888', fontSize: 11 }}>{t('sketch.offset_m')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -273,8 +275,8 @@ export function EditorToolbar({
                 className="sketch-tool-btn danger"
                 onClick={onDeleteEntity}
                 disabled={!hasSelection}
-                title="删除选中图元 (Del)"
-                aria-label="删除选中图元"
+                title={t('sketch.delete_entities')}
+                aria-label={t('sketch.delete_entities_a')}
               >
                 Del
               </button>
@@ -287,7 +289,7 @@ export function EditorToolbar({
       {creatingFeature && (
         <div className="sketch-toolbar feature-ribbon" style={{ padding: '4px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="sketch-tool-group" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ color: '#888', fontSize: 11 }}>Z标高:</label>
+            <label style={{ color: '#888', fontSize: 11 }}>{t('sketch.z_elev')}</label>
             <input
               type="number"
               step="0.1"
@@ -298,7 +300,7 @@ export function EditorToolbar({
           </div>
           {creatingFeature === 'extrude' && (
             <div className="sketch-tool-group" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <label style={{ color: '#888', fontSize: 11 }}>拉伸深度:</label>
+              <label style={{ color: '#888', fontSize: 11 }}>{t('sketch.extrude_depth')}</label>
               <input
                 type="number"
                 step="0.1"
@@ -310,7 +312,7 @@ export function EditorToolbar({
           )}
           {creatingFeature === 'revolve' && (
             <div className="sketch-tool-group" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <label style={{ color: '#888', fontSize: 11 }}>旋转角度(°):</label>
+              <label style={{ color: '#888', fontSize: 11 }}>{t('sketch.revolve_angle')}</label>
               <input
                 type="number"
                 step="1"
@@ -321,13 +323,13 @@ export function EditorToolbar({
             </div>
           )}
           {creatingFeature === 'sweep' && (
-            <span style={{ color: '#ffa726', fontSize: 11 }}>扫掠: 绘制轮廓 → 切换到路径</span>
+            <span style={{ color: '#ffa726', fontSize: 11 }}>{t('sketch.hint_sweep')}</span>
           )}
           {(creatingFeature === 'loft' || creatingFeature === 'fusion') && (
-            <span style={{ color: '#ffa726', fontSize: 11 }}>放样/融合: 绘制截面 → 切换到截面2</span>
+            <span style={{ color: '#ffa726', fontSize: 11 }}>{t('sketch.hint_loft')}</span>
           )}
           {creatingFeature === 'lofted_fusion' && (
-            <span style={{ color: '#ffa726', fontSize: 11 }}>放样融合: 绘制截面1 → 截面2 → 路径</span>
+            <span style={{ color: '#ffa726', fontSize: 11 }}>{t('sketch.hint_lofted_fusion')}</span>
           )}
         </div>
       )}
