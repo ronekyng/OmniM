@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+test.use({ locale: 'zh-CN' });
+
 /** Phase 8-4 (ASSEMBLY §1): BOM / quantity panel for Assembly containers. */
 
 test('assembly BOM section lists parts; leaf objects have no BOM', async ({ page }) => {

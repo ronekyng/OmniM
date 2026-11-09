@@ -8,6 +8,7 @@ import { CatalogParams } from './create/CatalogParams';
 import { PropertyDefPanel } from './PropertyDefPanel';
 import { IcoClose } from './Icons';
 import { SkeletonLines } from './Loading';
+import { useI18n } from '../../shared/i18n';
 import { useDelayedLoading } from '../../shared/useDelayedLoading';
 
 type ObjectPropertiesPanelProps = {
@@ -33,7 +34,8 @@ const POINT_TYPES = new Set(['point_cloud', 'terrain_model', 'feature_line', 'co
 const BODY_TYPES = new Set(['tank', 'pump', 'valve', 'gear', 'equipment', 'part', 'assembly']);
 
 export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingForm, creationPhase, onSaved, onClose, onExtraChange, onChangeForm, onSubmitCreate, panelMode = 'floating', onToggleMode, onGetMaterial, onSetMaterial }: ObjectPropertiesPanelProps) {
-  const [object, setObject] = useState<OmniObject | null>(null);
+    const { t } = useI18n();
+const [object, setObject] = useState<OmniObject | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
@@ -196,7 +198,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
       // Optimistic update — next poll will confirm
       onSaved();
     } catch (err) {
-      setError(`保存属性 ${key} 失败: ${err instanceof Error ? err.message : String(err)}`);
+      setError(t('props.save_failed', { key, message: err instanceof Error ? err.message : String(err) }));
     }
   }
 
@@ -229,9 +231,9 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
     return (
       <section className={`properties-panel ${modeClass}`}>
         <div className="panel-header">
-          <h3>新建图元属性</h3>
+          <h3>{t('props.editor_title')}</h3>
           <div className="panel-header-actions">
-            <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
+            <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? t('props.mode.to_docked') : t('props.mode.to_floating')}>
               {panelMode === 'floating' ? '⊞' : '⊟'}
             </button>
             <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
@@ -240,13 +242,13 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         {error && <p className="error">{error}</p>}
 
         <div className="propsets-section">
-          <h3>基本属性</h3>
+          <h3>{t('props.section.basic')}</h3>
           <div className="prop-row">
-            <span className="prop-label">类型</span>
+            <span className="prop-label">{t('props.field.type')}</span>
             <input className="prop-value" readOnly value={ct} aria-label="Type" />
           </div>
           <div className="prop-row">
-            <span className="prop-label">名称</span>
+            <span className="prop-label">{t('props.field.name')}</span>
             <input className="prop-value" value={creatingForm.name} aria-label="Name" placeholder={`${ct}-...`} onChange={(e) => handleChange({ name: e.target.value })} />
           </div>
           <div className="prop-row">
@@ -254,33 +256,33 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             <input className="prop-value" value={localIfc} aria-label="IFC Class" onChange={(e) => { setLocalIfc(e.target.value); notifyExtra(e.target.value, localDesc); }} />
           </div>
           <div className="prop-row">
-            <span className="prop-label">描述</span>
+            <span className="prop-label">{t('props.field.description')}</span>
             <textarea className="prop-value-text" value={localDesc} aria-label="Description" onChange={(e) => { setLocalDesc(e.target.value); notifyExtra(localIfc, e.target.value); }} rows={2} />
           </div>
         </div>
 
         {isCatalog && (
           <div className="propsets-section">
-            <h3>构件参数</h3>
+            <h3>{t('props.section.params')}</h3>
             <CatalogParams form={creatingForm} onChange={handleChange} />
           </div>
         )}
 
         {(isLinear || posStr) && (
           <div className="propsets-section">
-            <h3>几何参数</h3>
+            <h3>{t('props.section.geometry')}</h3>
             {isLinear && (
               <>
                 <div className="prop-row">
-                  <span className="prop-label">起点</span>
+                  <span className="prop-label">{t('props.field.start')}</span>
                   <input className="prop-value" readOnly value={startStrFrom(creatingForm)} aria-label="Start point" />
                 </div>
                 <div className="prop-row">
-                  <span className="prop-label">终点</span>
+                  <span className="prop-label">{t('props.field.end')}</span>
                   <input className="prop-value" readOnly value={endStrFrom(creatingForm)} aria-label="End point" />
                 </div>
                 <div className="prop-row">
-                  <span className="prop-label">长度</span>
+                  <span className="prop-label">{t('props.field.length')}</span>
                   <div className="prop-row-inline">
                     <input className="prop-value" value={creatingForm.length} aria-label="Length" onChange={(e) => handleChange({ length: e.target.value })} />
                     <span className="prop-value">m</span>
@@ -290,7 +292,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
             )}
             {!isLinear && posStr && (
               <div className="prop-row">
-                <span className="prop-label">位置</span>
+                <span className="prop-label">{t('props.field.position')}</span>
                 <input className="prop-value" value={posStr} readOnly aria-label="Position" />
               </div>
             )}
@@ -299,15 +301,15 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
 
         <div className="propsets-section hint" style={{ padding: '8px', fontSize: '12px', color: '#888' }}>
           {creationPhase === 'picking'
-            ? '在 3D 视图中点击放置点，可在此实时调整类型和参数。'
+            ? t('props.hint.place')
             : isConfiguring
-              ? '在面板中设置参数后点击"创建"。'
-              : '在此设置 IFC 分类和描述。'}
+              ? t('props.hint.configure')
+              : t('props.hint.ifc')}
         </div>
 
         <div className="form-actions">
           <button className="primary" disabled={isCreating} onClick={onSubmitCreate}>
-            {isCreating ? '创建中...' : isConfiguring ? '创建' : '创建'}
+            {isCreating ? t('props.create.saving') : t('props.create.submit')}
           </button>
         </div>
       </section>
@@ -322,7 +324,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         <div className="panel-header">
           <h3>{selectedCount} objects selected</h3>
           <div className="panel-header-actions">
-            <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
+            <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? t('props.mode.to_docked') : t('props.mode.to_floating')}>
               {panelMode === 'floating' ? '⊞' : '⊟'}
             </button>
             <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
@@ -381,14 +383,14 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
   const modeClass = panelMode === 'floating' ? 'properties-panel--floating' : 'properties-panel--docked';
 
   // Collapse the mesh-info group from the data-driven property panel
-  const collapsedGroups = new Set<string>(['几何参数']);
+  const collapsedGroups = new Set<string>([t('props.group_geometry')]);
 
   return (
     <section className={`properties-panel ${modeClass}`} key={object.id}>
       <div className="panel-header">
         <h3>{object.name || 'Properties'}</h3>
         <div className="panel-header-actions">
-          <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? '切换至停靠模式' : '切换至悬浮模式'}>
+          <button className="mode-toggle" onClick={onToggleMode} title={panelMode === 'floating' ? t('props.mode.to_docked') : t('props.mode.to_floating')}>
             {panelMode === 'floating' ? '⊞' : '⊟'}
           </button>
           <button className="close-btn" onClick={onClose} title="Close"><IcoClose /></button>
@@ -419,9 +421,9 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         </div>
 {onGetMaterial && onSetMaterial && primaryId && (
           <div className="propsets-section">
-            <h3>材质</h3>
+            <h3>{t('props.section.material')}</h3>
             <div className="prop-row">
-              <span className="prop-label">颜色</span>
+              <span className="prop-label">{t('props.field.color')}</span>
               <input className="prop-value" type="color" value={material.color} aria-label="Color"
                 onChange={(e) => {
                   const next = { ...material, color: e.target.value };
@@ -431,7 +433,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
               />
             </div>
             <div className="prop-row">
-              <span className="prop-label">粗糙度</span>
+              <span className="prop-label">{t('props.field.roughness')}</span>
               <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.roughness} aria-label="Roughness"
                 onChange={(e) => {
                   const next = { ...material, roughness: parseFloat(e.target.value) };
@@ -442,7 +444,7 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
               <span className="prop-value" style={{ width: 32, textAlign: 'right' }}>{material.roughness.toFixed(2)}</span>
             </div>
             <div className="prop-row">
-              <span className="prop-label">金属度</span>
+              <span className="prop-label">{t('props.field.metalness')}</span>
               <input className="prop-value" type="range" min="0" max="1" step="0.01" value={material.metalness} aria-label="Metalness"
                 onChange={(e) => {
                   const next = { ...material, metalness: parseFloat(e.target.value) };
@@ -460,24 +462,24 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
         </div>
         {bom && (
           <div className="propsets-section">
-            <h3>BOM / 工程量</h3>
+            <h3>{t('props.section.bom')}</h3>
             <div role="table" aria-label="Bill of materials" aria-colcount={4} aria-rowcount={bom.rows.length + 1}>
               <div className="bom-row bom-row-head" role="row">
-                <span role="columnheader">对象</span>
-                <span role="columnheader">类型</span>
-                <span role="columnheader">来源</span>
-                <span role="columnheader">体积 m³</span>
+                <span role="columnheader">{t('props.bom.col_object')}</span>
+                <span role="columnheader">{t('props.bom.col_type')}</span>
+                <span role="columnheader">{t('props.bom.col_source')}</span>
+                <span role="columnheader">{t('props.bom.col_volume')}</span>
               </div>
               {bom.rows.map((row) => (
                 <div className="bom-row" role="row" key={row.object_id}>
                   <span role="cell" title={row.name}>{row.name}</span>
                   <span role="cell">{row.object_type}</span>
-                  <span role="cell">{row.component_def_id ? '目录' : row.kind === 'part' ? '基本体' : '代理'}</span>
+                  <span role="cell">{row.component_def_id ? t('props.bom.source_catalog') : row.kind === 'part' ? t('props.bom.source_part') : t('props.bom.source_proxy')}</span>
                   <span role="cell">{row.bbox_volume_m3 != null ? row.bbox_volume_m3.toFixed(2) : '—'}</span>
                 </div>
               ))}
             </div>
-            <small className="hint">合计 {bom.totals.total_volume_m3.toFixed(2)} m³（包围盒估算）</small>
+            <small className="hint">{t('props.bom.total', { total: bom.totals.total_volume_m3.toFixed(2) })}</small>
           </div>
         )}
         <div className="form-actions">
@@ -496,29 +498,29 @@ export function ObjectPropertiesPanel({ selectedIds, tree, meshInfo, creatingFor
       {/* Linear geometry params (start/end points) — still rendered alongside the data-driven panel */}
       {isLinear && (startPoint || endPoint) && (
         <div className="propsets-section">
-          <h3>线性几何参数</h3>
+          <h3>{t('props.section.linear')}</h3>
           {startPoint && (
-            <ParamRow label="起点" value={startPoint} onChange={(v) => saveGeoParam('start_point', v)} />
+            <ParamRow label={t('props.field.start')} value={startPoint} onChange={(v) => saveGeoParam('start_point', v)} />
           )}
           {endPoint && (
-            <ParamRow label="终点" value={endPoint} onChange={(v) => saveGeoParam('end_point', v)} />
+            <ParamRow label={t('props.field.end')} value={endPoint} onChange={(v) => saveGeoParam('end_point', v)} />
           )}
         </div>
       )}
 
       {object.catalog_ref && (
         <div className="propsets-section">
-          <h3>目录引用</h3>
-          <div className="prop-row"><span className="prop-label">目录构件</span><input className="prop-value" readOnly value={object.catalog_ref.component_def_id} /></div>
+          <h3>{t('props.section.catref')}</h3>
+          <div className="prop-row"><span className="prop-label">{t('props.field.component')}</span><input className="prop-value" readOnly value={object.catalog_ref.component_def_id} /></div>
           {object.catalog_ref.series_id && (
-            <div className="prop-row"><span className="prop-label">系列</span><input className="prop-value" readOnly value={object.catalog_ref.series_id} /></div>
+            <div className="prop-row"><span className="prop-label">{t('props.field.series')}</span><input className="prop-value" readOnly value={object.catalog_ref.series_id} /></div>
           )}
           {object.catalog_ref.selector_path.length > 0 && (
-            <div className="prop-row"><span className="prop-label">选择路径</span><input className="prop-value" readOnly value={object.catalog_ref.selector_path.join(' → ')} /></div>
+            <div className="prop-row"><span className="prop-label">{t('props.field.selection_path')}</span><input className="prop-value" readOnly value={object.catalog_ref.selector_path.join(' → ')} /></div>
           )}
           {Object.keys(object.catalog_ref.param_values).length > 0 && (
             <details className="propset" open>
-              <summary className="propset-title">实例参数</summary>
+              <summary className="propset-title">{t('props.section.params')}</summary>
               {Object.entries(object.catalog_ref.param_values).map(([k, v]) => (
                 <div key={k} className="propset-prop">
                   <span className="propset-prop-name">{k}</span>
