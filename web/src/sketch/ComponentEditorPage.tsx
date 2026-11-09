@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { api } from '../shared/api';
 import { nextAutoName } from '../shared/naming';
 import { notify } from '../shared/toast';
+import { useI18n } from '../shared/i18n';
 import type { Sketch, SketchConstraintType, SketchResponse, FeatureItem } from '../shared/types';
 import { SketchCanvas2D } from './SketchCanvas2D';
 import { SketchCanvas3D } from './SketchCanvas3D';
@@ -28,6 +29,7 @@ const MULTI_SKETCH_LABELS: Record<string, string[]> = {
 };
 
 export function ComponentEditorPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [sketches, setSketches] = useState<SketchResponse[]>([]);
@@ -89,7 +91,7 @@ export function ComponentEditorPage() {
       api.getComponent(currentComponentId)
         .then((c) => setComponentName(c.name))
         .catch((err: unknown) =>
-          notify.error(`构件信息加载失败: ${err instanceof Error ? err.message : String(err)}`),
+          notify.error(`${t('sketch.err.load_failure')}: ${err instanceof Error ? err.message : String(err)}`),
         );
     }
   }, [currentComponentId, loadSketches, loadFeatures]);
@@ -146,7 +148,7 @@ export function ComponentEditorPage() {
       refreshUndoStatus();
       if (currentSketch) loadSketch(currentSketch.id);
     } catch (e) {
-      notify.error('撤销失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.undo' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, [currentSketch]);
 
@@ -156,7 +158,7 @@ export function ComponentEditorPage() {
       refreshUndoStatus();
       if (currentSketch) loadSketch(currentSketch.id);
     } catch (e) {
-      notify.error('重做失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.redo' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }, [currentSketch]);
 
@@ -195,7 +197,7 @@ export function ComponentEditorPage() {
         await solveAndLoad(currentSketch.id);
       }
     } catch (e) {
-      notify.error('更新约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.constraint_update' as never)}: ${e instanceof Error ? e.message : String(e)}`);
       setEditingConstraint(null);
     }
   };
@@ -304,7 +306,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart({ x, y });
       } catch (e) {
-        notify.error('添加线段失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_line' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
       }
       return;
@@ -326,7 +328,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        notify.error('添加圆形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_circle' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
       }
       return;
@@ -356,7 +358,7 @@ export function ComponentEditorPage() {
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       } catch (e) {
-        notify.error('添加弧线失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_arc' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       }
@@ -382,7 +384,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        notify.error('添加矩形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_rect' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
       }
       return;
@@ -409,7 +411,7 @@ export function ComponentEditorPage() {
         await loadSketch(currentSketch.id);
         setPendingLineStart(null);
       } catch (e) {
-        notify.error('添加正多边形失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_polygon' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
       }
       return;
@@ -447,7 +449,7 @@ export function ComponentEditorPage() {
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       } catch (e) {
-        notify.error('添加椭圆失败: ' + (e instanceof Error ? e.message : String(e)));
+        notify.error(`${t('sketch.err.add_ellipse' as never)}: ${e instanceof Error ? e.message : String(e)}`);
         setPendingLineStart(null);
         setPendingPolyPoints([]);
       }
@@ -471,7 +473,7 @@ export function ComponentEditorPage() {
       await loadSketch(currentSketch.id);
       setSelectedEntityIdx((res as any).index);
     } catch (e) {
-      notify.error('添加实体失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.add_entity' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -488,7 +490,7 @@ export function ComponentEditorPage() {
       setPendingPolyPoints([]);
       setPendingLineStart(null);
     } catch (e) {
-      notify.error('添加' + type + '失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.op_add')}${type}${t('sketch.err.feature_failed').slice(0, -8)}: ` + (e instanceof Error ? e.message : String(e)));
       setPendingPolyPoints([]);
       setPendingLineStart(null);
     }
@@ -500,7 +502,7 @@ export function ComponentEditorPage() {
     try {
       await solveAndLoad(currentSketch.id);
     } catch (e) {
-      notify.error('求解失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.solve' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
     setSolving(false);
   };
@@ -517,7 +519,7 @@ export function ComponentEditorPage() {
       });
       await loadSketch(currentSketch.id);
     } catch (e) {
-      notify.error('添加约束失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.add_constraint' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -611,7 +613,7 @@ export function ComponentEditorPage() {
       await api.updateSketchEntity(currentSketch.id, bestIdx, { points: newPoints });
       await loadSketch(currentSketch.id);
     } catch (e) {
-      notify.error('延伸失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.extend' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -627,7 +629,7 @@ export function ComponentEditorPage() {
         axisIdx = i; break;
       }
     }
-    if (axisIdx < 0) { notify.error('请先绘制一条镜像轴（参考线）'); return; }
+    if (axisIdx < 0) { notify.error(t('sketch.err.mirror_axis_missing')); return; }
 
     const { mirrorPoint } = await import('../shared/geometry');
     const axis = entities[axisIdx];
@@ -718,7 +720,7 @@ export function ComponentEditorPage() {
       setPendingLineStart(null);
       setCreatingFeature({ featureType: type, sketchIds, currentSketchIdx: 0 });
     } catch (e) {
-      notify.error('创建 Sketch 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('sketch.err.create_sketch' as never)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -774,7 +776,7 @@ export function ComponentEditorPage() {
       setEditingFeature(null);
       await loadFeatures(currentComponentId);
     } catch (e) {
-      notify.error((editingFeature.id ? '编辑' : '添加') + ' Feature 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${editingFeature.id ? t('sketch.err.op_edit') : t('sketch.err.op_add')} ${t('sketch.err.feature_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -1115,7 +1117,7 @@ export function ComponentEditorPage() {
         </div>
         <div className="component-canvas-area">
           <div className="component-empty">
-            请从主视图创建或编辑 Component
+            {t('sketch.warn.pick_from_main')}
           </div>
         </div>
       </div>
@@ -1150,7 +1152,7 @@ export function ComponentEditorPage() {
                 api.getComponent(currentComponentId)
                   .then((c) => setComponentName(c.name))
                   .catch((err: unknown) =>
-                    notify.error(`构件信息加载失败: ${err instanceof Error ? err.message : String(err)}`),
+                    notify.error(`${t('sketch.err.load_failure')}: ${err instanceof Error ? err.message : String(err)}`),
                   );
               }
             }}
@@ -1159,7 +1161,7 @@ export function ComponentEditorPage() {
           <span
             className="component-title component-title-editable"
             onClick={() => setEditingName(true)}
-            title="点击编辑名称"
+            title={t('sketch.dlg.edit_name')}
           >{componentName || 'Component Editor'}</span>
         )}
       </div>
@@ -1242,7 +1244,12 @@ export function ComponentEditorPage() {
           {/* Drawing mode banner */}
           {creatingFeature && (
             <div className="component-creating-banner">
-              <IcoWarning /> 正在绘制 {creatingFeature.featureType} {MULTI_SKETCH_LABELS[creatingFeature.featureType]?.[creatingFeature.currentSketchIdx] ?? '轮廓'} — 完成后点击 Done
+              <IcoWarning /> {creatingFeature.featureType} {(() => {
+                const labels = MULTI_SKETCH_LABELS[creatingFeature.featureType] ?? [];
+                const idx = creatingFeature.currentSketchIdx ?? 0;
+                const label = labels[idx] ?? '';
+                return label.startsWith('sketch.') ? t(label as never) : label;
+              })()}
             </div>
           )}
 
@@ -1364,14 +1371,14 @@ export function ComponentEditorPage() {
               }}
             />
             <div className="dimension-edit-actions">
-              <button className="dimension-edit-btn" onClick={() => setEditingConstraint(null)}>取消</button>
+              <button className="dimension-edit-btn" onClick={() => setEditingConstraint(null)}>{t('sketch.dlg.cancel')}</button>
               <button
                 className="dimension-edit-btn dimension-edit-confirm"
                 onClick={() => {
                   const input = document.querySelector('.dimension-edit-input') as HTMLInputElement;
                   if (input) handleConstraintValueChange(parseFloat(input.value) || 0);
                 }}
-              >确认</button>
+              >{t('sketch.dlg.confirm')}</button>
             </div>
           </div>
         </div>
