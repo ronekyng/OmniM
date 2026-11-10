@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { LayerDefInput } from '../../../shared/types';
-import { MATERIAL_CATEGORY_NAMES } from '../../../shared/types';
+import { MATERIAL_CATEGORY_KEYS } from '../../../shared/types';
 import { api } from '../../../shared/api';
 import type { Material } from '../../../shared/types';
 import { DEFAULT_LAYERS_WALL, DEFAULT_LAYERS_SLAB } from '../../../shared/types/creation';
@@ -15,17 +15,7 @@ type Props = {
   onChange: (layers: LayerDefInput[]) => void;
 };
 
-const FUNCTION_LABELS: Record<string, string> = {
-  structural: '承重',
-  insulation: '保温',
-  finish: '饰面',
-  membrane: '防水',
-  vapor: '隔汽',
-  cladding: '覆面',
-  waterproof: '防水',
-  finish_floor: '面层',
-  finish_ceiling: '吊顶',
-};
+
 
 const WALL_TEMPLATES: { name: string; layers: () => LayerDefInput[] }[] = [
   {
@@ -72,6 +62,10 @@ const SLAB_TEMPLATES: { name: string; layers: () => LayerDefInput[] }[] = [
  *  function tagging, templates, and a visual section preview. */
 export function LayerEditor({ value, mode, onChange }: Props) {
     const { t } = useI18n();
+    const catLabel = (c: number): string => {
+      const k = MATERIAL_CATEGORY_KEYS[c];
+      return k ? t(k as never) : String(c);
+    };
 const [materials, setMaterials] = useState<Material[]>([]);
   const [expanded, setExpanded] = useState(true);
   const [pickerIndex, setPickerIndex] = useState<number | null>(null);
@@ -129,15 +123,15 @@ const [materials, setMaterials] = useState<Material[]>([]);
       {expanded && (
         <>
           <div className="layer-editor-templates">
-            {templates.map((t) => (
+            {templates.map((tpl) => (
               <button
-                key={t.name}
+                key={tpl.name}
                 className="layer-template-btn"
                 type="button"
-                onClick={() => applyTemplate(t.layers())}
-                title={`应用模板: ${t.name}`}
+                onClick={() => applyTemplate(tpl.layers())}
+                title={t('layer.template.apply', { name: tpl.name })}
               >
-                {t.name}
+                {tpl.name}
               </button>
             ))}
           </div>
@@ -172,7 +166,7 @@ const [materials, setMaterials] = useState<Material[]>([]);
                 </div>
 
                 <div className="layer-card-field">
-                  <span className="layer-field-label">材料</span>
+                  <span className="layer-field-label">{t('layer.material')}</span>
                   <select
                     className="layer-material-select"
                     aria-label={`Layer ${i + 1} material`}
@@ -182,14 +176,14 @@ const [materials, setMaterials] = useState<Material[]>([]);
                       updateLayer(i, { material_id: e.target.value, material_name: mat?.name || e.target.value, color: mat?.color ? `rgb(${Math.round(mat.color.r * 255)},${Math.round(mat.color.g * 255)},${Math.round(mat.color.b * 255)})` : l.color });
                     }}
                   >
-                    <option value="">— 无 —</option>
+                    <option value="">{t('layer.opt_none')}</option>
                     {materials.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name}（{MATERIAL_CATEGORY_NAMES[m.category] || m.category}）
+                        {m.name}（{catLabel(m.category)}）
                       </option>
                     ))}
                   </select>
-                  <button type="button" className="layer-browse-btn" onClick={() => setPickerIndex(i)} title="浏览材料库">⋯</button>
+                  <button type="button" className="layer-browse-btn" onClick={() => setPickerIndex(i)} title={t('layer.browse_material')}>⋯</button>
                 </div>
 
                 <div className="layer-card-field">

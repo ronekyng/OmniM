@@ -619,19 +619,19 @@ export type Material = {
   standards: string[];
 };
 
-export const MATERIAL_CATEGORY_NAMES: Record<number, string> = {
-  0: '未分类',
-  1: '金属',
-  2: '混凝土',
-  3: '木材',
-  4: '砌体',
-  5: '塑料',
-  6: '复合材料',
-  7: '玻璃',
-  8: '保温',
-  9: '土壤',
-  10: '水',
-  99: '其他',
+export const MATERIAL_CATEGORY_KEYS: Record<number, string> = {
+  0: 'mat.cat.0',
+  1: 'mat.cat.1',
+  2: 'mat.cat.2',
+  3: 'mat.cat.3',
+  4: 'mat.cat.4',
+  5: 'mat.cat.5',
+  6: 'mat.cat.6',
+  7: 'mat.cat.7',
+  8: 'mat.cat.8',
+  9: 'mat.cat.9',
+  10: 'mat.cat.10',
+  99: 'mat.cat.99',
 };
 
 // ── Layer structure (LayerEditor) types ──

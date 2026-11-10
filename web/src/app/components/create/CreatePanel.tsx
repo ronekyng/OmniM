@@ -26,15 +26,15 @@ type CreatePanelProps = {
 
 const OBJECT_TYPE_OPTIONS: { group: string; types: ObjectType[] }[] = [
   {
-    group: '建筑',
+    group: 'create.grp.architecture',
     types: ['wall', 'slab', 'beam', 'column', 'door', 'window', 'opening', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
   },
   {
-    group: '基础设施',
+    group: 'create.grp.infrastructure',
     types: ['road', 'bridge', 'tunnel', 'pipe', 'duct', 'feature_line', 'contour_line'],
   },
   {
-    group: '设备',
+    group: 'create.grp.equipment',
     types: ['tank', 'pump', 'valve', 'motor', 'part', 'assembly'],
   },
 ];
@@ -129,18 +129,18 @@ const [dirty, setDirty] = useState(false);
 
         {showConfirm && (
           <div className="confirm-overlay" style={{ padding: '8px', background: '#2a2d35', borderRadius: '6px', marginBottom: '8px' }}>
-            <p style={{ fontSize: '12px', marginBottom: '6px' }}>表单已修改，确认关闭吗？</p>
-            <button className="primary" style={{ marginRight: '6px', fontSize: '11px', padding: '2px 8px' }} onClick={handleConfirmClose}>确认关闭</button>
-            <button style={{ fontSize: '11px', padding: '2px 8px' }} onClick={() => setShowConfirm(false)}>继续编辑</button>
+            <p style={{ fontSize: '12px', marginBottom: '6px' }}>{t('create.confirm_close.msg')}</p>
+            <button className="primary" style={{ marginRight: '6px', fontSize: '11px', padding: '2px 8px' }} onClick={handleConfirmClose}>{t('create.confirm_close.ok')}</button>
+            <button style={{ fontSize: '11px', padding: '2px 8px' }} onClick={() => setShowConfirm(false)}>{t('create.confirm_close.keep')}</button>
           </div>
         )}
 
         {isError && error && (
           <div className="error-panel" style={{ padding: '8px', background: '#3d1f1f', borderRadius: '6px', marginBottom: '8px', color: '#ff6b6b' }}>
-            <strong>创建失败：</strong>{error}
+            <strong>{t('create.failed_alert')}</strong>{error}
             <div style={{ marginTop: '6px' }}>
-              <button className="primary" style={{ marginRight: '6px', fontSize: '11px', padding: '2px 8px' }} onClick={onResetToPicking}>重试选点</button>
-              <button style={{ fontSize: '11px', padding: '2px 8px' }} onClick={onCancel}>取消</button>
+              <button className="primary" style={{ marginRight: '6px', fontSize: '11px', padding: '2px 8px' }} onClick={onResetToPicking}>{t('create.retry_pick')}</button>
+              <button style={{ fontSize: '11px', padding: '2px 8px' }} onClick={onCancel}>{t('create.dlg.cancel')}</button>
             </div>
           </div>
         )}
@@ -148,14 +148,14 @@ const [dirty, setDirty] = useState(false);
         <div className="create-row">
           <select aria-label="Object type" value={form.objectType} onChange={(e) => handleObjectTypeChange(e.target.value)}>
             {OBJECT_TYPE_OPTIONS.map((g) => (
-              <optgroup key={g.group} label={g.group}>
+              <optgroup key={g.group} label={t(g.group as never)}>
                 {g.types.map((t) => (
                   <option key={t} value={t}>{objectTypeLabel(t)} {t}</option>
                 ))}
               </optgroup>
             ))}
           </select>
-          <input aria-label="Name" placeholder="名称" value={form.name} onChange={(e) => handleChange({ name: e.target.value })} />
+          <input aria-label="Name" placeholder={t('create.ph.name')} value={form.name} onChange={(e) => handleChange({ name: e.target.value })} />
         </div>
         {errors.name && <small className="hint" style={{ color: '#ff6b6b' }}>{errors.name}</small>}
 
@@ -173,11 +173,11 @@ const [dirty, setDirty] = useState(false);
               value={form.form}
               onChange={(e) => handleChange(withGenesisForm(form, e.target.value as 'panel' | 'region'))}
             >
-              <option value="panel">中心线（面板）</option>
-              <option value="region">封闭轮廓（块）</option>
+              <option value="panel">{t('create.wall.form_panel')}</option>
+              <option value="region">{t('create.wall.form_region')}</option>
             </select>
             <small className="hint">
-              {form.form === 'panel' ? '沿中心线选点，逐段生成' : '沿封闭轮廓选点，整块生成'}
+              {form.form === 'panel' ? t('create.wall.hint_panel') : t('create.wall.hint_region')}
             </small>
           </div>
         )}
@@ -196,11 +196,11 @@ const [dirty, setDirty] = useState(false);
                 ));
               }}
             >
-              <option value="footprint">轮廓（多边形）</option>
-              <option value="extrusion">坡屋面（段）</option>
+              <option value="footprint">{t('create.roof.footprint')}</option>
+              <option value="extrusion">{t('create.roof.extrusion')}</option>
             </select>
             <small className="hint">
-              {form.roofMode === 'footprint' ? '沿轮廓选点，封闭后完成' : '指定屋面坡向段（两点）'}
+              {form.roofMode === 'footprint' ? t('create.roof.hint_footprint') : t('create.roof.hint_extrusion')}
             </small>
           </div>
         )}
@@ -219,8 +219,8 @@ const [dirty, setDirty] = useState(false);
                 });
               }}
             >
-              <option value="place">单点放置（Revit）</option>
-              <option value="segment">两点（Tekla）</option>
+              <option value="place">{t('create.column.place')}</option>
+              <option value="segment">{t('create.column.segment')}</option>
             </select>
             {form.columnMode === 'place' && (
               <div className="create-row create-row--labeled">
@@ -247,16 +247,16 @@ const [dirty, setDirty] = useState(false);
         {form.objectType === 'storey' && (
           <div className="create-row create-row--labeled">
             <span className="field-label">{t('create.elevation')}</span>
-            <input aria-label="Elevation" placeholder="m（可为负）" value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
+            <input aria-label="Elevation" placeholder={t('create.ph.elevation')} value={form.elevation} onChange={(e) => handleChange({ elevation: e.target.value })} />
 <span className="field-unit">m</span>
             {errors.elevation && <span className="field-error">{errors.elevation}</span>}
-            <small className="hint">楼层是标高容器，不生成几何。</small>
+            <small className="hint">{t('create.hint_storey')}</small>
           </div>
         )}
 
         {isDatum && form.objectType !== 'storey' && (
           <div className="create-row">
-            <span className="hint">容器对象只承载层级，不生成几何。</span>
+            <span className="hint">{t('create.hint_container')}</span>
           </div>
         )}
 
@@ -267,10 +267,10 @@ const [dirty, setDirty] = useState(false);
         {isPrimitive && (
           <div className="create-row create-row--labeled">
             <select aria-label="Geometry type" value={form.geometryType} onChange={(e) => handleGeometryTypeChange(e.target.value as GeometryType)}>
-              <option value="box">Box 长方体</option>
-              <option value="cylinder">Cylinder 圆柱</option>
-              <option value="sphere">Sphere 球体</option>
-              <option value="cone">Cone 圆锥</option>
+              <option value="box">{t('create.geom.box')}</option>
+              <option value="cylinder">{t('create.geom.cylinder')}</option>
+              <option value="sphere">{t('create.geom.sphere')}</option>
+              <option value="cone">{t('create.geom.cone')}</option>
             </select>
             <span className="field-label">{paramLabels(form.geometryType)[0]}</span>
             <input aria-label={paramLabels(form.geometryType)[0]} placeholder="" value={form.p1} onChange={(e) => handleChange({ p1: e.target.value })} />
@@ -314,7 +314,7 @@ const [dirty, setDirty] = useState(false);
               <span className="field-label">{t('create.start')}</span>
               <input aria-label="Start X" placeholder="X" value={form.startX} onChange={(e) => handleChange({ startX: e.target.value })} />
 <span className="field-unit">m</span>
-              <input aria-label="Start Y" placeholder="Y (高度)" value={form.startY} onChange={(e) => handleChange({ startY: e.target.value })} />
+              <input aria-label="Start Y" placeholder={t('create.ph.y_height')} value={form.startY} onChange={(e) => handleChange({ startY: e.target.value })} />
 <span className="field-unit">m</span>
               <input aria-label="Start Z" placeholder="Z" value={form.startZ} onChange={(e) => handleChange({ startZ: e.target.value })} />
 <span className="field-unit">m</span>
@@ -323,7 +323,7 @@ const [dirty, setDirty] = useState(false);
               <span className="field-label">{t('create.end')}</span>
               <input aria-label="End X" placeholder="X" value={form.endX} onChange={(e) => handleChange({ endX: e.target.value })} />
 <span className="field-unit">m</span>
-              <input aria-label="End Y" placeholder="Y (高度)" value={form.endY} onChange={(e) => handleChange({ endY: e.target.value })} />
+              <input aria-label="End Y" placeholder={t('create.ph.y_height')} value={form.endY} onChange={(e) => handleChange({ endY: e.target.value })} />
 <span className="field-unit">m</span>
               <input aria-label="End Z" placeholder="Z" value={form.endZ} onChange={(e) => handleChange({ endZ: e.target.value })} />
 <span className="field-unit">m</span>
@@ -335,7 +335,7 @@ const [dirty, setDirty] = useState(false);
               <span className="field-label">{t('create.position')}</span>
               <input aria-label="Position X" placeholder="X" value={form.posX} onChange={(e) => handleChange({ posX: e.target.value })} />
 <span className="field-unit">m</span>
-              <input aria-label="Position Y" placeholder="Y (高度)" value={form.posY} onChange={(e) => handleChange({ posY: e.target.value })} />
+              <input aria-label="Position Y" placeholder={t('create.ph.y_height')} value={form.posY} onChange={(e) => handleChange({ posY: e.target.value })} />
 <span className="field-unit">m</span>
               <input aria-label="Position Z" placeholder="Z" value={form.posZ} onChange={(e) => handleChange({ posZ: e.target.value })} />
 <span className="field-unit">m</span>
@@ -363,6 +363,7 @@ function LevelFields({
   errors: Record<string, string>;
   onChange: (p: Partial<CreationForm>) => void;
 }) {
+    const { t } = useI18n();
   const [levels, setLevels] = useState<StoreyOption[]>([]);
 
   useEffect(() => {
@@ -378,21 +379,21 @@ function LevelFields({
   if (levels.length === 0) {
     return (
       <div className="create-row">
-        <span className="hint">无楼层基准（可选）：先在建筑分类中创建楼层</span>
+        <span className="hint">{t('create.levels.none')}</span>
       </div>
     );
   }
 
   return (
     <div className="create-row create-row--labeled">
-      <span className="field-label">底部标高</span>
+      <span className="field-label">{t('create.levels.bottom')}</span>
       <select aria-label="Bottom level" value={form.bottomLevelId} onChange={(e) => onChange({ bottomLevelId: e.target.value })}>
-        <option value="">无</option>
+        <option value="">{t('create.levels.none_opt')}</option>
         {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
       </select>
-      <span className="field-label">顶部标高</span>
+      <span className="field-label">{t('create.levels.top')}</span>
       <select aria-label="Top level" value={form.topLevelId} onChange={(e) => onChange({ topLevelId: e.target.value })}>
-        <option value="">无</option>
+        <option value="">{t('create.levels.none_opt')}</option>
         {levels.map((l) => <option key={l.id} value={l.id}>{label(l)}</option>)}
       </select>
       {errors.bottomLevelId && <span className="field-error">{errors.bottomLevelId}</span>}
@@ -428,14 +429,14 @@ function DoorWindowFields({ form, errors, onChange }: {
     return () => { cancelled = true; };
   }, []);
 
-  if (loading) return <div className="create-row"><span>加载墙体列表...</span></div>;
-  if (walls.length === 0) return <div className="create-row"><span className="hint"><IcoWarning /> 请先创建一面墙体</span></div>;
+  if (loading) return <div className="create-row"><span>{t('create.walls.loading')}</span></div>;
+  if (walls.length === 0) return <div className="create-row"><span className="hint"><IcoWarning /> {t('create.walls.empty')}</span></div>;
 
   return (
     <>
       <div className="create-row">
         <select aria-label="Target wall" value={form.targetWallId} onChange={(e) => onChange({ targetWallId: e.target.value })}>
-          <option value="">-- 选择目标墙体 --</option>
+          <option value="">{t('create.walls.pick')}</option>
           {walls.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
         </select>
       </div>
