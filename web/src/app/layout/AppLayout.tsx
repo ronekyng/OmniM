@@ -8,6 +8,7 @@ import {
   saveLayout,
   type FloatingWindow,
 } from '../../shared/layout';
+import { useI18n } from '../../shared/i18n';
 import { useAppStore } from '../store/appStore';
 
 type AppLayoutProps = {
@@ -56,6 +57,7 @@ function getVisibleRightPanels() {
 }
 
 export function AppLayout({ toolbar, titleBar, statusBar, leftPanel, rightPanel, bottomPanel, children, panelMode = 'docked' }: AppLayoutProps) {
+  const { t } = useI18n();
   const initial = useRef(loadLayout()).current;
   const [rightWidth, setRightWidth] = useState(initial.docks.right.width);
   // SHL-09 §4.4: the floating window box (per panel id) persists with the
@@ -213,13 +215,13 @@ export function AppLayout({ toolbar, titleBar, statusBar, leftPanel, rightPanel,
             <button
               key={panel.id}
               type="button"
-              title={panel.title ?? panel.id}
-              aria-label={panel.title ?? panel.id}
+              title={panel.titleKey ? t(panel.titleKey as never) : (panel.title ?? panel.id)}
+              aria-label={panel.titleKey ? t(panel.titleKey as never) : (panel.title ?? panel.id)}
               aria-expanded={drawerOpen}
               className={drawerOpen ? 'strip-icon active' : 'strip-icon'}
               onClick={() => setDrawerOpen((v) => !v)}
             >
-              <span aria-hidden="true">{(panel.title ?? panel.id).slice(0, 1)}</span>
+              <span aria-hidden="true">{(panel.titleKey ? t(panel.titleKey as never) : (panel.title ?? panel.id)).slice(0, 1)}</span>
             </button>
           ))}
         </nav>

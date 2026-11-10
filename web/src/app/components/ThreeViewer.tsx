@@ -211,7 +211,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
 
   // When enough points are collected during picking, the preview markers
   // are drawn by the click handler. The user stays in 'picking' until they
-  // press "创建" in the Properties panel.
+  // press Create in the Properties panel.
 
   useImperativeHandle(ref, () => ({
     fit: () => stateRef.current && fitCamera(stateRef.current),
@@ -1181,7 +1181,7 @@ focusObject: (id) => {
       </span>
       {creationPhase === 'picking' && creationObjectType && (
         <div className="picking-hint">
-          <span><IcoTarget /> {pickingHint(creationObjectType, creationPoints, creationForm ? pickModeForForm(creationForm) : undefined)} ，按 Esc 取消</span>
+          <span><IcoTarget /> {pickingHint(creationObjectType, creationPoints, creationForm ? pickModeForForm(creationForm) : undefined)}{t('pick.hint.cancel')}</span>
         </div>
       )}
     </div>

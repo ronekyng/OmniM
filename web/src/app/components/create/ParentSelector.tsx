@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../../shared/i18n';
 import type { TreeNode } from '../../../shared/types';
 import { CONTAINER_TYPES } from '../../../shared/catalog';
 
 export function ParentSelector({ tree, value, onChange }: { tree?: TreeNode[]; value: string; onChange: (id: string) => void }) {
+  const { t } = useI18n();
   const [containers, setContainers] = useState<{ id: string; name: string; type: string; depth: number }[]>([]);
 
   useEffect(() => {
@@ -25,16 +27,16 @@ export function ParentSelector({ tree, value, onChange }: { tree?: TreeNode[]; v
 
   return (
     <div className="create-row create-row--labeled">
-      <span className="field-label">放置于</span>
+      <span className="field-label">{t('create.parent.label')}</span>
       <select aria-label="Parent container" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">-- 项目根级 --</option>
+        <option value="">{t('create.parent.root_opt')}</option>
         {containers.map((c) => (
           <option key={c.id} value={c.id}>
             {'\u3000'.repeat(c.depth)}{c.name} ({c.type})
           </option>
         ))}
       </select>
-      {value && <small className="hint">图元将作为此容器的子项</small>}
+      {value && <small className="hint">{t('create.parent.hint')}</small>}
     </div>
   );
 }

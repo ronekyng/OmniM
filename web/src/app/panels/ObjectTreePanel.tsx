@@ -1,3 +1,4 @@
+import { useI18n } from '../../shared/i18n';
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ObjectTree } from '../components/ObjectTree';
@@ -32,6 +33,7 @@ function flattenNames(nodes: TreeNode[]): string[] {
 }
 
 export function ObjectTreePanel() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const viewerRef = useThreeViewer();
   const tree = useAppStore((s) => s.tree);
@@ -141,7 +143,7 @@ export function ObjectTreePanel() {
       {error && <p className="error">{error}</p>}
       {tree.length === 0 ? (
         <div className="panel-state">
-          模型为空 — 用工具栏「Create」添加对象，或使用 Catalog 放置标准构件。
+          {t('tree.empty_workspace')}
         </div>
       ) : (
         <ObjectTree

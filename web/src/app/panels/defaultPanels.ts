@@ -30,7 +30,7 @@ export function registerDefaultPanels() {
       component: BuildingPanel,
       visible: () => !!useAppStore.getState().domainPanelOpen['building'],
       order: 3,
-      title: '建筑',
+      title: 'Building', titleKey: 'domain.building',
     },
     {
       id: 'domain-civil',
@@ -38,7 +38,7 @@ export function registerDefaultPanels() {
       component: CivilPanel,
       visible: () => !!useAppStore.getState().domainPanelOpen['civil'],
       order: 4,
-      title: '土木',
+      title: 'Civil', titleKey: 'domain.civil',
     },
     {
       id: 'domain-plant',
@@ -46,7 +46,7 @@ export function registerDefaultPanels() {
       component: PlantPanel,
       visible: () => !!useAppStore.getState().domainPanelOpen['plant'],
       order: 5,
-      title: '工厂',
+      title: 'Plant', titleKey: 'domain.plant',
     },
     {
       id: 'domain-mechanical',
@@ -54,7 +54,7 @@ export function registerDefaultPanels() {
       component: MechanicalPanel,
       visible: () => !!useAppStore.getState().domainPanelOpen['mechanical'],
       order: 6,
-      title: '机械',
+      title: 'Mechanical', titleKey: 'domain.mechanical',
     },
     {
       id: 'omni-console',

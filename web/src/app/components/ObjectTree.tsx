@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
+import { useI18n } from '../../shared/i18n';
 import type { TreeNode } from '../../shared/types';
 import { colorForType } from './typeColors';
 import { IcoChevronDown, IcoChevronRight } from './Icons';
@@ -354,6 +355,7 @@ export function ObjectTree({
   onEditComponent,
   onRename,
 }: ObjectTreeProps) {
+  const { t } = useI18n();
   const onSelectionChangedRef = useRef(onSelectionChanged);
   const onDblRef = useRef(onDoubleClick);
   const onCreateRef = useRef(onCreateChild);
@@ -544,7 +546,7 @@ export function ObjectTree({
           ref={searchRef}
           className="tree-search"
           type="text"
-          placeholder="搜索名称 / 类型 / IFC Class… (/)"
+          placeholder={t('tree.search_ph')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />

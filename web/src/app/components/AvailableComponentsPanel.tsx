@@ -129,7 +129,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
       reloadScene();
       setCatalogPanelOpen(false);
     } catch (e) {
-      notify.error('实例化失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('avail.instantiate_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
     setInstantiating(false);
   };

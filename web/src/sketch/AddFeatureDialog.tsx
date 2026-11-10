@@ -55,7 +55,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
 
   const [vals, setVals] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
-    // 预填当前 feature 的参数
+    // Prefill parameters from the current feature
     if (feature.feature_type === 'extrude') {
       init.depth = String(feature.depth);
       init.direction_x = '0';
@@ -86,7 +86,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
       is_cut: isCut,
     };
 
-    // 合并表单参数
+    // Merge form parameters
     for (const f of fields) {
       if (f.type === 'number') {
         params[f.key] = parseFloat(vals[f.key]) || f.default;
@@ -95,7 +95,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
       }
     }
 
-    // 特殊类型参数映射: chamfer/fillet/pattern/shell 使用 depth 字段
+    // Special parameter mapping: chamfer/fillet/pattern/shell use the depth field
     if (feature.feature_type === 'chamfer') {
       params.depth = parseFloat(vals['distance']) || 0.1;
     }
@@ -113,24 +113,24 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
       params.spacing_z = 0;
       params.depth = spacing;
       params.angle = count as number;
-      // 将 dependency_ids 设为空（将在服务器端通过顺序确定）
+      // Leave dependency_ids empty (resolved by order server-side)
       params.dependency_ids = feature.id ? [feature.id] : [];
     }
     if (feature.feature_type === 'shell') {
       params.depth = parseFloat(vals['wall_thickness']) || 0.1;
     }
 
-    // revolve 的 axis_sketch_id 从 feature 传入
+    // revolve axis_sketch_id comes from the feature
     if (feature.feature_type === 'revolve' && feature.axis_sketch_id) {
       params.axis_sketch_id = feature.axis_sketch_id;
     }
 
-    // loft 和 lofted_fusion 的 input_sketch_ids 从 feature 传入
+    // loft / lofted_fusion input_sketch_ids come from the feature
     if ((feature.feature_type === 'loft' || feature.feature_type === 'lofted_fusion') && feature.input_sketch_ids.length > 0) {
       params.input_sketch_ids = feature.input_sketch_ids;
     }
 
-    // fusion 的第二个截面从 input_sketch_ids[0] 传入
+    // fusion's second section comes from input_sketch_ids[0]
     if (feature.feature_type === 'fusion' && feature.input_sketch_ids.length > 0) {
       params.input_sketch_ids = feature.input_sketch_ids;
     }
@@ -138,7 +138,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
     onConfirm(params);
   };
 
-  // 过滤出可用的 sketch（排除当前选中的 profile sketch 用于 sweep path）
+  // Filter usable sketches (the current profile sketch is excluded for sweep paths)
   const availableSketches = feature.feature_type === 'sweep'
     ? sketches.filter(s => s.id !== profileSketchId)
     : sketches;
@@ -148,7 +148,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
       <div className="dialog" onClick={(e) => e.stopPropagation()}>
         <h3>{isEdit ? t('sketch.dlg.edit') : t('sketch.dlg.add')} {feature.feature_type}</h3>
 
-        {/* Profile Sketch — 只在无预设时显示选择器 */}
+        {/* Profile sketch — show the picker only when no preset exists */}
         {sketchPreset ? (
           <div className="dialog-row">
             <label>{t('sketch.dlg.profile_preset')}</label>
@@ -181,7 +181,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
           </div>
         )}
 
-        {/* 动态字段 */}
+        {/* Dynamic fields */}
         {fields.map(f => (
           <div key={f.key} className="dialog-row">
             <label>{t(f.labelKey as never)}</label>
@@ -207,7 +207,7 @@ export function AddFeatureDialog({ feature, sketches, onConfirm, onCancel }: Pro
           </div>
         ))}
 
-        {/* 空心 (Cut) toggle for applicable feature types */}
+        {/* Cut toggle for applicable feature types */}
         {CUTTABLE_TYPES.includes(feature.feature_type) && (
           <div className="dialog-row">
             <label>

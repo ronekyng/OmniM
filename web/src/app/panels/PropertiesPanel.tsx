@@ -1,3 +1,4 @@
+import { useI18n } from '../../shared/i18n';
 import { useCallback } from 'react';
 import { ObjectPropertiesPanel } from '../components/ObjectPropertiesPanel';
 import { useAppStore } from '../store/appStore';
@@ -7,6 +8,7 @@ import type { CreationForm } from '../../shared/types/creation';
 import { useToastApi } from '../../shared/toast';
 
 export function PropertiesPanel() {
+  const { t } = useI18n();
   const toast = useToastApi();
   const viewerRef = useThreeViewer();
   const selectedIds = useAppStore((s) => s.selectedIds);
@@ -47,7 +49,7 @@ export function PropertiesPanel() {
     if (!form) return;
     const result = validateForm(form);
     if (!result.valid) {
-      toast.error('请修正表单错误');
+      toast.error(t('toolbar.fix_errors'));
       return;
     }
     creationDispatch({ type: 'submitCreation' });

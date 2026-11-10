@@ -21,11 +21,11 @@ type ConstraintTool = SketchConstraintType | null;
 type CreatingFeature = { featureType: FeatureType; sketchIds: string[]; currentSketchIdx: number } | null;
 
 const MULTI_SKETCH_LABELS: Record<string, string[]> = {
-  revolve: ['轮廓', '轴线'],
-  sweep: ['轮廓', '路径'],
-  loft: ['截面1', '截面2'],
-  fusion: ['截面1', '截面2'],
-  lofted_fusion: ['截面1', '截面2', '路径'],
+  revolve: ['sketch.role.profile', 'sketch.role.axis'],
+  sweep: ['sketch.role.profile', 'sketch.role.path'],
+  loft: ['sketch.role.profile1', 'sketch.role.profile2'],
+  fusion: ['sketch.role.profile1', 'sketch.role.profile2'],
+  lofted_fusion: ['sketch.role.profile1', 'sketch.role.profile2', 'sketch.role.path'],
 };
 
 export function ComponentEditorPage() {
@@ -1141,7 +1141,7 @@ export function ComponentEditorPage() {
               if (currentComponentId && componentName.trim()) {
                 api.updateObject(currentComponentId, { name: componentName.trim() }).catch(
                   (err: unknown) =>
-                    notify.error(`重命名保存失败: ${err instanceof Error ? err.message : String(err)}`),
+                    notify.error(`${t('sketch.err.rename_save')}: ${err instanceof Error ? err.message : String(err)}`),
                 );
               }
             }}
@@ -1347,10 +1347,10 @@ export function ComponentEditorPage() {
         <div className="dimension-edit-overlay" onClick={() => setEditingConstraint(null)}>
           <div className="dimension-edit-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="dimension-edit-header">
-              编辑 {editingConstraint.type === 'Length' ? '长度' :
-                    editingConstraint.type === 'Distance' ? '距离' :
-                    editingConstraint.type === 'Angle' ? '角度' :
-                    editingConstraint.type === 'Radius' ? '半径' : '直径'}
+              {t('sketch.dlg.edit')} {editingConstraint.type === 'Length' ? t('sketch.c_length') :
+                    editingConstraint.type === 'Distance' ? t('sketch.c_distance') :
+                    editingConstraint.type === 'Angle' ? t('sketch.c_angle') :
+                    editingConstraint.type === 'Radius' ? t('sketch.c_radius') : t('sketch.c_diameter')}
             </div>
             <input
               className="dimension-edit-input"

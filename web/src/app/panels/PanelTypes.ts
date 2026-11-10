@@ -9,4 +9,6 @@ export type PanelRegistration = {
   visible: () => boolean;
   order: number;
   title?: string;
+  /** Optional i18n key taking precedence over `title` at display time. */
+  titleKey?: string;
 };

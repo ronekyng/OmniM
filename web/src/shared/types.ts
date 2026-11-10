@@ -74,7 +74,7 @@ export type UpdateObjectRequest = {
   top_level_id?: string;
 };
 
-/** Grid datum line (轴网), P8-S1/S3. `axis` is the direction the line runs. */
+/** Grid datum line (grid axis), P8-S1/S3. `axis` is the direction the line runs. */
 export type GridLine = {
   id: string;
   label: string;

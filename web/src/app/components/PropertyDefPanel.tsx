@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useI18n } from '../../shared/i18n';
 import type { ObjectPropertyDef, PropertyValue } from '../../shared/types';
 
 type PropertyDefPanelProps = {
@@ -20,6 +21,7 @@ type PropertyDefPanelProps = {
  * objects and from a curated per-type schema for built-in types.
  */
 export function PropertyDefPanel({ defs, values, onChange, collapsedGroups }: PropertyDefPanelProps) {
+  const { t } = useI18n();
   if (defs.length === 0) return null;
 
   const groups = groupBy(defs, (d) => d.group);
@@ -47,6 +49,7 @@ export function PropertyDefPanel({ defs, values, onChange, collapsedGroups }: Pr
 }
 
 function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; value: string; onChange: (key: string, value: string) => Promise<void> }) {
+  const { t } = useI18n();
   const [saving, setSaving] = useState(false);
   const [local, setLocal] = useState(value);
 
@@ -116,7 +119,7 @@ function PropertyDefRow({ def, value, onChange }: { def: ObjectPropertyDef; valu
                 void save(v);
               }}
             />
-            <span>{local === 'true' ? '是' : '否'}</span>
+            <span>{local === 'true' ? t('common.yes') : t('common.no')}</span>
           </label>
         </div>
       );

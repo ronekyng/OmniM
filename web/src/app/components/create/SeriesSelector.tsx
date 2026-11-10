@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '../../../shared/i18n';
 import { api } from '../../../shared/api';
 import { OBJECT_TYPE_DOMAIN } from '../../../shared/catalog';
 import { IcoWarning } from '../Icons';
 
 export function SeriesSelector({ value, onChange, objectType }: { value: string; onChange: (id: string) => void; objectType: string }) {
+  const { t } = useI18n();
   const [seriesList, setSeriesList] = useState<{ id: string; name: string; domain: string }[]>([]);
 
   useEffect(() => {
@@ -17,17 +19,17 @@ export function SeriesSelector({ value, onChange, objectType }: { value: string;
 
   return (
     <div className="create-row create-row--labeled">
-      <span className="field-label">系列</span>
+      <span className="field-label">{t('series.sel.label')}</span>
       <select aria-label="Series" value={value} onChange={(e) => onChange(e.target.value)}>
-        <option value="">-- 默认模板 --</option>
+        <option value="">{t('series.sel.default_opt')}</option>
         {filtered.map((s) => (
           <option key={s.id} value={s.name}>{s.name} ({s.domain})</option>
         ))}
       </select>
       {filtered.length === 0 && seriesList.length > 0 && (
-        <small className="hint"><IcoWarning /> 当前类型无匹配系列</small>
+        <small className="hint"><IcoWarning /> {t('series.sel.none_for_type')}</small>
       )}
-      {value ? <small className="hint">通过系列选择构件规格</small> : <small className="hint">使用类型默认目录构件</small>}
+      {value ? <small className="hint">{t('series.sel.via_series')}</small> : <small className="hint">{t('series.sel.via_default')}</small>}
     </div>
   );
 }

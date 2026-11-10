@@ -5,7 +5,7 @@ import { useAppStore } from '../store/appStore';
 import { useI18n } from '../../shared/i18n';
 
 /** Storey view selector (P8-S4): filters the viewport to the chosen storey and
- *  sets a plan section cut 1.2 m above its datum. "全部" restores everything and
+ *  sets a plan section cut 1.2 m above its datum. The "all" entry restores everything and
  *  disables the storey-driven section. */
 export function StoreyViewSelect() {
   const { t } = useI18n();
@@ -51,7 +51,7 @@ export function StoreyViewSelect() {
     <select
       value={activeStoreyId ?? ''}
       onChange={(e) => onChange(e.target.value)}
-      title="楼层视图（按标高过滤 + 剖切）"
+      title={t('storey.view.title')}
       style={{ maxWidth: 132 }}
     >
       <option value="">{t('storey.all')}</option>

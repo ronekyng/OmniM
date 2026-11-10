@@ -29,7 +29,7 @@ export function TitleBar() {
   const creationObjectType = useAppStore((s) => s.creationObjectType);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [path, setPath] = useState('project.omnim');
-  // 项目设置（DATA_INTEGRITY §2.3, UI-DAT-07）
+  // Project settings (DATA_INTEGRITY §2.3, UI-DAT-07)
   const [metaOpen, setMetaOpen] = useState(false);
   const [meta, setMeta] = useState<ProjectMeta | null>(null);
   const [metaSaving, setMetaSaving] = useState(false);
@@ -113,7 +113,7 @@ export function TitleBar() {
         })()}
       </span>
       <div className="title-actions">
-        {/* I18N §3: 即时切换、不重载、`<html lang>` 同步。语言以自身语言命名。 */}
+        {/* I18N §3: instant switch, no reload, `<html lang>` sync. Languages are named in their own language. */}
         <select
           className="lang-switch"
           value={locale}

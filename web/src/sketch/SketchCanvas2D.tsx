@@ -139,7 +139,7 @@ export function SketchCanvas2D({
     ctx.fillStyle = '#44ff44';
     ctx.fillText('Y', ayEnd.x + 4, ayEnd.y + 4);
 
-    // section lines (3D实体剖视图轮廓)
+    // section lines (3D solid section outline)
     if (sectionLines.length > 0) {
       ctx.save();
       ctx.strokeStyle = '#6688cc';

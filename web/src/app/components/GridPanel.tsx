@@ -27,7 +27,7 @@ type StoreyDraft = { id: string | null; name: string; elevation: string };
 
 const EMPTY_STOREY: StoreyDraft = { id: null, name: '', elevation: '0' };
 
-/** Grid datum panel (P8-S3): CRUD for 轴网 lines; the viewport re-renders on
+/** Grid datum panel (P8-S3): CRUD for grid lines; the viewport re-renders on
  *  `reloadScene()` because ThreeViewer refetches `/api/grids` with the mesh. */
 export function GridPanel() {
   const { t } = useI18n();
@@ -55,7 +55,7 @@ export function GridPanel() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  /** P8-S1/S4: levels live next to grids in the 轴网 tab (IA_SHELL §3.4).
+  /** P8-S1/S4: levels live next to grids in the Grids tab (IA_SHELL §3.4).
    *  Storeys are datum-only objects — no geometry is created here. */
   const refreshStoreys = useCallback(async () => {
     try {

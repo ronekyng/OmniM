@@ -105,7 +105,7 @@ export function EditorToolbar({
   const { t } = useI18n();
   return (
     <div className="sketch-toolbar-wrapper">
-      {/* Row 1: Feature type buttons (创建实体) */}
+      {/* Row 1: Feature type buttons (create entities) */}
       <div className="sketch-toolbar feature-ribbon">
         <div className="sketch-tool-group">
           {FEATURE_BUTTONS.map((f) => (
@@ -123,7 +123,7 @@ export function EditorToolbar({
         </div>
       </div>
 
-      {/* Row 2: Entity tools + Constraints + Actions (草图) */}
+      {/* Row 2: Entity tools + Constraints + Actions (sketching) */}
       <div className="sketch-toolbar">
         {/* Entity tools */}
         <div className="sketch-tool-group">
@@ -211,7 +211,7 @@ export function EditorToolbar({
                       key={idx}
                       className={`sketch-tool-btn ${idx === activeSketchIdx ? 'active' : ''}`}
                       onClick={() => onSwitchSketch(idx)}
-                      title={`切换到${label}`}
+                      title={t('sketch.switch_to') + label}
                     >
                       {label}
                     </button>
