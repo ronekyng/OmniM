@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-11-04
+last_updated: 2026-11-10
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图批次组织。
 
-**最后更新：2026-11-03**
+**最后更新：2026-11-10**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,13 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-11-10] — I18N-01 全量外置收口（UI-I18N-01 ✅ · CJK 988→51）
+
+### 变更（Changed）
+- **UI-I18N-01 ✅**：全部 UI 字符串经 `t()`/词典。本收口批清掉最后的高频面：`LibraryManagerPage` 全量、`SeriesManagerPage` 全量、`CreatePanel` 余量、`AddFeatureDialog`（14 参数字段）、`ComponentEditorPage`（role keys/失败 toast/约束名）、`EditorToolbar`、`AssemblyPanel` 余量、`AvailableComponentsPanel`、`FeaturePanel`、`GridPanel` 全量、`MaterialBrowser` 全量、`DomainPanels`/`CatalogParams`/`MainToolbar`/`ThreeViewer`、决策树选点提示全集（`pick.*`）、`validateForm` 校验串（`create.err.*`）、`catalog.ts` 键化（`DOMAIN_GROUPS` labelKey/labelKeys → `nav.group.*`/`nav.type.*`；`objectTypeLabelKey` + 内核 `hasMessage`）、`MATERIAL_CATEGORY_KEYS`（`mat.cat.*`）、面板注册 `titleKey` 化。CJK 机器扫描残余 **51 段**＝层模板/材料默认名 50 段（契约 I18N §1 模型数据）+ 语言自命名 1 段（§3"中文"）。
+- 词典 `create.*/layer.*/mat.*/lib.*/series.*/assay/toolbar.*/catp.*/viewer.*/avail.*/feature.*/grid.*/pick.*/library.*/create.err.*` 等新增 ~260 键；zh/en 同键由单测覆盖；多 spec 强制 zh-CN 锁定。
+- 门禁看板更新：**G2 32/37**（I18N-01 🔀→✅）；债务台账"未外置 UI 字符串（31 文件）"移除，改为"硬编码英文 JSX 尚未扫描"（📅 后续）。
 
 ## [2026-11-04] — G2 收口批次 II（SHL-09/11 · FBK-03 · DAT · DS · INT · CMP-05 · PRF-06 · I18N）
 

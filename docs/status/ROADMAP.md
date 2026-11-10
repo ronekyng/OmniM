@@ -81,7 +81,7 @@ Project Workspace, sketch editor, feature tree, catalog panel, properties panel,
 |---|---|---|---|---|
 | G0 | Contracts and requirements | 🔀 | Draft complete, signature block pending | Product/design/frontend signatures |
 | G1 | Alpha | 📅 Not passed | 23 ✅ / 2 🔀 / 0 📅 of 25 | All 25 ✅ with clickable evidence |
-| G2 | Beta | 🔀 In progress | 31 / 37 (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-03/05/06/07/08/10/11/12`, `UI-A11Y-01/02/03/04`, `UI-I18N-02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06` ✅) | Design system, i18n, A11Y, performance all met |
+| G2 | Beta | 🔀 In progress | 32 / 37 (`UI-SHL-12`, `UI-SHL-09/11`, `UI-DS-01/03/04/06/08/12`, `UI-INT-03/05/06/07/08/10/11/12`, `UI-A11Y-01/02/03/04`, `UI-I18N-01/02/03/04`, `UI-DAT-04/05/07`, `UI-FBK-03`, `UI-CMP-05`, `UI-PRF-06` ✅) | Design system, i18n, A11Y, performance all met |
 | G3 | GA | 📅 Not started | 0 / 34 | Compatibility/security/telemetry/ACR/release handbook + external review |
 
 Full list: [REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.md); judgement rules: [RELEASE_READINESS](RELEASE_READINESS.md).
@@ -189,7 +189,7 @@ The text DSL is not a non-goal; it is batch 1's undelivered item, waiting on [RF
 | Item | Owner | Evidence |
 |---|---|---|
 | Hard-coded colours bypass semantic tokens | G2 | [CODE_DEVIATIONS](CODE_DEVIATIONS.md) 7.8 |
-| UI strings not externalized (31 files) | G2 | CODE_DEVIATIONS 7.9 |
+| Hard-coded English UI strings not yet scanned (CJK scan only) | G2 | docs/specification/ui/I18N_L10N.md §2 limitation |
 | Accessibility semantics missing | G2 | CODE_DEVIATIONS 7.10 |
 | `App.tsx` whole-store subscription, unsplit `ThreeViewer`, react-query unused | G2 | [CODE_AUDIT](CODE_AUDIT_2026-10-30.zh-CN.md) P2/P3 |
 | Error codes reserved but never emitted | G2 | [ERROR_CODES](../reference/ERROR_CODES.md) |

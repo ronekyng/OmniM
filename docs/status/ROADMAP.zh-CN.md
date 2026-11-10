@@ -81,7 +81,7 @@ Project Workspace、草图编辑器、特征树、目录面板、属性面板、
 |---|---|---|---|---|
 | G0 | 契约与需求 | 🔀 | 草案完成，签字栏待填 | 产品/设计/前端三方签字 |
 | G1 | Alpha | 📅 未通过 | 25 条中 23 ✅ / 2 🔀 / 0 📅 | 25 条全部 ✅ 且证据可点开 |
-| G2 | Beta | 🔀 进行中 | 31 / 37（`UI-SHL-12`、`UI-SHL-09/11`、`UI-DS-01/03/04/06/08/12`、`UI-INT-03/05/06/07/08/10/11/12`、`UI-A11Y-01/02/03/04`、`UI-I18N-02/03/04`、`UI-DAT-04/05/07`、`UI-FBK-03`、`UI-CMP-05`、`UI-PRF-06` ✅） | 设计系统、i18n、A11Y、性能全部达标 |
+| G2 | Beta | 🔀 进行中 | 32 / 37（`UI-SHL-12`、`UI-SHL-09/11`、`UI-DS-01/03/04/06/08/12`、`UI-INT-03/05/06/07/08/10/11/12`、`UI-A11Y-01/02/03/04`、`UI-I18N-01/02/03/04`、`UI-DAT-04/05/07`、`UI-FBK-03`、`UI-CMP-05`、`UI-PRF-06` ✅） | 设计系统、i18n、A11Y、性能全部达标 |
 | G3 | GA | 📅 未开始 | 0 / 34 | 兼容/安全/遥测/ACR/发布手册 + 外部评审 |
 
 完整清单：[REQUIREMENTS_REGISTER](../product/REQUIREMENTS_REGISTER.zh-CN.md)；判定规则：[RELEASE_READINESS](RELEASE_READINESS.zh-CN.md)。
@@ -189,7 +189,7 @@ Project Workspace、草图编辑器、特征树、目录面板、属性面板、
 | 项 | 归属 | 证据 |
 |---|---|---|
 | 硬编码颜色未走语义令牌 | G2 | [CODE_DEVIATIONS](CODE_DEVIATIONS.zh-CN.md) 7.8 |
-| 界面文案未外置（31 文件） | G2 | CODE_DEVIATIONS 7.9 |
+| 硬编码英文 UI 文本尚未扫描（仅 CJK 检出） | G2 | [I18N_L10N](../specification/ui/I18N_L10N.zh-CN.md) §2 已知限制 |
 | 可访问性语义缺失 | G2 | CODE_DEVIATIONS 7.10 |
 | `App.tsx` 全量 store 订阅、`ThreeViewer` 未拆分、react-query 未启用 | G2 | [CODE_AUDIT](CODE_AUDIT_2026-10-30.zh-CN.md) P2/P3 |
 | 错误码保留但未发射 | G2 | [ERROR_CODES](../reference/ERROR_CODES.zh-CN.md) |

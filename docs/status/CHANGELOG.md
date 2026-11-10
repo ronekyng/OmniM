@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-11-04
+last_updated: 2026-11-10
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap batch.
 
-**Last updated: 2026-11-03**
+**Last updated: 2026-11-10**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-11-10] — I18N-01 full externalisation close-out (UI-I18N-01 ✅ · CJK 988→51)
+
+### Changed
+- **UI-I18N-01 ✅**: every UI string now goes through `t()`/dictionary. This close-out batch clears the last high-frequency surfaces: `LibraryManagerPage` (full), `SeriesManagerPage` (full), `CreatePanel` remainder, `AddFeatureDialog` (14 parameter fields), `ComponentEditorPage` (role keys/failure toasts/constraint names), `EditorToolbar`, `AssemblyPanel` remainder, `AvailableComponentsPanel`, `FeaturePanel`, `GridPanel` (full), `MaterialBrowser` (full), `DomainPanels`/`CatalogParams`/`MainToolbar`/`ThreeViewer`, the creation pick-hint set (`pick.*`), `validateForm` strings (`create.err.*`), `catalog.ts` keyification (`DOMAIN_GROUPS` labelKey/labelKeys → `nav.group.*`/`nav.type.*`; `objectTypeLabelKey` + kernel `hasMessage`), `MATERIAL_CATEGORY_KEYS` (`mat.cat.*`), and panel-registry `titleKey`. Residual machine-scanned CJK: **51 runs** = layer templates / default material names 50 runs (model data per I18N §1) + language self-name 1 run (§3 "中文").
+- Dictionaries gained ~260 new keys (`create.*`, `layer.*`, `mat.*`, `library.*`, `series.*`, `assy.*`, `toolbar.*`, `catp.*`, `viewer.*`, `avail.*`, `feature.*`, `grid.*`, `pick.*`, `create.err.*`, …); zh/en share keys by unit test; multiple specs force zh-CN.
+- Gate board updated: **G2 32/37** (I18N-01 🔀→✅); the debt-ledger entry "UI strings not externalized (31 files)" is replaced by "hard-coded English JSX not yet scanned" (📅 follow-up).
 
 ## [2026-11-04] — G2 closing batch II (SHL-09/11 · FBK-03 · DS-01/06/12 · INT-05/10/11 · CMP-05)
 
