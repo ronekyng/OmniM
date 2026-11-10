@@ -4,6 +4,7 @@ import { CATALOG_TYPES, defsForType, defaultDefForType, defaultParamsForDef, ens
 import { ComponentParamPanel } from './ComponentParamPanel';
 import type { ComponentDef } from '../../../shared/types';
 import { IcoWarning } from '../Icons';
+import { useI18n } from '../../../shared/i18n';
 
 type Props = {
   form: CreationForm;
@@ -13,6 +14,7 @@ type Props = {
 /** Catalog param section for catalog-backed object types. Fully driven by the
  *  selected ComponentDef's ParamDefs (the product path in the dev plan §1.2/§1.3). */
 export function CatalogParams({ form, onChange }: Props) {
+  const { t } = useI18n();
   const { status, catalog } = useCatalog();
 
   useEffect(() => { void ensureCatalogLoaded(); }, []);
@@ -45,16 +47,16 @@ export function CatalogParams({ form, onChange }: Props) {
   const hiddenParams = (form.objectType === 'wall' || form.objectType === 'slab') ? ['length'] : [];
 
   if (status === 'loading' && defs.length === 0) {
-    return <div className="catalog-params"><small className="hint">加载构件目录...</small></div>;
+    return <div className="catalog-params"><small className="hint">{t('catp.loading')}</small></div>;
   }
   if (defs.length === 0) {
-    return <div className="catalog-params"><small className="hint"><IcoWarning /> 目录中暂无 {form.objectType} 类型的构件</small></div>;
+    return <div className="catalog-params"><small className="hint"><IcoWarning /> {t('catp.none_for_type', { type: form.objectType })}</small></div>;
   }
 
   return (
     <div className="catalog-params">
       <div className="create-row create-row--labeled">
-        <span className="field-label">构件</span>
+        <span className="field-label">{t('catp.component')}</span>
         <select
           value={selectedDef?.id ?? ''}
           onChange={(e) => {
@@ -64,7 +66,7 @@ export function CatalogParams({ form, onChange }: Props) {
         >
           {defs.map((d) => (
             <option key={d.id} value={d.id}>
-              {d.name}{d.published ? '' : ' (草稿)'}
+              {d.name}{d.published ? '' : t('catp.badge.draft')}
             </option>
           ))}
         </select>
@@ -73,7 +75,7 @@ export function CatalogParams({ form, onChange }: Props) {
       {selectedDef && (
         <>
           <small className="hint">
-            {selectedDef.description || selectedDef.category} · 材料: {selectedDef.default_material}
+            {selectedDef.description || selectedDef.category} · {t('catp.materials', { mat: selectedDef.default_material })}
           </small>
           <ComponentParamPanel
             params={selectedDef.params}

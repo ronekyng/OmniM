@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + CreatePanel 全 UI + LayerEditor UI + MaterialBrowser 全量 + 材料类别键化 + AvailableComponentsPanel 全量（含 domain.* 键复用/实例化失败/收藏）+ FeaturePanel 全量 + GridPanel 全量（楼层/轴网表单，zh spec 断言同步为 名称/标高/添加楼层）+ LibraryManagerPage + SeriesManagerPage + EditorToolbar + AddFeatureDialog + ComponentEditorPage；CJK 359→308；余：AssemblyPanel 剩余、MainToolbar/DomainPanels 零散、catalog.ts 类型标签映射、types/creation.ts 校验串；层模板/材料默认名为模型数据不外置 | G2 | 🔀 |
+| UI-I18N-01 | 零硬编码用户字符串 | I18N_L10N §2 | 字符串扫描 · 至此外置：外壳全量 + CreatePanel/LayerEditor(MaterialBrowser)/AvailableComponentsPanel/FeaturePanel/GridPanel/LibraryManagerPage/SeriesManagerPage/EditorToolbar/AddFeatureDialog/ComponentEditorPage + AssemblyPanel 余量（几何选项/位置 placeholder/添加到列表/创建 Assembly 计数）+ DomainPanels 域标签键化+添加到模型 + CatalogParams 全量 + MainToolbar（创建失败/附加字段/修正错误/Component 创建/指示器）+ ThreeViewer 测量保存失败 ×3；CJK 272；余：catalog.ts 类型标签映射、types/creation.ts 校验串、pickText、Picking、其他零散；层模板/材料默认名/语言自命名（中文/English）为模型数据或约定内 | G2 | 🔀 |
 | UI-I18N-02 | zh-CN 默认、en-US 回退、即时切换 | I18N_L10N §3 | 语言 e2e · `i18n.ts` 内核 + 标题栏切换器；`language.spec.ts`：即时切换/持久化/`<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |

@@ -302,10 +302,10 @@ export function AssemblyPanel({
                 value={draft.shape}
                 onChange={(e) => updateDraft({ shape: e.target.value })}
               >
-                <option value="box">方块 (Box)</option>
-                <option value="cylinder">圆柱 (Cylinder)</option>
-                <option value="sphere">球体 (Sphere)</option>
-                <option value="cone">圆锥 (Cone)</option>
+                <option value="box">{t('assy.prim.box')}</option>
+                <option value="cylinder">{t('assy.prim.cylinder')}</option>
+                <option value="sphere">{t('assy.prim.sphere')}</option>
+                <option value="cone">{t('assy.prim.cone')}</option>
               </select>
             </div>
             <div className="create-row">
@@ -337,29 +337,29 @@ export function AssemblyPanel({
 
         <div className="create-row">
           <input
-            placeholder="X 位置 (m)"
+            placeholder={t('assy.ph.x')}
             value={draft.x || ''}
             onChange={(e) => updateDraft({ x: parseFloat(e.target.value) || 0 })}
           />
           <input
-            placeholder="Y 位置 (m)"
+            placeholder={t('assy.ph.y')}
             value={draft.y || ''}
             onChange={(e) => updateDraft({ y: parseFloat(e.target.value) || 0 })}
           />
           <input
-            placeholder="Z 位置 (m)"
+            placeholder={t('assy.ph.z')}
             value={draft.z || ''}
             onChange={(e) => updateDraft({ z: parseFloat(e.target.value) || 0 })}
           />
           <input
-            placeholder="旋转 Z (°)"
+            placeholder={t('assy.ph.rot_z')}
             value={draft.rotationDeg || ''}
             onChange={(e) => updateDraft({ rotationDeg: parseFloat(e.target.value) || 0 })}
           />
         </div>
 
         <button className="primary" onClick={addPart}>
-          + 添加到列表
+          {t('assy.btn.add')}
         </button>
       </div>
 
@@ -369,7 +369,7 @@ export function AssemblyPanel({
           disabled={busy}
           onClick={() => void createAssembly()}
         >
-          {busy ? '创建中…' : `创建 Assembly（${parts.length} 个子件）`}
+          {busy ? t('create.saving') : t('assy.btn.submit', { count: parts.length })}
         </button>
       )}
     </div>

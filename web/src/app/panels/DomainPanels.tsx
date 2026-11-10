@@ -20,13 +20,13 @@ async function autoInstanceName(prefix: string): Promise<string> {
   return nextAutoName(prefix, objects.map((o) => o.name));
 }
 
-export const DOMAIN_LABELS: Record<string, string> = {
-  structural: '建筑结构',
-  building: '建筑',
-  civil: '土木',
-  plant: '工厂',
-  mechanical: '机械',
-  piping: '管道',
+export const DOMAIN_LABEL_KEYS: Record<string, string> = {
+  structural: 'domain.structural',
+  building: 'domain.building',
+  civil: 'domain.civil',
+  plant: 'domain.plant',
+  mechanical: 'domain.mechanical',
+  piping: 'domain.piping',
 };
 
 type QuickCreateAction = {
@@ -221,7 +221,7 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
   return (
     <div className="domain-panel">
       <div className="domain-panel-header">
-        <span>{DOMAIN_LABELS[domain] || domain}</span>
+        <span>{(() => { const k = DOMAIN_LABEL_KEYS[domain]; return k ? t(k as never) : domain; })()}</span>
         <button className="icon-btn" onClick={() => setOpen(domain, false)} title="Close"><IcoClose /></button>
       </div>
 
@@ -278,7 +278,7 @@ function DomainPanelContent({ domain, extra }: { domain: string; extra?: React.R
                 className="domain-panel-item-btn"
                 disabled={busy === c.name}
                 onClick={() => void handleInstantiate(c)}
-                title="添加到模型"
+                title={t('avail.add_to_model')}
               >
                 +
               </button>

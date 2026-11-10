@@ -6,6 +6,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { ViewCubeGizmo, ObjectPosition } from '@mlightcad/three-viewcube';
 import { api } from '../../shared/api';
 import { notify } from '../../shared/toast';
+import { t } from '../../shared/i18n';
 import type { MeshObject, Measurement } from '../../shared/types';
 import type { TransformMode } from './MainToolbar';
 import { useAppStore } from '../store/appStore';
@@ -1296,7 +1297,7 @@ function drawDistanceMeasurement(viewer: ViewerState, p1: THREE.Vector3, p2: THR
     points: [{ x: p1.x, y: p1.y, z: p1.z }, { x: p2.x, y: p2.y, z: p2.z }],
     value: dist,
     color: '#44ff88',
-  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
+  }).catch((err: unknown) => notify.error(`${t('viewer.measure_save_failed')}: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 function drawAngleMeasurement(viewer: ViewerState, vertex: THREE.Vector3, p1: THREE.Vector3, p2: THREE.Vector3) {
@@ -1340,7 +1341,7 @@ function drawAngleMeasurement(viewer: ViewerState, vertex: THREE.Vector3, p1: TH
     points: [{ x: vertex.x, y: vertex.y, z: vertex.z }, { x: p1.x, y: p1.y, z: p1.z }, { x: p2.x, y: p2.y, z: p2.z }],
     value: deg,
     color: '#ffaa44',
-  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
+  }).catch((err: unknown) => notify.error(`${t('viewer.measure_save_failed')}: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 function drawAreaMeasurement(viewer: ViewerState, points: THREE.Vector3[]) {
@@ -1400,7 +1401,7 @@ function drawAreaMeasurement(viewer: ViewerState, points: THREE.Vector3[]) {
     points: pts,
     value: area,
     color: '#44aaff',
-  }).catch((err: unknown) => notify.error(`测量保存失败: ${err instanceof Error ? err.message : String(err)}`));
+  }).catch((err: unknown) => notify.error(`${t('viewer.measure_save_failed')}: ${err instanceof Error ? err.message : String(err)}`));
 }
 
 /** Render a persisted Measurement object into the scene's measureGroup. */

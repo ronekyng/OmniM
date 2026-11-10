@@ -114,7 +114,7 @@ export function MainToolbar({
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         creationDispatch({ type: 'failCreation', error: msg });
-        toast.error(`创建失败: ${msg}`);
+        toast.error(t('toolbar.create_failed', { msg }));
       }
     };
     void doCreate();
@@ -148,7 +148,7 @@ export function MainToolbar({
     // in `.catch(() => {})`, which ate HTTP 500s and read as "saved
     // successfully" — surface them.
     const warnField = (err: unknown) =>
-      toast.error(`附加字段保存失败: ${err instanceof Error ? err.message : String(err)}`);
+      toast.error(`${t('toolbar.extra_save_failed')}: ${err instanceof Error ? err.message : String(err)}`);
 
     // Ensure the catalog is loaded so we can resolve the selected ComponentDef.
     await ensureCatalogLoaded().catch(warnField);
@@ -400,7 +400,7 @@ export function MainToolbar({
     const result = validateForm(creationForm);
     setFormErrors(result.errors);
     if (!result.valid) {
-      toast.error('请修正表单错误');
+      toast.error(t('toolbar.fix_errors'));
       return;
     }
     creationDispatch({ type: 'submitCreation' });
@@ -529,9 +529,9 @@ export function MainToolbar({
             const comp = await api.createComponent({ name: nextAutoName('Component', names) });
             onEditComponent?.(comp.id);
           } catch (e) {
-            toast.error(`创建 Component 失败: ${e instanceof Error ? e.message : String(e)}`);
+            toast.error(`${t('toolbar.comp_create_failed')}: ${e instanceof Error ? e.message : String(e)}`);
           }
-        }} title="创建 Component 并进入编辑器"><IcoSketch /><span className="btn-label">Component</span></button>
+        }} title={t('toolbar.comp_create_title')}><IcoSketch /><span className="btn-label">Component</span></button>
         <span className="separator" />
         <button onClick={() => setCatalogOpen((v) => !v)} title="Catalog browser"><IcoCatalog /><span className="btn-label">Catalog</span></button>
         <button onClick={() => navigate('/series-manager')} title="Series Manager"><IcoSeries /><span className="btn-label">Series</span></button>
@@ -557,7 +557,7 @@ export function MainToolbar({
             </button>
           ))}
           {creationObjectType && (
-            <span className="domain-tool-indicator">当前：{creationObjectType ? typeLabel(creationObjectType) : ''}</span>
+            <span className="domain-tool-indicator">{t('toolbar.current_indicator', { label: creationObjectType ? typeLabel(creationObjectType) : '' })}</span>
           )}
         </div>
       )}
