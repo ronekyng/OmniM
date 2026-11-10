@@ -1,7 +1,7 @@
 ---
 title: "OmniM Frontend Requirements Register (RTM)"
 status: design
-last_updated: 2026-11-09
+last_updated: 2026-11-10
 applies_to: "web/"
 evidence: "n/a (product requirement)"
 ---
@@ -141,7 +141,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised: shell + domain panels + CreatePanel + LayerEditor + AssemblyPanel + ObjectPropertiesPanel + EditorToolbar + AddFeatureDialog + ComponentEditorPage + SeriesManagerPage (header buttons/inputs, series list/empty/detail/edit form/3 tabs/decision tree/catalog/mapping overview, leaf constraint editor, all failure/success toasts — 96→16 runs) + AddFeatureDialog; CJK 526; remaining: LibraryManagerPage (82), scattered catalog sidebar | G2 | 🔀 |
+| UI-I18N-01 | Zero hardcoded user strings | I18N_L10N §2 | string scan · externalised: shell + domain panels + CreatePanel + LayerEditor + AssemblyPanel + ObjectPropertiesPanel + EditorToolbar + AddFeatureDialog + ComponentEditorPage + SeriesManagerPage + LibraryManagerPage full (header/create/import-export/sidebar/detail grid/materials/params editor/connectors/edit form/all toasts — 82 runs cleared); CJK 444; remaining: catalog/available-components sidebar + scattered runs | G2 | 🔀 |
 | UI-I18N-02 | zh-CN default, en-US fallback, live switch | I18N_L10N §3 | locale e2e · `i18n.ts` kernel + title-bar switcher; `language.spec.ts`: live switch / persistence / `<html lang>` | G2 | ✅ |
 | UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests · `tPlural()` over `Intl.PluralRules`; dictionaries declare `other`; `i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures · 3-decimal coordinates / grouped counts / short dates / clock / angle formatters + fixtures; panel consumption rolling in | G2 | ✅ |

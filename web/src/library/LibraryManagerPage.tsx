@@ -108,7 +108,7 @@ export function LibraryManagerPage() {
       const mesh = await api.previewCatalogComponent({ component_def_id: selectedId, params });
       setPreviewMesh(mesh);
     } catch (e) {
-      setPreviewError('预览失败: ' + (e instanceof Error ? e.message : String(e)));
+      setPreviewError(`${t('library.preview_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setPreviewLoading(false);
     }
@@ -135,12 +135,12 @@ export function LibraryManagerPage() {
       setPreviewMesh(null);
       loadCatalog();
     } catch (e) {
-      notify.error('保存失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.save_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleCreate = async () => {
-    if (!createName || !createCategory) { notify.error('名称和类别不能为空'); return; }
+    if (!createName || !createCategory) { notify.error(t('library.name_category_required')); return; }
     try {
       await api.createComponentDef({ name: createName, category: createCategory });
       setCreateName('');
@@ -148,7 +148,7 @@ export function LibraryManagerPage() {
       setShowCreateForm(false);
       loadCatalog();
     } catch (e) {
-      notify.error('创建失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.create_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -159,7 +159,7 @@ export function LibraryManagerPage() {
       if (selectedId === id) setSelectedId(null);
       loadCatalog();
     } catch (e) {
-      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.delete_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -182,7 +182,7 @@ export function LibraryManagerPage() {
       setNewParamUnit('');
       loadCatalog();
     } catch (e) {
-      notify.error('添加参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.add_param_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -200,7 +200,7 @@ export function LibraryManagerPage() {
       setEditingParamIdx(null);
       loadCatalog();
     } catch (e) {
-      notify.error('更新参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.update_param_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -210,28 +210,28 @@ export function LibraryManagerPage() {
       await api.deleteComponentParam(selectedId, idx);
       loadCatalog();
     } catch (e) {
-      notify.error('删除参数失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('library.delete_param_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleExport = async () => {
     try {
       const res = await api.exportCatalog();
-      setExportMsg(`导出成功: ${res.path} (${res.component_count} 个构件)`);
+      setExportMsg(t('library.export_ok', { path: res.path, count: res.component_count }));
     } catch (e) {
-      setExportMsg('导出失败: ' + (e instanceof Error ? e.message : String(e)));
+      setExportMsg(`${t('library.export_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
   const handleImport = async () => {
-    if (!importPath) { notify.error('请输入文件路径'); return; }
+    if (!importPath) { notify.error(t('library.path_required')); return; }
     try {
       const res = await api.importCatalog(importPath);
-      setImportMsg(`导入成功: ${res.component_count} 个构件 (${res.names.join(', ')})`);
+      setImportMsg(t('library.import_ok', { count: res.component_count, names: res.names.join(', ') }));
       setImportPath('');
       loadCatalog();
     } catch (e) {
-      setImportMsg('导入失败: ' + (e instanceof Error ? e.message : String(e)));
+      setImportMsg(`${t('library.import_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -250,24 +250,24 @@ export function LibraryManagerPage() {
       <div className="library-mgr-header">
         <h1>Library Manager</h1>
         <div className="library-mgr-header-actions">
-          <button className="library-mgr-btn" onClick={() => setShowCreateForm(!showCreateForm)}>+ 新建构件</button>
-          <button className="library-mgr-btn" onClick={handleExport}>导出 .omnimlib</button>
-          <button className="library-mgr-back" onClick={() => navigate('/')}>← 返回</button>
+          <button className="library-mgr-btn" onClick={() => setShowCreateForm(!showCreateForm)}>{t('library.btn.new')}</button>
+          <button className="library-mgr-btn" onClick={handleExport}>{t('library.btn.export')}</button>
+          <button className="library-mgr-back" onClick={() => navigate('/')}>{t('library.btn.back')}</button>
         </div>
       </div>
 
       {showCreateForm && (
         <div className="library-mgr-create-form">
-          <input placeholder="名称" value={createName} onChange={e => setCreateName(e.target.value)} />
-          <input placeholder="类别" value={createCategory} onChange={e => setCreateCategory(e.target.value)} />
-          <button className="library-mgr-btn" onClick={handleCreate}>确认创建</button>
-          <button className="library-mgr-btn" onClick={() => setShowCreateForm(false)}>取消</button>
+          <input placeholder={t('library.ph.name')} value={createName} onChange={e => setCreateName(e.target.value)} />
+          <input placeholder={t('library.ph.category')} value={createCategory} onChange={e => setCreateCategory(e.target.value)} />
+          <button className="library-mgr-btn" onClick={handleCreate}>{t('library.btn.create')}</button>
+          <button className="library-mgr-btn" onClick={() => setShowCreateForm(false)}>{t('library.btn.cancel')}</button>
         </div>
       )}
 
       <div className="library-mgr-io-bar">
-        <input placeholder="导入 .omnimlib 文件路径" value={importPath} onChange={e => setImportPath(e.target.value)} />
-        <button className="library-mgr-btn" onClick={handleImport}>导入</button>
+        <input placeholder={t('library.ph.import_path')} value={importPath} onChange={e => setImportPath(e.target.value)} />
+        <button className="library-mgr-btn" onClick={handleImport}>{t('library.btn.import')}</button>
         {importMsg && <span className="library-mgr-io-msg">{importMsg}</span>}
         {exportMsg && <span className="library-mgr-io-msg">{exportMsg}</span>}
       </div>
@@ -276,12 +276,12 @@ export function LibraryManagerPage() {
 
       <div className="library-mgr-body">
         <div className="library-mgr-sidebar">
-          <h3>构件目录</h3>
+          <h3>{t('library.catalog.title')}</h3>
           <div className="library-mgr-domain-tabs">
             <button
               className={`library-mgr-domain-tab ${domainFilter === '' ? 'active' : ''}`}
               onClick={() => setDomainFilter('')}
-            >全部</button>
+            >{t('library.filter.all')}</button>
             {domains.map(d => (
               <button
                 key={d}
@@ -290,8 +290,8 @@ export function LibraryManagerPage() {
               >{domainLabelOf(d)}</button>
             ))}
           </div>
-          {loading && <div className="library-mgr-loading">加载中...</div>}
-          {!loading && filteredCatalog.length === 0 && <div className="library-mgr-empty">暂无构件</div>}
+          {loading && <div className="library-mgr-loading">{t('library.list.loading')}</div>}
+          {!loading && filteredCatalog.length === 0 && <div className="library-mgr-empty">{t('library.list.empty')}</div>}
           {categories.map(cat => (
             <div key={cat} className="library-mgr-category">
               <div className="library-mgr-cat-header" onClick={() => toggleCategory(cat)}>
@@ -321,38 +321,38 @@ export function LibraryManagerPage() {
               <div className="library-mgr-detail-header">
                 <h2>{selectedComp.name}</h2>
                 <span className={`library-mgr-badge ${selectedComp.published ? 'published' : 'draft'}`}>
-                  {selectedComp.published ? '已发布' : '草稿'}
+                  {selectedComp.published ? t('library.badge.published') : t('library.badge.draft')}
                 </span>
                 <div className="library-mgr-detail-actions">
-                  <button className="library-mgr-btn" onClick={handleStartEdit}>编辑</button>
-                  <button className="library-mgr-btn" onClick={() => handleDelete(selectedComp.id)}>删除</button>
+                  <button className="library-mgr-btn" onClick={handleStartEdit}>{t('library.btn.edit')}</button>
+                  <button className="library-mgr-btn" onClick={() => handleDelete(selectedComp.id)}>{t('library.btn.delete')}</button>
                 </div>
               </div>
 
               <div className="library-mgr-detail-grid">
                 <div className="library-mgr-detail-field">
-                  <label>类别</label><span>{selectedComp.category}</span>
+                  <label>{t('library.field.category')}</label><span>{selectedComp.category}</span>
                 </div>
                 <div className="library-mgr-detail-field">
-                  <label>IFC 类</label><span>{selectedComp.ifc_class}</span>
+                  <label>{t('library.field.ifc')}</label><span>{selectedComp.ifc_class}</span>
                 </div>
                 <div className="library-mgr-detail-field">
-                  <label>标准</label><span>{selectedComp.standard_reference}</span>
+                  <label>{t('library.field.standard')}</label><span>{selectedComp.standard_reference}</span>
                 </div>
                 <div className="library-mgr-detail-field">
-                  <label>领域</label><span>{selectedComp.domain}</span>
+                  <label>{t('library.field.domain')}</label><span>{selectedComp.domain}</span>
                 </div>
                 <div className="library-mgr-detail-field">
-                  <label>特征树模板</label><span>{selectedComp.feature_tree_id || '无'}</span>
+                  <label>{t('library.field.feature_tree')}</label><span>{selectedComp.feature_tree_id || t('library.none')}</span>
                 </div>
                 <div className="library-mgr-detail-field">
-                  <label>默认材质</label><span>{selectedComp.default_material || '无'}</span>
+                  <label>{t('library.field.default_material')}</label><span>{selectedComp.default_material || t('library.none')}</span>
                 </div>
               </div>
 
               <div className="library-mgr-detail-actions">
                 <button className="library-mgr-btn" onClick={handlePreview} disabled={previewLoading}>
-                  {previewLoading ? '生成中...' : <><IcoSearch /> 3D 预览</>}
+                  {previewLoading ? t('library.preview.generating') : <><IcoSearch /> {t('library.preview.open')}</>}
                 </button>
               </div>
               {previewError && <div className="library-mgr-error">{previewError}</div>}
@@ -372,7 +372,7 @@ export function LibraryManagerPage() {
 
               {selectedComp.allowed_materials.length > 0 && (
                 <div className="library-mgr-section">
-                  <h4>允许材质</h4>
+                  <h4>{t('library.materials.title')}</h4>
                   <div className="library-mgr-materials">
                     {selectedComp.allowed_materials.map(m => <span key={m} className="library-mgr-mat">{m}</span>)}
                   </div>
@@ -380,7 +380,7 @@ export function LibraryManagerPage() {
               )}
 
               <div className="library-mgr-section">
-                <h4>参数定义 ({selectedComp.params.length})</h4>
+                <h4>{t('library.params.title', { count: selectedComp.params.length })}</h4>
                 <div className="library-mgr-params">
                   {selectedComp.params.map((p, idx) => (
                     <div key={p.name + idx} className="library-mgr-param-card">
@@ -393,8 +393,8 @@ export function LibraryManagerPage() {
                           <input type="number" value={p.default_value} onChange={e => {
                             // Can't directly update via local state, reload
                           }} />
-                          <button className="library-mgr-btn" onClick={() => handleUpdateParam(idx, p)}>保存</button>
-                          <button className="library-mgr-btn" onClick={() => setEditingParamIdx(null)}>取消</button>
+                          <button className="library-mgr-btn" onClick={() => handleUpdateParam(idx, p)}>{t('library.btn.save')}</button>
+                          <button className="library-mgr-btn" onClick={() => setEditingParamIdx(null)}>{t('library.btn.cancel')}</button>
                         </div>
                       ) : (
                         <>
@@ -402,12 +402,12 @@ export function LibraryManagerPage() {
                             <span className="library-mgr-param-name">{p.name}</span>
                             <span className="library-mgr-param-default">{p.default_value} {p.unit}</span>
                             <div className="library-mgr-param-actions">
-                              <button className="library-mgr-btn-sm" onClick={() => setEditingParamIdx(idx)} title="编辑参数" aria-label="编辑参数"><IcoEdit /></button>
-                              <button className="library-mgr-btn-sm danger" onClick={() => handleDeleteParam(idx)} title="删除参数" aria-label="删除参数"><IcoDelete /></button>
+                              <button className="library-mgr-btn-sm" onClick={() => setEditingParamIdx(idx)} title={t('library.param.edit')} aria-label={t('library.param.edit')}><IcoEdit /></button>
+                              <button className="library-mgr-btn-sm danger" onClick={() => handleDeleteParam(idx)} title={t('library.param.delete')} aria-label={t('library.param.delete')}><IcoDelete /></button>
                             </div>
                           </div>
                           <div className="library-mgr-param-range">
-                            范围: {p.min_value} – {p.max_value} · 步长: {p.step}
+                            {t('library.param.range', { min: p.min_value, max: p.max_value, step: p.step })}
                           </div>
                         </>
                       )}
@@ -416,28 +416,28 @@ export function LibraryManagerPage() {
                 </div>
 
                 <div className="library-mgr-add-param">
-                  <input placeholder="参数名" value={newParamName} onChange={e => setNewParamName(e.target.value)} />
-                  <input type="number" placeholder="默认值" value={newParamDefault} onChange={e => setNewParamDefault(e.target.value)} />
-                  <input type="number" placeholder="最小值" value={newParamMin} onChange={e => setNewParamMin(e.target.value)} />
-                  <input type="number" placeholder="最大值" value={newParamMax} onChange={e => setNewParamMax(e.target.value)} />
-                  <input type="number" placeholder="步长" value={newParamStep} onChange={e => setNewParamStep(e.target.value)} />
-                  <input placeholder="单位" value={newParamUnit} onChange={e => setNewParamUnit(e.target.value)} />
-                  <button className="library-mgr-btn" onClick={handleAddParam}>添加参数</button>
+                  <input placeholder={t('library.param.ph_name')} value={newParamName} onChange={e => setNewParamName(e.target.value)} />
+                  <input type="number" placeholder={t('library.param.ph_default')} value={newParamDefault} onChange={e => setNewParamDefault(e.target.value)} />
+                  <input type="number" placeholder={t('library.param.ph_min')} value={newParamMin} onChange={e => setNewParamMin(e.target.value)} />
+                  <input type="number" placeholder={t('library.param.ph_max')} value={newParamMax} onChange={e => setNewParamMax(e.target.value)} />
+                  <input type="number" placeholder={t('library.param.ph_step')} value={newParamStep} onChange={e => setNewParamStep(e.target.value)} />
+                  <input placeholder={t('library.param.ph_unit')} value={newParamUnit} onChange={e => setNewParamUnit(e.target.value)} />
+                  <button className="library-mgr-btn" onClick={handleAddParam}>{t('library.param.add')}</button>
                 </div>
               </div>
 
               <div className="library-mgr-section">
-                <h4>连接点 ({selectedComp.connectors.length})</h4>
+                <h4>{t('library.connectors.title', { count: selectedComp.connectors.length })}</h4>
                 {selectedComp.connectors.length === 0 ? (
-                  <div className="library-mgr-empty">无连接点</div>
+                  <div className="library-mgr-empty">{t('library.connectors.none')}</div>
                 ) : (
                   selectedComp.connectors.map(c => (
                     <div key={c.id} className="library-mgr-connector-card">
                       <div className="library-mgr-connector-name">{c.name} ({c.id})</div>
                       <div className="library-mgr-connector-detail">
-                        位置: ({c.position_x_expr}, {c.position_y_expr}, {c.position_z_expr})
-                        · 方向: ({c.direction_x_expr}, {c.direction_y_expr}, {c.direction_z_expr})
-                        · 类型: {c.connection_type_code}
+                        {t('library.connectors.pos', { x: c.position_x_expr, y: c.position_y_expr, z: c.position_z_expr })}
+                        {t('library.connectors.dir', { x: c.direction_x_expr, y: c.direction_y_expr, z: c.direction_z_expr })}
+                        {t('library.connectors.type', { code: c.connection_type_code })}
                       </div>
                     </div>
                   ))
@@ -446,54 +446,54 @@ export function LibraryManagerPage() {
             </div>
           ) : selectedComp && editing ? (
             <div className="library-mgr-edit-form">
-              <h2>编辑构件</h2>
+              <h2>{t('library.edit.title')}</h2>
               <div className="library-mgr-edit-field">
-                <label>名称</label>
+                <label>{t('library.field.name')}</label>
                 <input value={editName} onChange={e => setEditName(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>类别</label>
+                <label>{t('library.field.category')}</label>
                 <input value={editCategory} onChange={e => setEditCategory(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>描述</label>
+                <label>{t('library.field.description')}</label>
                 <textarea value={editDesc} onChange={e => setEditDesc(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>IFC 类</label>
+                <label>{t('library.field.ifc')}</label>
                 <input value={editIfc} onChange={e => setEditIfc(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>标准参考</label>
+                <label>{t('library.field.standard_ref')}</label>
                 <input value={editStd} onChange={e => setEditStd(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>领域</label>
+                <label>{t('library.field.domain')}</label>
                 <input value={editDomain} onChange={e => setEditDomain(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>标签 (逗号分隔)</label>
+                <label>{t('library.field.tags')}</label>
                 <input value={editTags} onChange={e => setEditTags(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>允许材质 (逗号分隔)</label>
+                <label>{t('library.field.materials_list')}</label>
                 <input value={editMaterials} onChange={e => setEditMaterials(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>默认材质</label>
+                <label>{t('library.field.default_material')}</label>
                 <input value={editDefaultMat} onChange={e => setEditDefaultMat(e.target.value)} />
               </div>
               <div className="library-mgr-edit-field">
-                <label>特征树模板 ID</label>
-                <input value={editFeatureTree} onChange={e => setEditFeatureTree(e.target.value)} placeholder="输入特征树模板 ID" />
+                <label>{t('library.field.feature_tree_id')}</label>
+                <input value={editFeatureTree} onChange={e => setEditFeatureTree(e.target.value)} placeholder={t('library.ph.feature_tree_id')} />
               </div>
               <div className="library-mgr-edit-actions">
-                <button className="library-mgr-btn" onClick={handleSaveEdit}>保存</button>
-                <button className="library-mgr-btn" onClick={() => setEditing(false)}>取消</button>
+                <button className="library-mgr-btn" onClick={handleSaveEdit}>{t('library.btn.save')}</button>
+                <button className="library-mgr-btn" onClick={() => setEditing(false)}>{t('library.btn.cancel')}</button>
               </div>
             </div>
           ) : (
-            <div className="library-mgr-placeholder">选择一个构件查看详情</div>
+            <div className="library-mgr-placeholder">{t('library.empty')}</div>
           )}
         </div>
       </div>
