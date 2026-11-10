@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../shared/api';
 import { useAppStore } from '../store/appStore';
+import { useI18n } from '../../shared/i18n';
 import type { GridLine } from '../../shared/types';
 
 type Draft = {
@@ -29,6 +30,7 @@ const EMPTY_STOREY: StoreyDraft = { id: null, name: '', elevation: '0' };
 /** Grid datum panel (P8-S3): CRUD for 轴网 lines; the viewport re-renders on
  *  `reloadScene()` because ThreeViewer refetches `/api/grids` with the mesh. */
 export function GridPanel() {
+  const { t } = useI18n();
   const reloadScene = useAppStore((s) => s.reloadScene);
   const markDirty = useAppStore((s) => s.markDirty);
   const [lines, setLines] = useState<GridLine[]>([]);
@@ -180,15 +182,15 @@ export function GridPanel() {
   return (
     <div className="grid-panel">
       <div className="grid-panel-section">
-        <div className="grid-form-title">楼层 Levels</div>
+        <div className="grid-form-title">{t('grid.levels.title')}</div>
         <div className="grid-panel-list">
-          {storeys.length === 0 && <div className="grid-empty">No storeys yet.</div>}
+          {storeys.length === 0 && <div className="grid-empty">{t('grid.no_storeys')}</div>}
           {storeys.map((storey) => (
             <div key={storey.id} className="grid-line-row">
               <span className="grid-label">{storey.name}</span>
               <span className="grid-line-meta">{storey.elevation.toFixed(2)} m</span>
-              <button type="button" className="grid-icon-btn" onClick={() => editStorey(storey)} disabled={storeyBusy}>Edit</button>
-              <button type="button" className="grid-icon-btn danger" onClick={() => void removeStorey(storey.id)} disabled={storeyBusy} title="Delete">×</button>
+              <button type="button" className="grid-icon-btn" onClick={() => editStorey(storey)} disabled={storeyBusy}>{t('grid.btn.edit')}</button>
+              <button type="button" className="grid-icon-btn danger" onClick={() => void removeStorey(storey.id)} disabled={storeyBusy} title={t('grid.btn.delete')}>×</button>
             </div>
           ))}
         </div>
@@ -200,17 +202,17 @@ export function GridPanel() {
             void submitStorey();
           }}
         >
-          <div className="grid-form-title">{storeyDraft.id ? 'Edit storey' : 'Add storey'}</div>
+          <div className="grid-form-title">{storeyDraft.id ? t('grid.edit_storey') : t('grid.add_storey')}</div>
           <label>
-            <span>Name</span>
+            <span>{t('grid.f.name')}</span>
             <input
-              placeholder="F1 / 首层"
+              placeholder={t('grid.ph.f1')}
               value={storeyDraft.name}
               onChange={(e) => setStoreyDraft({ ...storeyDraft, name: e.target.value })}
             />
           </label>
           <label>
-            <span>Elevation (m)</span>
+            <span>{t('grid.f.elevation')}</span>
             <input
               placeholder="0.00"
               value={storeyDraft.elevation}
@@ -219,22 +221,22 @@ export function GridPanel() {
           </label>
           <div className="grid-form-actions">
             {storeyDraft.id && (
-              <button type="button" onClick={() => setStoreyDraft(EMPTY_STOREY)} disabled={storeyBusy}>Cancel</button>
+              <button type="button" onClick={() => setStoreyDraft(EMPTY_STOREY)} disabled={storeyBusy}>{t('grid.dlg.cancel')}</button>
             )}
             <button type="submit" className="primary" disabled={storeyBusy || !storeyDraft.name.trim()}>
-              {storeyDraft.id ? 'Save changes' : 'Add storey'}
+              {storeyDraft.id ? t('grid.save_changes') : t('grid.add_storey')}
             </button>
           </div>
-          <p className="grid-hint">楼层是标高容器，不生成几何；删除仍被构件引用的楼层会被拒绝。</p>
+          <p className="grid-hint">{t('grid.levels.hint')}</p>
           {storeyError && <div className="grid-error">{storeyError}</div>}
         </form>
       </div>
 
       <div className="grid-divider" />
-      <div className="grid-form-title">轴网 Grid lines</div>
+      <div className="grid-form-title">{t('grid.grids.title')}</div>
 
       <div className="grid-panel-list">
-        {lines.length === 0 && <div className="grid-empty">No grid lines yet.</div>}
+        {lines.length === 0 && <div className="grid-empty">{t('grid.no_grids')}</div>}
         {lines.map((line) => (
           <div key={line.id} className="grid-line-row">
             <span className={`grid-label ${line.axis === 'AlongX' ? 'axis-x' : 'axis-y'}`}>
@@ -243,8 +245,8 @@ export function GridPanel() {
             <span className="grid-line-meta">
               {line.axis === 'AlongX' ? 'X' : 'Y'} · {line.coordinate.toFixed(2)} m
             </span>
-            <button type="button" className="grid-icon-btn" onClick={() => edit(line)} disabled={busy}>Edit</button>
-            <button type="button" className="grid-icon-btn danger" onClick={() => void remove(line.id)} disabled={busy} title="Delete">×</button>
+            <button type="button" className="grid-icon-btn" onClick={() => edit(line)} disabled={busy}>{t('grid.btn.edit')}</button>
+            <button type="button" className="grid-icon-btn danger" onClick={() => void remove(line.id)} disabled={busy} title={t('grid.btn.delete')}>×</button>
           </div>
         ))}
       </div>
@@ -256,9 +258,9 @@ export function GridPanel() {
           void submit();
         }}
       >
-        <div className="grid-form-title">{draft.id ? 'Edit grid line' : 'Add grid line'}</div>
+        <div className="grid-form-title">{draft.id ? t('grid.edit_grid') : t('grid.add_grid')}</div>
         <label>
-          <span>Label</span>
+          <span>{t('grid.f.label')}</span>
           <input
             placeholder="A / 1"
             value={draft.label}
@@ -266,14 +268,14 @@ export function GridPanel() {
           />
         </label>
         <label>
-          <span>Direction</span>
+          <span>{t('grid.f.direction')}</span>
           <select value={draft.axis} onChange={(e) => setDraft({ ...draft, axis: e.target.value as Draft['axis'] })}>
-            <option value="AlongY">Y (letters)</option>
-            <option value="AlongX">X (numbers)</option>
+            <option value="AlongY">{t('grid.axis.y')}</option>
+            <option value="AlongX">{t('grid.axis.x')}</option>
           </select>
         </label>
         <label>
-          <span>Coordinate (m)</span>
+          <span>{t('grid.f.coordinate')}</span>
           <input
             placeholder="0.00"
             value={draft.coordinate}
@@ -292,10 +294,10 @@ export function GridPanel() {
                 if (on) setDraft({ ...draft, extent_min: '0', extent_max: '0' });
               }}
             />
-            <span>贯通整个视图（±20 m）</span>
+            <span>{t('grid.span_full')}</span>
           </label>
           <label>
-            <span>From (m)</span>
+            <span>{t('grid.f.from')}</span>
             <input
               placeholder="0"
               disabled={fullSpan}
@@ -304,7 +306,7 @@ export function GridPanel() {
             />
           </label>
           <label>
-            <span>To (m)</span>
+            <span>{t('grid.f.to')}</span>
             <input
               placeholder="0"
               disabled={fullSpan}
@@ -315,15 +317,15 @@ export function GridPanel() {
         </div>
         <div className="grid-form-actions">
           {draft.id && (
-            <button type="button" onClick={() => setDraft(EMPTY)} disabled={busy}>Cancel</button>
+            <button type="button" onClick={() => setDraft(EMPTY)} disabled={busy}>{t('grid.dlg.cancel')}</button>
           )}
           <button type="submit" className="primary" disabled={busy || !draft.label.trim()}>
-            {draft.id ? 'Save changes' : 'Add grid line'}
+            {draft.id ? t('grid.save_changes') : t('grid.add_grid')}
           </button>
         </div>
         {/* B2 (UI/UX audit): implementation detail → semantic copy. */}
         <p className="grid-hint">
-          起止坐标填 0（或 0/0）表示该轴线贯通整个视图（±20 m）；其余数字为普通工程坐标（m）。
+          {t('grid.span_hint')}
         </p>
         {error && <div className="grid-error">{error}</div>}
       </form>

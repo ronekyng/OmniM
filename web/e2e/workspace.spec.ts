@@ -30,9 +30,9 @@ test('sample project: theme, dock tabs and storey creation', async ({ page }) =>
   // Left dock: levels live next to grids (IA_SHELL §3.4).
   await page.getByRole('tab', { name: '轴网' }).click();
   await expect(page.getByText('楼层 Levels')).toBeVisible();
-  await page.getByLabel('Name').fill('E2E-Level');
-  await page.getByLabel('Elevation (m)').fill('4.5');
-  await page.getByRole('button', { name: 'Add storey' }).click();
+  await page.getByLabel('名称').fill('E2E-Level');
+  await page.getByLabel('标高 (m)').fill('4.5');
+  await page.getByRole('button', { name: '添加楼层' }).click();
   await expect(page.locator('.grid-line-row', { hasText: 'E2E-Level' })).toBeVisible();
 
   // The storey view selector picks the new datum up.

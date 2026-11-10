@@ -3,6 +3,7 @@ import type { FeatureItem, SketchResponse } from '../shared/types';
 import { api } from '../shared/api';
 import { notify } from '../shared/toast';
 import { useConfirm } from '../app/components/ConfirmDialog';
+import { useI18n } from '../shared/i18n';
 import { Glyph, IcoDelete, IcoEdit, IcoRefresh, IcoVolumeOff, IcoVolumeOn, type GlyphName } from '../app/components/Icons';
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
 };
 
 export function FeaturePanel({ componentId, features, sketches, onRefresh, onEditFeature, onSelectSketch, onRebuilt }: Props) {
+  const { t } = useI18n();
   const confirm = useConfirm();
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
       await api.removeFeature(componentId, featureId);
       onRefresh();
     } catch (e) {
-      notify.error('删除失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('feature.delete_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -96,7 +98,7 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
       await api.rebuildComponent(componentId);
       onRefresh();
     } catch (e) {
-      notify.error('Rebuild 失败: ' + (e instanceof Error ? e.message : String(e)));
+      notify.error(`${t('feature.rebuild_failed')}: ${e instanceof Error ? e.message : String(e)}`);
     }
   };
 
@@ -114,8 +116,8 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
       <div className="feature-list">
         {features.length === 0 ? (
           <div className="feature-empty">
-            暂无 Feature<br />
-            <span style={{ fontSize: 11, color: '#666' }}>点击上方工具栏按钮添加</span>
+            {t('feature.empty')}<br />
+            <span style={{ fontSize: 11, color: '#666' }}>{t('feature.empty_hint')}</span>
           </div>
         ) : (
           features.map((feature) => (
@@ -140,25 +142,25 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
                   <button
                     className="feature-action-btn"
                     onClick={() => handleToggleSuppress(feature)}
-                    title={feature.suppressed ? '取消抑制' : '抑制'}
+                    title={feature.suppressed ? t('feature.unsuppress') : t('feature.suppress')}
                   >{feature.suppressed ? <IcoVolumeOff /> : <IcoVolumeOn />}</button>
                   <button
                     className="feature-action-btn"
                     onClick={() => onEditFeature(feature)}
-                    title="编辑"
-                    aria-label="编辑"
+                    title={t('feature.btn.edit')}
+                    aria-label={t('feature.btn.edit')}
                   ><IcoEdit /></button>
                   <button
                     className="feature-action-btn danger"
                     onClick={() => handleDeleteFeature(feature.id)}
-                    title="删除"
-                    aria-label="删除"
+                    title={t('feature.btn.delete')}
+                    aria-label={t('feature.btn.delete')}
                   ><IcoDelete /></button>
                 </div>
               </div>
               <div className="feature-card-body">
                 <div className="feature-param">
-                  <span className="feature-param-label">类型:</span>
+                  <span className="feature-param-label">{t('feature.type')}</span>
                   <span className="feature-param-value">{feature.feature_type}</span>
                 </div>
                 {feature.sketch_id && (
@@ -183,10 +185,10 @@ export function FeaturePanel({ componentId, features, sketches, onRefresh, onEdi
                   </div>
                 )}
                 {feature.suppressed && (
-                  <div className="feature-param feature-suppressed-tag">已抑制</div>
+                  <div className="feature-param feature-suppressed-tag">{t('feature.suppressed_tag')}</div>
                 )}
                 {feature.dirty && (
-                  <div className="feature-param feature-dirty-tag">需重建</div>
+                  <div className="feature-param feature-dirty-tag">{t('feature.dirty_tag')}</div>
                 )}
               </div>
             </div>

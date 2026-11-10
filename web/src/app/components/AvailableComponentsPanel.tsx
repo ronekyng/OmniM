@@ -51,18 +51,19 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
     api.listSeries()
       .then((list) => setSeriesList(list))
       .catch((err: unknown) =>
-        notify.error(`系列列表加载失败: ${err instanceof Error ? err.message : String(err)}`),
+        notify.error(`${t('avail.series.load_failed')}: ${err instanceof Error ? err.message : String(err)}`),
       );
   }, [catalogReload]);
 
-  const DOMAIN_LABELS: Record<string, string> = {
-    structural: '建筑结构',
-    building: '建筑',
-    civil: '土木',
-    plant: '工厂',
-    mechanical: '机械',
-    piping: '管道',
+  const DOMAIN_KEYS: Record<string, string> = {
+    structural: 'domain.structural',
+    building: 'domain.building',
+    civil: 'domain.civil',
+    plant: 'domain.plant',
+    mechanical: 'domain.mechanical',
+    piping: 'domain.piping',
   };
+  const domainLabel = (d: string): string => (DOMAIN_KEYS[d] ? t(DOMAIN_KEYS[d] as never) : d);
 
   const domains = [...new Set(catalog.map((c) => c.domain))].sort();
 
@@ -146,9 +147,9 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
           <button
             className={showMaterials ? 'active' : ''}
             onClick={() => setShowMaterials((v) => !v)}
-            title="材料库"
+            title={t('mat.title')}
           >
-            材料库
+            {t('mat.title')}
           </button>
           {!embedded && (
             <button onClick={() => setCatalogPanelOpen(false)}><IcoClose /></button>
@@ -185,7 +186,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                         checked={favoritesOnly}
                         onChange={(e) => { setFavoritesOnly(e.target.checked); setFavVersion((v) => v + 1); }}
                       />
-                      只看收藏
+                      {t('avail.favorites_only')}
                     </label>
                   </div>
                   <select
@@ -193,9 +194,9 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                     value={domainFilter}
                     onChange={(e) => { setDomainFilter(e.target.value); setMaterialFilter(''); }}
                   >
-                    <option value="">所有领域</option>
+                    <option value="">{t('avail.all_domains')}</option>
                     {domains.map((d) => (
-                      <option key={d} value={d}>{DOMAIN_LABELS[d] || d}</option>
+                      <option key={d} value={d}>{domainLabel(d)}</option>
                     ))}
                   </select>
 
@@ -204,7 +205,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                     value={selectedSeries}
                     onChange={(e) => setSelectedSeries(e.target.value)}
                   >
-                    <option value="">所有系列</option>
+                    <option value="">{t('avail.all_series')}</option>
                     {seriesList.map((s) => (
                       <option key={s.id} value={s.id}>{s.name} ({s.domain})</option>
                     ))}
@@ -213,7 +214,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                   <input
                     className="avail-comp-search"
                     type="text"
-                    placeholder="搜索构件名称、类别、标签..."
+                    placeholder={t('series.ph.component_search')}
                     value={searchText}
                     onChange={(e) => setSearchText(e.target.value)}
                   />
@@ -224,7 +225,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                       value={materialFilter}
                       onChange={(e) => setMaterialFilter(e.target.value)}
                     >
-                      <option value="">所有材质</option>
+                      <option value="">{t('avail.all_materials')}</option>
                       {[...allMaterials].map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
@@ -234,7 +235,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
 
                 <div className="avail-comp-list">
                   {filtered.length === 0 && (
-                    <div className="avail-comp-empty">无匹配构件</div>
+                    <div className="avail-comp-empty">{t('avail.none')}</div>
                   )}
                   {filtered.map((c) => {
                     const fav = isFavorite(c.id);
@@ -251,7 +252,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                           <button
                             className={`avail-comp-fav ${fav ? 'active' : ''}`}
                             onClick={(e) => { e.stopPropagation(); toggleFavorite(c.id); setFavVersion((v) => v + 1); }}
-                            title={fav ? '取消收藏' : '收藏'}
+                            title={fav ? t('mat.fav_remove') : t('mat.fav_add')}
                           >
                             <IcoStar filled={fav} />
                           </button>
@@ -259,7 +260,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                         <div className="avail-comp-card-meta">{c.category} &middot; {c.ifc_class}</div>
                         <div className="avail-comp-card-desc">{c.description}</div>
                         <div className="avail-comp-card-tags">{c.tags.join(', ')}</div>
-                        <div className="avail-comp-card-params">{c.params.length} 参数</div>
+                        <div className="avail-comp-card-params">{t('avail.param_count', { count: c.params.length })}</div>
                       </div>
                     );
                   })}
@@ -271,15 +272,15 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                   <>
                     <h3 className="avail-comp-detail-title">{selectedComp.name}</h3>
                     <div className="avail-comp-detail-meta">
-                      <span>类别: {selectedComp.category}</span>
+                      <span>{t('avail.category', { value: selectedComp.category })}</span>
                       <span>IFC: {selectedComp.ifc_class}</span>
-                      <span>标准: {selectedComp.standard_reference}</span>
+                      <span>{t('avail.standard', { value: selectedComp.standard_reference })}</span>
                     </div>
                     <p className="avail-comp-detail-desc">{selectedComp.description}</p>
 
                     {selectedComp.allowed_materials.length > 0 && (
                       <div className="avail-comp-detail-section">
-                        <label>材质</label>
+                        <label>{t('avail.field.material')}</label>
                         <select
                           className="avail-comp-select"
                           value={selectedComp.default_material}
@@ -294,7 +295,7 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
 
                     {selectedComp.params.length > 0 && (
                       <div className="avail-comp-detail-section">
-                        <label>参数</label>
+                        <label>{t('avail.field.params')}</label>
                         <ComponentParamPanel
                           params={selectedComp.params}
                           values={paramValues}
@@ -308,12 +309,12 @@ const [seriesList, setSeriesList] = useState<Series[]>([]);
                       onClick={handleInstantiate}
                       disabled={instantiating}
                     >
-                      {instantiating ? '创建中...' : '添加到模型'}
+                      {instantiating ? t('create.saving') : t('avail.add_to_model')}
                     </button>
                   </>
                 ) : (
                   <div className="avail-comp-detail-empty">
-                    选择一个构件查看参数
+                    {t('avail.empty')}
                   </div>
                 )}
               </div>
