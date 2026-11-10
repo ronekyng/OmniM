@@ -1,7 +1,7 @@
 ---
 title: "OmniM 界面性能预算"
 status: design
-last_updated: 2026-11-04
+last_updated: 2026-11-10
 applies_to: "web/"
 evidence: "n/a (design contract)"
 ---

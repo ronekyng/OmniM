@@ -25,6 +25,7 @@ evidence: "audited against code 2026-10-27"
 ## [2026-11-10] — I18N-01 全量外置收口（UI-I18N-01 ✅ · CJK 988→51）
 
 ### 变更（Changed）
+- **性能两项真优化（UI-PRF-01..04）**：定位 ~3.5 s 重挂载阻塞根因为 SwiftShader 首帧渲染（PCFSoft 阴贴 + PMREM 环境 + 常驻 rAF 渲染循环）；`ThreeViewer` 软光栅检测降级（关阴影/ENV）+ 按需渲染（相机移动/场景变异/交互工具才出帧，变异点 `invalidate()`）；夹具加 reopen 测量、修 workspace_mount 时基 bug、空闲探针（恒 1 的墙钟累加）换 Long Tasks——实测打开/再打开 0.5–0.64 s（预算 3 s ✓）、命令面板 0.63–0.84 s（预算 0.12 s ✗ 剩参考机 p95）、空闲主线程 0；PERFORMANCE 中英契约注记与登记表已更新。
 - **UI-I18N-01 ✅**：全部 UI 字符串经 `t()`/词典。本收口批清掉最后的高频面：`LibraryManagerPage` 全量、`SeriesManagerPage` 全量、`CreatePanel` 余量、`AddFeatureDialog`（14 参数字段）、`ComponentEditorPage`（role keys/失败 toast/约束名）、`EditorToolbar`、`AssemblyPanel` 余量、`AvailableComponentsPanel`、`FeaturePanel`、`GridPanel` 全量、`MaterialBrowser` 全量、`DomainPanels`/`CatalogParams`/`MainToolbar`/`ThreeViewer`、决策树选点提示全集（`pick.*`）、`validateForm` 校验串（`create.err.*`）、`catalog.ts` 键化（`DOMAIN_GROUPS` labelKey/labelKeys → `nav.group.*`/`nav.type.*`；`objectTypeLabelKey` + 内核 `hasMessage`）、`MATERIAL_CATEGORY_KEYS`（`mat.cat.*`）、面板注册 `titleKey` 化。CJK 机器扫描残余 **51 段**＝层模板/材料默认名 50 段（契约 I18N §1 模型数据）+ 语言自命名 1 段（§3"中文"）。
 - 词典 `create.*/layer.*/mat.*/lib.*/series.*/assay/toolbar.*/catp.*/viewer.*/avail.*/feature.*/grid.*/pick.*/library.*/create.err.*` 等新增 ~260 键；zh/en 同键由单测覆盖；多 spec 强制 zh-CN 锁定。
 - 门禁看板更新：**G2 32/37**（I18N-01 🔀→✅）；债务台账"未外置 UI 字符串（31 文件）"移除，改为"硬编码英文 JSX 尚未扫描"（📅 后续）。

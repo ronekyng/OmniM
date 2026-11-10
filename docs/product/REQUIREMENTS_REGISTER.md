@@ -153,10 +153,10 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-PRF-01 | First paint and ready budgets | PERFORMANCE §3 | perf harness | G2 | 📅 |
-| UI-PRF-02 | Interaction latency budgets | PERFORMANCE §3.2 | interaction trace | G2 | 📅 |
-| UI-PRF-03 | Frame-rate budgets at object counts | PERFORMANCE §4 | frame-time fixture · perf.spec records sample/+100-part FPS; headless SwiftShader low + idle busy=1 (persistent loop B9 open) → 🔀 | G2 | 🔀 |
-| UI-PRF-04 | Idle CPU budget | PERFORMANCE §4.3 | idle sampling · fixture records idle busy fraction; persistent render loop (B9) open → 🔀 | G2 | 🔀 |
+| UI-PRF-01 | First paint and ready budgets | PERFORMANCE §3 | perf fixture · 2026-11-10 headless Chromium: FCP 296-328 ms (≤1.2 s ✓), shell ready 189-211 ms (≤2.5 s ✓), open/re-open same session 0.5-0.64 s (≤3.0 s ✓); root cause (SwiftShader shadows+PMREM+always-render loop) fixed (software-raster fallback + render-on-demand); reference-machine p95 re-run pending → 🔀 | G2 | 📅 |
+| UI-PRF-02 | Interaction latency budgets | PERFORMANCE §3.2 | interaction trace · panel/selection/highlight 99-306 ms (occasionally over the 120 ms budget); command palette 634-836 ms (>120 ms ✗, was ~4 s); button/toggle & context menu not split out — reference-machine p95 re-run pending → 🔀 | G2 | 📅 |
+| UI-PRF-03 | Frame-rate budgets at object counts | PERFORMANCE §4 | frame-time fixture · with render-on-demand: fps sample 20-53 (SwiftShader headless, soft cap); idle busy=0; hardware-GPU reference re-run pending → 🔀 | G2 | 🔀 |
+| UI-PRF-04 | Idle CPU budget | PERFORMANCE §4.3 | idle sampling · the fixture probe was wall-clock accumulation (structurally always 1) and was replaced with Long Tasks; after the fix idle busy=0 measured; reference re-run pending → 🔀 | G2 | 🔀 |
 | UI-PRF-05 | Memory ceiling and soak | PERFORMANCE §5 | soak test | G3 | 📅 |
 | UI-PRF-06 | Bundle budget and splitting | PERFORMANCE §6 | bundle report · index gzip 141 KB (≤500), CSS 16.6 KB (≤60), three in a lazy OrbitControls chunk, editor/library/series split; `e2e/perf.spec` PRF-06 block | G2 | ✅ |
 | UI-PRF-07 | Tree scroll at 5000 nodes | PERFORMANCE §7 | scroll trace | G3 | 📅 |

@@ -47,7 +47,14 @@ All numbers in this document assume this machine. Slower machines get a proporti
 | Workspace ready (viewport interactive) | ≤ 4.0 s p95 | Mark after first rendered frame |
 | Project open (2000 objects) | ≤ 3.0 s p95 | From click to interactive |
 | Requirement | UI-PRF-01 |
-**Fixture measurement (2026-11-04, dev-server / Chromium; `e2e/perf.spec.ts`)**: FCP 312 ms (≤1.2 s ✓); shell ready 199 ms (≤2.5 s ✓); single-select properties render 123 ms. **Open-project ~4 s (>3 s ✗) and command palette ~4 s (>120 ms ✗)** appear on the remount path of a reused session — suspected WebGL context rebuild / first re-render stall; PRF-01/02 stay 🔀, recorded in the [RELEASE_READINESS](../../status/RELEASE_READINESS.md) G2 board; optimisation backlog. Open→ready is <3 s on a first fresh session.
+**Fixture measurement (2026-11-10, dev-server / headless Chromium; `e2e/perf.spec.ts`)**: FCP 296–328 ms (≤1.2 s ✓); shell ready 189–211 ms (≤2.5 s ✓); workspace open 512–579 ms (≤3.0 s ✓ on the blended sample scene); re-open in the same session 595–640 ms (≤3.0 s ✓); single-select properties 99–306 ms; command palette 634–836 ms (>120 ms ✗, was ~4 s); idle main-thread busy fraction **0** with ~20–53 fps under SwiftShader.
+
+**Root cause found and fixed (2026-11-10)**: the ~3.5 s "React commit" stall was the software rasteriser (SwiftShader) rendering the workspace's first frames — PCFSoft shadow maps plus the per-mount PMREM environment map, rendered by an always-on `requestAnimationFrame` loop that also kept long tasks (≈60 ms every 60 ms) on the main thread (PRF-03/04 never idled). Two real optimisations landed in `ThreeViewer.tsx`:
+
+1. **Software-raster fallback** — the renderer detects SwiftShader/llvmpipe/softpipe and disables shadow maps and the PMREM environment (hardware GPU keeps the full quality path; quality parity is tracked by `UI-DS-*` visual knobs, not this fixture).
+2. **Render-on-demand** — the generate-continuously loop now renders only when the camera moved (position/quaternion delta), a scene mutation ran (`viewer.invalidate()` at every mutator), or an interactive tool (transform/measures) is active. The broken idle probe in the fixture (wall-clock arithmetic that always returned 1) was replaced with Long Tasks.
+
+PRF-01/02 remain 🔀 pending the p95 re-run on the reference machine (PERFORMANCE §2); PRF-03/04 evidence improves to idle=0 with the same pending reference-machine caveat.
 
 **Remount root cause narrowed (2026-11-04, instrumented)**: the API flow (`new` + `refresh` + `reloadScene`) totals <100 ms and the route switches to `/` by ~0.9 s, but `.title-bar` enters the DOM only at ~4.4 s — the **workspace root's React commit phase alone occupies ~3.5 s** (the viewer effect is fast: renderer 13–19 ms, PMREM 88–108 ms via `performance.mark` traces). The next cut is on the commit side: workspace panel/store mount batching, dev-mode overheads and the Suspense retry chain — not WebGL, not the network.
 

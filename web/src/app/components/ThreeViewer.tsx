@@ -111,6 +111,8 @@ type ViewerState = {
   isOrtho: boolean;
   sunLight: THREE.DirectionalLight;
   snapIndicator: SnapIndicator;
+  /** PRF-01/03 render-on-demand: schedule a frame. */
+  invalidate: () => void;
 };
 
 export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged, onPointerWorld, onStats }, ref) {
@@ -127,6 +129,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   const cameraDirRef = useRef(new THREE.Vector3(0, 0, 1));
   const measurePointsRef = useRef<THREE.Vector3[]>([]);
   const measureModeRef = useRef<MeasureMode>('none');
+  const transformModeRef = useRef<TransformMode>(null);
   const pickingMarkerGroupRef = useRef<THREE.Group>(new THREE.Group());
   // Per-frame hover preview (dashed cursor line, whole-path layered preview,
   // polygon loop + fill incl. cursor). Cleared/rebuilt on every pointer move.
@@ -141,6 +144,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
   onSelectionChangedRef.current = onSelectionChanged;
   onChangedRef.current = onChanged;
   measureModeRef.current = measureMode;
+  transformModeRef.current = transformMode;
   creationDispatchRef.current = useAppStore.getState().creationDispatch;
 
   const snapSettings = useAppStore((s) => s.snapSettings);
@@ -184,6 +188,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
     }
     prevCreationPhaseRef.current = creationPhase;
+    stateRef.current?.invalidate();
   }, [creationPhase]);
 
   // Confirmed picking visuals in pickingMarkerGroup: point markers always;
@@ -297,19 +302,21 @@ focusObject: (id) => {
       measurePointsRef.current = [];
       clearMeasurePreviewObjects();
       const s = stateRef.current;
-      if (s) clearMeasureGroup(s);
+      if (s) { clearMeasureGroup(s); s.invalidate(); }
     },
     clearPickingMarkers: () => {
       clearMarkerGroup(pickingMarkerGroupRef.current);
       if (hoverGroupRef.current) clearMarkerGroup(hoverGroupRef.current);
       previewLineRef.current = null;
       layerPreviewRef.current = null;
+      stateRef.current?.invalidate();
     },
     finishMeasurement: () => {
       const s = stateRef.current;
       if (!s || measureModeRef.current === 'none') return;
       const points = measurePointsRef.current;
       if (points.length < 2) return;
+      s.invalidate();
       if (measureModeRef.current === 'distance' && points.length >= 2) {
         drawDistanceMeasurement(s, points[0], points[1]);
         measurePointsRef.current = [];
@@ -371,19 +378,36 @@ focusObject: (id) => {
     camera.position.set(15, 20, 12);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // PRF-01/03: detect software rasterisers (SwiftShader/llvmpipe). Shadow
+    // maps and the PMREM environment are expensive there; the reference
+    // machine (hardware GPU) keeps the full quality path.
     renderer.setSize(host.clientWidth, host.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
+    let glIsSoftware = false;
+    try {
+      const glctx = renderer.getContext();
+      const dbgExt = glctx.getExtension('WEBGL_debug_renderer_info');
+      const gpuName = dbgExt ? String(glctx.getParameter(dbgExt.UNMASKED_RENDERER_WEBGL)) : '';
+      glIsSoftware = /swiftshader|llvmpipe|softpipe|basic render/i.test(gpuName);
+    } catch { /* context info unavailable — assume hardware */ }
+    if (glIsSoftware) {
+      renderer.shadowMap.enabled = false;
+      renderer.setPixelRatio(1);
+    } else {
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+    }
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;
     host.appendChild(renderer.domElement);
 
     // Environment map for realistic reflections
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
-    scene.environment = envTexture;
-    pmremGenerator.dispose();
+    if (!glIsSoftware) {
+      const pmremGenerator = new THREE.PMREMGenerator(renderer);
+      const envTexture = pmremGenerator.fromScene(new RoomEnvironment(), 0.04).texture;
+      scene.environment = envTexture;
+      pmremGenerator.dispose();
+    }
 
     // ── ViewCube Gizmo ──
     let _clickTimer: ReturnType<typeof setTimeout> | null = null;
@@ -539,7 +563,8 @@ focusObject: (id) => {
     scene.add(hoverGroup);
     hoverGroupRef.current = hoverGroup;
     const snapIndicator = new SnapIndicator(scene);
-    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, datumGridGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator };
+    let needsRenderGlobal = true;
+    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, datumGridGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator, invalidate: () => { needsRenderGlobal = true; } };
     stateRef.current = viewer;
 
     transformControls.addEventListener('dragging-changed', (event) => {
@@ -574,6 +599,7 @@ focusObject: (id) => {
         camera.updateProjectionMatrix();
       }
       renderer.setSize(w, h);
+      viewer.invalidate();
     }
 
     // ── Overlay-based box selection ──
@@ -875,17 +901,30 @@ focusObject: (id) => {
     let frame: number;
     let fpsFrames = 0;
     let fpsLast = performance.now();
+    // PRF-01/03: render on demand. Continuous rendering burns the main thread
+    // (SwiftShader frames cost ~60 ms each); most workspace time is static,
+    // so a frame is only rendered when the scene/camera actually changed or
+    // while an interactive tool (transform/measures) is active.
+    // Track camera movement instead of self-feeding change events (the
+    // continuous OrbitControls update would otherwise render every frame).
+    const lastCamPos = new THREE.Vector3(Infinity, Infinity, Infinity);
+    const lastCamQuat = new THREE.Quaternion();
     function animate() {
       frame = requestAnimationFrame(animate);
-      fpsFrames += 1;
-      const now = performance.now();
-      if (now - fpsLast >= 1000) {
-        onStatsRef.current?.(Math.round((fpsFrames * 1000) / (now - fpsLast)));
-        fpsFrames = 0;
-        fpsLast = now;
-      }
+      const isTool = transformModeRef.current || measureModeRef.current !== 'none';
       controls.update();
-      transformControls.update(0.016);
+      if (
+        !camera.position.equals(lastCamPos)
+        || !camera.quaternion.equals(lastCamQuat)
+        || isTool
+      ) {
+        lastCamPos.copy(camera.position);
+        lastCamQuat.copy(camera.quaternion);
+        needsRenderGlobal = true;
+      }
+      if (isTool || needsRenderGlobal) transformControls.update(0.016);
+      if (!needsRenderGlobal) return;
+      needsRenderGlobal = false;
       if (viewer.isOrtho) {
         const dist = Math.max(camera.position.distanceTo(controls.target), 0.01);
         const aspect = camera.aspect;
@@ -898,6 +937,13 @@ focusObject: (id) => {
       }
       renderer.render(scene, camera);
       viewCubeGizmo.update();
+      fpsFrames += 1;
+      if (performance.now() - fpsLast >= 1000) {
+        const t = performance.now();
+        onStatsRef.current?.(Math.round((fpsFrames * 1000) / (t - fpsLast)));
+        fpsFrames = 0;
+        fpsLast = t;
+      }
       const dir = camera.position.clone().sub(controls.target).normalize();
       cameraDirRef.current.copy(dir);
       viewer.currentView = getOrthoView(dir);
@@ -909,6 +955,9 @@ focusObject: (id) => {
 
     let lastCursorEmit = 0;
     function onPointerMove(event: MouseEvent) {
+      // PRF-03: pointer moves may draw hover highlights / snap previews /
+      // creation previews; schedule one frame for whatever this event changed.
+      viewer.invalidate();
       const rect = renderer.domElement.getBoundingClientRect();
       pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -1030,6 +1079,7 @@ focusObject: (id) => {
       } else {
         renderer.domElement.style.cursor = 'default';
       }
+      viewer.invalidate();
     }
 
     function onContextMenu(event: MouseEvent) {
@@ -1488,6 +1538,7 @@ async function loadMeasurements(viewer: ViewerState) {
     for (const m of measurements) {
       renderMeasurement(viewer, m);
     }
+    viewer.invalidate();
   } catch { /* ignore */ }
 }
 
@@ -1557,6 +1608,7 @@ function selectMeshes(viewer: ViewerState, ids: readonly string[]) {
       viewer.transformControls.attach(mesh);
     }
   }
+  viewer.invalidate();
 }
 
 async function persistSelectedTransform(viewer: ViewerState, selectedId?: string) {
@@ -1658,6 +1710,7 @@ function applyVisualMode(viewer: ViewerState, mode: VisualMode) {
         break;
     }
   }
+  viewer.invalidate();
 }
 
 function applySection(viewer: ViewerState, section: SectionState) {
@@ -1708,6 +1761,7 @@ function applySection(viewer: ViewerState, section: SectionState) {
     material.needsUpdate = true;
   }
   viewer.renderer.localClippingEnabled = true;
+  viewer.invalidate();
 }
 
 function homeCamera(viewer: ViewerState) {

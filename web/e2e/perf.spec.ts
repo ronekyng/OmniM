@@ -32,7 +32,7 @@ async function measure(page: Page): Promise<Report> {
   await page.getByRole('button', { name: /Open sample project/ }).click();
   await page.locator('.title-bar').waitFor({ timeout: 20_000 });
   report.shell_ready_ms = Date.now() - clickAt;
-  report.workspace_mount_ms = Math.round(performance.now() - t0);
+  report.workspace_mount_ms = Date.now() - t0;
 
   // Interaction latencies (PRF-02 budgets live in §3.2; recording only).
   const tSel = Date.now();
@@ -45,6 +45,19 @@ async function measure(page: Page): Promise<Report> {
   await page.getByRole('dialog', { name: 'Command palette' }).waitFor({ timeout: 10_000 });
   report.palette_open_ms = Date.now() - tPal;
   await page.keyboard.press('Escape');
+
+  // Remount path (PRF-01 §3.1): leave to the project home and re-open the
+  // sample project in the same session. Data flows are warm; this isolates
+  // the React mount cost keyed by route change.
+  await page.locator('.title-project').click({ force: true });
+  await page.getByRole('button', { name: 'Leave', exact: true }).waitFor({ timeout: 10_000 }).catch(() => {});
+  const leave = page.getByRole('button', { name: 'Leave', exact: true });
+  if (await leave.isVisible().catch(() => false)) await leave.click();
+  await page.waitForURL('**/projects', { timeout: 15_000 }).catch(() => {});
+  const t2 = Date.now();
+  await page.getByRole('button', { name: /Open sample project/ }).click();
+  await page.locator('.title-bar').waitFor({ timeout: 20_000 });
+  report.reopen_ms = Date.now() - t2;
   return report;
 }
 
@@ -96,16 +109,23 @@ test('PRF-03/04 fixture: frame-time vs object count + idle CPU sampling', async 
   }));
   void t0;
 
-  // Idle main-thread sampling (PRF-04): busy fraction over 1.5 s idle.
+  // Idle main-thread sampling (PRF-04): busy fraction over 1.5 s idle,
+  // measured with the Long Tasks API (wall-clock probe above was broken —
+  // `busy += now - last` always summed to the whole window).
   const idleBusy = await page.evaluate(() => new Promise<number>((resolve) => {
     const t0 = performance.now();
     let busy = 0;
-    let last = t0;
-    const probe = setInterval(() => {
-      busy += performance.now() - last;
-      last = performance.now();
-    }, 50);
-    setTimeout(() => { clearInterval(probe); resolve(busy / (performance.now() - t0)); }, 1500);
+    let observer: PerformanceObserver | null = null;
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) busy += entry.duration;
+      });
+      observer.observe({ entryTypes: ['longtask'] });
+    } catch { /* longtask unsupported → report 0 */ }
+    setTimeout(() => {
+      observer?.disconnect();
+      resolve(Math.min(1, busy / (performance.now() - t0)));
+    }, 1500);
   }));
 
   const report = {
