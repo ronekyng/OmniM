@@ -67,7 +67,7 @@ describe('polygonPreviewError (front-side validation, mirrors server validate_bo
   });
 
   it('rejects a self-intersecting footprint (nonzero-area crossing quad)', () => {
-    expect(polygonPreviewError([pt(0, 0), pt(5, 5), pt(5, 0), pt(2, 3)])).toMatch(/自相交/);
+    expect(polygonPreviewError([pt(0, 0), pt(5, 5), pt(5, 0), pt(2, 3)])).toMatch(/自相交|Self-intersecting/);
   });
 
   it('rejects the zero-area bowtie (area or crossing rule, both valid)', () => {
@@ -75,10 +75,10 @@ describe('polygonPreviewError (front-side validation, mirrors server validate_bo
   });
 
   it('rejects collinear degenerate footprints', () => {
-    expect(polygonPreviewError([pt(0, 0), pt(2, 0), pt(4, 0)])).toMatch(/共线|面积为零/);
+    expect(polygonPreviewError([pt(0, 0), pt(2, 0), pt(4, 0)])).toMatch(/共线|面积为零|collinear|Zero outline area/);
   });
 
   it('rejects duplicate consecutive vertices', () => {
-    expect(polygonPreviewError([pt(0, 0), pt(4, 0), pt(4, 3), pt(4, 3)])).toMatch(/重合/);
+    expect(polygonPreviewError([pt(0, 0), pt(4, 0), pt(4, 3), pt(4, 3)])).toMatch(/重合|Duplicate/);
   });
 });

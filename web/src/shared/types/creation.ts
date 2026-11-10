@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { LayerDefInput, ParamValueMap } from '../types';
 
 export type Point3D = { x: number; y: number; z: number };
@@ -180,24 +181,24 @@ export function validateForm(form: CreationForm): ValidationResult {
   const errors: Record<string, string> = {};
   // Name is optional — the backend auto-generates one from the object type.
   if (form.objectType === 'door' || form.objectType === 'window') {
-    if (!form.targetWallId) errors.targetWallId = '请选择目标墙体';
+    if (!form.targetWallId) errors.targetWallId = t('create.err.target_wall');
     const w = parseFloat(form.openingWidth);
-    if (isNaN(w) || w <= 0) errors.openingWidth = '开口宽度必须大于 0';
+    if (isNaN(w) || w <= 0) errors.openingWidth = t('create.err.opening_width');
     const h = parseFloat(form.openingHeight);
-    if (isNaN(h) || h <= 0) errors.openingHeight = '开口高度必须大于 0';
+    if (isNaN(h) || h <= 0) errors.openingHeight = t('create.err.opening_height');
   }
   if (form.objectType === 'storey') {
     // Elevation may be negative (basement levels), but must be a number.
-    if (isNaN(parseFloat(form.elevation))) errors.elevation = '标高必须是数字';
+    if (isNaN(parseFloat(form.elevation))) errors.elevation = t('create.err.elevation_number');
   }
   if (EXTENT_TYPES.has(form.objectType)) {
     // P8-S3: extent refs are both-or-neither and must differ. Ordering
     // (top above bottom) is enforced server-side, where elevations are known.
     const hasBottom = !!form.bottomLevelId;
     const hasTop = !!form.topLevelId;
-    if (hasBottom !== hasTop) errors.bottomLevelId = '标高范围需同时选择底部与顶部';
+    if (hasBottom !== hasTop) errors.bottomLevelId = t('create.err.levels_pair');
     else if (hasBottom && hasTop && form.bottomLevelId === form.topLevelId) {
-      errors.bottomLevelId = '底部与顶部不能是同一楼层';
+      errors.bottomLevelId = t('create.err.levels_same');
     }
   }
   return { valid: Object.keys(errors).length === 0, errors };

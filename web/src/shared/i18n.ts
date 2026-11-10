@@ -114,6 +114,13 @@ export function t(key: MessageKey, vars?: Record<string, string | number>): stri
   return '';
 }
 
+/** 键在当前或 en-US 词典中是否存在（供运行时类型标签等动态键构造使用）。 */
+export function hasMessage(key: string): boolean {
+  const loc = locale();
+  return dictionaries[loc][key as MessageKey] !== undefined
+    || dictionaries[FALLBACK][key as MessageKey] !== undefined;
+}
+
 /** §4 复数：`Intl.PluralRules` 选择类别（禁止手写复数）。键 `….<category>`。 */
 export function tPlural(
   // 复数键是“基键 + 类别后缀”，不属于词典扁平键集合本身。

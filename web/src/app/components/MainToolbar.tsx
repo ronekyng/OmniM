@@ -383,7 +383,9 @@ export function MainToolbar({
   const typeLabel = (type: string): string => {
     const key = `nav.type.${type}`;
     const translated = t(key as never);
-    return translated !== key ? translated : (DOMAIN_GROUPS[activeDomain ?? 'building']?.labels[type] ?? type);
+    if (translated !== key) return translated;
+    const lk = DOMAIN_GROUPS[activeDomain ?? 'building']?.labelKeys[type];
+    return lk ? t(lk as never) : type;
   };
 
   function handleDomainObjectClick(t: string) {

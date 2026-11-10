@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 import { api } from './api';
 import type { ComponentDef, ParamDef } from './types';
 import type { ObjectType } from './types/creation';
+import { hasMessage } from './i18n';
 
 // ============================================================
 // Data-driven catalog: fetch ComponentDef list from the backend
@@ -171,22 +172,22 @@ export function toggleFavorite(defId: string): string[] {
 // the source of truth for which ObjectTypes support picking.
 // ============================================================
 
-export const DOMAIN_GROUPS: Record<string, { label: string; types: ObjectType[]; labels: Record<string, string> }> = {
+export const DOMAIN_GROUPS: Record<string, { labelKey: string; types: ObjectType[]; labelKeys: Record<string, string> }> = {
   building: {
-    label: '建筑', types: ['wall', 'slab', 'column', 'beam', 'door', 'window', 'opening', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
-    labels: { wall: '墙体', slab: '楼板', column: '柱', beam: '梁', door: '门', window: '窗', opening: '洞口', stair: '楼梯', roof: '屋顶', building: '建筑', storey: '楼层', space: '空间', site: '场地' },
+    labelKey: 'nav.group.label.building', types: ['wall', 'slab', 'column', 'beam', 'door', 'window', 'opening', 'stair', 'roof', 'building', 'storey', 'space', 'site'],
+    labelKeys: { wall: 'nav.type.wall', slab: 'nav.type.slab', column: 'nav.type.column', beam: 'nav.type.beam', door: 'nav.type.door', window: 'nav.type.window', opening: 'nav.type.opening', stair: 'nav.type.stair', roof: 'nav.type.roof', building: 'nav.type.building', storey: 'nav.type.storey', space: 'nav.type.space', site: 'nav.type.site' },
   },
   civil: {
-    label: '土木', types: ['road', 'bridge', 'tunnel', 'pipe', 'duct', 'feature_line', 'contour_line'],
-    labels: { road: '道路', bridge: '桥梁', tunnel: '隧道', pipe: '管道', duct: '风管', feature_line: '特征线', contour_line: '等高线' },
+    labelKey: 'nav.group.label.civil', types: ['road', 'bridge', 'tunnel', 'pipe', 'duct', 'feature_line', 'contour_line'],
+    labelKeys: { road: 'nav.type.road', bridge: 'nav.type.bridge', tunnel: 'nav.type.tunnel', pipe: 'nav.type.pipe', duct: 'nav.type.duct', feature_line: 'nav.type.feature_line', contour_line: 'nav.type.contour_line' },
   },
   plant: {
-    label: '工厂', types: ['tank', 'pump', 'valve', 'pipe'],
-    labels: { tank: '储罐', pump: '泵', valve: '阀门', pipe: '管道' },
+    labelKey: 'nav.group.label.plant', types: ['tank', 'pump', 'valve', 'pipe'],
+    labelKeys: { tank: 'nav.type.tank', pump: 'nav.type.pump', valve: 'nav.type.valve', pipe: 'nav.type.pipe' },
   },
   mechanical: {
-    label: '机械', types: ['beam', 'column', 'part', 'motor', 'assembly'],
-    labels: { beam: '梁', column: '柱', part: '零件', motor: '电机', assembly: '装配体' },
+    labelKey: 'nav.group.label.mechanical', types: ['beam', 'column', 'part', 'motor', 'assembly'],
+    labelKeys: { beam: 'nav.type.beam', column: 'nav.type.column', part: 'nav.type.part', motor: 'nav.type.motor', assembly: 'nav.type.assembly' },
   },
 };
 
@@ -219,16 +220,10 @@ export const PICKING_TYPES = new Set<ObjectType>(['wall', 'slab', 'roof', 'floor
 /** Surface types that support a layered stack via LayerEditor + layered genrule. */
 export const LAYERED_TYPES = new Set<ObjectType>(['wall', 'slab', 'roof', 'floor']);
 
-/** Human-readable label for an ObjectType (for catalog UI). */
-export function objectTypeLabel(type: ObjectType): string {
-  const labels: Partial<Record<ObjectType, string>> = {
-    wall: '墙体', slab: '楼板', beam: '梁', column: '柱', door: '门', window: '窗', opening: '洞口',
-    road: '道路', pipe: '管道', duct: '风管', tank: '储罐', pump: '泵', valve: '阀门',
-    stair: '楼梯', roof: '屋顶', bridge: '桥梁', tunnel: '隧道',
-    building: '建筑', storey: '楼层', space: '空间', site: '场地',
-    part: '零件', motor: '电机', assembly: '装配体', gear: '齿轮', equipment: '设备',
-  };
-  return labels[type] ?? type;
+/** i18n message key for an ObjectType (for catalog UI); null falls back to the raw type. */
+export function objectTypeLabelKey(type: string): string | null {
+  const k = `nav.type.${type}`;
+  return hasMessage(k) ? k : null;
 }
 
 export type { ParamDef };

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CreationForm, CreationPhase, ObjectType, GeometryType } from '../../../shared/types/creation';
 import { withGenesisForm, EXTENT_TYPES, storeyOptions, type StoreyOption } from '../../../shared/types/creation';
-import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, DATUM_TYPES, objectTypeLabel } from '../../../shared/catalog';
+import { GENRULE_TYPES, CATALOG_TYPES, LINEAR_TYPES, LAYERED_TYPES, LINE_GENRULE_TYPES, SURFACE_TYPES, DATUM_TYPES, objectTypeLabelKey } from '../../../shared/catalog';
 import { ParentSelector } from './ParentSelector';
 import { SeriesSelector } from './SeriesSelector';
 import { CatalogParams } from './CatalogParams';
@@ -149,8 +149,8 @@ const [dirty, setDirty] = useState(false);
           <select aria-label="Object type" value={form.objectType} onChange={(e) => handleObjectTypeChange(e.target.value)}>
             {OBJECT_TYPE_OPTIONS.map((g) => (
               <optgroup key={g.group} label={t(g.group as never)}>
-                {g.types.map((t) => (
-                  <option key={t} value={t}>{objectTypeLabel(t)} {t}</option>
+                {g.types.map((type) => (
+                  <option key={type} value={type}>{t((objectTypeLabelKey(type) ?? '') as never)} {type}</option>
                 ))}
               </optgroup>
             ))}
@@ -348,7 +348,7 @@ const [dirty, setDirty] = useState(false);
           disabled={isCreating}
           onClick={onSubmit}
         >
-          {buttonText} {objectTypeLabel(form.objectType)}
+          {buttonText} {t((objectTypeLabelKey(form.objectType) ?? '') as never)}
         </button>
       </div>
     </>

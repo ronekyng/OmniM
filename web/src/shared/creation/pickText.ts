@@ -1,25 +1,26 @@
 import type { PickMode } from '../types/creation';
+import { t } from '../i18n';
 
 type HintFn = (o: { clicks: number }) => string;
 
 export const PICK_TEXT: Record<PickMode['mode'], HintFn[]> = {
   polyline: [
-    () => '点击第 1 个点（可继续沿路径选点）',
-    () => '点击下一点（双击或回车完成）',
-    () => '点击下一点（双击或回车完成）',
+    () => t('pick.path.first'),
+    () => t('pick.path.next'),
+    () => t('pick.path.next'),
   ],
   polygon: [
-    () => '点击轮廓第 1 个点（最少 3 点，可选多边形顶点）',
-    () => '点击轮廓第 2 个点（最少 3 点）',
-    () => '点击第 3 个点封闭轮廓（双击完成）',
-    (o) => `点击第 ${o.clicks + 1} 个点（点击首点或双击闭合）`,
+    () => t('pick.poly.first'),
+    () => t('pick.poly.second'),
+    () => t('pick.poly.third'),
+    (o) => t('pick.poly.close', { n: o.clicks + 1 }),
   ],
   segment: [
-    () => '点击起点',
-    () => '点击终点（完成）',
+    () => t('pick.seg.start'),
+    () => t('pick.seg.end'),
   ],
   place: [
-    () => '点击放置位置',
+    () => t('pick.place'),
   ],
 };
 

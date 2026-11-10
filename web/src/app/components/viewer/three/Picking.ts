@@ -18,6 +18,8 @@ export function canComplete(mode: PickMode, count: number): boolean {
   return count >= 2;
 }
 
+import { t } from '../../../../shared/i18n';
+
 export function pickingHint(objectType: ObjectType, points: Point3D[], mode?: PickMode): string {
   const pm = mode ?? defaultPickModeForType(objectType);
   const count = points.length;
@@ -26,20 +28,20 @@ export function pickingHint(objectType: ObjectType, points: Point3D[], mode?: Pi
     // Polygon: closing the loop is the last click; polyline can keep going.
     switch (pm.mode) {
       case 'polygon':
-        return `多边形：已选 ${count} 点，点击首点或双击/回车闭合（最少 ${min}）`;
+        return t('pick.state.poly_close', { count, min });
       case 'polyline':
-        return `折线：已选 ${count} 点（最少 ${min}），双击/回车结束`;
+        return t('pick.state.poly_done', { count, min });
       case 'segment':
-        return '线段：起点与终点已选，双击/回车完成';
+        return t('pick.state.seg_done');
       case 'place':
-        return '单击放置';
+        return t('pick.state.place');
     }
   }
   if (count > 0) {
     switch (pm.mode) {
-      case 'polyline': return `折线：已选 ${count} 点（最少 ${min}），继续选点`;
-      case 'polygon': return `多边形：已选 ${count} 点（最少 ${min} 点，点击首点可闭合）`;
-      case 'segment': return `线段：已选 ${count} 点（最少 ${min}）`;
+      case 'polyline': return t('pick.state.polyline', { count, min });
+      case 'polygon': return t('pick.state.polygon', { count, min });
+      case 'segment': return t('pick.state.segment', { count, min });
     }
   }
   const steps = PICK_TEXT[pm.mode] ?? [];

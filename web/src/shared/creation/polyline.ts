@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import type { Point3D } from '../types/creation';
 
 /**
@@ -15,7 +16,7 @@ export function polygonPreviewError(points: Point3D[]): string | null {
   for (let i = 0; i < n; i++) {
     const a = points[i];
     const b = points[(i + 1) % n];
-    if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-6) return '顶点重合：起点/终点不能再点击同一位置';
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 1e-6) return t('pick.err.duplicate');
   }
   // Shoelace area (ignore z: footprint is plan-view)
   let area2 = 0;
@@ -24,13 +25,13 @@ export function polygonPreviewError(points: Point3D[]): string | null {
     const b = points[(i + 1) % n];
     area2 += a.x * b.y - b.x * a.y;
   }
-  if (Math.abs(area2) / 2 < 1e-3) return '轮廓面积为零：顶点共线或退化';
+  if (Math.abs(area2) / 2 < 1e-3) return t('pick.err.zero_area');
   // Self-intersection (proper crossings only, adjacent edges share endpoints)
   for (let i = 0; i < n; i++) {
     for (let j = i + 1; j < n; j++) {
       if (Math.abs(i - j) <= 0 || (i === 0 && j === n - 1)) continue;
       if (segmentsProperlyIntersect(points[i], points[(i + 1) % n], points[j], points[(j + 1) % n])) {
-        return '轮廓自相交：形如"8 字形"的路径无法生成楼板/屋顶';
+        return t('pick.err.self_intersect');
       }
     }
   }
