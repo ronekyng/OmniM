@@ -10,6 +10,7 @@ import { TitleBar } from './components/TitleBar';
 import { StatusBar } from './components/StatusBar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useConfirm } from './components/ConfirmDialog';
+import { usePaletteStore } from './store/paletteStore';
 import { shouldWarnBeforeUnload } from '../shared/saveState';
 import { analyzeDeleteImpact, formatDeleteImpact } from '../shared/deleteImpact';
 import type { ThreeViewerHandle } from './components/ThreeViewer';
@@ -95,23 +96,44 @@ export function App() {
     window.sessionStorage.getItem('omnim.crashTest') === 'route';
   const viewerRef = useRef<ThreeViewerHandle>(null);
 
-  const {
-    selectedIds, tree, stats, error, canUndo, canRedo,
-    transformMode, visualMode, section, measureMode,
-    transformOpen, visualOpen, panelMode,
-    gridVisible, isOrtho, transformSpace, reloadToken,
-    creationPhase, creationForm, creationPoints,
+  // PERF: per-slice selectors — a whole-store subscription here re-rendered
+  // the entire workspace on every store write (cursorWorld fires per pointer
+  // move), which dominated interaction latency (PRF-02).
+  const { selectedIds, tree, stats, error, canUndo, canRedo, transformMode, visualMode, section, measureMode, transformOpen, visualOpen, panelMode, gridVisible, isOrtho, transformSpace, reloadToken, creationPhase, creationForm, creationPoints, snapSettings, navScheme, saveState, theme, domainPanelOpen, catalogPanelOpen,
     setSelectedIds, setTransformMode, setVisualMode,
     setSection, setMeasureMode, setPanelMode,
     setTransformOpen, setVisualOpen,
     setGridVisible, setIsOrtho, setTransformSpace,
-    snapSettings, setSnapSettings,
-    navScheme, setNavScheme,
+    setSnapSettings,
+    setNavScheme,
     creationDispatch,
-    refresh, reloadScene, markDirty, saveProject, saveState,
+    refresh, reloadScene, markDirty, saveProject,
     setCursorWorld, setFps,
-    theme,
-  } = useAppStore();
+  } = {
+    selectedIds: useAppStore((s) => s.selectedIds), tree: useAppStore((s) => s.tree), stats: useAppStore((s) => s.stats), error: useAppStore((s) => s.error), canUndo: useAppStore((s) => s.canUndo), canRedo: useAppStore((s) => s.canRedo), transformMode: useAppStore((s) => s.transformMode), visualMode: useAppStore((s) => s.visualMode), section: useAppStore((s) => s.section), measureMode: useAppStore((s) => s.measureMode), transformOpen: useAppStore((s) => s.transformOpen), visualOpen: useAppStore((s) => s.visualOpen), panelMode: useAppStore((s) => s.panelMode), gridVisible: useAppStore((s) => s.gridVisible), isOrtho: useAppStore((s) => s.isOrtho), transformSpace: useAppStore((s) => s.transformSpace), reloadToken: useAppStore((s) => s.reloadToken), creationPhase: useAppStore((s) => s.creationPhase), creationForm: useAppStore((s) => s.creationForm), creationPoints: useAppStore((s) => s.creationPoints), snapSettings: useAppStore((s) => s.snapSettings), navScheme: useAppStore((s) => s.navScheme), saveState: useAppStore((s) => s.saveState), theme: useAppStore((s) => s.theme),
+    domainPanelOpen: useAppStore((s) => s.domainPanelOpen),
+    catalogPanelOpen: useAppStore((s) => s.catalogPanelOpen),
+    setSelectedIds: useAppStore((s) => s.setSelectedIds),
+    setTransformMode: useAppStore((s) => s.setTransformMode),
+    setVisualMode: useAppStore((s) => s.setVisualMode),
+    setSection: useAppStore((s) => s.setSection),
+    setMeasureMode: useAppStore((s) => s.setMeasureMode),
+    setPanelMode: useAppStore((s) => s.setPanelMode),
+    setTransformOpen: useAppStore((s) => s.setTransformOpen),
+    setVisualOpen: useAppStore((s) => s.setVisualOpen),
+    setGridVisible: useAppStore((s) => s.setGridVisible),
+    setIsOrtho: useAppStore((s) => s.setIsOrtho),
+    setTransformSpace: useAppStore((s) => s.setTransformSpace),
+    setSnapSettings: useAppStore((s) => s.setSnapSettings),
+    setNavScheme: useAppStore((s) => s.setNavScheme),
+    creationDispatch: useAppStore((s) => s.creationDispatch),
+    refresh: useAppStore((s) => s.refresh),
+    reloadScene: useAppStore((s) => s.reloadScene),
+    markDirty: useAppStore((s) => s.markDirty),
+    saveProject: useAppStore((s) => s.saveProject),
+    setCursorWorld: useAppStore((s) => s.setCursorWorld),
+    setFps: useAppStore((s) => s.setFps),
+  };
   const confirm = useConfirm();
   const activeStoreyId = useAppStore((s) => s.activeStoreyId);
   const storeyName = useMemo(() => {
@@ -126,7 +148,6 @@ export function App() {
     };
     return walk(tree);
   }, [activeStoreyId, tree]);
-  const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   // DATA_INTEGRITY §3.3: all in-app navigations away from the workspace funnel
   // through one guard so the three-way choice is identical everywhere.
@@ -245,7 +266,7 @@ export function App() {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setPaletteOpen(true);
+        usePaletteStore.getState().setOpen(true);
         return;
       }
       if (event.key === 'F1') {
@@ -538,7 +559,7 @@ export function App() {
       onDiscard={leaveDiscard}
       onCancel={() => { if (!leaveBusy) setLeaveTarget(null); }}
     />
-    <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
+    <CommandPalette commands={commands} />
     <ShortcutHelp open={helpOpen} commands={commands} onClose={() => setHelpOpen(false)} />
     </ErrorBoundary>
   );

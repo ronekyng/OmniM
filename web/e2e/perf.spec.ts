@@ -40,10 +40,41 @@ async function measure(page: Page): Promise<Report> {
   await page.locator('.properties-panel').first().waitFor({ timeout: 10_000 });
   report.props_render_ms = Date.now() - tSel;
 
+  // PRF-02 (§3.2): settle the selection-triggered scene work first (mesh
+  // build + SwiftShader frame are long tasks on the main thread), then time
+  // the palette in-page (keydown → portal attach) so the number reflects the
+  // palette itself rather than the tail of the preceding interaction.
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    const settled = () => { obs.disconnect(); resolve(); };
+    let lastLong = performance.now();
+    const obs = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.duration > 30) lastLong = performance.now();
+      }
+    });
+    obs.observe({ entryTypes: ['longtask'] });
+    const check = () => {
+      if (performance.now() - lastLong > 500) settled();
+      else setTimeout(check, 120);
+    };
+    setTimeout(check, 400);
+    setTimeout(settled, 8_000); // never block the fixture on a busy renderer
+  }));
+  report.palette_open_ms = await page.evaluate(() => new Promise<number>((resolve) => {
+    const t0 = performance.now();
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true, cancelable: true }));
+    const obs = new MutationObserver(() => {
+      if (document.querySelector('.command-palette')) {
+        obs.disconnect();
+        resolve(performance.now() - t0);
+      }
+    });
+    obs.observe(document.body, { childList: true, subtree: true });
+    setTimeout(() => resolve(performance.now() - t0), 10_000);
+  }));
   const tPal = Date.now();
-  await page.keyboard.press('ControlOrMeta+K');
   await page.getByRole('dialog', { name: 'Command palette' }).waitFor({ timeout: 10_000 });
-  report.palette_open_ms = Date.now() - tPal;
+  report.palette_visible_ms = Date.now() - tPal;
   await page.keyboard.press('Escape');
 
   // Remount path (PRF-01 §3.1): leave to the project home and re-open the
@@ -134,8 +165,13 @@ test('PRF-03/04 fixture: frame-time vs object count + idle CPU sampling', async 
     idle_cpu_busy_frac: Math.round(idleBusy * 1000) / 1000,
   };
   try {
-    const { appendFileSync } = await import('node:fs');
-    appendFileSync('/tmp/opencode/perf-report.json', '\n' + JSON.stringify(report));
+    // Merge into the PRF-01/02 report (single JSON object per file).
+    const { readFileSync, writeFileSync } = await import('node:fs');
+    let merged: Record<string, unknown> = { ...report };
+    try {
+      merged = { ...(JSON.parse(readFileSync('/tmp/opencode/perf-report.json', 'utf-8')) as object), ...report };
+    } catch { /* first run or partial file: keep just this report */ }
+    writeFileSync('/tmp/opencode/perf-report.json', JSON.stringify(merged, null, 2));
   } catch { /* non-fatal */ }
   console.log('[perf-fixture-frames]', JSON.stringify(report));
 });

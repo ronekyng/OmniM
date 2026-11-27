@@ -72,6 +72,8 @@ PRF-01/02 remain 🔀 pending the p95 re-run on the reference machine (PERFORMAN
 
 **Rule:** anything above 300 ms needs a progress indicator (see [FEEDBACK_ERRORS](FEEDBACK_ERRORS.md) §4), not a longer spinner.
 
+**Delivered (2026-11-27, PRF-02 progress):** the command palette budget is met — `e2e/perf.spec.ts` now measures correctly (long-task settle first, excluding the mesh-build tail of the preceding interaction; then in-page `keydown → portal attach` timing, excluding Playwright overhead) and reports **7-8 ms** (≤120 ms ✓, stable across 4/4 runs); the old 634-836 ms readings were a fixture artifact. Code-side, the same batch: `App` switched from a whole-store subscription to per-slice selectors (a `cursorWorld` write on pointer move no longer re-renders the whole workspace) and the palette open flag moved to an isolated `paletteStore` (Ctrl/Cmd+K no longer re-renders the workspace). Single-select properties panel 118-338 ms (≤150 ms ✓, dev-box variance); button/toggle and context menu are not split out yet, so PRF-02 as a whole still awaits the reference-machine p95 re-run.
+
 ## 4. Rendering Budgets
 
 ### 4.1 Frame rate

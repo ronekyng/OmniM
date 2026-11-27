@@ -24,6 +24,8 @@ evidence: "audited against code 2026-10-27"
 
 ## [2026-11-27] — G1 收口：选择手势与离场守卫（UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25）
 
+- **命令面板方法学修正 + 重渲路径清理（PRF-02 推进）**：`e2e/perf.spec.ts` 改为长任务沉降 + keydown→portal 页内计时后，命令面板打开实测 **7–8 ms**（≤120 ms ✓）；旧 634–836 ms 系夹具伪影（把前一交互网格构建长任务尾流与 Playwright 协议开销计入面板延迟）。代码侧：`App` 全量 store 订阅改逐片选择器（指针移动 `cursorWorld` 写入不再全量重渲工作区）、面板开关下沉独立 `paletteStore`（Ctrl/Cmd+K 零工作区重渲）、perf 报告双对象拼接修复；PRF-01/02 登记 📅→🔀。
+
 - **读屏评审套件（UI-A11Y-05 推进）**：视口文本替代补齐楼层与词典化（`a11y.viewport.*`，含对象数/相机/楼层），新增命令面板 **Describe scene** 经 `role=status` 播报场景摘要；`docs/guides/A11Y_MANUAL_REVIEW(.zh-CN).md` 交付 10 场景人工清单与签收标准；`e2e/a11ySnapshot.spec.ts` 生成 `/tmp/opencode/a11y-snapshots.json` 供评审对照；`a11y.spec` 增视口楼层断言。机器侧 axe 0 严重违规，A11Y-05 状态 📅→🔀（待评审签字）。
 
 ### 新增（Added）

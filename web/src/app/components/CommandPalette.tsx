@@ -1,20 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialogFocus } from './useDialogFocus';
+import { usePaletteStore } from '../store/paletteStore';
 
 // The command type + registry live in `app/commands.ts` (single source).
 export type { PaletteCommand } from '../commands';
 import type { PaletteCommand } from '../commands';
-/** UI-SHL-12 / A11Y §3: keyboard command palette (Ctrl/Cmd+K). */
-export function CommandPalette({
-  open,
-  commands,
-  onClose,
-}: {
-  open: boolean;
-  commands: PaletteCommand[];
-  onClose: () => void;
-}) {
+/** UI-SHL-12 / A11Y §3: keyboard command palette (Ctrl/Cmd+K).
+ *  The open flag comes from `paletteStore` so toggling it never re-renders
+ *  the workspace (PERFORMANCE §3.2). */
+export function CommandPalette({ commands }: { commands: PaletteCommand[] }) {
+  const open = usePaletteStore((s) => s.open);
+  const onClose = useCallback(() => usePaletteStore.getState().setOpen(false), []);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const dialogRef = useRef<HTMLDivElement | null>(null);

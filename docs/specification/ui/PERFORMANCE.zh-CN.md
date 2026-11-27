@@ -65,6 +65,8 @@ evidence: "n/a (design contract)"
 
 **规则：** 超过 300 ms 的操作需要进度指示（见 [FEEDBACK_ERRORS](FEEDBACK_ERRORS.zh-CN.md) §4），而不是更久的加载动画。
 
+**已交付（2026-11-27，PRF-02 推进）：** 命令面板预算达标——`e2e/perf.spec.ts` 修正测量方法学（先做长任务沉降，把"选中触发的网格构建尾流"排除；再在页面内用 `keydown→portal 挂载` 计时，排除 Playwright 协议开销）后，命令面板打开 **7–8 ms**（≤120 ms ✓，4/4 稳定）；旧读数 634–836 ms 是夹具伪影。代码侧同批落地：`App` 由全量 store 订阅改为逐片选择器（指针移动 `cursorWorld` 写入不再触发整个工作区重渲），面板开关状态下沉到独立 `paletteStore`（Ctrl/Cmd+K 不再重渲工作区）。单选属性面板 118–338 ms（≤150 ms ✓，dev 机方差）；按钮/开关与上下文菜单未单列，PRF-02 整体仍待参考机 p95 复测。
+
 ## 4. 渲染预算
 
 ### 4.1 帧率

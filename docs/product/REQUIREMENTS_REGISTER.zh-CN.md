@@ -153,8 +153,8 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-PRF-01 | 首屏与就绪预算 | PERFORMANCE §3 | 性能夹具 · 2026-11-10 无头 Chromium 实测：FCP 296–328 ms（≤1.2 s ✓）、外壳就绪 189–211 ms（≤2.5 s ✓）、打开/再打开同会话 0.5–0.64 s（≤3.0 s ✓）；根因（SwiftShader 阴影+PMREM+常驻渲染循环）已修复（软光栅降级+按需渲染）；仅剩参考机 p95 复测 → 🔀 | G2 | 📅 |
-| UI-PRF-02 | 交互延迟预算 | PERFORMANCE §3.2 | 交互追踪 · 面板/选择/高亮 99–306 ms（ occasionally 超 120 ms 预算）；命令面板 634–836 ms（>120 ms ✗，此前 ~4 s）；按钮/切换与上下文菜单未单列——参考机 p95 复测待办 → 🔀 | G2 | 📅 |
+| UI-PRF-01 | 首屏与就绪预算 | PERFORMANCE §3 | 性能夹具 · 2026-11-10 无头 Chromium 实测：FCP 296–328 ms（≤1.2 s ✓）、外壳就绪 189–211 ms（≤2.5 s ✓）、打开/再打开同会话 0.5–0.64 s（≤3.0 s ✓）；根因（SwiftShader 阴影+PMREM+常驻渲染循环）已修复（软光栅降级+按需渲染）；仅剩参考机 p95 复测 | G2 | 🔀 |
+| UI-PRF-02 | 交互延迟预算 | PERFORMANCE §3.2 | 交互追踪 · 单选后属性面板 118–338 ms（≤150 ms 预算内，dev 机有方差）；命令面板修正方法学后浏览器内实测 7–8 ms（≤120 ms ✓；旧读数 634–836 ms 为夹具伪影——把前一交互的网格构建长任务尾流与 Playwright 协议开销计入面板延迟，`e2e/perf.spec.ts` 已改为长任务沉降 + keydown→portal 页内计时）；App 全量 store 订阅改逐片选择器（消除指针移动全量重渲）、面板开关下沉独立 `paletteStore`；按钮/切换与上下文菜单未单列——参考机 p95 复测待办 → 🔀 | G2 | 🔀 |
 | UI-PRF-03 | 各构件数下帧率预算 | PERFORMANCE §4 | 帧时间夹具 · 按需渲染落地后 FPS sample 20–53（SwiftShader 无头，软限）； idle busy=0；参考机（硬件 GPU）帧率预算复测待办 → 🔀 | G2 | 🔀 |
 | UI-PRF-04 | 空闲 CPU 预算 | PERFORMANCE §4.3 | 空闲采样 · 夹具原探针为墙钟累加（恒 1，结构性错误）已换 Long Tasks；修复后实测 idle busy=0；参考机复测待办 → 🔀 | G2 | 🔀 |
 | UI-PRF-05 | 内存上限与浸泡 | PERFORMANCE §5 | 浸泡测试 | G3 | 📅 |

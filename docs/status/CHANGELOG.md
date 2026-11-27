@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [2026-11-27] — G1 close-out: selection gestures and leave guard (UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25)
 
+- **Command-palette methodology fix + re-render path cleanup (PRF-02 progress)**: with `e2e/perf.spec.ts` reworked to long-task settle + in-page keydown→portal timing, palette open measures **7-8 ms** (≤120 ms ✓); the old 634-836 ms readings were a fixture artifact (the preceding interaction's mesh-build long-task tail and Playwright overhead were charged to the palette). Code side: `App` moved from a whole-store subscription to per-slice selectors (a `cursorWorld` write on pointer move no longer re-renders the workspace), the palette open flag moved to an isolated `paletteStore` (Ctrl/Cmd+K re-renders nothing outside the palette), the doubled perf-report JSON fix; PRF-01/02 register 📅→🔀.
+
 - **Screen-reader review kit (UI-A11Y-05 progress)**: the viewport text alternative now includes the storey and is dictionary-backed (`a11y.viewport.*` with count/camera/storey), plus a palette **Describe scene** action that announces the summary through `role=status`; `docs/guides/A11Y_MANUAL_REVIEW(.zh-CN).md` ships the 10-scenario manual checklist and sign-off criteria; `e2e/a11ySnapshot.spec.ts` writes `/tmp/opencode/a11y-snapshots.json` for reviewer comparison; `a11y.spec` gains a storey-description assertion. Machine side: axe 0 serious violations; A11Y-05 moves 📅→🔀 pending reviewer sign-off.
 
 ### Added
