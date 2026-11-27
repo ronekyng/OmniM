@@ -34,6 +34,7 @@ export function buildWorkspaceCommands(ctx: {
   transformMode: { current: 'translate' | 'rotate' | 'scale' | null; set: (mode: 'translate' | 'rotate' | 'scale' | null) => void };
   navCycle: () => void;
   create: (objectType: 'storey' | 'door') => void;
+  describeScene: () => void;
   navigate: (to: NavTarget) => void;
   help: () => void;
 }): PaletteCommand[] {
@@ -59,5 +60,7 @@ export function buildWorkspaceCommands(ctx: {
     // the registry so it is discoverable/fixed like every other command.
     { id: 'view.nav', title: 'Viewport navigation scheme', scope: 'Viewport', run: () => ctx.navCycle() },
     { id: 'help.shortcuts', title: 'Keyboard shortcuts', shortcut: 'F1', scope: 'Help', run: ctx.help },
+    // A11Y §6: canvas-only content needs a textual scene summary action.
+    { id: 'view.describeScene', title: 'Describe scene', scope: 'Viewport', run: ctx.describeScene },
   ];
 }

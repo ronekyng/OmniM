@@ -132,7 +132,7 @@ evidence: "n/a (product requirement)"
 | UI-A11Y-02 | 命令键盘完备且有帮助 | A11Y §3 | `commands/focus/a11y` specs（F1、命令面板、纯键盘 J1、F2、属性行方向键、F6、菜单） | G2 | ✅ |
 | UI-A11Y-03 | 焦点可见、有序、受限 | A11Y §4 | `web/e2e/focus.spec.ts`（:focus-visible 环、F6、删除后迁移、路由/错误兜底） | G2 | ✅ |
 | UI-A11Y-04 | 树/表/标签的 role 与 ARIA | A11Y §5 | `web/e2e/a11y.spec.ts`（tree/tablist/toolbar/menu/table/status/viewport） | G2 | ✅ |
-| UI-A11Y-05 | 无障碍名称；视口文本替代 | A11Y §6 | axe + 人工评审 | G2 | 📅 |
+| UI-A11Y-05 | 无障碍名称；视口文本替代 | A11Y §6 | axe（关键路径 0 严重违规）+ 名称/键盘 e2e · 视口摘要含对象数/相机/楼层（`a11y.viewport.*` 词典化）、新增命令面板「Describe scene」播报场景摘要；人工读屏套件已交付 `docs/guides/A11Y_MANUAL_REVIEW.zh-CN.md`（10 场景清单 + 签收标准），快照工具 `e2e/a11ySnapshot.spec.ts` 输出 `/tmp/opencode/a11y-snapshots.json`；等待评审人按套件签字 → 🔀 | G2 | 🔀 |
 | UI-A11Y-06 | 减弱动效支持 | A11Y §7 | 媒体模拟测试 | G3 | 📅 |
 | UI-A11Y-07 | 高对比主题达到 AA | A11Y §8 | 对比度审计 | G3 | 📅 |
 | UI-A11Y-08 | 结果播报 | A11Y §9 | 读屏脚本 | G3 | 📅 |

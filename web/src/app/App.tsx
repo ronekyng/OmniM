@@ -37,6 +37,7 @@ import { CommandPalette } from './components/CommandPalette';
 import { buildWorkspaceCommands } from './commands';
 import { ShortcutHelp } from './components/ShortcutHelp';
 import { LeaveGuardDialog } from './components/LeaveGuardDialog';
+import { useI18n } from '../shared/i18n';
 
 const FOCUS_REGIONS = [
   '.main-toolbar',
@@ -84,6 +85,7 @@ function CrashRoutePanel(): ReactNode {
 
 export function App() {
   const toast = useToastApi();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const location = useLocation();
   const isMain = location.pathname === '/' || location.pathname === '';
@@ -111,6 +113,19 @@ export function App() {
     theme,
   } = useAppStore();
   const confirm = useConfirm();
+  const activeStoreyId = useAppStore((s) => s.activeStoreyId);
+  const storeyName = useMemo(() => {
+    if (!activeStoreyId) return null;
+    const walk = (nodes: typeof tree): string | null => {
+      for (const node of nodes) {
+        if (node.id === activeStoreyId) return node.name;
+        const hit = node.children ? walk(node.children) : null;
+        if (hit) return hit;
+      }
+      return null;
+    };
+    return walk(tree);
+  }, [activeStoreyId, tree]);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   // DATA_INTEGRITY §3.3: all in-app navigations away from the workspace funnel
@@ -383,6 +398,12 @@ export function App() {
       toast.success(next === 'contract' ? 'Viewport nav: contract target (left inert · middle orbit · right pan)' : 'Viewport nav: shipped scheme (left pan · middle dolly · right rotate)');
     },
     create: (objectType) => creationDispatch({ type: 'completePicking', form: createInitialForm(objectType, []) }),
+    describeScene: () => toast.success(t('a11y.describe_scene', {
+      count: stats?.object_count ?? 0,
+      selected: selectedIds.length,
+      camera: isOrtho ? t('a11y.camera.ortho') : t('a11y.camera.perspective'),
+      storey: storeyName ?? t('a11y.viewport.storey_all'),
+    })),
     navigate: requestNavigate,
     help: () => setHelpOpen(true),
   });
@@ -455,6 +476,7 @@ export function App() {
                 onChanged={() => { markDirty(); refresh(); reloadScene(); }}
                 onPointerWorld={setCursorWorld}
                 onStats={setFps}
+                storeyName={storeyName}
               />
               </Suspense>
               {section.enabled && <SectionPanel section={section} onChange={setSection} />}

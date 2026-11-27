@@ -132,7 +132,7 @@ evidence: "n/a (product requirement)"
 | UI-A11Y-02 | Keyboard-complete commands and help | A11Y §3 | `commands/focus/a11y` specs (F1, palette, keyboard J1, F2, property rows, F6, menu) | G2 | ✅ |
 | UI-A11Y-03 | Visible, ordered, trapped focus | A11Y §4 | `web/e2e/focus.spec.ts` (focus-visible ring, F6, delete restore, route/error focus) | G2 | ✅ |
 | UI-A11Y-04 | Roles and ARIA for trees/tables/tabs | A11Y §5 | `web/e2e/a11y.spec.ts` (tree/tablist/toolbar/menu/table/status/viewport) | G2 | ✅ |
-| UI-A11Y-05 | Accessible names; viewport text alternative | A11Y §6 | axe + manual review | G2 | 📅 |
+| UI-A11Y-05 | Accessible names; viewport text alternative | A11Y §6 | axe (0 serious on critical paths) + name/keyboard e2e · viewport summary includes object count/camera/storey (`a11y.viewport.*` dictionary) and a palette "Describe scene" action announces the summary; the manual screen-reader kit ships as `docs/guides/A11Y_MANUAL_REVIEW.md` (10-scenario checklist + sign-off), snapshot aid `e2e/a11ySnapshot.spec.ts` writes `/tmp/opencode/a11y-snapshots.json`; awaiting reviewer sign-off → 🔀 | G2 | 🔀 |
 | UI-A11Y-06 | Reduced-motion support | A11Y §7 | media emulation test | G3 | 📅 |
 | UI-A11Y-07 | High-contrast theme meets AA | A11Y §8 | contrast audit | G3 | 📅 |
 | UI-A11Y-08 | Live announcements for results | A11Y §9 | screen-reader script | G3 | 📅 |

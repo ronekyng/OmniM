@@ -126,6 +126,7 @@ test('dock tabs, bottom tabs, toolbar, status, table and viewport are named', as
   const viewport = page.getByRole('application', { name: '3D viewport' });
   await expect(viewport).toHaveAttribute('aria-describedby', 'viewport-description');
   await expect(page.locator('#viewport-description')).toContainText('objects in the project');
+  await expect(page.locator('#viewport-description')).toContainText('Storey view:');
 
   await page.getByRole('button', { name: 'Save', exact: true }).click();
   const status = page.getByRole('status', { name: 'Notifications' });

@@ -94,6 +94,8 @@ type ThreeViewerProps = {
   onPointerWorld?: (point: [number, number, number] | null) => void;
   /** Rolling frame-rate sample (once per second), for the status bar. */
   onStats?: (fps: number) => void;
+  /** A11Y §6: human name of the storey filter for the viewport description. */
+  storeyName?: string | null;
 };
 
 type ViewerState = {
@@ -119,7 +121,7 @@ type ViewerState = {
   boxSelectOnDrag: boolean;
 };
 
-export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged, onPointerWorld, onStats }, ref) {
+export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged, onPointerWorld, onStats, storeyName }, ref) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const stateRef = useRef<ViewerState | null>(null);
   const selectedIdsRef = useRef<readonly string[]>([]);
@@ -1240,13 +1242,16 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       ref={hostRef}
       className={`three-viewer ${viewerStyles.threeViewer}`}
       role="application"
-      aria-label="3D viewport"
+      aria-label={t('a11y.viewport.label')}
       aria-describedby="viewport-description"
       tabIndex={0}
     >
       <span id="viewport-description" className="sr-only">
-        {objectCount} objects in the project. {isOrtho ? 'Orthographic' : 'Perspective'} camera.
-        Use the object tree for selection, properties and keyboard access.
+        {t('a11y.viewport.description', {
+          count: objectCount,
+          camera: isOrtho ? t('a11y.camera.ortho') : t('a11y.camera.perspective'),
+          storey: storeyName ?? t('a11y.viewport.storey_all'),
+        })}
       </span>
       {creationPhase === 'picking' && creationObjectType && (
         <div className="picking-hint">

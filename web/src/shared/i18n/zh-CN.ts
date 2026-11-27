@@ -591,6 +591,12 @@ export const zhCN = {
   'shell.leave.last_saved': '上次保存：{time}',
   'shell.leave.never': '尚未保存',
   'shell.leave.save': '保存并离开',
+  'a11y.viewport.label': '3D 视口',
+  'a11y.viewport.description': '{count} 个对象。{camera}相机。楼层视图：{storey}。可通过对象树进行选择、查看属性与键盘操作。',
+  'a11y.camera.ortho': '正交',
+  'a11y.camera.perspective': '透视',
+  'a11y.viewport.storey_all': '全部楼层',
+  'a11y.describe_scene': '场景描述：{count} 个对象，{selected} 个已选中，{camera}相机，楼层视图 {storey}。',
   'locale.zh-CN': '中文',
 } as const;
 

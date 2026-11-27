@@ -595,5 +595,11 @@ export const enUS = {
   'shell.leave.last_saved': 'Last saved: {time}',
   'shell.leave.never': 'never',
   'shell.leave.save': 'Save and leave',
+  'a11y.viewport.label': '3D viewport',
+  'a11y.viewport.description': '{count} objects in the project. {camera} camera. Storey view: {storey}. Use the object tree for selection, properties and keyboard access.',
+  'a11y.camera.ortho': 'Orthographic',
+  'a11y.camera.perspective': 'Perspective',
+  'a11y.viewport.storey_all': 'all storeys',
+  'a11y.describe_scene': 'Scene: {count} objects, {selected} selected, {camera} camera, storey view {storey}.',
   'locale.en-US': 'English',
 } as unknown as Record<MessageKey, string>;

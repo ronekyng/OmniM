@@ -24,6 +24,8 @@ evidence: "audited against code 2026-10-27"
 
 ## [2026-11-27] — G1 收口：选择手势与离场守卫（UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25）
 
+- **读屏评审套件（UI-A11Y-05 推进）**：视口文本替代补齐楼层与词典化（`a11y.viewport.*`，含对象数/相机/楼层），新增命令面板 **Describe scene** 经 `role=status` 播报场景摘要；`docs/guides/A11Y_MANUAL_REVIEW(.zh-CN).md` 交付 10 场景人工清单与签收标准；`e2e/a11ySnapshot.spec.ts` 生成 `/tmp/opencode/a11y-snapshots.json` 供评审对照；`a11y.spec` 增视口楼层断言。机器侧 axe 0 严重违规，A11Y-05 状态 📅→🔀（待评审签字）。
+
 ### 新增（Added）
 - **七种选择手势（UI-INT-01 ✅）**：树 Shift+单击范围选择（新增锚点，避免焦点抢跑）+ `Ctrl/Cmd+A` 全选当前树中可见对象；视口框选对齐契约——普通拖空白=替换选择（契约导航制左键本为惰性），`Ctrl/Cmd+`拖=追加命中；空白单击清空、Esc 取消；`e2e/gestures.spec.ts` 树/视口两组 + 两墙夹具（`/api/genrule`）。
 - **三选一离场守卫（UI-DAT-06 ✅）**：`LeaveGuardDialog`（保存并离开 / 丢弃 / 取消），列项目名与上次保存时间；`Esc`=取消、`Enter`=保存（表单提交即安全默认）；标题栏返回与命令面板导航共用同一守卫（`App.requestNavigate`）；`beforeunload` 仍仅在 dirty 注册；`e2e/data.spec.ts` 增 Save/Enter/Esc 路径。
