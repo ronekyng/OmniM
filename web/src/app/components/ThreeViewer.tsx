@@ -722,6 +722,7 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
     }
 
     function onPointerDown(event: PointerEvent) {
+      if (event.button === 2) { event.preventDefault(); return; }
       if (event.button !== 0) return;
       if (draggingTransformRef.current) return;
       const additive = event.ctrlKey || event.metaKey;
@@ -1103,9 +1104,14 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       viewer.invalidate();
     }
 
+    // INTERACTION §2: the right button belongs to the viewport (orbit under
+    // the current nav scheme, pan under contract). Suppress the browser
+    // context menu on the canvas unconditionally so right-drag completes as
+    // a navigation gesture; the app's own context menus live in the object
+    // tree and panels, never on the canvas.
     function onContextMenu(event: MouseEvent) {
+      event.preventDefault();
       if (measureModeRef.current === 'area' && measurePointsRef.current.length >= 3) {
-        event.preventDefault();
         const s = stateRef.current;
         if (s) {
           drawAreaMeasurement(s, measurePointsRef.current);

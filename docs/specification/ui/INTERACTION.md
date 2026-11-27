@@ -302,6 +302,8 @@ Rules:
 
 **Delivered (2026-11-04, G2 · INT-12)**: navigation binding is a real setting — the registry command `view.nav` is discoverable in the palette and toggles `current`/`contract`, persisted to `omnim.nav` (in-memory fallback in private mode) and applied to OrbitControls via `applyNavScheme` on workspace mount and on change (contract: inert left = selection-only, middle orbit, right pan, wheel zoom-to-cursor). Still outstanding: the SHIFT+middle pan modifier mapping and making the contract scheme the default — recorded honestly in CODE_DEVIATIONS §7. Evidence: `e2e/navScheme.spec.ts`.
 
+**Delivered (2026-11-27, right-button gesture fix)**: the canvas `contextmenu` is now prevented unconditionally (and the right `pointerdown` too), so the browser menu/back gesture no longer hijacks the viewport — right-drag orbits under `current` and pans under `contract`, completing the gesture end to end; the app's own context menus live in the object tree/panels, the canvas needs none. The area-measure right-button finalize path is preserved. Evidence: `e2e/navScheme.spec.ts` (canvas pixel diff around a right-drag + `defaultPrevented` assertion, both schemes).
+
 ## 11. Non-Goals
 
 1. Free-form command-line syntax in the viewport (use the console).

@@ -302,6 +302,8 @@ type Shortcut = {
 
 **已交付（2026-11-04，G2 · INT-12）**：导航绑定成为**真实设置**——注册表命令 `view.nav` 在命令面板可发现，切换 `current`/`contract` 两制并持久化 `omnim.nav`（Private 模式降内存内），`applyNavScheme` 在工作域挂载与设置变更时施加到 OrbitControls（contract：左键置空=纯选择、中键=轨道、右键=平移、滚轮=朝光标缩放）。仍未完成：Shift+中键平移组合（OrbitControls 无法一键映射修饰键）与"契约制成为默认"——已登记 CODE_DEVIATIONS §7 保持诚实。证据：`e2e/navScheme.spec.ts`。
 
+**已交付（2026-11-27，右键手势修复）**：画布 `contextmenu` 一律 `preventDefault`（`pointerdown` 右键同样阻止），浏览器菜单/返回手势不再劫持视口——`current` 制下右键拖拽=轨道旋转、`contract` 制下右键拖拽=平移，手势完整走完；应用自身的上下文菜单只在对象树/面板，画布无菜单需求。面积测量的右键收尾逻辑保留。证据：`e2e/navScheme.spec.ts`（右键拖拽前后画布像素差异 + `defaultPrevented` 断言，两制各验）。
+
 ## 11. 非目标
 
 1. 视口内的自由文本命令行语法（使用控制台）。
