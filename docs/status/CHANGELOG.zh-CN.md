@@ -24,6 +24,8 @@ evidence: "audited against code 2026-10-27"
 
 ## [2026-11-27] — G1 收口：选择手势与离场守卫（UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25）
 
+- **减弱动效支持（UI-A11Y-06 ✅，G3 首个完成项）**：`styles.css` 全局 reduce 块停用 pulse/skeleton-shimmer/aichat-bounce/progress-sweep 与 toast 滑入，静态样式保持可感知；视图立方本无缓动，≤100 ms 不透明度过渡保留；`e2e/reducedMotion.spec.ts` reduce+对照组媒体模拟验证；登记 ✅，RELEASE_READINESS 完备度层级 🔀 1/6、可访问性域 🔀 5/8。
+
 - **右键手势修复（INT §2）**：画布 `contextmenu` 一律阻止 + `pointerdown` 右键 `preventDefault`，浏览器菜单/返回手势不再劫持视口；右键拖拽在 `current` 制=轨道旋转、`contract` 制=平移完整生效，面积测量右键收尾保留；`e2e/navScheme.spec.ts` 增右键拖拽像素差异 + `defaultPrevented` 断言（两制）。
 
 - **命令面板方法学修正 + 重渲路径清理（PRF-02 推进）**：`e2e/perf.spec.ts` 改为长任务沉降 + keydown→portal 页内计时后，命令面板打开实测 **7–8 ms**（≤120 ms ✓）；旧 634–836 ms 系夹具伪影（把前一交互网格构建长任务尾流与 Playwright 协议开销计入面板延迟）。代码侧：`App` 全量 store 订阅改逐片选择器（指针移动 `cursorWorld` 写入不再全量重渲工作区）、面板开关下沉独立 `paletteStore`（Ctrl/Cmd+K 零工作区重渲）、perf 报告双对象拼接修复；PRF-01/02 登记 📅→🔀。

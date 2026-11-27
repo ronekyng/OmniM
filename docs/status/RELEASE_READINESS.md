@@ -87,7 +87,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | Area | Required | Status |
 |---|---|---|
 | Design system (12) | Tokens, themes, icons, viewport palette; 3 completeness items deferred to G3 | 🔀 5/12 (DS-02/03/04/08/09 done) |
-| Accessibility (8) | WCAG 2.2 AA on critical paths; motion and live-region items deferred to G3 | 🔀 4/8 (A11Y-01/02/03/04 done; screen-reader review follows A11Y-05, aria-label localization follows I18N-01) |
+| Accessibility (8) | WCAG 2.2 AA on critical paths; motion and live-region items deferred to G3 | 🔀 5/8 (A11Y-01/02/03/04/06 done; screen-reader review follows A11Y-05, aria-label localization follows I18N-01) |
 | Internationalization (7) | 100% externalized and switchable; pseudo-locale deferred to G3 | 📅 |
 | Performance (8) | All budgets enforced in CI | 📅 |
 | Feedback (remaining) | Progress, coded errors, toasts | 🔀 |
@@ -102,7 +102,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 
 | Area | Required | Status |
 |---|---|---|
-| Completeness tiers | DS-05/07/10, A11Y-06/08, I18N-05 (moved from G2) | 📅 |
+| Completeness tiers | DS-05/07/10, A11Y-06/08, I18N-05 (moved from G2) | 🔀 1/6 (A11Y-06 ✅) |
 | Compatibility (6) | Browser/GPU/DPI matrix | 📅 |
 | Security (5) | Disclosure, path roots, CSP, consent | 📅 |
 | Telemetry and support (6) | Event dictionary, diagnostics, help | 📅 |
@@ -111,7 +111,7 @@ Complete list of the 25 G1 requirements (generated from the register, not a hand
 | Release notes and migration | Template and process in [RELEASE_CHECKLIST](../process/RELEASE_CHECKLIST.md) | 📅 |
 | Support runbook | Templates in [RELEASE_CHECKLIST](../process/RELEASE_CHECKLIST.md) §4–§5 | 📅 |
 
-**G3 verdict:** 📅 **not ready.**
+**G3 verdict:** 📅 **not ready.** `UI-A11Y-06` (2026-11-27) is the first completed G3 item.
 
 ## 7. Blocking Issues
 

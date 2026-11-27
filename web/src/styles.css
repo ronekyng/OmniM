@@ -1397,6 +1397,16 @@ body { font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
   .toast-item { animation: none; }
 }
+
+/* A11Y §7 (UI-A11Y-06): under prefers-reduced-motion all decorative/infinite
+ * motion stops; state stays perceivable through static styling. Opacity
+ * transitions ≤100 ms are kept per the contract. */
+@media (prefers-reduced-motion: reduce) {
+  .prop-saving { animation: none; opacity: 1; }
+  .skeleton-bar { animation: none; }
+  .aichat-dot { animation: none; opacity: 0.6; }
+  .progress-indeterminate::after { animation: none; }
+}
 .toast-dot {
   width: 8px;
   height: 8px;

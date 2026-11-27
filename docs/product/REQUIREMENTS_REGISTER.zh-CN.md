@@ -133,7 +133,7 @@ evidence: "n/a (product requirement)"
 | UI-A11Y-03 | 焦点可见、有序、受限 | A11Y §4 | `web/e2e/focus.spec.ts`（:focus-visible 环、F6、删除后迁移、路由/错误兜底） | G2 | ✅ |
 | UI-A11Y-04 | 树/表/标签的 role 与 ARIA | A11Y §5 | `web/e2e/a11y.spec.ts`（tree/tablist/toolbar/menu/table/status/viewport） | G2 | ✅ |
 | UI-A11Y-05 | 无障碍名称；视口文本替代 | A11Y §6 | axe（关键路径 0 严重违规）+ 名称/键盘 e2e · 视口摘要含对象数/相机/楼层（`a11y.viewport.*` 词典化）、新增命令面板「Describe scene」播报场景摘要；人工读屏套件已交付 `docs/guides/A11Y_MANUAL_REVIEW.zh-CN.md`（10 场景清单 + 签收标准），快照工具 `e2e/a11ySnapshot.spec.ts` 输出 `/tmp/opencode/a11y-snapshots.json`；等待评审人按套件签字 → 🔀 | G2 | 🔀 |
-| UI-A11Y-06 | 减弱动效支持 | A11Y §7 | 媒体模拟测试 | G3 | 📅 |
+| UI-A11Y-06 | 减弱动效支持 | A11Y §7 | 媒体模拟 e2e `e2e/reducedMotion.spec.ts`（reduce 组断言 toast 滑入/骨架屏/AI 气泡点/进度扫掠 computed `animation-name: none`；对照组 no-preference 证明同一表面仍在动，即降级来自 `prefers-reduced-motion` 块）；`styles.css` 全局 reduce 块停用 pulse/skeleton-shimmer/aichat-bounce/progress-sweep 并保留静态可感知样式；视图立方 `setView` 本就无缓动，≤100 ms 不透明度过渡按契约保留 | G3 | ✅ |
 | UI-A11Y-07 | 高对比主题达到 AA | A11Y §8 | 对比度审计 | G3 | 📅 |
 | UI-A11Y-08 | 结果播报 | A11Y §9 | 读屏脚本 | G3 | 📅 |
 
