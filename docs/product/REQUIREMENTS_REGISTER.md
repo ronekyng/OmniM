@@ -146,7 +146,7 @@ evidence: "n/a (product requirement)"
 | UI-I18N-03 | ICU MessageFormat for plurals | I18N_L10N §4 | ICU unit tests · `tPlural()` over `Intl.PluralRules`; dictionaries declare `other`; `i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | Locale-aware numbers/dates/units | I18N_L10N §5 | format fixtures · 3-decimal coordinates / grouped counts / short dates / clock / angle formatters + fixtures; panel consumption rolling in | G2 | ✅ |
 | UI-I18N-05 | Pseudo-localization passes | I18N_L10N §6 | pseudo-locale screenshots | G3 | 📅 |
-| UI-I18N-06 | Key convention and unused-key detection | I18N_L10N §7 | key lint | G3 | 📅 |
+| UI-I18N-06 | Key convention and unused-key detection | I18N_L10N §7 | key lint `scripts/check_i18n_keys.py` (wired into `test-all.sh`): missing-key and zh/en parity hard gates with 0 violations (plural categories exempted per language); unused keys reported per version (3 currently, removed one minor version later); duplicate values report 51 groups (same-label panels are the per-domain keys the structure rule asks for); legacy key prefixes (panel/assy/layer/quick/domain/left/nav/library/mat/grid/feature/avail/catp/toolbar/viewer/pick/crumb/storey) remain a recorded deviation in CODE_DEVIATIONS §7.14, full rename tracked as a separate batch → 🔀 | G3 | 🔀 |
 | UI-I18N-07 | RTL structural readiness | I18N_L10N §8 | logical-property scan | G3 | 📅 |
 
 ## 10. Register: PRF — Performance

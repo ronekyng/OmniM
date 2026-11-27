@@ -224,6 +224,7 @@ extrude 的 pipe/road 模板与 `LinearComponent` 引擎。审计时的三条并
 | 7.11 | 拾取会话中 `Delete` 被忽略 | `Delete` 仍删除当前选择；只有 `Backspace` 被特判 | `web/src/app/App.tsx:91-95` | UI-INT-02 |
 | 7.12 | 保存语义单一口径（自动落盘 vs "未保存"） | **已整改（2026-10-30，UI/UX 审计 F1）**：服务端每次变更默认落盘，而 UI 显式保存状态机把 dirty 显示为 "Unsaved changes"（假警报）。现 `saveLabel` dirty 态为 "Auto-saved server-side · Ctrl+S to snapshot"，TitleBar 徽标 aria 同步；`FRONTEND_MATURITY` §5 口径改为"脏状态=快照分级" | `web/src/shared/saveState.ts`、`TitleBar.tsx`、`FRONTEND_MATURITY.md` | UI-DAT-02 |
 | 7.13 | 参数面板同屏单位可读（mm/m 双单位） | **已整改（2026-10-30，UI/UX 审计 F4/D1/D2）**：Assembly 面板尺寸/偏移占位符标注 (m)，顶部加 mm/m 双单位提示；LayerEditor 厚度标 (mm)；目录参数面板此前已带 unit 后缀；轴网贯通语义开关替代 0/0 密码 | `AssemblyPanel.tsx`、`LayerEditor.tsx`、`GridPanel.tsx` | UI-INT-09 |
+| 7.14 | i18n 键名遵循 `<area>.<component>.<element>` | **部分遵循（2026-11-27，UI-I18N-06）**：`scripts/check_i18n_keys.py` 键校验落地——缺失键/zh-en 配对为硬门禁（`test-all.sh`），未使用键/重复值按契约逐版本报告（当前 3 个未使用键在报告）；词汇表存在 legacy 前缀（`panel./assy./layer./quick./domain./left./nav./library./mat./grid./feature./avail./catp./toolbar./viewer./pick./crumb./storey.`，为 I18N-01 交付时的自然分域），完整重命名到契约 area 列表待专门批次（高机械替换量） | `scripts/check_i18n_keys.py`、`web/src/shared/i18n/*.ts` | UI-I18N-06 |
 
 **为记录起见，以下不是偏差：** 拾取状态机、视口渲染质量（色调映射、软阴影、剖切、测量）
 以及目录/系列管理器均已实现，不受上述条目影响。

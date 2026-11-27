@@ -9,6 +9,9 @@ python3 scripts/check_docs.py
 echo "[omnim] checking the single write path..."
 python3 scripts/check_write_paths.py
 
+echo "[omnim] auditing i18n keys..."
+python3 scripts/check_i18n_keys.py
+
 echo "[omnim] running Rust tests..."
 cargo test
 

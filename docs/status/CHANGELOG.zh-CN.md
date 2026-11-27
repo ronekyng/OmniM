@@ -24,6 +24,8 @@ evidence: "audited against code 2026-10-27"
 
 ## [2026-11-27] — G1 收口：选择手势与离场守卫（UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25）
 
+- **i18n 键校验（UI-I18N-06 推进）**：`scripts/check_i18n_keys.py` 落地并接入 `test-all.sh`——缺失键/zh-en 配对硬门禁（0 违规，复数类别按语言豁免、tPlural 基键豁免），未使用键逐版本报告（3 个）、重复值报告（51 组）；legacy 键前缀偏差登记 CODE_DEVIATIONS §7.14；I18N_L10N §7 中英注记。
+
 - **减弱动效支持（UI-A11Y-06 ✅，G3 首个完成项）**：`styles.css` 全局 reduce 块停用 pulse/skeleton-shimmer/aichat-bounce/progress-sweep 与 toast 滑入，静态样式保持可感知；视图立方本无缓动，≤100 ms 不透明度过渡保留；`e2e/reducedMotion.spec.ts` reduce+对照组媒体模拟验证；登记 ✅，RELEASE_READINESS 完备度层级 🔀 1/6、可访问性域 🔀 5/8。
 
 - **右键手势修复（INT §2）**：画布 `contextmenu` 一律阻止 + `pointerdown` 右键 `preventDefault`，浏览器菜单/返回手势不再劫持视口；右键拖拽在 `current` 制=轨道旋转、`contract` 制=平移完整生效，面积测量右键收尾保留；`e2e/navScheme.spec.ts` 增右键拖拽像素差异 + `defaultPrevented` 断言（两制）。

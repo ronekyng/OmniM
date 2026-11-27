@@ -146,7 +146,7 @@ evidence: "n/a (product requirement)"
 | UI-I18N-03 | ICU 复数格式 | I18N_L10N §4 | ICU 单测 · `tPlural()` 走 `Intl.PluralRules`；词典 other 声明；`i18n.test.ts` | G2 | ✅ |
 | UI-I18N-04 | 语言环境感知的数字/日期/单位 | I18N_L10N §5 | 格式夹具 · 坐标 3 位小数/分组计数/短日期/时间制/角度格式器 + 夹具；面板消费分批接入中 | G2 | ✅ |
 | UI-I18N-05 | 伪本地化通过 | I18N_L10N §6 | 伪语言截图 | G3 | 📅 |
-| UI-I18N-06 | 键名规范与未使用键检测 | I18N_L10N §7 | 键校验 | G3 | 📅 |
+| UI-I18N-06 | 键名规范与未使用键检测 | I18N_L10N §7 | 键校验 `scripts/check_i18n_keys.py`（接入 `test-all.sh`）：缺失键与 zh/en 配对硬门禁 0 违规（复数类别按语言豁免）；未使用键逐版本报告（当前 3 个，一个次要版本后移除）；重复值报告 51 组（跨面板同义标签属键结构规则要求的分域键）；键名 legacy 前缀（panel/assy/layer/quick/domain/left/nav/library/mat/grid/feature/avail/catp/toolbar/viewer/pick/crumb/storey）为遗留偏差，登记 CODE_DEVIATIONS §7.14，完整重命名待专门批次 → 🔀 | G3 | 🔀 |
 | UI-I18N-07 | RTL 结构就绪 | I18N_L10N §8 | 逻辑属性扫描 | G3 | 📅 |
 
 ## 10. 登记：PRF — 性能

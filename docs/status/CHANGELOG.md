@@ -24,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [2026-11-27] — G1 close-out: selection gestures and leave guard (UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25)
 
+- **i18n key lint (UI-I18N-06 progress)**: `scripts/check_i18n_keys.py` landed and wired into `test-all.sh` — missing-key/zh-en-parity hard gates (0 violations; plural categories and tPlural base refs exempted), unused keys reported per version (3), duplicate values reported (51 groups); the legacy key-prefix deviation is recorded as CODE_DEVIATIONS §7.14; I18N_L10N §7 notes in both languages.
+
 - **Reduced-motion support (UI-A11Y-06 ✅, first completed G3 item)**: a global reduce block in `styles.css` stops the pulse/skeleton-shimmer/aichat-bounce/progress-sweep animations and the toast slide-in while keeping static styling perceivable; the view cube has no easing and ≤100 ms opacity transitions stay; verified by `e2e/reducedMotion.spec.ts` (reduce + control groups under media emulation); register ✅, RELEASE_READINESS completeness tiers 🔀 1/6, accessibility domain 🔀 5/8.
 
 - **Right-button gesture fix (INT §2)**: the canvas suppresses `contextmenu` unconditionally and right `pointerdown` is prevented, so the browser menu/back gesture no longer hijacks the viewport; right-drag orbits under `current` and pans under `contract` end to end, with the area-measure finalize path preserved; `e2e/navScheme.spec.ts` gains a right-drag pixel-diff + `defaultPrevented` assertion across both schemes.
