@@ -51,6 +51,8 @@ Rules:
 3. Hidden objects cannot be selected by viewport picking but remain selectable from the tree.
 4. Selection changes are announced to assistive technology (see [A11Y](A11Y.md) §9).
 
+**Delivered (2026-11-27, UI-INT-01 ✅):** all seven gestures ship. Viewport box select: plain empty-space drag replaces the selection under the contract nav scheme (left is otherwise inert); Ctrl/Cmd+drag adds the box hits in either scheme. Tree Shift+click range-selects the visible rows, and Ctrl/Cmd+A selects every row currently listed (search/expansion respected). Evidence: `web/e2e/gestures.spec.ts` (tree + viewport groups).
+
 ## 4. Picking Session State Machine
 
 ### 4.1 States

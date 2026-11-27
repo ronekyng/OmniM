@@ -81,7 +81,7 @@ evidence: "n/a (product requirement)"
 
 | ID | 需求 | 契约 | 验证 | 门禁 | 状态 |
 |---|---|---|---|---|---|
-| UI-INT-01 | 五种选择手势 | INTERACTION §3 | 交互 e2e | G1 | 🔀 |
+| UI-INT-01 | 五种选择手势 | INTERACTION §3 | 交互 e2e 全覆盖 · `e2e/gestures.spec.ts` 三组：树（单击替换/Ctrl 切换/Shift 范围/Esc/Ctrl+A 全选）+ 视口（点选/空白清空/Ctrl 拖框追加/契约导航制左键拖空框替换）；Ctrl+A 与 Shift 范围另附 `ObjectTree` anchor 修复；面板截图/空白点击校准相机后稳定通过 | G1 | ✅ |
 | UI-INT-02 | 拾取状态机契约 | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | 单一快捷键注册表，文档生成 | INTERACTION §5 | `gen_keymap.py --check` · 32 绑定中英一致；命令数组收敛 `app/commands.ts` 单一产地；`global_keydown` 门禁收口 window 监听 allow-list | G2 | ✅ |
 | UI-INT-04 | 输入时不触发全局快捷键 | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
@@ -118,7 +118,7 @@ evidence: "n/a (product requirement)"
 | UI-DAT-03 | 脏标记与最后保存时间 | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | 自动保存 ≤60 秒且不阻塞 | DATA_INTEGRITY §4 | 自动保存追踪 · 每次 mutation 即持久化；盘失败仅记日志不阻塞；`project_meta.rs` | G2 | ✅ |
 | UI-DAT-05 | 崩溃恢复损失 ≤5 分钟 | DATA_INTEGRITY §5 | 杀进程重启演练 · mutation 即快照 → 零丢失；`Project::load` 重开断言在 `project_meta.rs` | G2 | ✅ |
-| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts`（Stay/Leave/clean） | G1 | 🔀 |
+| UI-DAT-06 | 未保存变更拦截 | DATA_INTEGRITY §3.3 | 三选一离场守卫 · `LeaveGuardDialog`（保存并离开/丢弃/Cancel，项目名+上次保存时间，Esc=取消、Enter=保存）；同一守卫接管标题栏返回与命令面板导航；`beforeunload` 仅在 dirty 时注册；`e2e/data.spec.ts` Stay/Leave/clean + 保存并离开/Enter/Esc 两组 | G1 | ✅ |
 | UI-DAT-07 | 项目元信息可编辑并持久化 | DATA_INTEGRITY §2.3 | 重开断言 · `/api/project/meta` PUT/GET + 标题栏「项目设置」对话框；重命名文件事务；`e2e/meta.spec.ts` | G2 | ✅ |
 | UI-DAT-08 | 外部修改检测与只读 | DATA_INTEGRITY §6 | mtime 冲突测试 | G3 | 📅 |
 | UI-DAT-09 | 打开时缺失依赖报告 | DATA_INTEGRITY §2.4 | 夹具项目测试 | G3 | 📅 |

@@ -55,6 +55,8 @@ export type ThreeViewerHandle = {
   getCameraDirection: () => THREE.Vector3 | undefined;
   rotateView: (dx: number, dy: number) => void;
   getMeshInfo: (id: string) => MeshInfo | undefined;
+  /** INT-01: object ids currently rendered (respects the storey filter). */
+  getVisibleIds: () => string[];
   getMeshMaterial: (id: string) => MeshMaterial | undefined;
   setMeshMaterial: (id: string, mat: MeshMaterial) => void;
   focusObject: (id: string) => void;
@@ -113,6 +115,8 @@ type ViewerState = {
   snapIndicator: SnapIndicator;
   /** PRF-01/03 render-on-demand: schedule a frame. */
   invalidate: () => void;
+  /** INT-01/INT-12: plain empty-space drag box-selects under the contract scheme. */
+  boxSelectOnDrag: boolean;
 };
 
 export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(function ThreeViewer({ selectedIds, reloadToken, transformMode, visualMode, section, measureMode, onSelectionChanged, onChanged, onPointerWorld, onStats }, ref) {
@@ -232,7 +236,8 @@ export const ThreeViewer = forwardRef<ThreeViewerHandle, ThreeViewerProps>(funct
       if (!mesh) return undefined;
       return mesh.userData as MeshInfo;
     },
-focusObject: (id) => {
+    getVisibleIds: () => [...(stateRef.current?.meshes.keys() ?? [])],
+    focusObject: (id) => {
       const s = stateRef.current;
       if (!s) return;
       const mesh = s.meshes.get(id);
@@ -278,6 +283,7 @@ focusObject: (id) => {
     applyNavScheme: (scheme) => {
       const s = stateRef.current;
       if (!s) return;
+      s.boxSelectOnDrag = scheme === 'contract';
       s.controls.mouseButtons = scheme === 'contract'
         ? { LEFT: null, MIDDLE: THREE.MOUSE.ROTATE, RIGHT: THREE.MOUSE.PAN }
         : { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
@@ -564,7 +570,7 @@ focusObject: (id) => {
     hoverGroupRef.current = hoverGroup;
     const snapIndicator = new SnapIndicator(scene);
     let needsRenderGlobal = true;
-    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, datumGridGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator, invalidate: () => { needsRenderGlobal = true; } };
+    const viewer: ViewerState = { scene, camera, renderer, controls, transformControls, group, measureGroup, datumGridGroup, meshes, edgeHelpers: new Map(), currentView: 'iso', grid, isOrtho: false, sunLight: sun, snapIndicator, invalidate: () => { needsRenderGlobal = true; }, boxSelectOnDrag: false };
     stateRef.current = viewer;
 
     transformControls.addEventListener('dragging-changed', (event) => {
@@ -642,7 +648,7 @@ focusObject: (id) => {
       return selectedIds;
     }
 
-    function startBoxSelection(event: PointerEvent) {
+    function startBoxSelection(event: PointerEvent, additive: boolean) {
       // Prevent OrbitControls from getting subsequent events by placing an overlay.
       // The overlay captures the pointer, so OrbitControls receives a pointercancel
       // and properly resets its internal state.
@@ -683,14 +689,13 @@ focusObject: (id) => {
         controls.enabled = true;
 
         if (isDragging) {
-          // Box selection: compute and apply
+          // INTERACTION §3: plain drag replaces the selection, Ctrl/Cmd+drag
+          // adds the hits to it.
           const hitIds = getObjectsInRect(viewer, startX, startY, e.clientX, e.clientY);
-          const current = new Set(selectedIdsRef.current);
-          for (const id of hitIds) {
-            if (current.has(id)) current.delete(id);
-            else current.add(id);
-          }
-          onSelectionChangedRef.current?.([...current]);
+          const next = additive
+            ? [...new Set([...selectedIdsRef.current, ...hitIds])]
+            : hitIds;
+          onSelectionChangedRef.current?.(next);
         } else {
           // No drag (click): dispatch synthetic click for normal processing
           renderer.domElement.dispatchEvent(new MouseEvent('click', {
@@ -706,13 +711,27 @@ focusObject: (id) => {
     }
 
     // ── Pointer handler for box selection ──
+    function hitsMeshAt(clientX: number, clientY: number): boolean {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, viewer.camera);
+      return raycaster.intersectObjects([...viewer.meshes.values()]).length > 0;
+    }
+
     function onPointerDown(event: PointerEvent) {
       if (event.button !== 0) return;
       if (draggingTransformRef.current) return;
-      if (!(event.ctrlKey || event.metaKey)) return;
+      const additive = event.ctrlKey || event.metaKey;
+      // INTERACTION §3: plain drag on empty space box-selects; with the
+      // contract nav scheme the left button is otherwise inert, so the drag
+      // starts a replace-selection box. Ctrl/Cmd+drag is additive in both
+      // schemes. Dragging from an object stays with OrbitControls.
+      const plainEmptyDrag = !additive && viewer.boxSelectOnDrag && !hitsMeshAt(event.clientX, event.clientY);
+      if (!additive && !plainEmptyDrag) return;
       // Disable OrbitControls before overlay takes capture, preventing any camera movement
       controls.enabled = false;
-      startBoxSelection(event);
+      startBoxSelection(event, additive);
     }
 
     // ── Click handler ──

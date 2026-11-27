@@ -1,7 +1,7 @@
 ---
 title: "Changelog"
 status: history
-last_updated: 2026-11-10
+last_updated: 2026-11-27
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ All notable changes to the OmniM project are documented in this file. Substantiv
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project does not currently use semantic versioning; entries are organized by roadmap batch.
 
-**Last updated: 2026-11-10**
+**Last updated: 2026-11-27**
 
 ## Keep a Changelog legend
 
@@ -21,6 +21,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **Not implemented (known gaps)** — planned but absent capabilities, stated explicitly for honesty
 
 ---
+
+## [2026-11-27] — G1 close-out: selection gestures and leave guard (UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25)
+
+### Added
+- **Seven selection gestures (UI-INT-01 ✅)**: tree Shift+click range select (new anchor so focus does not race it) + `Ctrl/Cmd+A` selects every currently listed tree object; viewport box select now matches the contract — plain empty-space drag replaces the selection (left is otherwise inert under the contract nav scheme), `Ctrl/Cmd+`drag adds the hits; empty click clears and Esc cancels; `e2e/gestures.spec.ts` adds tree/viewport groups with a two-wall fixture (`/api/genrule`).
+- **Three-way leave guard (UI-DAT-06 ✅)**: `LeaveGuardDialog` (Save and leave / Discard / Cancel) listing the project name and last-saved time; `Esc`=cancel and `Enter`=save (form submit = safe default); the title-bar back action and palette navigation share the same guard (`App.requestNavigate`); `beforeunload` still registers only while dirty; `e2e/data.spec.ts` gains the Save/Enter/Esc path.
+
+### Changed
+- Gate board: **G1 25/25 ✅ passed** (was 23✅/2🔀); delivery notes added to `INTERACTION §3` / `DATA_INTEGRITY §3.3` in both languages.
 
 ## [2026-11-10] — I18N-01 full externalisation close-out (UI-I18N-01 ✅ · CJK 988→51)
 

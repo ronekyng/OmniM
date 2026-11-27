@@ -81,7 +81,7 @@ evidence: "n/a (product requirement)"
 
 | ID | Requirement | Contract | Verification | Gate | Status |
 |---|---|---|---|---|---|
-| UI-INT-01 | Five selection gestures | INTERACTION §3 | interaction e2e | G1 | 🔀 |
+| UI-INT-01 | Five selection gestures | INTERACTION §3 | interaction e2e, full coverage · `e2e/gestures.spec.ts` three groups: tree (click replace / Ctrl toggle / Shift range / Esc / Ctrl+A select-all) + viewport (click select / empty click clears / Ctrl-drag additive box / contract-scheme empty-drag replace box); Ctrl+A and Shift range share an `ObjectTree` anchor fix; stable with fitted camera | G1 | ✅ |
 | UI-INT-02 | Picking state machine contract | INTERACTION §4 | `stateMachine.test.ts` | G1 | ✅ |
 | UI-INT-03 | Single shortcut registry, generated docs | INTERACTION §5 | `gen_keymap.py --check` · 32 bindings, en/zh aligned; command array owns `app/commands.ts` as single source; `global_keydown` gate allow-lists window listeners | G2 | ✅ |
 | UI-INT-04 | No global shortcuts while typing | INTERACTION §5.3 | `web/e2e/shell.spec.ts` | G1 | ✅ |
@@ -118,7 +118,7 @@ evidence: "n/a (product requirement)"
 | UI-DAT-03 | Dirty mark and last-saved time | DATA_INTEGRITY §3.2 | `web/e2e/data.spec.ts` | G1 | ✅ |
 | UI-DAT-04 | Autosave ≤60 s, non-blocking | DATA_INTEGRITY §4 | autosave trace · every mutation persists; disk failure logged, never blocking; `project_meta.rs` | G2 | ✅ |
 | UI-DAT-05 | Crash recovery ≤5 min loss | DATA_INTEGRITY §5 | kill/restart drill · a mutation *is* the snapshot → zero loss; `Project::load` reopen assertion in `project_meta.rs` | G2 | ✅ |
-| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | `web/e2e/data.spec.ts` (Stay/Leave/clean) | G1 | 🔀 |
+| UI-DAT-06 | Unsaved-changes interception | DATA_INTEGRITY §3.3 | three-way leave guard · `LeaveGuardDialog` (Save and leave / Discard / Cancel, project name + last-saved time, Esc=cancel & Enter=save); the same guard serves the title-bar back action and palette navigation; `beforeunload` registers only while dirty; `e2e/data.spec.ts` Stay/Leave/clean plus save-and-leave/Enter/Esc cases | G1 | ✅ |
 | UI-DAT-07 | Editable, persisted project metadata | DATA_INTEGRITY §2.3 | reopen assertion · `/api/project/meta` PUT/GET + title-bar settings dialog; renaming runs a file transaction; `e2e/meta.spec.ts` | G2 | ✅ |
 | UI-DAT-08 | External change detection and read-only | DATA_INTEGRITY §6 | mtime conflict test | G3 | 📅 |
 | UI-DAT-09 | Missing dependency report on open | DATA_INTEGRITY §2.4 | fixture project test | G3 | 📅 |

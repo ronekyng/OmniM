@@ -508,7 +508,7 @@ export const enUS = {
   'grid.levels.title': 'Levels',
   'grid.grids.title': 'Grid lines',
   'grid.ph.f1': 'F1 / L1',
-  'grid.levels.hint': 'Storeys are elevation containers; no geometry is generated. Stores still referenced by elements cannot be deleted.',
+  'grid.levels.hint': 'Storeys are elevation containers; no geometry is generated. Storeys still referenced by elements cannot be deleted.',
   'grid.span_full': 'Span the whole view (±20 m)',
   'grid.span_hint': 'From/To of 0 (or 0/0) spans the whole view (±20 m); other numbers are ordinary engineering coordinates (m).',
   'grid.add_storey': 'Add storey',
@@ -591,5 +591,9 @@ export const enUS = {
   'common.yes': 'Yes',
   'common.no': 'No',
   'pick.hint.cancel': '; press Esc to cancel',
+  'shell.leave.project': 'Project: {name}',
+  'shell.leave.last_saved': 'Last saved: {time}',
+  'shell.leave.never': 'never',
+  'shell.leave.save': 'Save and leave',
   'locale.en-US': 'English',
 } as unknown as Record<MessageKey, string>;

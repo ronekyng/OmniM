@@ -587,6 +587,10 @@ export const zhCN = {
   'common.yes': '是',
   'common.no': '否',
   'pick.hint.cancel': '，按 Esc 取消',
+  'shell.leave.project': '项目：{name}',
+  'shell.leave.last_saved': '上次保存：{time}',
+  'shell.leave.never': '尚未保存',
+  'shell.leave.save': '保存并离开',
   'locale.zh-CN': '中文',
 } as const;
 

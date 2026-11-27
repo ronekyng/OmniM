@@ -128,6 +128,10 @@ Rules:
 3. Keyboard: `Esc` = cancel, `Enter` = save (the safe default).
 4. Requirement: UI-DAT-06.
 
+**Delivered (2026-11-27, UI-DAT-06 ✅):** `LeaveGuardDialog` offers the three choices (Save and leave / Discard / Cancel), lists the project name and last-saved time, `Esc`=cancel and `Enter`=save; the title-bar back action and palette navigation share the same guard; `beforeunload` registers only while dirty. Evidence: `web/e2e/data.spec.ts`.
+
+
+
 ### 3.4 Save failure
 
 | Cause | UI |

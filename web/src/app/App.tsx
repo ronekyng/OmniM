@@ -36,6 +36,7 @@ import { applyTheme } from '../shared/theme';
 import { CommandPalette } from './components/CommandPalette';
 import { buildWorkspaceCommands } from './commands';
 import { ShortcutHelp } from './components/ShortcutHelp';
+import { LeaveGuardDialog } from './components/LeaveGuardDialog';
 
 const FOCUS_REGIONS = [
   '.main-toolbar',
@@ -112,6 +113,43 @@ export function App() {
   const confirm = useConfirm();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // DATA_INTEGRITY §3.3: all in-app navigations away from the workspace funnel
+  // through one guard so the three-way choice is identical everywhere.
+  const [leaveTarget, setLeaveTarget] = useState<string | null>(null);
+  const [leaveBusy, setLeaveBusy] = useState(false);
+
+  const requestNavigate = useCallback((to: string) => {
+    if (isMain && shouldWarnBeforeUnload(useAppStore.getState().saveState)) {
+      setLeaveTarget(to);
+      return;
+    }
+    navigate(to);
+  }, [isMain, navigate]);
+
+  const leaveSave = useCallback(() => {
+    void (async () => {
+      setLeaveBusy(true);
+      try {
+        await useAppStore.getState().saveProject();
+        const state = useAppStore.getState().saveState;
+        if (state.status === 'failed') {
+          toast.error(state.error ?? 'Save failed');
+          return; // stay and show the error (§3.3 rule: on failure stay)
+        }
+        const target = leaveTarget ?? '/projects';
+        setLeaveTarget(null);
+        navigate(target);
+      } finally {
+        setLeaveBusy(false);
+      }
+    })();
+  }, [leaveTarget, navigate, toast]);
+
+  const leaveDiscard = useCallback(() => {
+    const target = leaveTarget ?? '/projects';
+    setLeaveTarget(null);
+    navigate(target);
+  }, [leaveTarget, navigate]);
 
   async function deleteSelected() {
     if (selectedIds.length === 0) return;
@@ -206,6 +244,14 @@ export function App() {
         return;
       }
       if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        const treeIds = Array.from(document.querySelectorAll('[role="tree"] [data-node-id]'))
+          .map((el) => el.getAttribute('data-node-id'))
+          .filter((id): id is string => !!id);
+        setSelectedIds(treeIds.length > 0 ? treeIds : (viewerRef.current?.getVisibleIds() ?? []));
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
         event.preventDefault();
         if (event.shiftKey) void redoCommand();
@@ -314,6 +360,15 @@ export function App() {
     undo: () => void undoCommand(),
     redo: () => void redoCommand(),
     delete: () => void deleteSelected(),
+    selectAll: () => {
+      // INTERACTION §3: select every object listed in the tree (respects search
+      // and expansion); fall back to the rendered meshes when no tree is shown.
+      const treeIds = Array.from(document.querySelectorAll('[role="tree"] [data-node-id]'))
+        .map((el) => el.getAttribute('data-node-id'))
+        .filter((id): id is string => !!id);
+      setSelectedIds(treeIds.length > 0 ? treeIds : (viewerRef.current?.getVisibleIds() ?? []));
+    },
+    visibleCount: viewerRef.current?.getVisibleIds().length ?? 0,
     canUndo,
     canRedo,
     selectionCount: selectedIds.length,
@@ -328,7 +383,7 @@ export function App() {
       toast.success(next === 'contract' ? 'Viewport nav: contract target (left inert · middle orbit · right pan)' : 'Viewport nav: shipped scheme (left pan · middle dolly · right rotate)');
     },
     create: (objectType) => creationDispatch({ type: 'completePicking', form: createInitialForm(objectType, []) }),
-    navigate,
+    navigate: requestNavigate,
     help: () => setHelpOpen(true),
   });
 
@@ -346,7 +401,7 @@ export function App() {
               exercise its error boundary without touching AppLayout. */}
           {crashRoute && <CrashRoutePanel />}
           <AppLayout
-            titleBar={<TitleBar />}
+            titleBar={<TitleBar onRequestLeave={requestNavigate} />}
             statusBar={<StatusBar />}
             toolbar={<div className="modeling-bar">
               <MainToolbar
@@ -452,6 +507,15 @@ export function App() {
       } />
     </Routes>
     <ToastContainer />
+    <LeaveGuardDialog
+      open={leaveTarget !== null}
+      projectName={stats?.name || 'Untitled'}
+      lastSavedAt={saveState.lastSavedAt}
+      busy={leaveBusy}
+      onSave={leaveSave}
+      onDiscard={leaveDiscard}
+      onCancel={() => { if (!leaveBusy) setLeaveTarget(null); }}
+    />
     <CommandPalette open={paletteOpen} commands={commands} onClose={() => setPaletteOpen(false)} />
     <ShortcutHelp open={helpOpen} commands={commands} onClose={() => setHelpOpen(false)} />
     </ErrorBoundary>

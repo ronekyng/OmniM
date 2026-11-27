@@ -1,7 +1,7 @@
 ---
 title: "变更日志（Changelog）"
 status: history
-last_updated: 2026-11-10
+last_updated: 2026-11-27
 applies_to: "repo"
 evidence: "audited against code 2026-10-27"
 ---
@@ -11,7 +11,7 @@ evidence: "audited against code 2026-10-27"
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)；本项目暂不使用语义化版本，条目按路线图批次组织。
 
-**最后更新：2026-11-10**
+**最后更新：2026-11-27**
 
 ## Keep a Changelog 图例
 
@@ -21,6 +21,15 @@ evidence: "audited against code 2026-10-27"
 - **未实现（已知缺口）** — 已计划但缺失的能力，为诚实起见明确列出
 
 ---
+
+## [2026-11-27] — G1 收口：选择手势与离场守卫（UI-INT-01 ✅ · UI-DAT-06 ✅ · G1 25/25）
+
+### 新增（Added）
+- **七种选择手势（UI-INT-01 ✅）**：树 Shift+单击范围选择（新增锚点，避免焦点抢跑）+ `Ctrl/Cmd+A` 全选当前树中可见对象；视口框选对齐契约——普通拖空白=替换选择（契约导航制左键本为惰性），`Ctrl/Cmd+`拖=追加命中；空白单击清空、Esc 取消；`e2e/gestures.spec.ts` 树/视口两组 + 两墙夹具（`/api/genrule`）。
+- **三选一离场守卫（UI-DAT-06 ✅）**：`LeaveGuardDialog`（保存并离开 / 丢弃 / 取消），列项目名与上次保存时间；`Esc`=取消、`Enter`=保存（表单提交即安全默认）；标题栏返回与命令面板导航共用同一守卫（`App.requestNavigate`）；`beforeunload` 仍仅在 dirty 注册；`e2e/data.spec.ts` 增 Save/Enter/Esc 路径。
+
+### 变更（Changed）
+- 门禁看板：**G1 25/25 ✅ 通过**（原 23✅/2🔀）；`INTERACTION §3`/`DATA_INTEGRITY §3.3` 中英落交付注记。
 
 ## [2026-11-10] — I18N-01 全量外置收口（UI-I18N-01 ✅ · CJK 988→51）
 

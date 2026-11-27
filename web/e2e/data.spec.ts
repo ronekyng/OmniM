@@ -20,7 +20,7 @@ test('dirty state, explicit save and leave guard', async ({ page }) => {
   await page.locator('.title-project').click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
   await expect(page.getByRole('alertdialog')).toContainText('Leave without saving?');
-  await page.getByRole('button', { name: 'Stay' }).click();
+  await page.getByRole('button', { name: 'Stay', exact: true }).click();
   await expect(page.locator('.title-bar')).toBeVisible();
   await expect(page).not.toHaveURL(/\/projects$/);
 
@@ -57,7 +57,39 @@ test('dirty state, explicit save and leave guard', async ({ page }) => {
   // user gesture, so it cannot be covered here reliably.
   await page.locator('.title-project').click();
   await expect(page.getByRole('alertdialog')).toBeVisible();
-  await page.getByRole('button', { name: 'Leave' }).click();
+  await page.getByRole('button', { name: 'Leave', exact: true }).click();
   await expect(page).toHaveURL(/\/projects$/);
   await expect(page.getByRole('heading', { name: 'OmniM Projects' })).toBeVisible();
+});
+
+test('unsaved-changes guard: save-and-leave, Esc stays, Enter saves', async ({ page }) => {
+  await page.goto('/projects');
+  await page.getByRole('button', { name: /Open sample project/ }).click();
+  await expect(page.locator('.title-bar')).toBeVisible({ timeout: 20_000 });
+
+  // Make the session dirty.
+  await page.getByRole('tab', { name: 'Grids' }).click();
+  await page.getByLabel('Name').fill('Guard-Level');
+  await page.getByLabel('Elevation (m)').fill('4.2');
+  await page.getByRole('button', { name: 'Add storey' }).click();
+  await expect(page.locator('.grid-line-row', { hasText: 'Guard-Level' })).toBeVisible();
+
+  // Esc = cancel (stay in the workspace).
+  await page.locator('.title-project').click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText('Last saved:');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('.title-bar')).toBeVisible();
+
+  // Enter = save (safe default), then leave — the save request must succeed.
+  await page.locator('.title-project').click();
+  await expect(dialog).toBeVisible();
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/api/project/save') && r.request().method() === 'POST',
+  );
+  await page.keyboard.press('Enter');
+  expect((await saved).ok()).toBe(true);
+  await expect(page.getByRole('heading', { name: 'OmniM Projects' })).toBeVisible({ timeout: 15_000 });
 });

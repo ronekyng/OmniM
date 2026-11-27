@@ -128,6 +128,8 @@ clean ──变更──▶ dirty ──保存──▶ saving ──成功─�
 3. 键盘：`Esc` = 取消，`Enter` = 保存（安全默认）。
 4. 需求：UI-DAT-06。
 
+**已交付（2026-11-27，UI-DAT-06 ✅）：** `LeaveGuardDialog` 三选一（保存并离开 / 丢弃 / 取消），列出项目名与上次保存时间，`Esc`=取消、`Enter`=保存；标题栏返回与命令面板导航共用同一守卫；`beforeunload` 仅在 `dirty` 时注册。证据：`web/e2e/data.spec.ts`。
+
 ### 3.4 保存失败
 
 | 原因 | 界面 |

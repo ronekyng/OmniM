@@ -81,6 +81,9 @@ type ObjectTreeNodeProps = {
   level: number;
   focusedId: string | null;
   setFocusedId: (id: string) => void;
+  /** INT-01: anchor for Shift range selection (survives focus changes). */
+  anchorId: string | null;
+  setAnchorId: (id: string) => void;
   onKeyboardContextMenu: (nodeId: string) => void;
   onRename?: (id: string, name: string) => void;
 };
@@ -102,6 +105,8 @@ function ObjectTreeNode({
   level,
   focusedId,
   setFocusedId,
+  anchorId,
+  setAnchorId,
   onKeyboardContextMenu,
   onRename,
 }: ObjectTreeNodeProps) {
@@ -243,6 +248,25 @@ function ObjectTreeNode({
       onClick={(e) => {
         e.stopPropagation();
         const ctrl = e.ctrlKey || e.metaKey;
+        // INTERACTION §3: Shift+click range-selects within the visible tree.
+        if (e.shiftKey && !ctrl && anchorId && anchorId !== node.id) {
+          const treeRoot = e.currentTarget.closest('[role="tree"]');
+          const ids = treeRoot
+            ? Array.from(treeRoot.querySelectorAll('[data-node-id]'))
+                .map((el) => el.getAttribute('data-node-id'))
+                .filter((id): id is string => !!id)
+            : [];
+          const a = ids.indexOf(anchorId);
+          const b = ids.indexOf(node.id);
+          if (a >= 0 && b >= 0) {
+            const [lo, hi] = a < b ? [a, b] : [b, a];
+            onSelectionChanged(ids.slice(lo, hi + 1));
+            setAnchorId(node.id);
+            setFocusedId(node.id);
+            e.currentTarget.focus();
+            return;
+          }
+        }
         if (ctrl) {
           const current = new Set(selectedIds ?? []);
           current.has(node.id) ? current.delete(node.id) : current.add(node.id);
@@ -250,6 +274,7 @@ function ObjectTreeNode({
         } else {
           onSelectionChanged([node.id]);
         }
+        setAnchorId(node.id);
         setFocusedId(node.id);
         e.currentTarget.focus();
       }}
@@ -333,6 +358,8 @@ function ObjectTreeNode({
               level={level + 1}
               focusedId={focusedId}
               setFocusedId={setFocusedId}
+              anchorId={anchorId}
+              setAnchorId={setAnchorId}
               onKeyboardContextMenu={onKeyboardContextMenu}
               onRename={onRename}
             />
@@ -382,6 +409,7 @@ export function ObjectTree({
   } | null>(null);
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
   const [focusedId, setFocusedId] = useState<string | null>(null);
+  const [anchorId, setAnchorId] = useState<string | null>(null);
 
   const contextMenuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -577,6 +605,8 @@ export function ObjectTree({
             level={1}
             focusedId={focusedId}
             setFocusedId={setFocusedId}
+            anchorId={anchorId}
+            setAnchorId={setAnchorId}
             onKeyboardContextMenu={handleKeyboardContextMenu}
             onRename={(id, name) => onRenameRef.current?.(id, name)}
           />

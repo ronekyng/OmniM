@@ -22,6 +22,8 @@ export function buildWorkspaceCommands(ctx: {
   undo: () => void;
   redo: () => void;
   delete: () => void;
+  selectAll: () => void;
+  visibleCount: number;
   canUndo: boolean;
   canRedo: boolean;
   selectionCount: number;
@@ -40,6 +42,7 @@ export function buildWorkspaceCommands(ctx: {
     { id: 'edit.undo', title: 'Undo', shortcut: 'Ctrl/Cmd+Z', scope: 'Global', disabled: !ctx.canUndo, run: ctx.undo },
     { id: 'edit.redo', title: 'Redo', shortcut: 'Ctrl/Cmd+Shift+Z', scope: 'Global', disabled: !ctx.canRedo, run: ctx.redo },
     { id: 'edit.delete', title: 'Delete selected objects', shortcut: 'Delete', scope: 'Global', disabled: ctx.selectionCount === 0, run: ctx.delete },
+    { id: 'edit.selectAll', title: 'Select all visible objects', shortcut: 'Ctrl/Cmd+A', scope: 'Global', disabled: ctx.visibleCount === 0, run: ctx.selectAll },
     { id: 'view.fit', title: 'Fit view', shortcut: 'F', scope: 'Viewport', run: () => ctx.viewer.current?.fit() },
     { id: 'view.home', title: 'Home view', shortcut: 'H', scope: 'Viewport', run: () => ctx.viewer.current?.home() },
     { id: 'view.grid', title: 'Toggle grid', shortcut: 'G', scope: 'Viewport', run: ctx.grid.toggle },

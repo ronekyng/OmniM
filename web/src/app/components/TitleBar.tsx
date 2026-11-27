@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
-import { saveLabelKey, shouldWarnBeforeUnload } from '../../shared/saveState';
-import { useConfirm } from './ConfirmDialog';
+import { saveLabelKey } from '../../shared/saveState';
 import { useDialogFocus } from './useDialogFocus';
 import { IcoMoon, IcoSun } from './Icons';
 import { api } from '../../shared/api';
@@ -13,9 +12,8 @@ import { useI18n, type Locale } from '../../shared/i18n';
 
 /** Workspace title bar: project name, dirty mark, breadcrumb, explicit save.
  *  Contract: IA_SHELL §2.2, DATA_INTEGRITY §3. */
-export function TitleBar() {
+export function TitleBar({ onRequestLeave }: { onRequestLeave?: (to: string) => void } = {}) {
   const navigate = useNavigate();
-  const confirm = useConfirm();
   const stats = useAppStore((s) => s.stats);
   const saveState = useAppStore((s) => s.saveState);
   const saveProject = useAppStore((s) => s.saveProject);
@@ -49,18 +47,10 @@ export function TitleBar() {
     document.title = `${dirty ? '• ' : ''}${name} ${t('shell.titlebar.doc_prefix')}`;
   }, [dirty, name]);
 
-  const openProjects = async () => {
-    if (shouldWarnBeforeUnload(saveState)) {
-      const ok = await confirm({
-        title: t('shell.leave.title'),
-        message: t('shell.leave.message'),
-        confirmLabel: t('shell.leave.confirm'),
-        cancelLabel: t('shell.leave.cancel'),
-        danger: true,
-      });
-      if (!ok) return;
-    }
-    navigate('/projects');
+  const openProjects = () => {
+    // DATA_INTEGRITY §3.3: the shared three-way guard owns the dialog.
+    if (onRequestLeave) onRequestLeave('/projects');
+    else navigate('/projects');
   };
 
   const openMeta = async () => {
